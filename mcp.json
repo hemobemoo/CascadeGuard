@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      }
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "firecrawl": {
+      "type": "http",
+      "url": "https://mcp.firecrawl.dev/v2/mcp",
+      "headers": {
+        "Authorization": "Bearer ${FIRECRAWL_API_KEY}"
+      }
+    },
+    "phoenix": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@arizeai/phoenix-mcp@latest",
+        "--baseUrl",
+        "${PHOENIX_BASE_URL:-http://localhost:6006}"
+      ]
+    }
+  }
+}
