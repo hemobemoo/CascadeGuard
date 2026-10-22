@@ -215,6 +215,17 @@ clauses are precedents and context for gap analysis and can be reviewed later.
       inferring counterpart and data category too. Acceptable (5h covers actor/action, and the
       no-power-to-obligation rule covers obligations only), or record it without the permission
       reading? Also confirm that citing the derived OCR copy (not the original) is acceptable.
+   n. (Phase 2 test-breaker) Citation scope: should a cited clause have to concern the citing
+      role or action? Today the engine only checks that the clause is loaded (AGENTS.md).
+   o. (Phase 2 phase-auditor) Phase 2 "Done when" names `scenarios/uae_health_access/
+      expected_baseline.yaml`. While gate 1 is open the golden is fixture-based
+      (`tests/fixtures/uae_health_access/expected_baseline.yaml`); the real-corpus golden follows
+      the core-set review. Accept that for the Phase 2 PR?
+   p. (evidence-auditor) Boundary of decision 5h: an `interpreted` reading may infer the actor or
+      action, but not a counterpart, recipient or data category from outside the quote (applied:
+      art14-5 lost its counterpart/data category). `dha.pp11.4-18-4`/`4-18-5` each borrow one
+      element from the other paragraph; the auditor suggests one clause quoting 4.18.4 and 4.18.5
+      together. Confirm the boundary, and whether to merge the two DHA clauses.
    l. GitHub residual from the book purge: the read-only ref `refs/pull/1/head` still points at
       the pre-purge commit `9f67523`, whose history contains both books (they stay downloadable
       through PR #1). Only GitHub Support can remove it. The human decides whether to contact
