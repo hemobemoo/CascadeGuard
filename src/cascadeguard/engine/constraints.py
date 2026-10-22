@@ -20,11 +20,13 @@ REQUEST = "request_information"
 class Reason(StrEnum):
     """Why the engine rejected an action or a decision."""
 
+    MALFORMED_DECISION = "malformed_decision"  # not a valid AgentDecision
     UNKNOWN_CITATION = "unknown_citation"  # clause id not in the corpus at all
     DRAFT_CITATION = "draft_citation"  # clause exists but is not loaded (draft, not reviewed)
     WRONG_ROLE_OR_TIME = "wrong_role_or_time"
     NOT_ALLOWED_ACTION = "not_allowed_action"
     UNKNOWN_TARGET = "unknown_target"
+    SELF_TARGET = "self_target"
     FACT_NOT_KNOWN = "fact_not_known"
     MISSING_PARAMETER = "missing_parameter"
     OUTSIDE_RECIPIENT_BOUNDARY = "outside_recipient_boundary"
@@ -47,6 +49,7 @@ class Verdict:
     reasons: tuple[Reason, ...]
     clause_ids: tuple[str, ...]  # clauses that decided it (authority or restriction)
     detail: str
+    fact_id: str | None = None  # the fact a share delivers: read once, checked, then applied
 
 
 class RuleBook:
@@ -170,6 +173,18 @@ class ConstraintEngine:
     def _open_obligation(self, clause_id: str) -> None:
         state = self.state
         clause = self.rules.clauses.get(clause_id)
+        if clause is not None and (
+            clause.normalized is None or clause.normalized.kind is not RuleKind.OBLIGATION
+        ):
+            state.add_finding(
+                Finding(
+                    kind="trigger_not_obligation",
+                    minute=state.minute,
+                    clause_ids=(clause_id,),
+                    detail=f"{clause_id} is listed in opens_obligations but is not an obligation",
+                )
+            )
+            return
         if clause is None or clause.normalized is None:
             state.add_finding(
                 Finding(
@@ -181,8 +196,16 @@ class ConstraintEngine:
             )
             return
         n = clause.normalized
-        state.open_obligation(clause_id, n.actor, n.action, n.deadline_minutes)
-        state.record("obligation_opened", role=n.actor, action=n.action, clause_ids=(clause_id,))
+        # Same firmness rule as authority: binding: unknown opens an uncertain obligation.
+        firm = clause.binding is True or _is_scenario_rule(clause)
+        state.open_obligation(clause_id, n.actor, n.action, n.deadline_minutes, firm=firm)
+        state.record(
+            "obligation_opened",
+            role=n.actor,
+            action=n.action,
+            clause_ids=(clause_id,),
+            detail="" if firm else "uncertain: binding unknown",
+        )
         if n.deadline_minutes is None:
             state.add_finding(
                 Finding(
@@ -198,9 +221,26 @@ class ConstraintEngine:
 
     # ----- decisions -----
 
-    def process(self, decision: AgentDecision, expected_role: str) -> None:
+    def process(self, decision: object, expected_role: str) -> None:
+        """Check one agent decision. Agents are untrusted: what they return is re-validated from
+        plain data, so constructed objects or subclassed containers never reach the checks.
+        """
         state = self.state
-        decision = decision.model_copy(deep=True)  # the agent keeps no handle on what we log
+        try:
+            if type(decision) is not AgentDecision:
+                raise TypeError(f"expected AgentDecision, got {type(decision).__name__}")
+            decision = AgentDecision.model_validate(decision.model_dump(mode="python"))
+        except (TypeError, ValueError) as exc:  # ValueError covers ValidationError
+            state.record("rejected", role=expected_role, reasons=(Reason.MALFORMED_DECISION,))
+            state.add_finding(
+                Finding(
+                    kind=Reason.MALFORMED_DECISION.value,
+                    minute=state.minute,
+                    role=expected_role,
+                    detail=str(exc).splitlines()[0],
+                )
+            )
+            return
         cited = tuple(c.clause_id for c in decision.citations)
         if not decision.proposed_actions and not cited:
             return
@@ -220,30 +260,31 @@ class ConstraintEngine:
                 )
             )
             # Citations are still checked and recorded below; no action is taken either way.
-        for clause_id in cited:
-            if clause_id not in self.rules.clauses:
-                reason = (
-                    Reason.DRAFT_CITATION
-                    if clause_id in self.corpus_clause_ids
-                    else Reason.UNKNOWN_CITATION
-                )
-                state.record(
-                    "rejected",
+        bad_citations = [cid for cid in dict.fromkeys(cited) if cid not in self.rules.clauses]
+        for clause_id in bad_citations:  # every bad citation is its own finding
+            reason = (
+                Reason.DRAFT_CITATION
+                if clause_id in self.corpus_clause_ids
+                else Reason.UNKNOWN_CITATION
+            )
+            state.record(
+                "rejected",
+                role=expected_role,
+                reasons=(reason,),
+                clause_ids=(clause_id,),
+                detail="whole decision rejected: cited clause is not loaded by the engine",
+            )
+            state.add_finding(
+                Finding(
+                    kind=reason.value,
+                    minute=state.minute,
                     role=expected_role,
-                    reasons=(reason,),
                     clause_ids=(clause_id,),
-                    detail="whole decision rejected: cited clause is not loaded by the engine",
+                    detail=f"{expected_role} cited {clause_id}, not loaded by the engine",
                 )
-                state.add_finding(
-                    Finding(
-                        kind=reason.value,
-                        minute=state.minute,
-                        role=expected_role,
-                        clause_ids=(clause_id,),
-                        detail=f"{expected_role} cited {clause_id}, not loaded by the engine",
-                    )
-                )
-                return
+            )
+        if bad_citations:
+            return
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             return
         role = state.roles.role(decision.role_id)
@@ -259,7 +300,7 @@ class ConstraintEngine:
                 clause_ids=verdict.clause_ids,
             )
             if verdict.accepted:
-                self._apply(role, action)
+                self._apply(role, action, verdict)
 
     def check(self, role: Role, action: ProposedAction) -> Verdict:
         state = self.state
@@ -274,8 +315,12 @@ class ConstraintEngine:
 
         if kind in (SHARE, REQUEST) and action.target not in role_ids:
             return Verdict(False, (Reason.UNKNOWN_TARGET,), (), f"unknown target {action.target}")
+        if kind in (SHARE, REQUEST) and action.target == role.id:
+            return Verdict(False, (Reason.SELF_TARGET,), (), "a role cannot target itself")
+        fact_id: str | None = None
         if kind == SHARE:
-            fact = state.fact(action.parameters.get("fact", ""))
+            fact_id = action.parameters.get("fact", "")
+            fact = state.fact(fact_id)
             if fact is None or fact not in state.known_facts(role.id):
                 return Verdict(False, (Reason.FACT_NOT_KNOWN,), (), "sender does not know it")
             assert action.target is not None
@@ -320,13 +365,13 @@ class ConstraintEngine:
                 reasons.append(Reason.AUTHORITY_UNCERTAIN)
                 details.append("only clauses with binding: unknown support it")
             clause_ids.extend(supporting)
-        return Verdict(not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details))
+        return Verdict(not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details), fact_id)
 
-    def _apply(self, role: Role, action: ProposedAction) -> None:
+    def _apply(self, role: Role, action: ProposedAction, verdict: Verdict) -> None:
         state = self.state
         kind = action.action_type
-        if kind == SHARE and action.target is not None:
-            fact_id = action.parameters["fact"]
+        if kind == SHARE and action.target is not None and verdict.fact_id is not None:
+            fact_id = verdict.fact_id  # exactly the fact that was checked
             if state.learn(action.target, fact_id):
                 state.record("fact_released", role=action.target, detail=fact_id)
         state.mark_done(role.id, kind)
