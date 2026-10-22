@@ -38,8 +38,10 @@ clauses:
       action: activate_fallback_channel
       condition: business continuity plan in place for incidents
     notes: >-
-      Requires a continuity plan but says nothing about who may reverse an automated account
-      lock, or when. Reading it as covering a fallback access channel is an interpretation.
+      Requires entities to establish continuity and recovery plans; the listed plan contents
+      (PDF pages 30-31) do not mention a fallback channel, and it says nothing about who may
+      reverse an automated account lock, or when. Mapping it to `activate_fallback_channel` is
+      an interpretation.
 
   - id: dha.pp11.4-18-2
     title: Investigate incidents from discovery, including whether PHI was affected
@@ -59,10 +61,12 @@ clauses:
       kind: obligation
       actor: health_service_operator
       action: raise_security_incident
-      condition: on discovery of a suspected breach or incident
+      condition: from discovery of a breach or incident until closure
     notes: >-
-      Supports treating the fraud-model alert as a suspected incident to be investigated, not
-      as an established breach. ("aa.." is how the PDF's list marker extracts.)
+      Supports treating the fraud-model alert as an incident to be investigated, not as an
+      established breach. The text requires investigation; `raise_security_incident` is the
+      scenario action id mapped to it, and "suspected" is the scenario's wording, not the
+      policy's. ("aa.." is how the PDF's list marker extracts.)
 
   - id: dha.pp11.4-18-4
     title: Breach reporting period borrowed from the UAE Data Protection Law
@@ -83,8 +87,11 @@ clauses:
       action: notify_health_data_oversight
       condition: breach or incident; period set by PDPL Executive Regulations (not in corpus)
     notes: >-
-      Candidate mandate-overlap finding: the period comes from a law that excludes regulated
-      health data (uae.pdpl.art2-2). The period is not known from the corpus.
+      Candidate mandate-overlap finding: the period comes from a law that may exclude regulated
+      health data (uae.pdpl.art2-2). The period is not known from the corpus. This paragraph
+      names no recipient; the recipient in `notify_health_data_oversight` comes from 4.18.5
+      (dha.pp11.4-18-5). Reading "Executive Regulations of UAE Data Protection Law" as those of
+      Decree-Law 45/2021 is an interpretation.
 
   - id: dha.pp11.4-18-5
     title: Breach notifications go to the UAE Information Office and DHA

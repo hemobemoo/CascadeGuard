@@ -43,7 +43,8 @@ clauses:
       condition: an AI output may be erroneous
     notes: >-
       Policy charter, not law. Supports human review of automated locks but assigns no owner
-      or deadline.
+      or deadline. The text names no actor or action; `health_service_operator` and
+      `review_automated_lockouts` are the scenario's mapping, an interpretation.
 
   - id: mocai.ethics.contest-redress
     title: "MOCAI ethics: contest and redress against AI decisions"
@@ -53,15 +54,17 @@ clauses:
       supporting these [...] models.
     source_file: MOCAI-AI-Ethics-EN-1.pdf
     page: 16
-    article: Item d under Principle 4 guidelines (printed page 30; section number not legible in extraction)
+    article: 3.4.2.1(d)
     issuer: UAE Minister of State for Artificial Intelligence (MOCAI)
     jurisdiction: UAE
     document_date: "2022-12"
     status: draft
     binding: false
     notes: >-
-      Two-column spread; text from the neighbouring column interleaves on extraction, hence
-      the [...] marks. Please confirm the section number against the PDF.
+      Two-column spread; text from the neighbouring column (item c of 3.4.2.2, printed page
+      31) interleaves on extraction, hence the [...] marks. Section 3.4.2 is the guidelines of
+      Principle 4 (Explainable AI); the parent guideline is soft ("AI operators could consider
+      ..."), so this is guidance, not a duty.
 
   - id: mocai.ethics.fallback-plan
     title: "MOCAI ethics: safeguards enabling a fallback plan"

@@ -71,6 +71,9 @@ clauses:
     notes: >-
       Basis for the health-data oversight role's authority to determine how health data may be
       exchanged. Mapping the scenario role to "the Health Authority" is an interpretation.
+      "shall set" is read as a power (kind permission) that the role may use; it can also be
+      read as a duty (kind obligation). `issue_determination` is the scenario action id that
+      stands for setting such standards; it is not in the text.
 
   - id: uae.fl2-2019.art16
     title: Confidentiality of patient information and its exceptions
@@ -92,8 +95,9 @@ clauses:
       action: share_incident_status
       data_category: patient_account_records
       condition: >-
-        only for health purposes, with written patient approval, or under one of the five
-        listed exceptions (PDF page 5)
+        for health purposes; any other use needs the patient's written approval, except in the
+        cases listed after this article (PDF page 5, not quoted in this clause)
     notes: >-
-      The five exceptions are on PDF page 5. None of them names incident coordination with a
+      The exceptions on PDF page 5 are outside this quote and would need their own clause(s)
+      before the engine relies on them. None of them names incident coordination with a
       telecom operator; whether exception 3 or 5 could apply is a question for a human expert.
