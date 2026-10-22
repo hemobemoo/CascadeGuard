@@ -2,14 +2,24 @@
 
 Curated tools for this project. Nothing here is a dependency unless `AGENTS.md` lists it.
 
-## MCP servers (configured by the human before the session — not installed by the agent)
+## GitHub access
+
+- **`git`** for commits, branches, pushes.
+- **GitHub CLI (`gh`)** for creating the repo, pull requests, issues, and checking CI.
+  Already authenticated on this machine (`gh auth status`). Prefer `gh` over the GitHub MCP.
+
+## MCP servers (configured by the human in `.mcp.json` — the agent does not install or edit them)
+
+`.mcp.json` is committed and contains no secrets. It reads keys from Windows user
+environment variables (set once with `setx`): `CONTEXT7_API_KEY`, `GITHUB_PAT`,
+`FIRECRAWL_API_KEY`. Restart the terminal/VS Code after changing them.
 
 | MCP | Use it for | Notes |
 |---|---|---|
-| [Context7](https://github.com/upstash/context7) | Current docs for FastAPI, Pydantic, NiceGUI, DuckDB, NetworkX, Playwright, OpenTelemetry, OpenInference, Phoenix, pytest | Check here before writing library code from memory. Highest-value MCP. |
-| [Playwright MCP](https://github.com/microsoft/playwright-mcp) | Open the local app, click through incident → replay, inspect UI errors, take screenshots | From Phase 4 onward. |
-| [GitHub MCP](https://github.com/github/github-mcp-server) | Issues, pull requests, review, history | Use plain `git` for commits, branches, pushes. |
-| [Firecrawl MCP](https://github.com/firecrawl/firecrawl-mcp-server) | Find and extract official UAE, ITU and international policy sources | Needs an API key. Output goes to `policies/sources/` only — unverified until a human reviews it and it is recorded in `policies/reviewed/`. |
+| [Context7](https://github.com/upstash/context7) | Current docs for FastAPI, Pydantic, NiceGUI, DuckDB, NetworkX, Playwright, OpenTelemetry, OpenInference, Phoenix, pytest | Use before writing library code from memory. Highest-value MCP. |
+| [Playwright MCP](https://github.com/microsoft/playwright-mcp) | Open the local app, click through incident → replay, inspect UI errors, take screenshots | From Phase 4 onward. Needs Node.js. |
+| [GitHub MCP](https://github.com/github/github-mcp-server) | Only if `gh` cannot do the job (e.g. structured PR review comments) | Fine-grained token scoped to the CascadeGuard repo. |
+| [Firecrawl MCP](https://github.com/firecrawl/firecrawl-mcp-server) | Only when the human asks to find additional official web sources | Not needed for the 19-PDF knowledge base. Output goes to `policies/sources/web/` — unverified until reviewed. Never use it to parse the local PDFs. |
 
 ## Core libraries (in the stack)
 
@@ -21,7 +31,7 @@ Curated tools for this project. Nothing here is a dependency unless `AGENTS.md` 
 
 - [GitHub Spec Kit](https://github.com/github/spec-kit) — use lightly: one short spec per phase in `specs/`. Do not run its full multi-step workflow.
 
-## These are optional — use or install them when they are usful and impactful 
+## These are optional — use or install them when they are usful and impactful
 
 - [OpenAPPA](https://github.com/archestra-ai/OpenAPPA) — possible extra guardrail layer, after the constraint engine is stable.
 - [Graphify](https://github.com/Graphify-Labs/graphify) — repo/knowledge-graph exploration. The CascadeGuard policy and dependency model stays our own.

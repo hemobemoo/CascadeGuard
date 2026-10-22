@@ -106,6 +106,11 @@ Ask before adding any dependency not listed here.
   `docs/decisions/` only for a real decision with trade-offs.
 - If a requirement is ambiguous or conflicts with `CascadeGuard.md`, ask. Don't guess silently.
 - Use the Context7 MCP for current library docs instead of relying on memory.
+- Use `git` for commits and branches and the GitHub CLI (`gh`) for repo, PR and issue work.
+  Use the GitHub MCP only when `gh` cannot do the task.
+- Do not use the Firecrawl MCP unless the human asks. Never send the local PDFs or any
+  `.env` value to an external service.
+- Do not edit `.mcp.json`, and never write a key or token into any file.
 - Optional tools in `REFERENCE_LINKS.md` marked "only when asked" stay unused unless the human asks.
 
 ## Commands
