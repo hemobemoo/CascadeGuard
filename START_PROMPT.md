@@ -11,7 +11,7 @@ Before writing any code, read, in this order:
 4. `REFERENCE_LINKS.md` — which external tools to use, and which to leave alone.
 
 Then reply with a short summary of your understanding and any conflicts or open questions
-before starting Phase 0.
+before starting Phase 0. Create `PROGRESS.md` (see `AGENTS.md`) as part of Phase 0.
 
 Preserve the central idea:
 
