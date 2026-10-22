@@ -15,8 +15,8 @@ clauses:
     status: draft
     binding: false
     notes: >-
-      Definition only. The simulated traffic-management model is mapped to an ML pipeline
-      managed by an MLFO inside the telecom operator.
+      Viewer page 8 (printed page 2). Definition only. The simulated traffic-management model is
+      mapped to an ML pipeline managed by an MLFO inside the telecom operator.
 
   - id: itu.y3172.req-ml-mng-003
     title: Monitor the effect of ML on network operations and correct it

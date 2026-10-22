@@ -18,12 +18,14 @@ clauses:
     status: draft
     binding: true
     notes: >-
-      Working reading, pending human review: personal health data in the scenario is treated as
-      regulated by Federal Law No. 2 of 2019 (uae.fl2-2019.art2), so the PDPL is treated as not
-      governing it. If the portal operator were a governmental entity, exclusion (b) would also
-      apply. The quote stops at (e); exclusions (f) and (g) follow, and (g) covers companies and
-      establishments in free zones that have special data-protection legislation (PDF pages
-      6-7). The scenario's portal operator is not placed in a free zone.
+      Binding scope: federal law, applying to the processing described in Art 2(1), subject to the
+      Art 2(2) exclusions. The PDF is an English version; the Arabic text was not checked. Working
+      reading, pending human review: personal health data in the scenario is treated as regulated
+      by Federal Law No. 2 of 2019 (uae.fl2-2019.art2), so the PDPL is treated as not governing
+      it. If the portal operator were a governmental entity, exclusion (b) would also apply. The
+      quote stops at (e); exclusions (f) and (g) follow, and (g) covers companies and
+      establishments in free zones that have special data-protection legislation (PDF pages 6-7).
+      The scenario's portal operator is not placed in a free zone.
 
   - id: uae.pdpl.art9-1
     title: Reporting a personal data breach to the Bureau
@@ -65,10 +67,11 @@ clauses:
     status: draft
     binding: true
     notes: >-
-      A recourse right against automated decisions such as the account lockout. Its
-      applicability here is uncertain because of the exclusions in uae.pdpl.art2-2. Qualified
-      by Art 18(2) (PDF pages 21-22): the Data Subject "may not object" in listed cases
-      (contract, automated processing required under other legislation, prior consent). Art
-      18(4) (PDF page 22) has the Controller "include the human element in reviewing automated
-      processing decisions at the request of the Data Subject"; a candidate owner for lockout
-      review if the PDPL applies.
+      Binding scope: federal law, applying to the processing described in Art 2(1), subject to the
+      Art 2(2) exclusions. The PDF is an English version; the Arabic text was not checked. A
+      recourse right against automated decisions such as the account lockout. Its applicability
+      here is uncertain because of the exclusions in uae.pdpl.art2-2. Qualified by Art 18(2) (PDF
+      pages 21-22): the Data Subject "may not object" in listed cases (contract, automated
+      processing required under other legislation, prior consent). Art 18(4) (PDF page 22) has the
+      Controller "include the human element in reviewing automated processing decisions at the
+      request of the Data Subject"; a candidate owner for lockout review if the PDPL applies.
