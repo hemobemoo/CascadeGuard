@@ -16,8 +16,8 @@
     },
     "playwright": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
+      "command": "cmd",
+      "args": ["/c", "npx","-y", "@playwright/mcp@latest"]
     },
     "firecrawl": {
       "type": "http",
@@ -28,8 +28,10 @@
     },
     "phoenix": {
       "type": "stdio",
-      "command": "npx",
+      "command": "cmd",
       "args": [
+        "/c",
+        "npx",
         "-y",
         "@arizeai/phoenix-mcp@latest",
         "--baseUrl",

@@ -17,6 +17,12 @@ __pycache__/
 build/
 dist/
 
+# Generated runtime data (DuckDB, LLM cache, exports)
+data/
+
+# Phoenix tracing
+.phoenix/
+
 # Tooling / OS noise
 .DS_Store
 Thumbs.db
