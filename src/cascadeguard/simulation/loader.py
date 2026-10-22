@@ -31,9 +31,18 @@ def load_scenario(
         unknown_roles = sorted(({*event.recipients} | {f.holder for f in event.facts}) - role_ids)
         if unknown_roles:
             raise ScenarioLoadError(f"event {event.id}: unknown roles {unknown_roles}")
-        unknown_clauses = sorted(set(event.relevant_clauses) - known_clause_ids)
+        cited = {*event.relevant_clauses, *event.opens_obligations}
+        unknown_clauses = sorted(cited - known_clause_ids)
         if unknown_clauses:
             raise ScenarioLoadError(f"event {event.id}: unknown clauses {unknown_clauses}")
+
+    action_ids = {a.id for a in roles.actions}
+    for goal in scenario.recovery_goals:
+        unknown_actions = sorted(set(goal.achieved_by) - action_ids)
+        if unknown_actions:
+            raise ScenarioLoadError(f"goal {goal.id}: unknown actions {unknown_actions}")
+        if goal.known_by is not None and goal.known_by.role not in role_ids:
+            raise ScenarioLoadError(f"goal {goal.id}: unknown role {goal.known_by.role}")
 
     boundaries = {r.id: set(r.boundary.visible_categories) for r in roles.roles}
     for event in scenario.events:

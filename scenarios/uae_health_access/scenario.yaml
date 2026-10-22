@@ -23,6 +23,7 @@ events:
       authentication SMS as low-priority bulk traffic. One-time passwords arrive late or not
       at all.
     recipients: [telecom_operator]
+    opens_obligations: [illus.telecom.incident-report]
     facts:
       - id: sms_latency_spike
         statement: >-
@@ -55,6 +56,7 @@ events:
       classifies the retry pattern as possible credential stuffing, automatically locks the
       accounts and raises a suspicious-access alert.
     recipients: [health_service_operator]
+    opens_obligations: [dha.pp11.4-18-2, dha.pp11.4-18-4]
     facts:
       - id: otp_failure_spike
         statement: >-
@@ -195,3 +197,21 @@ events:
     recipients: []
     review_points:
       - Which recovery blockers remain, and which failure category each belongs to.
+
+# What the response needs. Diagnosis explains every unmet critical goal (engine/diagnosis.py).
+recovery_goals:
+  - id: patient_access_restored
+    description: >-
+      Locked-out patients can use the portal again, or have a working alternative channel.
+    critical: true
+    achieved_by: [reverse_automated_lockouts, activate_fallback_channel]
+  - id: alert_cause_known_to_health
+    description: The health operator knows whether the authentication failure is network-side.
+    critical: true
+    known_by:
+      role: health_service_operator
+      data_category: network_incident_status
+  - id: network_incident_reported
+    description: The telecom regulator receives a report of the network incident.
+    critical: false
+    achieved_by: [report_to_telecom_regulator]

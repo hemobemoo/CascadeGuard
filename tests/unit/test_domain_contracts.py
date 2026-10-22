@@ -34,10 +34,10 @@ def test_agent_decision_is_immutable() -> None:
     decision = AgentDecision(
         role_id="telecom_operator",
         at=datetime(2026, 3, 2, 4, 0, tzinfo=UTC),
-        proposed_actions=[],
+        proposed_actions=(),
         rationale="monitoring",
-        citations=[],
-        uncertainty=[],
+        citations=(),
+        uncertainty=(),
     )
     with pytest.raises(ValidationError):
         decision.role_id = "telecom_regulator"  # type: ignore[misc]

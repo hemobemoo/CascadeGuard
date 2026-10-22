@@ -16,6 +16,12 @@
 #   aggregate_access_impact   counts of affected/locked accounts and affected groups, no identities
 #   public_channel_status     availability of alternative access channels
 #   regulatory_reports        incident reports and notifications submitted to oversight roles
+#
+# Action preconditions the engine checks (Phase 2):
+#   requires_authority    a loaded obligation/permission clause must name the role (or "any");
+#                         a clause with binding: unknown only makes authority uncertain
+#   requires_information  the role must have seen a fact in each listed category
+#   requires_prior        the role must already have had each listed action accepted
 
 actions:
   - id: investigate_network_fault
@@ -36,8 +42,13 @@ actions:
     description: Put automated account locks under human review.
   - id: reverse_automated_lockouts
     description: Unlock accounts locked by the fraud-risk model after review.
+    requires_authority: true
+    # Disputing the alert needs evidence that the failure is network-side.
+    requires_information: [network_incident_status]
+    requires_prior: [review_automated_lockouts]
   - id: activate_fallback_channel
     description: Open an alternative access or authentication channel for affected patients.
+    requires_authority: true
   - id: assess_access_impact
     description: Assess which user groups are affected and how, from aggregate data.
   - id: recommend_measure
@@ -46,6 +57,7 @@ actions:
     description: Ask the competent role for a determination (e.g. whether a data share is permitted).
   - id: issue_determination
     description: Issue a determination within the role's own remit.
+    requires_authority: true
   - id: provide_policy_analysis
     description: Give cited analysis of applicable provisions, uncertainty and suspected gaps.
   - id: monitor

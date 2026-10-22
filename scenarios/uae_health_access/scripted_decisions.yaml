@@ -1,0 +1,201 @@
+# Decisions used by ScriptedAgent (no LLM). The baseline run: each role follows its own process.
+# Citations use real clause ids. The engine accepts a decision only if every cited clause is
+# loaded (reviewed or illustrative); otherwise the whole decision is rejected and recorded as a
+# finding. Hypothetical scenario; all data synthetic.
+scenario: uae_health_access
+decisions:
+  - role: telecom_operator
+    at_minute: 0
+    actions:
+      - action_type: investigate_network_fault
+    rationale: >-
+      SMS latency rose sharply 20 minutes after a traffic-model update; investigate the ML
+      pipeline, not only congestion.
+    citations:
+      - clause_id: itu.y3172.req-ml-mng-003
+        relevance: Monitoring the effect of ML on network operations.
+    uncertainty:
+      - Whether the model update caused the latency.
+
+  - role: health_service_operator
+    at_minute: 15
+    actions:
+      - action_type: raise_security_incident
+    rationale: >-
+      Investigate the fraud model's alert as a suspected incident, not as a proven breach.
+    citations:
+      - clause_id: dha.pp11.4-18-2
+        relevance: Breaches/incidents are investigated from discovery until closure.
+    uncertainty:
+      - Whether any unauthorised access happened.
+
+  - role: telecom_operator
+    at_minute: 30
+    actions:
+      - action_type: share_incident_status
+        target: health_service_operator
+        parameters: {fact: otp_delivery_status}
+    rationale: >-
+      Tell the health portal that OTP delivery is degraded network-side. The status holds no
+      personal data.
+    citations:
+      - clause_id: nist.ai-rmf.manage-4-3
+        relevance: Incident communication to relevant AI actors (non-binding precedent).
+    uncertainty:
+      - Root cause not yet confirmed.
+
+  - role: health_service_operator
+    at_minute: 30
+    actions:
+      - action_type: request_information
+        target: telecom_operator
+        parameters: {data_category: network_incident_status}
+      - action_type: share_incident_status
+        target: telecom_operator
+        parameters: {fact: locked_account_records}
+    rationale: >-
+      Ask the telecom operator whether there is a network problem, and send the affected mobile
+      numbers so it can check SMS delivery.
+    citations:
+      - clause_id: dha.pp11.4-18-2
+        relevance: The investigation needs the cause of the failures.
+      - clause_id: uae.fl2-2019.art16
+        relevance: Confidentiality of patient information when it is circulated.
+    uncertainty:
+      - Whether sending mobile numbers is a permitted circulation.
+
+  - role: telecom_operator
+    at_minute: 45
+    actions:
+      - action_type: report_to_telecom_regulator
+    rationale: A significant degradation of a public service must be reported to the regulator.
+    citations:
+      - clause_id: illus.telecom.incident-report
+        relevance: Operator's reporting duty (illustrative scenario rule).
+    uncertainty:
+      - Root cause still under investigation.
+
+  - role: telecom_regulator
+    at_minute: 45
+    actions:
+      - action_type: request_information
+        target: telecom_operator
+        parameters: {data_category: network_incident_status}
+    rationale: Ask the operator for the incident status it reported.
+    citations:
+      - clause_id: illus.telecom.regulator-information-request
+        relevance: Regulator's power to request incident information (illustrative scenario rule).
+    uncertainty: []
+
+  - role: health_service_operator
+    at_minute: 45
+    actions:
+      - action_type: notify_health_data_oversight
+      - action_type: review_automated_lockouts
+    rationale: >-
+      Report the suspected incident, and put the automated locks under human review because the
+      alert may be a false positive.
+    citations:
+      - clause_id: dha.pp11.4-18-4
+        relevance: Breaches/incidents are reported within a designated period.
+      - clause_id: uae.ai-charter.human-oversight
+        relevance: Human oversight to correct errors of AI systems (non-binding).
+    uncertainty:
+      - The reporting period cannot be determined from the cited text.
+
+  - role: policy_legal_adviser
+    at_minute: 45
+    actions:
+      - action_type: provide_policy_analysis
+    rationale: >-
+      Working reading: Federal Law No. 2 of 2019 governs health data in this scenario, and the
+      PDPL is not assumed to apply. Both are pending expert review.
+    citations:
+      - clause_id: uae.fl2-2019.art2
+        relevance: Scope of the ICT-in-health law.
+      - clause_id: uae.pdpl.art2-2
+        relevance: PDPL exclusion for health data with its own legislation.
+    uncertainty:
+      - Applicability is a legal question for expert review.
+
+  - role: telecom_operator
+    at_minute: 60
+    actions:
+      - action_type: share_incident_status
+        target: telecom_regulator
+        parameters: {fact: otp_delivery_status}
+    rationale: Answer the regulator's request with the minimal incident status.
+    citations:
+      - clause_id: illus.telecom.regulator-information-request
+        relevance: The regulator requested this information.
+    uncertainty: []
+
+  - role: health_service_operator
+    at_minute: 60
+    actions:
+      - action_type: reverse_automated_lockouts
+      - action_type: activate_fallback_channel
+    rationale: >-
+      3,950 patients are still locked out. Unlock reviewed accounts and open the call centre as
+      a fallback channel.
+    citations:
+      - clause_id: uae.ai-charter.human-oversight
+        relevance: Human oversight to correct AI errors (non-binding).
+      - clause_id: dha.pp11.4-18-1
+        relevance: Business continuity and recovery plans.
+    uncertainty:
+      - The alert has not been disproven.
+      - Whether the call centre may act as an authentication fallback.
+
+  - role: health_data_oversight
+    at_minute: 60
+    actions:
+      - action_type: issue_determination
+    rationale: >-
+      Determination within the health-data remit: no identifiable patient records may be sent to
+      the telecom operator for this incident.
+    citations:
+      - clause_id: uae.fl2-2019.art6
+        relevance: Authority to set controls on exchanging health data.
+      - clause_id: uae.fl2-2019.art4
+        relevance: Health data may not circulate outside permitted cases.
+    uncertainty:
+      - Whether a minimal status share in the other direction is permitted is not decided here.
+
+  - role: public_access_inclusion
+    at_minute: 60
+    actions:
+      - action_type: assess_access_impact
+      - action_type: recommend_measure
+        target: health_service_operator
+        parameters: {measure: activate_fallback_channel}
+    rationale: >-
+      SMS-only users and users over 65 are most affected. Recommend an alternative access channel.
+    citations:
+      - clause_id: mocai.ethics.fallback-plan
+        relevance: AI systems should enable a fallback plan (non-binding guidance).
+    uncertainty: []
+
+  - role: policy_legal_adviser
+    at_minute: 60
+    actions:
+      - action_type: provide_policy_analysis
+    rationale: Compare the UAE reporting period with the GDPR's explicit notification deadline.
+    citations:
+      - clause_id: eu.gdpr.art33-1
+        relevance: Foreign precedent with an explicit deadline.
+    uncertainty:
+      - The GDPR is not binding in the UAE.
+
+  - role: telecom_regulator
+    at_minute: 75
+    actions:
+      - action_type: share_incident_status
+        target: health_service_operator
+        parameters: {fact: otp_delivery_status}
+    rationale: Pass the network-side status on to the health operator.
+    citations:
+      - clause_id: illus.telecom.regulator-information-request
+        relevance: The regulator holds the status after its request.
+    uncertainty:
+      - Whether the regulator may pass telecom information to the health sector.
