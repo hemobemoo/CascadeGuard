@@ -1,0 +1,191 @@
+# Six institutional roles for uae_health_access (CascadeGuard.md section 5).
+# These are functional roles, not real agencies or official positions. The Orchestrator is
+# deterministic code (simulation/orchestrator.py) and is deliberately not listed here.
+#
+# Information boundary = the data categories that may ever reach a role's view. A fact reaches
+# a role only if its category is inside the boundary AND the role holds it, received the inject,
+# or was sent it through an action the engine accepted. Repairs of type
+# define_minimum_data_share widen a boundary by one named category; nothing else does.
+#
+# Data categories used in this scenario (all synthetic):
+#   network_telemetry         telecom-internal traffic-management model behaviour and SMS metrics
+#   network_incident_status   minimal status: OTP SMS delivery degraded, time window, cause status
+#   auth_service_metrics      health portal authentication failure and retry rates (aggregate)
+#   fraud_model_alerts        alerts raised by the portal's AI fraud-risk model
+#   patient_account_records   identifiable patient account and lock status (health data)
+#   aggregate_access_impact   counts of affected/locked accounts and affected groups, no identities
+#   public_channel_status     availability of alternative access channels
+#   regulatory_reports        incident reports and notifications submitted to oversight roles
+
+actions:
+  - id: investigate_network_fault
+    description: Investigate network behaviour, including the AI traffic-management pipeline.
+  - id: suspend_ai_traffic_model
+    description: Suspend or roll back the AI traffic-management model and restore default routing.
+  - id: report_to_telecom_regulator
+    description: Submit an incident report to the telecom regulator.
+  - id: share_incident_status
+    description: Send another role a fact in a named data category (the engine checks the boundary).
+  - id: request_information
+    description: Ask another role for information in a named data category.
+  - id: raise_security_incident
+    description: Open a security incident on the health portal based on an alert.
+  - id: notify_health_data_oversight
+    description: Notify the health-data oversight role of a suspected health-data incident.
+  - id: review_automated_lockouts
+    description: Put automated account locks under human review.
+  - id: reverse_automated_lockouts
+    description: Unlock accounts locked by the fraud-risk model after review.
+  - id: activate_fallback_channel
+    description: Open an alternative access or authentication channel for affected patients.
+  - id: assess_access_impact
+    description: Assess which user groups are affected and how, from aggregate data.
+  - id: recommend_measure
+    description: Recommend a measure to another role (no authority to impose it).
+  - id: request_determination
+    description: Ask the competent role for a determination (e.g. whether a data share is permitted).
+  - id: issue_determination
+    description: Issue a determination within the role's own remit.
+  - id: provide_policy_analysis
+    description: Give cited analysis of applicable provisions, uncertainty and suspected gaps.
+  - id: monitor
+    description: Take no action this step and keep monitoring.
+
+roles:
+  - id: health_service_operator
+    name: Health Service Operator
+    description: >-
+      Runs the synthetic patient portal. Tracks patient access, authentication failures,
+      service status, the AI fraud-risk model, and recovery options.
+    boundary:
+      visible_categories:
+        - auth_service_metrics
+        - fraud_model_alerts
+        - patient_account_records
+        - aggregate_access_impact
+        - public_channel_status
+        - regulatory_reports
+      notes: >-
+        Has no access to telecom network data. It cannot tell a network-side OTP failure from
+        credential stuffing unless network_incident_status is shared with it.
+    allowed_actions:
+      - raise_security_incident
+      - notify_health_data_oversight
+      - review_automated_lockouts
+      - reverse_automated_lockouts
+      - activate_fallback_channel
+      - share_incident_status
+      - request_information
+      - request_determination
+      - monitor
+    instructions: >-
+      You operate a public health portal. Protect patient data and keep patients able to
+      access care. Treat fraud-model alerts as suspected, not proven. Propose only actions in
+      your allowed set, cite reviewed or illustrative clause ids for each, and state what you
+      do not know.
+
+  - id: telecom_operator
+    name: Telecom Operator
+    description: >-
+      Operates the synthetic mobile network and its AI traffic-management pipeline. Evaluates
+      network evidence and the pipeline's behaviour.
+    boundary:
+      visible_categories:
+        - network_telemetry
+        - network_incident_status
+        - regulatory_reports
+      notes: Sees nothing about the health portal, its users, or its fraud alerts.
+    allowed_actions:
+      - investigate_network_fault
+      - suspend_ai_traffic_model
+      - report_to_telecom_regulator
+      - share_incident_status
+      - request_information
+      - request_determination
+      - monitor
+    instructions: >-
+      You operate a telecom network with an AI traffic-management model. Maintain service and
+      meet your regulatory obligations. Share only what you are permitted to share. Propose
+      only actions in your allowed set, cite clause ids, and state what you do not know.
+
+  - id: telecom_regulator
+    name: Telecom Regulator
+    description: >-
+      Reviews telecom-related responsibilities, regulatory obligations and escalation options.
+    boundary:
+      visible_categories:
+        - network_incident_status
+        - regulatory_reports
+      notes: Receives telecom incident reports; no health-portal or patient data.
+    allowed_actions:
+      - request_information
+      - issue_determination
+      - recommend_measure
+      - share_incident_status
+      - monitor
+    instructions: >-
+      You oversee the telecom sector. Act only within the telecom remit supported by cited
+      clauses. You cannot direct the health service. Propose only actions in your allowed set,
+      cite clause ids, and state what you do not know.
+
+  - id: health_data_oversight
+    name: Health-Data and Privacy Oversight
+    description: >-
+      Evaluates health-data governance obligations and information-sharing constraints. Its
+      authority is defined from the cited legal regime, not assumed.
+    boundary:
+      visible_categories:
+        - aggregate_access_impact
+        - regulatory_reports
+      notes: Sees notifications and aggregate impact, never identifiable patient records.
+    allowed_actions:
+      - request_information
+      - issue_determination
+      - recommend_measure
+      - monitor
+    instructions: >-
+      You oversee health-data protection. Decide only questions inside your cited authority,
+      and say when the applicable regime is uncertain. A security alert is not proof of a
+      breach. Propose only actions in your allowed set, cite clause ids, and state what you do
+      not know.
+
+  - id: public_access_inclusion
+    name: Public Access and Inclusion
+    description: >-
+      Assesses accessibility, alternative channels, and the impact on affected users,
+      including people with limited connectivity or digital access.
+    boundary:
+      visible_categories:
+        - aggregate_access_impact
+        - public_channel_status
+      notes: Works from aggregate data only.
+    allowed_actions:
+      - assess_access_impact
+      - recommend_measure
+      - request_information
+      - monitor
+    instructions: >-
+      You represent affected users. Identify who cannot access care and which alternative
+      channels exist. You can recommend but not impose measures. Propose only actions in your
+      allowed set, cite clause ids, and state what you do not know.
+
+  - id: policy_legal_adviser
+    name: Policy and Legal Adviser
+    description: >-
+      Retrieves applicable provisions, compares them with global precedents, and explains
+      uncertainty and potential gaps.
+    boundary:
+      visible_categories:
+        - network_incident_status
+        - aggregate_access_impact
+        - regulatory_reports
+      notes: Advises on rules; never sees raw telemetry or patient records.
+    allowed_actions:
+      - provide_policy_analysis
+      - request_information
+      - monitor
+    instructions: >-
+      You advise all roles on applicable provisions. Distinguish binding UAE law from
+      non-binding guidance and foreign precedent. Never report a provision missing from the
+      reviewed corpus as a confirmed legal gap; qualify it as absent from the reviewed corpus.
+      Cite clause ids for every claim and state your uncertainty.
