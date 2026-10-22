@@ -182,7 +182,9 @@ decisions:
     at_minute: 60
     actions:
       - action_type: provide_policy_analysis
-    rationale: Compare the UAE reporting period with the GDPR's explicit notification deadline.
+    rationale: >-
+      Compare the undetermined health-data reporting period with the GDPR's explicit
+      notification deadline (foreign precedent).
     citations:
       - clause_id: eu.gdpr.art33-1
         relevance: Foreign precedent with an explicit deadline.

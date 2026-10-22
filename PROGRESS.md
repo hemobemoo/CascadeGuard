@@ -4,7 +4,8 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 2 — Engine with scripted agents: built on `phase-2-engine`, review loop next.**
+**Phase 2 — Engine with scripted agents: built on `phase-2-engine`, review loop done (3 rounds),
+PR open, human gates open.**
 Phase 1 (PR #2) stays open until the human has reviewed the core clause set, then merges.
 Phase 2 runs against synthetic fixture clauses (`tests/fixtures/clauses`) while that review is
 pending.
@@ -112,21 +113,6 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   Intelligence, Digital Economy and Remote Work Applications Office", date 2024-07, binding false.
   The other parts and their pages are listed in `docs/policy-inventory.md`.
 
-## Approved gate-5 exceptions
-
-- **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
-  copied to `C:\AI for Good Lab Hackathon UAE\CascadeGuard-book-backup\` (with a full
-  pre-purge `git bundle` of all refs). History was rewritten with
-  `uvx git-filter-repo --force --invert-paths --path-glob "*Abhivardhan*" --path-glob "*Oxford Handbook*"`
-  (`--force` because this is a working clone, not a fresh one). `phase-1-domain-scenario` already
-  sat on the rewritten `main` (no rebase needed); tag `phase-0` points at the rewritten Phase 0
-  merge `51191ce`; branch `phase-0-tooling` deleted locally and on GitHub; `main`,
-  `phase-1-domain-scenario` and `phase-0` force-pushed. `git log --all -- "*Abhivardhan*" "*Oxford*"`
-  returns nothing; PR #2 head is the rewritten `d49da75`. The books stay on disk in
-  `policies/sources/` (ignored). **Residual:** GitHub keeps the read-only ref `refs/pull/1/head`
-  at the old commit `9f67523`, whose ancestors still contain the books; only GitHub Support can
-  remove it. Other clones made before 2026-10-22 must be re-cloned.
-
 - **Phase 2 engine decisions (2026-10-23):** authority comes from an obligation or permission
   clause that is binding, or from an illustrative scenario rule (`binding: false`).
   `binding: unknown` gives only "authority uncertain"; non-binding guidance never gives
@@ -134,6 +120,14 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   `unknown_citation`, both findings). All roles decide on the same snapshot; the engine applies
   decisions in `roles.yaml` order. Mandate overlap is not detected yet; it needs reviewed
   DHA/PDPL clauses.
+- **Phase 2 review round 3 (2026-10-23, last round):** phase-auditor FAIL only on question 7o
+  (no code change); test-breaker FAIL (BLOCKERs: inject text and decision points still told each
+  recipient about the other organisation; a misspelt request category dodged a prohibition;
+  MAJOR: clause data categories unchecked). Fixed after the round, not re-reviewed: decision
+  points name one role and go only to it; inject descriptions hold only what all recipients may
+  know; request and clause categories must be scenario categories (`unknown_data_category`);
+  empty impostor decisions are findings; the summary lists every fact delivery and goal minute.
+  Each fix has a test, mutation-checked against the old text.
 - **Phase 2 review round 2 fixes (2026-10-23):** decisions re-validated from plain data
   (constructed objects and subclassed containers rejected or normalised); a share delivers
   exactly the fact it checked; no fact is released before its inject; every bad citation is a
@@ -159,6 +153,21 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   waits for the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+
+## Approved gate-5 exceptions
+
+- **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
+  copied to `C:\AI for Good Lab Hackathon UAE\CascadeGuard-book-backup\` (with a full
+  pre-purge `git bundle` of all refs). History was rewritten with
+  `uvx git-filter-repo --force --invert-paths --path-glob "*Abhivardhan*" --path-glob "*Oxford Handbook*"`
+  (`--force` because this is a working clone, not a fresh one). `phase-1-domain-scenario` already
+  sat on the rewritten `main` (no rebase needed); tag `phase-0` points at the rewritten Phase 0
+  merge `51191ce`; branch `phase-0-tooling` deleted locally and on GitHub; `main`,
+  `phase-1-domain-scenario` and `phase-0` force-pushed. `git log --all -- "*Abhivardhan*" "*Oxford*"`
+  returns nothing; PR #2 head is the rewritten `d49da75`. The books stay on disk in
+  `policies/sources/` (ignored). **Residual:** GitHub keeps the read-only ref `refs/pull/1/head`
+  at the old commit `9f67523`, whose ancestors still contain the books; only GitHub Support can
+  remove it. Other clones made before 2026-10-22 must be re-cloned.
 
 ## Minimal core set for Phase 2
 
@@ -259,6 +268,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
    u. (Phase 2 evidence-auditor) The DHA fixtures are illustrative with `binding: unknown`, which
       the methodology does not allow in `policies/reviewed` (a test enforces `binding: false`
       there). Accept this fixture-only exception so fixtures mirror "authority uncertain"?
+   v. (Phase 2 test-breaker, round 3) Authority ignores a permission's `condition`, `counterpart`
+      and `data_category` (e.g. `uae.fl2-2019.art6` lets health-data oversight issue any
+      determination). Should a conditional permission give only "authority uncertain" until
+      conditions are modelled?
    l. GitHub residual from the book purge: the read-only ref `refs/pull/1/head` still points at
       the pre-purge commit `9f67523`, whose history contains both books (they stay downloadable
       through PR #1). Only GitHub Support can remove it. The human decides whether to contact
@@ -282,9 +295,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Next step
 
-1. Run the Phase 2 review loop on `phase-2-engine` (phase-auditor, test-breaker, and
-   evidence-auditor for the diagnosis and report wording). Fix BLOCKER and MAJOR findings, then
-   open the Phase 2 PR (base `phase-1-domain-scenario` until PR #2 merges).
-2. In parallel, the human reviews clauses (core set first), answers question 7 and confirms
-   194103a. Merge PR #2 once the core set is reviewed, then add the real-corpus golden
-   `scenarios/uae_health_access/expected_baseline.yaml`.
+1. Phase 2 PR is open (base `phase-1-domain-scenario`). It must not merge while gates are open:
+   7o (fixture-only golden), 194103a confirmation, and the Phase 2 questions 7n, 7q-7v.
+2. The human reviews clauses (core set first) and answers question 7. Merge PR #2 once the core
+   set is reviewed; then retarget the Phase 2 PR to `main`, add the real-corpus golden
+   `scenarios/uae_health_access/expected_baseline.yaml`, and re-run the Phase 2 reviewers.
+3. Phase 3 (repair and replay) starts after the Phase 2 PR merges.

@@ -1,6 +1,10 @@
 # uae_health_access: AI-driven healthcare access disruption (CascadeGuard.md section 3).
 # Every event, figure and system here is a hypothetical scenario inject. No real UAE system,
 # organisation or person is described. All patient data is synthetic.
+#
+# Information rule: an inject's title and description go to every recipient, so they hold only
+# what all recipients may know. Organisation-specific information is in facts (filtered by each
+# role's boundary). Each decision point names the one role it is put to.
 id: uae_health_access
 title: AI-driven healthcare access disruption
 summary: >-
@@ -40,7 +44,8 @@ events:
         holder: telecom_operator
         certainty: confirmed
     decision_points:
-      - Does the telecom operator investigate the AI pipeline or treat this as ordinary congestion?
+      - role: telecom_operator
+        question: Do you investigate the AI pipeline or treat this as ordinary congestion?
     relevant_clauses:
       - itu.y3172.mlfo
       - itu.y3172.req-ml-mng-003
@@ -78,7 +83,8 @@ events:
         holder: health_service_operator
         certainty: confirmed
     decision_points:
-      - Is the alert treated as a suspected incident to investigate, or as an established breach?
+      - role: health_service_operator
+        question: Is the alert a suspected incident to investigate, or an established breach?
     relevant_clauses:
       - dha.pp11.4-18-2
       - uae.fl2-2019.art4
@@ -90,9 +96,7 @@ events:
     at_minute: 30
     title: The evidence is incomplete
     description: >-
-      The telecom operator has partial evidence of a traffic-management problem. The health
-      service operator sees authentication failures and a security alert but not their
-      common cause.
+      Evidence about the failure is incomplete. No common cause has been confirmed.
     recipients: [telecom_operator, health_service_operator]
     facts:
       - id: network_fault_partial
@@ -117,8 +121,10 @@ events:
         holder: health_service_operator
         certainty: unknown
     decision_points:
-      - Can the telecom operator share the minimal OTP-delivery status with the health operator?
-      - Can the health operator share affected mobile numbers with the telecom operator?
+      - role: telecom_operator
+        question: Can you share the minimal OTP-delivery status with the health operator?
+      - role: health_service_operator
+        question: Can you share the affected users' contact details with the telecom operator?
     relevant_clauses:
       - uae.fl2-2019.art16
       - uae.fl2-2019.art6
@@ -130,8 +136,8 @@ events:
     at_minute: 45
     title: Institutional responsibilities diverge
     description: >-
-      Each role must decide what to report, what may be shared, who may authorise recovery,
-      and whether the automated locks should be reviewed or reversed.
+      Each role must decide what to report, what may be shared, and who may authorise recovery
+      within its own remit.
     recipients:
       - health_service_operator
       - telecom_operator
@@ -140,9 +146,12 @@ events:
       - public_access_inclusion
       - policy_legal_adviser
     decision_points:
-      - Does the telecom operator report to the telecom regulator?
-      - Does the health operator notify the health-data oversight role of a suspected incident?
-      - Who owns reviewing and reversing the automated lockouts?
+      - role: telecom_operator
+        question: Do you report the network incident to the telecom regulator?
+      - role: health_service_operator
+        question: Do you notify the health-data oversight role of a suspected incident?
+      - role: health_service_operator
+        question: Who owns reviewing and reversing the automated lockouts?
     relevant_clauses:
       - illus.telecom.incident-report
       - illus.telecom.regulator-information-request
@@ -178,7 +187,10 @@ events:
         holder: health_service_operator
         certainty: confirmed
     decision_points:
-      - Is a fallback access channel activated, and on whose authority?
+      - role: health_service_operator
+        question: Is a fallback access channel activated, and on whose authority?
+      - role: public_access_inclusion
+        question: Which affected groups need an alternative channel?
     relevant_clauses:
       - dha.pp11.4-18-1
       - mocai.ethics.fallback-plan

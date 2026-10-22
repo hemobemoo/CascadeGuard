@@ -17,9 +17,9 @@ For each inject in time order:
    uncertain (its missed deadline is reported with the "uncertain" qualification).
 2. Every role gets a frozen `RoleView` (`simulation/boundaries.py`). It holds tuples and deep
    copies of facts inside the role's boundary, and the role's own accepted actions. Recipients of
-   the inject also get its title, description, decision points and relevant loaded clauses (with
-   status labels). Everyone else gets only "no new inject", because inject text describes
-   events in other organisations. Views are built before any decision is applied.
+   the inject also get its title and description (which hold only what all recipients may know)
+   and its relevant loaded clauses with status labels; each decision point goes only to the role
+   it names. Everyone else gets only "no new inject". Views are built before any decision is applied.
 3. Each agent returns an `AgentDecision`. The engine processes them in `roles.yaml` order.
 
 Then the engine closes the run, `engine/graph.py` builds the dependency graph, and
@@ -36,12 +36,13 @@ Then the engine closes the run, `engine/graph.py` builds the dependency graph, a
   citation of a clause the engine did not load rejects the whole decision: `draft_citation` if
   the clause exists as a draft, otherwise `unknown_citation`. A wrong role or time is
   `wrong_role_or_time`. All are findings, logged under the role the orchestrator asked.
-- **Action level.** The action must be in the role's allowed set. `share_incident_status` needs
-  a fact the sender knows. It is rejected if the category is outside the recipient's boundary
+- **Action level.** The action must be in the role's allowed set. `share_incident_status` needs a
+  fact the sender knows. It is rejected if the category is outside the recipient's boundary
   (`outside_recipient_boundary`), and a role cannot target itself (`self_target`).
-  `request_information` needs a `data_category`. A request is accepted even for a category
-  outside the requester's own boundary: asking is evidence of the need, and the boundary is
-  enforced when anything is delivered.
+  `request_information` needs a `data_category` that is a scenario category
+  (`unknown_data_category` otherwise; clause categories are checked the same way at load). A
+  request is accepted even for a category outside the requester's own boundary: asking is evidence
+  of the need, and the boundary is enforced when anything is delivered.
 - **Restrictions (`restricted_by_clause`), on every action.** A prohibition applies to its
   action; if it names a data category, it applies when the action touches that category, or when
   the action names none (conservative). A data safeguard restricts its action for its category.

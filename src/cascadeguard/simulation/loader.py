@@ -33,6 +33,9 @@ def load_scenario(
         unknown_roles = sorted(({*event.recipients} | {f.holder for f in event.facts}) - role_ids)
         if unknown_roles:
             raise ScenarioLoadError(f"event {event.id}: unknown roles {unknown_roles}")
+        stray = sorted({d.role for d in event.decision_points} - set(event.recipients))
+        if stray:
+            raise ScenarioLoadError(f"event {event.id}: decision points for non-recipients {stray}")
         cited = {*event.relevant_clauses, *event.opens_obligations}
         unknown_clauses = sorted(cited - known_clause_ids)
         if unknown_clauses:
@@ -57,20 +60,26 @@ def load_scenario(
 
 
 def check_clause_references(clauses: Iterable[PolicyClause], roles: RoleSet) -> None:
-    """Every normalized actor/counterpart must be a role (or "any"), every action in the catalogue.
+    """Normalized actors/counterparts must be roles (or "any"), actions must be in the catalogue,
+    and data categories must be categories some role may see.
 
     A typo would otherwise grant nothing, or produce a false orphan duty, silently.
     """
     role_ids = {r.id for r in roles.roles} | {"any"}
     action_ids = {a.id for a in roles.actions}
+    categories = roles.known_categories()
     for clause in clauses:
         n = clause.normalized
         if n is None:
             continue
-        unknown = sorted({n.actor, n.counterpart or "any"} - role_ids | ({n.action} - action_ids))
+        unknown = sorted(
+            {n.actor, n.counterpart or "any"} - role_ids
+            | ({n.action} - action_ids)
+            | ({n.data_category} - categories if n.data_category is not None else set())
+        )
         if unknown:
             raise ScenarioLoadError(
-                f"{clause.id}: normalized names unknown roles/actions {unknown}"
+                f"{clause.id}: normalized names unknown roles/actions/categories {unknown}"
             )
 
 
