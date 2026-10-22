@@ -6,7 +6,8 @@ failure-testing system for AI-dependent public services.
 Before writing any code, read, in this order:
 
 1. `CascadeGuard.md` — the authoritative project concept.
-2. `AGENTS.md` — durable rules: architecture boundary, determinism, evidence, tooling, working rules.
+2. `AGENTS.md` — durable rules: architecture boundary, repair grammar and ranking, determinism,
+   evidence, git workflow, tooling, working rules.
 3. `cascadeguard_project_structure.txt` — target layout and the phase in which each part appears.
 4. `REFERENCE_LINKS.md` — which external tools to use, and which to leave alone.
 
@@ -31,7 +32,8 @@ For the `uae_health_access` scenario only:
 7. Replay the identical incident with the selected repair.
 8. Display and export the baseline-versus-replay comparison.
 
-Do not implement other countries, sectors, agents, or policy sources yet.
+Do not implement other countries, sectors, agents, policy sources, or the three controlled
+variants yet.
 
 ## Key decision: deterministic first, LLM last
 
@@ -70,12 +72,12 @@ class AgentDecision(BaseModel):
 
 
 class RepairOperationType(StrEnum):
-    # Use the grammar defined in CascadeGuard.md if it exists; otherwise this default set.
-    ADD_NOTIFICATION_OBLIGATION = "add_notification_obligation"
-    ADD_SCOPED_DATA_SHARING = "add_scoped_data_sharing"
-    ADD_FALLBACK_PATHWAY = "add_fallback_pathway"
-    ADD_ESCALATION_DEADLINE = "add_escalation_deadline"
-    REQUIRE_HUMAN_REVIEW = "require_human_review"
+    # The fixed repair grammar from CascadeGuard.md §6. Do not add types without asking.
+    ASSIGN_OWNER = "assign_owner"
+    ADD_ESCALATION_TRIGGER = "add_escalation_trigger"
+    DEFINE_MINIMUM_DATA_SHARE = "define_minimum_data_share"
+    ADD_FALLBACK_CHANNEL = "add_fallback_channel"
+    DESIGNATE_DECISION_REQUESTER = "designate_decision_requester"
 
 
 class RepairProposal(BaseModel):
@@ -85,18 +87,24 @@ class RepairProposal(BaseModel):
     parameters: dict[str, str] = Field(default_factory=dict)
     rationale: str
     citations: list[Citation]
+    requires_authorization: bool = False  # True if it creates a permission with no reviewed basis
 ```
 
-"Smallest safe repair" ranking (engine, deterministic): fewest roles and clauses touched,
-then no new prohibition or safeguard violated, then largest reduction in the diagnosed failure.
+"Smallest safe repair" ranking (engine, deterministic, lexicographic, per `CascadeGuard.md` §6
+and `AGENTS.md`): first discard any repair that permits a prohibited action or violates a
+safeguard; then most critical blockers removed; then fewest repair edits; then tie-breaks
+(no authorization needed first, fewest roles and clauses touched, `repair_id`).
 
 ## Phases — stop and report after each one
 
 Each report: what was built, how to run it, test results, open questions, and what the next
-phase will do. Wait for approval before continuing.
+phase will do. Deliver it as the PR description (see the git workflow in `AGENTS.md`).
+Wait for approval before continuing.
 
-**Phase 0 — Tooling.** `uv` project on Python 3.12, Ruff, Pyright, pytest, `.gitignore`,
-package skeleton with `cli.py` stub. Done when all checks pass on an empty test.
+**Phase 0 — Tooling.** `uv` project on Python 3.12, Ruff, Pyright, pytest, `.gitignore`
+(including the two published books and their extracted text), `.env.example` with the
+`AGENTS.md` variable names, package skeleton with `cli.py` stub, `README.md`, `PROGRESS.md`.
+Done when all checks pass on an empty test.
 
 **Phase 1 — Domain, policy extraction, and scenario.**
 
@@ -111,7 +119,10 @@ page count, and whether text extracts cleanly. Report scanned or unreadable page
 `status: reviewed` or `status: illustrative` clauses into the engine.
 
 1d. *Scenario.* `scenarios/uae_health_access/` with `scenario.yaml`, `roles.yaml`
-(roles, information boundaries, allowed actions, role instructions), and `README.md`.
+(the six institutional roles from `CascadeGuard.md` §5, their information boundaries,
+allowed actions and role instructions; the Orchestrator is code, not a role here), and
+`README.md`. Determine the applicable health-data regime from the sources rather than
+assuming Federal Decree-Law No. 45 of 2021 applies (see `CascadeGuard.md` §7).
 
 1e. *Clause drafts.* Draft YAML clauses in `policies/reviewed/` only for the provisions the
 scenario needs, quoting text verbatim from the extracted pages, with `source_file`, `page`,
@@ -134,7 +145,8 @@ see data outside its boundary.
 **Phase 3 — Repair and replay.** `engine/repair_search.py`, `simulation/replay.py`,
 `storage/audit.py` (DuckDB). `--repair <id>` replays the identical incident and prints a
 baseline-vs-replay comparison; export to JSON and Markdown. Done when golden tests cover
-baseline and at least one successful and one unsuccessful repair.
+baseline and at least one successful and one unsuccessful repair (for example, a repair
+that clears the information deadlock but leaves the lockout unresolved).
 
 **Phase 4 — Demo UI.** NiceGUI: scenario picker, timeline, dependency graph (`ui.echarts`)
 with the failure highlighted, repair list, side-by-side replay, export button, clause status
@@ -144,7 +156,7 @@ labels visible. Done when the full flow works in the browser using scripted agen
 
 - Use the `openai` SDK with OpenRouter as configured in `AGENTS.md`
   (`OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `CASCADEGUARD_MODEL` from `.env`).
-  I choose the model; do not pick or hardcode one. Create `.env.example` with names only.
+  I choose the model; do not pick or hardcode one.
 - Each role is the same model with a different boundary-filtered view, allowed action set,
   and role instructions from `roles.yaml`. Agents are code in this repository, not separate
   models and not Claude Code subagents or commands.
