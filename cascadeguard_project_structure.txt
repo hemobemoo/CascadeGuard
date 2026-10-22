@@ -9,10 +9,12 @@ cascadeguard/
 ├── pyproject.toml                    [P0]
 ├── uv.lock                           [P0] committed
 ├── .python-version                   [P0] 3.12
-├── .gitignore                        [P0] includes .venv/, data/, .env, .phoenix/
+├── .gitignore                        [P0] includes .venv/, data/, .env, .phoenix/,
+│                                     the two published books in policies/sources/ and
+│                                     their policies/extracted/*.jsonl (listed by filename)
 │                                     (.venv/ is created by `uv sync` — never commit it;
 │                                      no requirements.txt: pyproject.toml + uv.lock replace it)
-├── .env.example                      [P5] OPENROUTER_API_KEY, OPENROUTER_BASE_URL,
+├── .env.example                      [P0] OPENROUTER_API_KEY, OPENROUTER_BASE_URL,
 │                                     CASCADEGUARD_MODEL — names only (never commit .env)
 ├── .mcp.json                         [P0] MCP config for Claude Code — committed, no secrets
 │                                     (keys come from ${CONTEXT7_API_KEY} etc. set with setx)
@@ -21,9 +23,9 @@ cascadeguard/
 ├── CLAUDE.md                         [P0] one line: @AGENTS.md
 ├── CascadeGuard.md                   [P0] project concept (authoritative)
 ├── PROGRESS.md                       [P0] session hand-off: phase status, decisions, next step
-├── REFERENCE_LINKS.md                [P0]
+├── REFERENCE_LINKS.md                [P0] which tools and MCP servers to use for what
 │
-├── docs/
+├── docs/                             no separate agent-rules or MCP-rules files here
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
 │   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
@@ -35,15 +37,15 @@ cascadeguard/
 │   └── 004-demo-ui.md                [P4]
 │
 ├── src/cascadeguard/
-│   ├── __init__.py
-│   ├── cli.py                        [P2] `cascadeguard run <scenario> [--repair <id>]`
+│   ├── __init__.py                   [P0]
+│   ├── cli.py                        [P0] stub; [P2] `cascadeguard run <scenario> [--repair <id>]`
 │   │
 │   ├── domain/                       [P1] Pydantic v2 models only — no logic, no I/O
 │   │   ├── scenario.py               Scenario, TimelineEvent, Role, InformationBoundary
 │   │   ├── policies.py               PolicyClause, Obligation, Prohibition, Safeguard, Provenance
 │   │   ├── decisions.py              AgentDecision, ProposedAction, Citation
 │   │   ├── findings.py               ConstraintViolation, CoordinationFailure, Finding
-│   │   └── repairs.py                RepairOperation (closed set), RepairProposal
+│   │   └── repairs.py                RepairOperation (closed set of 5, CascadeGuard.md §6), RepairProposal
 │   │
 │   ├── knowledge/                    [P1]
 │   │   ├── loader.py                 load + validate reviewed clauses
@@ -52,20 +54,21 @@ cascadeguard/
 │   ├── simulation/                   [P2]
 │   │   ├── state.py                  canonical state + append-only event log
 │   │   ├── boundaries.py             what each role is allowed to see at time t
-│   │   ├── orchestrator.py           advances the timeline; collects proposals; calls engine
+│   │   ├── orchestrator.py           deterministic code (not an agent): advances the timeline;
+│   │   │                             collects proposals; calls engine
 │   │   └── replay.py                 [P3] re-run identical incident with a repair applied
 │   │
 │   ├── engine/                       [P2] deterministic — the only code that changes state
 │   │   ├── constraints.py            accept / reject proposed actions against clauses
 │   │   ├── graph.py                  NetworkX dependency graph (roles, data flows, obligations)
 │   │   ├── diagnosis.py              locate the cross-agency coordination failure
-│   │   └── repair_search.py          [P3] enumerate + rank repairs from the closed grammar
+│   │   └── repair_search.py          [P3] enumerate + rank repairs (lexicographic, see AGENTS.md)
 │   │
 │   ├── agents/
 │   │   ├── base.py                   [P2] Agent protocol: observe(view) -> AgentDecision
 │   │   ├── scripted.py               [P2] decisions read from scenario data (no LLM)
 │   │   ├── llm.py                    [P5] LLM-backed agent, same protocol, structured output
-│   │   └── cache.py                  [P5] record/replay cache keyed by hash(role, view, prompt version)
+│   │   └── cache.py                  [P5] record/replay cache keyed by hash(role, view, prompt version, model id)
 │   │
 │   ├── storage/
 │   │   └── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
@@ -81,7 +84,7 @@ cascadeguard/
 │
 ├── policies/
 │   ├── sources/                      [P0] the 19 original PDFs — never modified; engine never reads them
-│   │   └── web/                      [later] Firecrawl/web material — unverified
+│   │   └── web/                      [later] Firecrawl/web material — unverified, with URL + retrieval date
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
@@ -92,7 +95,7 @@ cascadeguard/
 ├── scenarios/
 │   └── uae_health_access/            [P1]
 │       ├── scenario.yaml             timeline of events
-│       ├── roles.yaml                roles + information boundaries
+│       ├── roles.yaml                the six institutional roles + information boundaries
 │       ├── scripted_decisions.yaml   [P2] decisions used by ScriptedAgent
 │       ├── expected_baseline.yaml    golden: the failure that MUST reproduce
 │       └── README.md                 plain-language narrative of the incident
@@ -100,10 +103,11 @@ cascadeguard/
 ├── data/                             gitignored — DuckDB file, LLM cache, exports
 │
 └── tests/
-    ├── unit/                         [P1+]
+    ├── unit/                         [P0+] (P0: one empty test so the checks run)
     ├── integration/                  [P2+] full loop with ScriptedAgent
     ├── golden/                       [P3] baseline + replay outputs must match snapshots
     └── e2e/                          [later] Playwright smoke test of the demo flow
 
 Deferred until the core loop works: api/ (NiceGUI already runs on FastAPI),
-docker/, web ingestion scripts, docs/threat-model.md, Playwright e2e.
+docker/, web ingestion scripts, docs/threat-model.md, Playwright e2e,
+the three controlled scenario variants.
