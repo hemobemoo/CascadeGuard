@@ -1,0 +1,82 @@
+# Non-binding UAE AI guidance: the UAE Charter for the Development and Use of AI (from the
+# "UAE Policy Foundation" compilation) and the MOCAI AI Ethics Principles & Guidelines.
+clauses:
+  - id: uae.ai-charter.safety
+    title: "Charter: safety, including modifying or removing risky systems"
+    text: >-
+      2. Safety: The UAE places great importance on safety, ensuring that all AI systems comply
+      with the highest safety standards. The country encourages modifying or removing systems
+      that pose risks.
+    source_file: UAE Policy Foundation.pdf
+    page: 1
+    article: Priorities & Key Components, 2
+    issuer: UAE Government (compiled document; compiler not stated in the PDF)
+    jurisdiction: UAE
+    document_date: unknown
+    status: draft
+    binding: false
+    normalized:
+      kind: permission
+      actor: telecom_operator
+      action: suspend_ai_traffic_model
+      condition: the AI system poses risks
+    notes: Policy charter, not law. Supports suspending the traffic-management model.
+
+  - id: uae.ai-charter.human-oversight
+    title: "Charter: human oversight to correct errors"
+    text: >-
+      6. Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and
+      human oversight over AI, aligning with ethical values and social standards to correct any
+      errors or biases that may arise.
+    source_file: UAE Policy Foundation.pdf
+    page: 2
+    article: Priorities & Key Components, 6
+    issuer: UAE Government (compiled document; compiler not stated in the PDF)
+    jurisdiction: UAE
+    document_date: unknown
+    status: draft
+    binding: false
+    normalized:
+      kind: safeguard
+      actor: health_service_operator
+      action: review_automated_lockouts
+      condition: an AI output may be erroneous
+    notes: >-
+      Policy charter, not law. Supports human review of automated locks but assigns no owner
+      or deadline.
+
+  - id: mocai.ethics.contest-redress
+    title: "MOCAI ethics: contest and redress against AI decisions"
+    text: >-
+      An individual should have the ability to contest and seek effective redress against
+      decisions [...] made by AI systems. These must be addressed by the group or team
+      supporting these [...] models.
+    source_file: MOCAI-AI-Ethics-EN-1.pdf
+    page: 16
+    article: Item d under Principle 4 guidelines (printed page 30; section number not legible in extraction)
+    issuer: UAE Minister of State for Artificial Intelligence (MOCAI)
+    jurisdiction: UAE
+    document_date: "2022-12"
+    status: draft
+    binding: false
+    notes: >-
+      Two-column spread; text from the neighbouring column interleaves on extraction, hence
+      the [...] marks. Please confirm the section number against the PDF.
+
+  - id: mocai.ethics.fallback-plan
+    title: "MOCAI ethics: safeguards enabling a fallback plan"
+    text: AI systems should have safeguards that enable a fallback plan in case of problems.
+    source_file: MOCAI-AI-Ethics-EN-1.pdf
+    page: 16
+    article: 3.5.1 (printed page 31)
+    issuer: UAE Minister of State for Artificial Intelligence (MOCAI)
+    jurisdiction: UAE
+    document_date: "2022-12"
+    status: draft
+    binding: false
+    normalized:
+      kind: safeguard
+      actor: health_service_operator
+      action: activate_fallback_channel
+      condition: the AI-dependent service fails
+    notes: Guidance, not law.
