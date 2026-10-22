@@ -8,6 +8,9 @@ and in a live pdfplumber read of the PDF. No book text appears in any clause, sc
 injection was found in the source text.
 
 Review the **minimal core set** first (the engine needs it for the real baseline), then the rest.
+This core-first order is the human's instruction (2026-10-22); it overrides START_PROMPT 1e's
+global NEEDS-HUMAN-JUDGMENT-first order, so `dha.pp11.applicability` and `dha.pp11.4-18-5`
+(NEEDS-HUMAN-JUDGMENT, not core) come in Part 2.
 Within each part: NEEDS-HUMAN-JUDGMENT, then FIX, then CLEAN. "Resolved" means fixed on this
 branch; "open (5h)" means the fix depends on the human's answer to question 5h in the PR (how
 `normalized` may map text onto the scenario's action catalogue). "Page" is the PDF viewer page
@@ -84,4 +87,12 @@ every DHA clause now points to `dha.pp11.applicability` for its `binding: unknow
 - Round 2 — evidence-auditor **FAIL** (2 MAJOR: art2 note not actually reworded; DHA §4.2
   definition and supersession omitted); phase-auditor **FAIL** (3 MAJOR: art2 note; PDPL art2-2
   note; methodology applicability line). All fixed in the round-2 commit.
-- Round 3 — see the PR body.
+- Round 3 — evidence-auditor **FAIL, no BLOCKER or MAJOR**: 6 clauses stay FIX only on question
+  5h (`normalized` mapping); new MINORs. phase-auditor **PASS** (all "Done when" criteria proven;
+  MINORs and human questions only). The round limit is reached: 5h is a human gate.
+- After round 3 (not re-reviewed): MINOR wording fixes. `dha.pp11.4-18-5` condition no longer
+  adds "suspected"; `uae.fl2-2019.art4` condition says "including, but not limited to, Art 16";
+  `uae.ai-charter.safety` and `mocai.ethics.fallback-plan` notes mark their mapping (and the
+  fallback condition is now "in case of problems"); `scenario.yaml` summary marks the lock
+  ownership as a hypothetical premise; Telecom header notes page 4. `dha.pp11.4-18-5` therefore
+  moves from FIX back to NEEDS-HUMAN-JUDGMENT (recipient mapping).

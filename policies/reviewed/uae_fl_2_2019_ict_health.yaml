@@ -44,7 +44,9 @@ clauses:
       actor: health_service_operator
       action: share_incident_status
       data_category: patient_account_records
-      condition: circulation is not one of the permitted cases (see uae.fl2-2019.art16)
+      condition: >-
+        circulation is not one of the permitted cases (including, but not limited to,
+        uae.fl2-2019.art16)
     notes: >-
       Binding scope: federal law, applying to ICT uses in the area of health in the State,
       including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
