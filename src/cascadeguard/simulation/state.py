@@ -5,6 +5,7 @@ the mutating methods here. Agents never receive this object: they get a frozen `
 by `simulation/boundaries.py`. Every read accessor returns an immutable copy.
 """
 
+import dataclasses
 from dataclasses import dataclass
 
 from cascadeguard.domain.findings import Finding, LogEntry
@@ -20,6 +21,7 @@ class ObligationStatus:
     due_at: int | None  # None: the deadline cannot be determined from the loaded clauses
     fulfilled_at: int | None
     missed: bool
+    firm: bool = True  # False: opened by a clause with binding: unknown
 
 
 class SimulationState:
@@ -32,6 +34,7 @@ class SimulationState:
             f.id: f.model_copy(deep=True) for e in scenario.events for f in e.facts
         }
         self._boundaries = {r.id: frozenset(r.boundary.visible_categories) for r in roles.roles}
+        self._released: set[str] = set()  # facts whose inject has happened
         self._known: dict[str, set[str]] = {r.id: set() for r in roles.roles}
         self._done: dict[str, list[tuple[int, str]]] = {r.id: [] for r in roles.roles}
         self._goals_met: dict[str, int] = {}
@@ -92,11 +95,15 @@ class SimulationState:
         if event.at_minute < self._minute:
             raise ValueError("the timeline never moves backwards")
         self._minute = event.at_minute
+        self._released.update(f.id for f in event.facts)
         self.record("inject", detail=event.title)
 
     def learn(self, role: str, fact_id: str) -> bool:
-        """Give a role a fact. Refused (False) if the category is outside its boundary."""
-        fact = self._facts[fact_id]
+        """Give a role a fact. Refused (False) if the category is outside its boundary, the inject
+        carrying the fact has not happened yet, or the role already knows it."""
+        fact = self._facts.get(fact_id)
+        if fact is None or fact_id not in self._released:
+            return False
         if fact.data_category not in self.boundary(role) or fact_id in self._known[role]:
             return False
         self._known[role].add(fact_id)
@@ -108,10 +115,12 @@ class SimulationState:
     def meet_goal(self, goal_id: str) -> None:
         self._goals_met.setdefault(goal_id, self._minute)
 
-    def open_obligation(self, clause_id: str, role: str, action: str, due_in: int | None) -> None:
+    def open_obligation(
+        self, clause_id: str, role: str, action: str, due_in: int | None, *, firm: bool = True
+    ) -> None:
         due = None if due_in is None else self._minute + due_in
         self._obligations.append(
-            ObligationStatus(clause_id, role, action, self._minute, due, None, False)
+            ObligationStatus(clause_id, role, action, self._minute, due, None, False, firm)
         )
 
     def fulfil_obligations(self, role: str, action: str) -> tuple[ObligationStatus, ...]:
@@ -119,8 +128,8 @@ class SimulationState:
         for i, ob in enumerate(self._obligations):
             if ob.role in (role, "any") and ob.action == action and ob.fulfilled_at is None:
                 late = ob.due_at is not None and self._minute > ob.due_at
-                self._obligations[i] = ObligationStatus(
-                    ob.clause_id, ob.role, ob.action, ob.opened_at, ob.due_at, self._minute, late
+                self._obligations[i] = dataclasses.replace(
+                    ob, fulfilled_at=self._minute, missed=late
                 )
                 fulfilled.append(self._obligations[i])
         return tuple(fulfilled)
@@ -131,9 +140,7 @@ class SimulationState:
         for i, ob in enumerate(self._obligations):
             due_passed = ob.due_at is not None and ob.due_at < until
             if ob.fulfilled_at is None and not ob.missed and due_passed:
-                self._obligations[i] = ObligationStatus(
-                    ob.clause_id, ob.role, ob.action, ob.opened_at, ob.due_at, None, True
-                )
+                self._obligations[i] = dataclasses.replace(ob, missed=True)
                 missed.append(self._obligations[i])
         return tuple(missed)
 

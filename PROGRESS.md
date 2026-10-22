@@ -133,6 +133,15 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   `unknown_citation`, both findings). All roles decide on the same snapshot; the engine applies
   decisions in `roles.yaml` order. Mandate overlap is not detected yet; it needs reviewed
   DHA/PDPL clauses.
+- **Phase 2 review round 2 fixes (2026-10-23):** decisions re-validated from plain data
+  (constructed objects and subclassed containers rejected or normalised); a share delivers
+  exactly the fact it checked; no fact is released before its inject; every bad citation is a
+  finding; self-targeted shares rejected; only obligation clauses open obligations, and
+  `binding: unknown` ones are marked uncertain; book names refused case-insensitively and
+  `source_file` must resolve inside `policies/sources`; stray files, subdirectories, extra keys
+  and blank text refused; every clause id in the CLI carries its status label; fresh-process
+  determinism test with three hash seeds. Requests for a category outside the requester's own
+  boundary stay accepted (documented in the spec).
 - **Phase 2 review round 1 fixes (2026-10-23):** inject text, decision points and clauses go only
   to the inject's recipients; views hold deep copies of facts and the state keeps private
   copies; prohibitions apply to every action kind (requests by category included); a safeguard
@@ -235,6 +244,20 @@ clauses are precedents and context for gap analysis and can be reviewed later.
       art14-5 lost its counterpart/data category). `dha.pp11.4-18-4`/`4-18-5` each borrow one
       element from the other paragraph; the auditor suggests one clause quoting 4.18.4 and 4.18.5
       together. Confirm the boundary, and whether to merge the two DHA clauses.
+   q. (Phase 2 test-breaker) Threat model: an in-process agent could walk the call stack to reach
+      the state (`specs/002`, "Threat model"). Accept for scripted and JSON-only LLM agents, or
+      require untrusted agents to run in a separate process?
+   r. (Phase 2 test-breaker) Should the engine reject agent text that declares a legal gap without
+      citations and a qualification (AGENTS.md forbids it; the "enforcement in code" list does not
+      cover it)?
+   s. (Phase 2 phase-auditor) Mandate overlap is not detected in Phase 2; defer it until the
+      DHA/PDPL clauses are reviewed?
+   t. (Phase 2 evidence-auditor) The engine reads `uae.fl2-2019.art16` and `art4` as a flat ban on
+      sharing `patient_account_records`; the free-text condition (health purposes, Art 16 item 3)
+      is not evaluated. Is a flat ban the intended reading for this scenario?
+   u. (Phase 2 evidence-auditor) The DHA fixtures are illustrative with `binding: unknown`, which
+      the methodology does not allow in `policies/reviewed` (a test enforces `binding: false`
+      there). Accept this fixture-only exception so fixtures mirror "authority uncertain"?
    l. GitHub residual from the book purge: the read-only ref `refs/pull/1/head` still points at
       the pre-purge commit `9f67523`, whose history contains both books (they stay downloadable
       through PR #1). Only GitHub Support can remove it. The human decides whether to contact

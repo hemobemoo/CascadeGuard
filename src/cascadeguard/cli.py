@@ -63,6 +63,12 @@ def _display(path: Path) -> str:
 
 
 def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
+    labels = dict(result.loaded_clauses)
+
+    def cite(ids: tuple[str, ...]) -> str:
+        """Every clause id is printed with its status label (or "not loaded")."""
+        return ", ".join(f"{c} [{labels.get(c, 'not loaded')}]" for c in ids)
+
     lines = [f"Scenario: {result.scenario_id} (synthetic, hypothetical)"]
     lines.append(f"Clause set: {result.clause_set}")
     lines.append(f"  {len(result.loaded_clauses)} clauses loaded")
@@ -80,12 +86,16 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
             what = e.action or "whole decision"
             target = f" -> {e.target}" if e.target else ""
             why = f"  ({', '.join(e.reasons)})" if e.reasons else ""
-            cites = f"  [{', '.join(e.clause_ids)}]" if e.clause_ids else ""
+            cites = f"  {{{cite(e.clause_ids)}}}" if e.clause_ids else ""
             detail = f"  {e.detail}" if e.detail else ""
             lines.append(f"  {e.kind.upper():8} {e.role}: {what}{target}{why}{cites}{detail}")
         elif e.kind.startswith("obligation_") or e.kind == "goal_met":
-            subject = e.detail or e.action or ""
-            cites = f"  [{', '.join(e.clause_ids)}]" if e.clause_ids else ""
+            subject = (
+                e.detail
+                if e.kind == "goal_met"
+                else (e.action or "") + (f" ({e.detail})" if e.detail else "")
+            )
+            cites = f"  {{{cite(e.clause_ids)}}}" if e.clause_ids else ""
             lines.append(f"  {e.kind:8} {e.role}: {subject}{cites}")
 
     lines.append("")
@@ -97,7 +107,8 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
             if o.fulfilled_at is not None
             else ("missed" if o.missed else "open")
         )
-        lines.append(f"  {o.clause_id}: {o.role} {o.action}, due {due}, {state}")
+        firm = "" if o.firm else ", uncertain (binding unknown)"
+        lines.append(f"  {cite((o.clause_id,))}: {o.role} {o.action}, due {due}, {state}{firm}")
     lines.append("")
     lines.append("Recovery goals")
     for goal, met in result.goals:
@@ -105,9 +116,9 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
     lines.append("")
     lines.append("Findings")
     for f in result.findings:
-        lines.append(f"  T+{f.minute:02d} {f.kind}: {f.detail}")
+        cites = f"  {{{cite(f.clause_ids)}}}" if f.clause_ids else ""
+        lines.append(f"  T+{f.minute:02d} {f.kind}: {f.detail}{cites}")
 
-    labels = dict(result.loaded_clauses)
     lines.append("")
     lines.append("Diagnosed coordination failures")
     if not result.failures:
@@ -115,10 +126,9 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
     for f in result.failures:
         lines.append(f"  [{f.category.value}] {f.subject}")
         lines.append(f"    {f.description}")
+        if f.clause_ids:  # right after the description, which may name them
+            lines.append(f"    clauses: {cite(f.clause_ids)}")
         lines.append(f"    blocks: {', '.join(f.goals)}; roles: {', '.join(f.roles)}")
-        if f.clause_ids:
-            cited = ", ".join(f"{c} [{labels.get(c, 'not loaded')}]" for c in f.clause_ids)
-            lines.append(f"    clauses: {cited}")
         lines.append(f"    {f.qualification}")
     return "\n".join(lines)
 

@@ -67,6 +67,7 @@ class RunResult:
                     "due": o.due_at,
                     "fulfilled": o.fulfilled_at,
                     "missed": o.missed,
+                    "firm": o.firm,
                 }
                 for o in self.obligations
             ],

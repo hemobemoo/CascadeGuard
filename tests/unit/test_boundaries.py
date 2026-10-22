@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from cascadeguard.agents.scripted import ScriptedAgent, load_scripted_agents
 from cascadeguard.domain.decisions import AgentDecision
@@ -50,6 +51,9 @@ def walk(value: Any) -> list[Any]:
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         for field in dataclasses.fields(value):
             out += walk(getattr(value, field.name))
+    elif isinstance(value, BaseModel):
+        for name in type(value).model_fields:
+            out += walk(getattr(value, name))
     elif isinstance(value, tuple):
         for item in value:  # pyright: ignore[reportUnknownVariableType]
             out += walk(item)
@@ -77,10 +81,11 @@ def test_telecom_operator_never_sees_patient_records() -> None:
     assert "patient_account_records" not in {f.data_category for v in spy.views for f in v.facts}
 
 
-def test_view_holds_no_state_and_no_mutable_containers() -> None:
-    view = run_with_spies()["health_service_operator"].views[-1]
-    for obj in walk(view):
-        assert not isinstance(obj, (SimulationState, list, dict, set))
+def test_views_hold_no_state_and_no_mutable_containers() -> None:
+    for spy in run_with_spies().values():
+        for view in spy.views:
+            for obj in walk(view):
+                assert not isinstance(obj, (SimulationState, list, dict, set))
 
 
 def test_view_cannot_be_modified() -> None:

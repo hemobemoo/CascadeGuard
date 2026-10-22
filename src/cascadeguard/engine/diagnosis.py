@@ -12,7 +12,13 @@ from cascadeguard.engine.graph import DependencyGraph, node
 from cascadeguard.simulation.state import SimulationState
 
 
-def qualification(clause_set: str) -> str:
+def qualification(clause_set: str, uncertain: bool = False) -> str:
+    if uncertain:
+        return (
+            f"Uncertain in the loaded clause set ({clause_set}): only clauses with binding: "
+            "unknown were found. This is not a confirmed legal or standards gap; it needs expert "
+            "review."
+        )
     return (
         f"Not found in the loaded clause set ({clause_set}). An absent provision is not a "
         "confirmed legal or standards gap; it needs expert review."
@@ -37,6 +43,7 @@ class _Collector:
         clause_ids: Iterable[str],
         evidence: Iterable[int],
         description: str,
+        uncertain: bool = False,
     ) -> None:
         fid = f"{category.value}:{subject}"
         old = self.by_id.get(fid)
@@ -50,7 +57,7 @@ class _Collector:
             clause_ids=tuple(sorted({*(old.clause_ids if old else ()), *clause_ids})),
             evidence=tuple(sorted({*(old.evidence if old else ()), *evidence})),
             description=old.description if old else description,
-            qualification=qualification(self.clause_set),
+            qualification=qualification(self.clause_set, uncertain),
         )
 
 
@@ -137,6 +144,7 @@ def diagnose(
                         unsure,
                         evidence,
                         f"No role has clear authority to {action}.{detail}",
+                        uncertain=bool(unsure),
                     )
             for prior in spec.requires_prior:
                 if not rules.obligations_for(prior):
@@ -159,6 +167,8 @@ def diagnose(
                 (ob.role,),
                 (ob.clause_id,),
                 [e.seq for e in log if e.kind == "obligation_missed" and e.action == ob.action],
-                f"{ob.role} did not complete {ob.action} by T+{ob.due_at}.",
+                f"{ob.role} did not complete {ob.action} by T+{ob.due_at}."
+                + ("" if ob.firm else " The obligation itself is uncertain (binding: unknown)."),
+                uncertain=not ob.firm,
             )
     return tuple(sorted(out.by_id.values(), key=lambda f: f.id))

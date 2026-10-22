@@ -107,18 +107,21 @@ obligations:
   due: 60
   fulfilled: 45
   missed: false
+  firm: true
 - clause: dha.pp11.4-18-2
   role: health_service_operator
   action: raise_security_incident
   due: null
   fulfilled: 15
   missed: false
+  firm: false
 - clause: dha.pp11.4-18-4
   role: health_service_operator
   action: notify_health_data_oversight
   due: null
   fulfilled: 45
   missed: false
+  firm: false
 goals:
   patient_access_restored: unmet
   alert_cause_known_to_health: unmet

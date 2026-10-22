@@ -11,8 +11,10 @@ no agent may see data outside its boundary.
 For each inject in time order:
 1. `ConstraintEngine.release(event)`. Deadlines that passed are marked missed. The state moves
    to the inject's minute. The inject's facts go to their holder and to recipients whose
-   boundary includes the category. `opens_obligations` clauses open obligations; a clause that
-   is not loaded becomes a `trigger_not_loaded` finding.
+   boundary includes the category. `opens_obligations` clauses open obligations: a clause that
+   is not loaded is a `trigger_not_loaded` finding, a non-obligation clause is a
+   `trigger_not_obligation` finding, and a `binding: unknown` clause opens an obligation marked
+   uncertain (its missed deadline is reported with the "uncertain" qualification).
 2. Every role gets a frozen `RoleView` (`simulation/boundaries.py`). It holds tuples and deep
    copies of facts inside the role's boundary, and the role's own accepted actions. Recipients of
    the inject also get its title, description, decision points and relevant loaded clauses (with
@@ -25,13 +27,21 @@ Then the engine closes the run, `engine/graph.py` builds the dependency graph, a
 
 ## Engine rules (`engine/constraints.py`)
 
-- **Decision level.** Citations are always checked, even on decisions without actions. A
+- **Untrusted agents.** Whatever an agent returns is re-validated from plain data
+  (`model_dump` then `model_validate`); anything that is not a valid `AgentDecision` is a
+  `malformed_decision` finding. The fact a share delivers is read once, checked, and delivered
+  as checked. The state never releases a fact before its inject.
+- **Decision level.** Citations are always checked, even on decisions without actions, and every
+  unloaded citation is its own finding. A
   citation of a clause the engine did not load rejects the whole decision: `draft_citation` if
   the clause exists as a draft, otherwise `unknown_citation`. A wrong role or time is
   `wrong_role_or_time`. All are findings, logged under the role the orchestrator asked.
 - **Action level.** The action must be in the role's allowed set. `share_incident_status` needs
   a fact the sender knows. It is rejected if the category is outside the recipient's boundary
-  (`outside_recipient_boundary`). `request_information` needs a `data_category`.
+  (`outside_recipient_boundary`), and a role cannot target itself (`self_target`).
+  `request_information` needs a `data_category`. A request is accepted even for a category
+  outside the requester's own boundary: asking is evidence of the need, and the boundary is
+  enforced when anything is delivered.
 - **Restrictions (`restricted_by_clause`), on every action.** A prohibition applies to its
   action; if it names a data category, it applies when the action touches that category, or when
   the action names none (conservative). A data safeguard restricts its action for its category.
@@ -55,8 +65,17 @@ Then the engine closes the run, `engine/graph.py` builds the dependency graph, a
 | Temporal infeasibility | An obligation's deadline passed unfulfilled |
 | Mandate overlap | **Not detected yet.** It needs reviewed DHA/PDPL clauses to compare; deferred |
 
-Every failure carries a qualification: "not found in the loaded clause set (...)". It is never
-a confirmed legal gap. Undetermined deadlines are findings, not failures.
+Every failure carries a qualification: "not found in the loaded clause set (...)", or
+"uncertain in the loaded clause set" when only `binding: unknown` clauses were found. It is never
+a confirmed legal gap. Undetermined deadlines are findings, not failures. The CLI prints every
+clause id with its status label.
+
+## Threat model
+
+Agents run in the same Python process. The engine never hands them the state, and everything
+they return is re-validated, but Python cannot stop deliberate introspection (e.g. walking the
+call stack) by in-process code. Scripted agents are trusted test code; Phase 5 LLM agents return
+only JSON. Whether untrusted agents must run in a separate process is a question for the human.
 
 ## Clause sets
 

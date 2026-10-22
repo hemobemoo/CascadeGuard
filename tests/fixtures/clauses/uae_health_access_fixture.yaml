@@ -3,6 +3,8 @@
 # while human review is pending, and behaves in the engine as that clause would: same
 # normalized reading and the same authority outcome (see each note). Generated from
 # policies/reviewed/ on 2026-10-23; tests/unit/test_fixtures.py fails if they drift.
+# Exception: DHA fixtures keep binding: unknown on an illustrative clause so they mirror
+# "authority uncertain"; policies/reviewed never allows that (question 7u in PROGRESS.md).
 clauses:
 - id: dha.pp11.4-18-1
   title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-1
