@@ -72,7 +72,8 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 - Scenario loading lives in `simulation/loader.py` (not listed in the structure file; it is the
   natural home, and Phase 2 builds the rest of `simulation/` around it).
 - Dev dependency `types-pyyaml` (PyYAML type stubs for strict Pyright): **approved by the human**.
-- Telecom: the two telecom rules **stay illustrative** (human decision); no OCR.
+- Telecom (2026-10-22): the two telecom rules stay illustrative (human decision). Superseded in
+  part: the human then supplied an OCR copy (see the Telecom Law OCR decision below).
 - Breach-reporting period for health data: **stays unknown** (human decision); the PDPL Executive
   Regulations are not added. The unknown period is itself a candidate finding.
 - `[...]` gaps: a test extracts the skipped text and fails on any qualifier, modal, number or
@@ -185,7 +186,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
    exact diffs to `AGENTS.md`, `START_PROMPT.md` and `.claude/agents/` in 194103a are approved.
 2. ~~Reviewer subagents do not load.~~ They load now. The Phase 1 review loop ran three rounds
    (2026-10-22/23): phase-auditor **PASS**; evidence-auditor **FAIL with no BLOCKER/MAJOR**, only
-   question 7h and MINORs. Verdicts in `docs/review/phase-1-clause-triage.md` and PR #2.
+   question 7h (since decided as 5h) and MINORs. Verdicts in `docs/review/phase-1-clause-triage.md` and PR #2.
 3. **Clause review** of the 29 drafts (28 + `uae.telecom-law.art14-5`, flagged "OCR — check
    against image"), in the order of `docs/review/phase-1-clause-triage.md` (minimal core set
    first). The human is reviewing in parallel with Phase 2 and will give the clause IDs to set to
@@ -265,8 +266,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Deferred MINOR findings (Phase 1 review)
 
-- `normalized` blocks go beyond the quote in five clauses (see 7h and the triage). Settle with
-  question 7h; evidence-auditor keeps them FIX until then.
+- `normalized` blocks go beyond the quote in five clauses (see the triage). Settled by
+  decision 5h (basis/mapping_note) and open questions h2 and 7p; they are now
+  NEEDS-HUMAN-JUDGMENT, not FIX.
 - ~~Book filenames as `source_file`; `normalized` names vs `roles.yaml`~~ Done in Phase 2
   (loader rejects book sources, duplicate YAML keys and stray `.yml` files;
   `check_clause_references` runs on every engine run, with tests).
