@@ -89,10 +89,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-1. **Commit the rule-file changes.** My commit of `AGENTS.md`, `START_PROMPT.md`,
-   `cascadeguard_project_structure.txt` and `.claude/agents/` as "Add reviewer subagents and human
-   gates" was blocked by the session's permission check. The files are uncommitted in the working
-   tree. Commit them yourself, or allow the commit.
+1. ~~Commit the rule-file changes.~~ Done in b84697b ("Add reviewer subagents and human gates"),
+   with the human's explicit approval.
 2. **Reviewer subagents do not load in the current session** (`evidence-auditor`, `phase-auditor`
    not found; agent definitions are read when a session starts). The review loop for Phase 1 has
    not run. Start a new session after committing them, then run step 1.
@@ -111,8 +109,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Next step
 
-1. Human commits the rule files (gate 1 above) and starts a new session so the reviewer subagents
-   load.
+1. Human starts a new session so the reviewer subagents in `.claude/agents/` load (rule files are
+   committed in b84697b).
 2. Run `evidence-auditor` and `phase-auditor` on `phase-1-domain-scenario` (PR #2); fix BLOCKER
    and MAJOR findings, at most three rounds; save the triage to
    `docs/review/phase-1-clause-triage.md`; update the PR body with both verdicts and the review
