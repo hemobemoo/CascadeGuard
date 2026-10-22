@@ -29,6 +29,7 @@ class Reason(StrEnum):
     SELF_TARGET = "self_target"
     FACT_NOT_KNOWN = "fact_not_known"
     MISSING_PARAMETER = "missing_parameter"
+    UNKNOWN_DATA_CATEGORY = "unknown_data_category"
     OUTSIDE_RECIPIENT_BOUNDARY = "outside_recipient_boundary"
     RESTRICTED_BY_CLAUSE = "restricted_by_clause"
     MISSING_PREREQUISITE = "missing_prerequisite"
@@ -242,7 +243,10 @@ class ConstraintEngine:
             )
             return
         cited = tuple(c.clause_id for c in decision.citations)
-        if not decision.proposed_actions and not cited:
+        impostor = decision.role_id != expected_role or decision.at != state.scenario.time_at(
+            state.minute
+        )
+        if not decision.proposed_actions and not cited and not impostor:
             return
         # Logged under the role the orchestrator asked, never the role the decision claims.
         state.record("decision", role=expected_role, detail=decision.rationale, clause_ids=cited)
@@ -335,6 +339,10 @@ class ConstraintEngine:
             category = action.parameters.get("data_category")
             if not category:
                 return Verdict(False, (Reason.MISSING_PARAMETER,), (), "data_category is required")
+            if category not in state.roles.known_categories():
+                return Verdict(
+                    False, (Reason.UNKNOWN_DATA_CATEGORY,), (), f"unknown category {category!r}"
+                )
             details.append(f"{category} from {action.target}")
             restricted = self.rules.restrictions(kind, category, role.id)
             if restricted:

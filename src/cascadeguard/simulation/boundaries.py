@@ -1,9 +1,11 @@
 """What each role may see at time t: a frozen, boundary-filtered view built from the state.
 
-Agents receive only a `RoleView`. It holds tuples, strings and deep copies of frozen models,
-never a reference to the state, so an agent cannot change the simulation or see facts outside its
-boundary. Inject text (title, description, decision points, clauses) goes only to the inject's
-recipients: it describes events in other organisations. Everyone else sees that time advanced.
+Agents receive only a `RoleView`. It holds tuples, strings and deep copies of frozen models, never
+a reference to the state, so an agent cannot change the simulation or see facts outside its
+boundary. Inject title and description go only to the inject's recipients and hold only what all
+recipients may know (organisation-specific information is in facts). Each decision point goes
+only to the role it names. Clause titles are public law, not scenario data, so recipients see
+the inject's relevant clauses with their status labels. Everyone else sees that time advanced.
 """
 
 from dataclasses import dataclass
@@ -31,7 +33,7 @@ class RoleView:
     event_id: str | None  # None when the role is not a recipient of the inject
     event_title: str
     event_description: str
-    decision_points: tuple[str, ...]
+    decision_points: tuple[str, ...]  # only the questions put to this role
     facts: tuple[Fact, ...]  # only facts inside the role's boundary that the role knows
     allowed_actions: tuple[str, ...]
     clauses: tuple[ClauseSummary, ...]  # loaded clauses relevant to this inject
@@ -64,7 +66,7 @@ def view_for(
         event_id=event.id if recipient else None,
         event_title=event.title if recipient else f"T+{state.minute:02d}: no new inject for you",
         event_description=event.description if recipient else "",
-        decision_points=event.decision_points if recipient else (),
+        decision_points=tuple(d.question for d in event.decision_points if d.role == role_id),
         facts=facts,
         allowed_actions=role.allowed_actions,
         clauses=relevant,

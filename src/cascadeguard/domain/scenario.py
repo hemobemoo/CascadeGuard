@@ -27,6 +27,11 @@ class Fact(DomainModel):
     certainty: Certainty
 
 
+class DecisionPoint(DomainModel):
+    role: str  # the one role this question is put to
+    question: str
+
+
 class TimelineEvent(DomainModel):
     id: str = Field(pattern=ID_PATTERN)
     at_minute: int = Field(ge=0)  # minutes after scenario start (T+00)
@@ -34,7 +39,7 @@ class TimelineEvent(DomainModel):
     description: str
     recipients: tuple[str, ...]  # role ids notified of this inject
     facts: tuple[Fact, ...] = ()
-    decision_points: tuple[str, ...] = ()
+    decision_points: tuple[DecisionPoint, ...] = ()  # each shown only to its role
     relevant_clauses: tuple[str, ...] = ()  # clause ids
     # Obligation clauses this inject triggers; the engine opens one obligation per loaded clause.
     opens_obligations: tuple[str, ...] = ()
@@ -134,6 +139,10 @@ class RoleSet(DomainModel):
             if unknown:
                 raise ValueError(f"action {action.id} requires unknown actions: {unknown}")
         return self
+
+    def known_categories(self) -> frozenset[str]:
+        """Every data category any role may see: the vocabulary of the scenario."""
+        return frozenset(c for r in self.roles for c in r.boundary.visible_categories)
 
     def role(self, role_id: str) -> Role:
         return next(r for r in self.roles if r.id == role_id)

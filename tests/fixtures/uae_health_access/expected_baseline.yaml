@@ -122,10 +122,50 @@ obligations:
   fulfilled: 45
   missed: false
   firm: false
+facts_released:
+- minute: 0
+  role: telecom_operator
+  fact: sms_latency_spike
+- minute: 0
+  role: telecom_operator
+  fact: traffic_model_update
+- minute: 15
+  role: health_service_operator
+  fact: otp_failure_spike
+- minute: 15
+  role: health_service_operator
+  fact: fraud_alert_credential_stuffing
+- minute: 15
+  role: health_service_operator
+  fact: locked_account_records
+- minute: 30
+  role: telecom_operator
+  fact: network_fault_partial
+- minute: 30
+  role: telecom_operator
+  fact: otp_delivery_status
+- minute: 30
+  role: health_service_operator
+  fact: no_confirmed_intrusion
+- minute: 60
+  role: health_service_operator
+  fact: patients_still_locked_out
+- minute: 60
+  role: public_access_inclusion
+  fact: patients_still_locked_out
+- minute: 60
+  role: health_service_operator
+  fact: call_centre_not_authorised
+- minute: 60
+  role: public_access_inclusion
+  fact: call_centre_not_authorised
+- minute: 60
+  role: telecom_regulator
+  fact: otp_delivery_status
 goals:
   patient_access_restored: unmet
   alert_cause_known_to_health: unmet
-  network_incident_reported: met
+  network_incident_reported: met at T+45
 findings:
 - minute: 15
   role: health_service_operator

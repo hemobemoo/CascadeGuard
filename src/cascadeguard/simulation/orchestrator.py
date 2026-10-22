@@ -71,7 +71,12 @@ class RunResult:
                 }
                 for o in self.obligations
             ],
-            "goals": {g: ("met" if m is not None else "unmet") for g, m in self.goals},
+            "facts_released": [
+                {"minute": e.minute, "role": e.role, "fact": e.detail}
+                for e in self.log
+                if e.kind == "fact_released"
+            ],
+            "goals": {g: (f"met at T+{m}" if m is not None else "unmet") for g, m in self.goals},
             "findings": [
                 {
                     "minute": f.minute,
