@@ -67,6 +67,17 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   obligation to act (such a rule becomes illustrative). The engine treats both bases the same;
   reports and the UI must show `PolicyClause.status_label` (e.g. "draft (interpreted)").
   All 14 `normalized` blocks have a basis: 12 interpreted, the 2 illustrative ones stated.
+- **Telecom Law OCR (human-supplied, 2026-10-22):** a derived source in
+  `policies/sources/ocr/…ocr.pdf`, extracted to its own JSONL with `"ocr": true`; the original is
+  unchanged (restored in 428e114 after 0a51f82 overwrote it). Quotes from OCR pages are
+  corrected against the page image and must carry "OCR — check against image" in notes (loader
+  check). Provenance and known OCR errors in `docs/policy-methodology.md`.
+- **Telecom illustrative rules vs. Art 12, 13, 14(3), 30** (checked against page images): none
+  states an operator incident-reporting duty or deadline, so `illus.telecom.incident-report` stays
+  illustrative ("the Law delegates this to TDRA regulations / the Executive Order, which are not in
+  the reviewed corpus"). Art 14(5) supports the regulator's information requests; drafted as
+  `uae.telecom-law.art14-5` (`interpreted`). `illus.telecom.regulator-information-request` stays
+  loaded until that draft is reviewed.
 - Draft clauses are not loaded by the engine. Phase 2 may be built against synthetic fixture
   clauses under `tests/fixtures/` (AGENTS.md "Human gates"); fixtures never prove the real scenario.
 - **Dubai Law No. 26 of 2015 is not drafted as a clause.** Art. 3 applies it to government
@@ -123,11 +134,13 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 2. ~~Reviewer subagents do not load.~~ They load now. The Phase 1 review loop ran three rounds
    (2026-10-22/23): phase-auditor **PASS**; evidence-auditor **FAIL with no BLOCKER/MAJOR**, only
    question 7h and MINORs. Verdicts in `docs/review/phase-1-clause-triage.md` and PR #2.
-3. **Clause review** of the 28 drafts, in the order of `docs/review/phase-1-clause-triage.md`
-   (minimal core set first). Reply with the clause IDs to set to `status: reviewed`.
+3. **Clause review** of the 29 drafts (28 + `uae.telecom-law.art14-5`, flagged "OCR — check
+   against image"), in the order of `docs/review/phase-1-clause-triage.md` (minimal core set
+   first). The human is reviewing in parallel with Phase 2 and will give the clause IDs to set to
+   `status: reviewed`. **Merge PR #2 once the core set is reviewed** (human instruction,
+   2026-10-23); not before.
 4. ~~Issuer of "UAE Policy Foundation.pdf".~~ Decided; see Decisions.
-5. ~~Book history purge.~~ Done; see "Approved gate-5 exceptions". Optional: ask GitHub Support to
-   purge `refs/pull/1/head` (old commit `9f67523`) and cached views.
+5. ~~Book history purge.~~ Done; see "Approved gate-5 exceptions". Residual: question 7l.
 6. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
    Directive on Automated Decision-Making; Singapore's Model AI Governance Framework (incl. agentic
    AI); WHO guidance on AI for health; NCEMA 7000; Executive Regulation of FL 2/2019.
@@ -145,13 +158,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
       supersede". Does that precedence rule displace the PDPL-based reporting period for health
       data, or does the period still come from the PDPL Executive Regulations?
    g. DHA 4.18.5: who is the "UAE Information Office", and may the mapping keep only DHA?
-   h. `normalized` action ids are links into the scenario's action catalogue (`roles.yaml`), not
-      words from the text; notes now say so. evidence-auditor holds that any actor/action not in
-      the quote stays FIX (5 clauses: `dha.pp11.4-18-1`, `uae.ai-charter.human-oversight`,
-      `uae.ai-charter.safety`, `mocai.ethics.fallback-plan`, `itu.y3172.req-ml-mng-003`). The
-      agent disagrees that renaming is required (the mapping is the purpose of `normalized`), so
-      this is a human gate: accept the mapping approach, or require text-entailed actions (the
-      engine would then need a separate clause-to-action mapping)?
+   h. ~~`normalized` mapping~~ Decided 2026-10-23: keep the links, add `basis`/`mapping_note`
+      (see Decisions).
+   h2. (from the six-clause re-audit after 5h) `dha.pp11.4-18-1`: may a duty to *establish*
+      continuity/recovery plans be mapped (`interpreted`) to an obligation to *activate* a
+      fallback channel, when plan items aa-hh do not mention one and §4.18 is about reporting
+      data-protection breaches? If not: record "establish plans" and make the fallback
+      illustrative. `dha.pp11.4-18-5`: the text requires notice to "both the UAE Information Office
+      and DHA" but only DHA is modelled; accept, or have the engine mark the duty as only partly
+      discharged?
    i. DHA PDF footers read "n/52" but the PDF has 50 pages (ends in references 5.23). Is the copy
       complete? No clause depends on the missing pages.
    j. `policies/extracted/_inventory.json` (committed) lists the two books' filenames, page counts
@@ -160,6 +175,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
    k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py` (P1),
       `domain/base.py` or `docs/policy-inventory.md`. It is a human-owned file: add them, or keep
       the note in Decisions?
+   l. GitHub residual from the book purge: the read-only ref `refs/pull/1/head` still points at
+      the pre-purge commit `9f67523`, whose history contains both books (they stay downloadable
+      through PR #1). Only GitHub Support can remove it. The human decides whether to contact
+      them.
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -178,7 +197,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Next step
 
-1. Human: answer question 7 and give the clause IDs to mark reviewed (core set first). Do not merge
-   PR #2 while clause review is open.
-2. Phase 2 starts on `phase-2-engine` (branched from `phase-1-domain-scenario`) against synthetic
-   fixture clauses under `tests/fixtures/`, addressing the two Phase 2 notes above.
+1. Phase 2 on `phase-2-engine` (branched from `phase-1-domain-scenario`), against synthetic
+   fixture clauses under `tests/fixtures/`, picking up the Phase 2 notes under "Deferred MINOR
+   findings" and using `PolicyClause.status_label` wherever a clause is reported.
+2. In parallel, the human reviews clauses (core set first), answers question 7, and confirms
+   194103a. Merge PR #2 once the core set is reviewed.

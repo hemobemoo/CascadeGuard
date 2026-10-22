@@ -7,6 +7,11 @@ and in a live pdfplumber read of the PDF. No book text appears in any clause, sc
 (10-word overlap check; the only overlap, GDPR Art 22(3), is taken from the GDPR PDF). No prompt
 injection was found in the source text.
 
+Every `normalized` block now has `basis` (human decision 5h): `interpreted` readings carry a
+one-line `mapping_note`. The six clauses held at FIX on 5h were re-audited after the change
+(2026-10-23): 3 CLEAN, 2 NEEDS-HUMAN-JUDGMENT, 1 MINOR FIX (resolved). Their rows were
+re-labelled in place; row order is kept from round 3.
+
 Review the **minimal core set** first (the engine needs it for the real baseline), then the rest.
 This core-first order is the human's instruction (2026-10-22); it overrides START_PROMPT 1e's
 global NEEDS-HUMAN-JUDGMENT-first order, so `dha.pp11.applicability` and `dha.pp11.4-18-5`
@@ -28,21 +33,22 @@ every DHA clause now points to `dha.pp11.applicability` for its `binding: unknow
 | 5 | `uae.fl2-2019.art6` | UAE Federal Law No. 2 of 2019 … | 3 | FIX resolved + question | "shall set" read as a power; `issue_determination` marked as a mapping. **Question:** the translation defines "Health Authority" twice (p.2); read literally, the second could make the portal operator a "Health Authority". Check the Arabic. |
 | 6 | `uae.fl2-2019.art16` | same | 4 | FIX resolved + question | Condition no longer imports the p.5 exceptions. Same "Health Authority" question; the parse of "not to use them except in the health purposes without written approval" is ambiguous in translation. |
 | 7 | `dha.pp11.4-18-4` | Health Data Protection and Confidentiality Policy_EN2022810559.pdf | 32 | FIX resolved | Notes now cite the policy's own definition of "UAE Data Protection Law" as Decree-Law 45/2021 and its supersession sentence (§4.2, pp.9–10). Recipient comes from 4.18.5. |
-| 8 | `dha.pp11.4-18-1` | same | 30 | FIX open (5h) | Obligation to `activate_fallback_channel` is not entailed: the text obliges entities to *establish* plans, and items a–h do not mention a fallback. |
-| 9 | `uae.ai-charter.human-oversight` | UAE Policy Foundation.pdf | 2 | FIX open (5h) | Actor and action are not in the text (notes admit the mapping). Issuer/date per your decision. |
-| 10 | `illus.telecom.incident-report` | — illustrative | — | CLEAN | binding false, plain language, no source file; the 60-minute deadline is a labelled scenario assumption. |
-| 11 | `illus.telecom.regulator-information-request` | — illustrative | — | CLEAN | Same. |
+| 8 | `dha.pp11.4-18-1` | same | 30 | NEEDS-HUMAN-JUDGMENT (after 5h) | `basis: interpreted`. Open question h2: may a duty to *establish* plans map to *activating* a fallback channel, when items aa–hh do not mention one and §4.18 is about breach reporting? If not, record "establish plans" and make the fallback illustrative. |
+| 9 | `uae.ai-charter.human-oversight` | UAE Policy Foundation.pdf | 2 | CLEAN (after 5h) | `basis: interpreted`, mapping_note covers actor and action. Issuer/date per your decision. |
+| 10 | `illus.telecom.incident-report` | — illustrative | — | CLEAN | binding false, plain language, no source file; the 60-minute deadline is a labelled scenario assumption. Stays illustrative: Art 12, 13, 14(3) and 30 (OCR copy, checked against images) state no reporting duty; the Law delegates this to TDRA regulations / the Executive Order, which are not in the reviewed corpus. |
+| 11 | `illus.telecom.regulator-information-request` | — illustrative | — | CLEAN | Same labels. Art 12, 13, 14(3) and 30 do not state it; Art 14(5) supports it as a draft (`uae.telecom-law.art14-5`, row 13a). Retire this rule once that clause is reviewed. |
 
 ## Part 2 — other clauses
 
 | # | Clause id | PDF | Page | Triage | What to check |
 |---|---|---|---|---|---|
 | 12 | `dha.pp11.applicability` | Health Data Protection and Confidentiality Policy_EN2022810559.pdf | 1 | NEEDS-HUMAN-JUDGMENT | Does the policy bind a DHA-licensed private operator? Scope §3.5 (p.9): "All users accessing and using health information in healthcare sector in the Emirate of Dubai". Cover says Effective 10/10/2022, footer says Nov 10, 2022; `document_date` uses the issue date 2022-08-10. |
-| 13 | `dha.pp11.4-18-5` | same | 32 | NEEDS-HUMAN-JUDGMENT | The text names "both the UAE Information Office and DHA"; the mapping keeps only DHA. "confirmed or suspected" in the condition extends "Breach notifications". |
+| 13 | `dha.pp11.4-18-5` | same | 32 | NEEDS-HUMAN-JUDGMENT (after 5h) | `basis: interpreted`. The text requires notice to "both the UAE Information Office and DHA"; only DHA is modelled (question h2). |
+| 13a | `uae.telecom-law.art14-5` | ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf | 14 (printed 12) | **OCR — check against image** (new, not yet audited) | Item 5 of Art 14: "Requesting any information required for the activities of TDRA;". Quoted from the OCR copy, corrected against the page image. A power to regulate requests, read (`interpreted`) as a regulator permission. Candidate source for `illus.telecom.regulator-information-request`. |
 | 14 | `uae.telecom-law.art6` | 887026278-TDRA-Telecom-Law-Final-English-o.pdf | 11 | FIX resolved | Binding scope and "English consolidated version, Arabic not checked" added. Gaps below. Footnote 1 = TRA→TDRA rename by Decree-Law 23/2020. |
-| 15 | `itu.y3172.req-ml-mng-003` | T-REC-Y.3172-201906-I!!PDF-E.pdf | 18 | FIX open (5h) | Text: "The ML architecture is required to support capabilities"; `normalized` puts an obligation on `telecom_operator` to `investigate_network_fault`. Gap below. |
-| 16 | `uae.ai-charter.safety` | UAE Policy Foundation.pdf | 1 | FIX open (5h) | `kind: permission`, actor and action are not in "The country encourages modifying or removing systems that pose risks." |
-| 17 | `mocai.ethics.fallback-plan` | MOCAI-AI-Ethics-EN-1.pdf | 16 | FIX open (5h) | Actor and action are not in "AI systems should have safeguards that enable a fallback plan in case of problems." |
+| 15 | `itu.y3172.req-ml-mng-003` | T-REC-Y.3172-201906-I!!PDF-E.pdf | 18 | FIX resolved (after 5h) | `basis: interpreted`. Condition now taken from the quote; article "7.5, REQ-ML-MNG-003 (Table 7-5; printed page 12)"; gap note worded as a candidate finding. |
+| 16 | `uae.ai-charter.safety` | UAE Policy Foundation.pdf | 1 | CLEAN (after 5h) | `basis: interpreted`; mapping_note covers actor, kind and action. |
+| 17 | `mocai.ethics.fallback-plan` | MOCAI-AI-Ethics-EN-1.pdf | 16 | CLEAN (after 5h) | `basis: interpreted`; condition "in case of problems" is verbatim. |
 | 18 | `uae.pdpl.art9-1` | Federal Decree by Law No. (45) of 2021 … | 13 | CLEAN (round 2) | Scope, truncated proviso and candidate overlap are stated. |
 | 19 | `uae.pdpl.art18-1` | same | 21 | CLEAN (round 2) | Art 18(2) and 18(4) noted. |
 | 20 | `eu.ai-act.art14-4-d` | EU AI Act, Regulation (EU) 2024-1689.pdf | 61 | CLEAN (round 2) | Chapeau qualifier noted. |

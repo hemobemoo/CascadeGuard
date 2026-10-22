@@ -5,6 +5,10 @@ policies/extracted/<pdf-stem>.jsonl with one {"source_file", "page", "text"} rec
 plus policies/extracted/_inventory.json summarising page counts, metadata and pages without
 extractable text (likely scanned images; these must be flagged to the human, never guessed).
 
+OCR'd copies in policies/sources/ocr/ are derived sources: each record also carries
+"ocr": true, source_file is "ocr/<name>", and the inventory entry names the original it was
+derived from. OCR text must be corrected against the page image before it is quoted.
+
 Usage: uv run python scripts/extract_pdf_text.py [--only <substring>]
 """
 
@@ -17,6 +21,7 @@ import pdfplumber
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ROOT / "policies" / "sources"
+OCR_SOURCES = SOURCES / "ocr"  # OCR'd copies of originals, named <original-stem>.ocr.pdf
 EXTRACTED = ROOT / "policies" / "extracted"
 INVENTORY = EXTRACTED / "_inventory.json"
 
@@ -26,6 +31,8 @@ MIN_TEXT_CHARS = 20
 
 def extract_pdf(pdf_path: Path) -> dict[str, Any]:
     out_path = EXTRACTED / f"{pdf_path.stem}.jsonl"
+    source_file = pdf_path.relative_to(SOURCES).as_posix()
+    ocr = pdf_path.parent == OCR_SOURCES
     empty_pages: list[int] = []
     image_only_pages: list[int] = []
     with pdfplumber.open(pdf_path) as pdf, out_path.open("w", encoding="utf-8") as out:
@@ -39,17 +46,23 @@ def extract_pdf(pdf_path: Path) -> dict[str, Any]:
                 empty_pages.append(number)
                 if page.images:
                     image_only_pages.append(number)
-            record = {"source_file": pdf_path.name, "page": number, "text": text}
+            record: dict[str, Any] = {"source_file": source_file, "page": number, "text": text}
+            if ocr:
+                record["ocr"] = True
             out.write(json.dumps(record, ensure_ascii=False) + "\n")
             page.close()
-    return {
-        "source_file": pdf_path.name,
+    entry: dict[str, Any] = {
+        "source_file": source_file,
         "output": out_path.name,
         "page_count": page_count,
         "pages_without_text": empty_pages,
         "image_pages_without_text": image_only_pages,
         "metadata": {k: metadata[k] for k in ("Title", "Author", "CreationDate") if k in metadata},
     }
+    if ocr:
+        entry["ocr"] = True
+        entry["derived_from"] = pdf_path.name.removesuffix(".ocr.pdf") + ".pdf"
+    return entry
 
 
 def main() -> int:
@@ -62,15 +75,15 @@ def main() -> int:
     if INVENTORY.exists():
         existing = {e["source_file"]: e for e in json.loads(INVENTORY.read_text("utf-8"))}
 
-    pdfs = sorted(SOURCES.glob("*.pdf"))
+    pdfs = sorted(SOURCES.glob("*.pdf")) + sorted(OCR_SOURCES.glob("*.ocr.pdf"))
     if args.only:
         pdfs = [p for p in pdfs if args.only in p.name]
     for pdf_path in pdfs:
         entry = extract_pdf(pdf_path)
-        existing[pdf_path.name] = entry
+        existing[entry["source_file"]] = entry
         print(
             f"{entry['page_count']:5d} pages, {len(entry['pages_without_text']):4d} without text"
-            f"  {pdf_path.name}"
+            f"  {entry['source_file']}"
         )
 
     inventory = [existing[name] for name in sorted(existing)]
