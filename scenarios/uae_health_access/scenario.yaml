@@ -7,7 +7,8 @@ summary: >-
   A telecom AI traffic-management model deprioritises authentication SMS under load. Patients
   retry, a health portal's AI fraud-risk model reads the retries as credential stuffing and
   locks accounts. Each institution follows its own process, but in this hypothetical setup no
-  one is assigned to reverse the locks, and the information that would explain them sits with another organisation.
+  one is assigned to reverse the locks, and the information that would explain them sits with
+  another organisation.
 synthetic: true
 seed: 20261022
 start_time: "2026-03-02T08:00:00+04:00"
