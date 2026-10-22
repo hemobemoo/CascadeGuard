@@ -20,6 +20,7 @@ cascadeguard/
 ├── AGENTS.md                         [P0] single source of truth for agent rules
 ├── CLAUDE.md                         [P0] one line: @AGENTS.md
 ├── CascadeGuard.md                   [P0] project concept (authoritative)
+├── PROGRESS.md                       [P0] session hand-off: phase status, decisions, next step
 ├── REFERENCE_LINKS.md                [P0]
 │
 ├── docs/

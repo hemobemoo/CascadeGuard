@@ -98,6 +98,11 @@ Ask before adding any dependency not listed here.
 ## Working rules
 
 - Work in the current phase only (see `START_PROMPT.md`). Stop and report at the end of each phase.
+- Keep `PROGRESS.md` current. It is the hand-off between sessions; a new session must read it
+  before doing anything. It holds: current phase and status, what is done (with the commands to
+  verify it), decisions made and why, open questions for the human, and the exact next step.
+  Update it at the end of every phase and before stopping for any reason.
+- At the end of each approved phase: update `PROGRESS.md`, commit, and tag (`git tag phase-N`).
 - Create a module only when the current task needs it. No empty placeholder files.
 - Before saying a task is done, run and pass:
   `uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest`
