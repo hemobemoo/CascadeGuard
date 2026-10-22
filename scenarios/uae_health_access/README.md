@@ -18,19 +18,22 @@ and all patient data is synthetic.
 
 - **Information deadlock.** The health operator needs to know the failure is network-side, but
   network data is outside its information boundary. No clause authorising a telecom-to-health
-  status share was found in the corpus (cf. `uae.fl2-2019.art4`, `uae.fl2-2019.art16`; draft,
-  unreviewed). Candidate finding.
+  status share was found in the reviewed corpus (Telecom Law pp.13-47 unreadable; cf.
+  `uae.fl2-2019.art4`, `uae.fl2-2019.art16`; draft, unreviewed). Candidate finding.
 - **Orphan duty.** No owner for reviewing and reversing an automated lockout was found in the
-  corpus for this scenario. Human-oversight principles (`uae.ai-charter.human-oversight`,
-  `mocai.ethics.contest-redress`) say it should happen but name no owner or deadline; PDPL
-  Art 18(4) assigns review to the Controller on request, but its applicability is uncertain
-  (`uae.pdpl.art18-1`, `uae.pdpl.art2-2`). All draft, unreviewed. Candidate finding.
-- **Mandate overlap.** The DHA policy appears to set the breach-reporting period by reference
-  to the PDPL Executive Regulations (`dha.pp11.4-18-4`), while the PDPL may exclude health data
-  that has its own legislation (`uae.pdpl.art2-2`). Draft, unreviewed. Candidate finding.
-- **Undefined trigger.** No clause was found that triggers escalation when an AI fraud alert may
-  be a false positive caused by another organisation's AI (cf. `dha.pp11.4-18-2`; draft,
-  unreviewed). Candidate finding.
+  reviewed corpus for this scenario (Telecom Law pp.13-47 unreadable). Human-oversight principles
+  (`uae.ai-charter.human-oversight`, `mocai.ethics.contest-redress`) say it should happen but name
+  no owner or deadline; PDPL Art 18(4) assigns review to the Controller on request, but its
+  applicability is uncertain (`uae.pdpl.art18-1`, `uae.pdpl.art2-2`). All draft, unreviewed.
+  Candidate finding.
+- **Mandate overlap.** The DHA policy appears to set the breach-reporting period by reference to
+  the PDPL Executive Regulations (`dha.pp11.4-18-4`), while the PDPL may exclude health data that
+  has its own legislation (`uae.pdpl.art2-2`). The DHA policy defines that law as Decree-Law
+  45/2021 and says the more specialised health regulation supersedes (section 4.2, PDF pages
+  9-10). Draft, unreviewed. Candidate finding.
+- **Undefined trigger.** No clause was found in the reviewed corpus that triggers escalation when
+  an AI fraud alert may be a false positive caused by another organisation's AI (cf.
+  `dha.pp11.4-18-2`; draft, unreviewed). Candidate finding.
 
 These are hypotheses for the engine to test (Phase 2), not findings yet. Any gap is reported as
 *not found in the reviewed corpus*, never as a confirmed legal gap.

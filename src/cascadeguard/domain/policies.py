@@ -3,7 +3,7 @@
 from enum import StrEnum
 from typing import Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, StrictBool, StrictInt, model_validator
 
 from cascadeguard.domain.base import DomainModel
 
@@ -43,7 +43,7 @@ class PolicyClause(DomainModel):
     title: str = Field(min_length=1)
     text: str = Field(min_length=1)  # verbatim from the extracted page (paraphrase if illustrative)
     source_file: str | None = None  # PDF filename in policies/sources/
-    page: int | None = Field(
+    page: StrictInt | None = Field(
         default=None, ge=1
     )  # 1-based PDF page index, as in policies/extracted/
     article: str | None = None  # article/section number as printed, if any
@@ -51,7 +51,7 @@ class PolicyClause(DomainModel):
     jurisdiction: str = Field(min_length=1)
     document_date: str = Field(pattern=DOCUMENT_DATE_PATTERN)
     status: ClauseStatus
-    binding: bool | Literal["unknown"]
+    binding: StrictBool | Literal["unknown"]  # no "yes"/1 coercion
     normalized: NormalizedRule | None = None
     notes: str | None = None
 
