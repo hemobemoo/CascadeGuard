@@ -59,6 +59,8 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 - `[...]` gaps: a test extracts the skipped text and fails on any qualifier, modal, number or
   cross-reference unless the gap is only a footnote marker or a margin requirement ID. FL 2/2019
   Art. 4 and PDPL Art. 2(2) are now quoted in full instead of with gaps.
+- `PolicyClause.binding` and `page` are strict (no "yes"/1/"3" coercion), with tests
+  (phase-auditor round 2).
 - Draft clauses are not loaded by the engine. Phase 2 may be built against synthetic fixture
   clauses under `tests/fixtures/` (AGENTS.md "Human gates"); fixtures never prove the real scenario.
 - **Dubai Law No. 26 of 2015 is not drafted as a clause.** Art. 3 applies it to government
@@ -131,14 +133,28 @@ clauses are precedents and context for gap analysis and can be reviewed later.
    d. Confirm or keep as "treated as applicable": FL 2/2019 and the DHA policy apply to the
       scenario (README "Applicable health-data regime", Decisions above).
    e. DHA policy: binding on DHA-licensed private entities? (`binding: unknown` on all DHA clauses.)
-   f. DHA 4.18.4: are the "Executive Regulations of UAE Data Protection Law" those of
-      Decree-Law 45/2021?
+   f. DHA 4.18.4: the policy defines "UAE Data Protection Law" as Decree-Law 45/2021 (§4.2,
+      pp.9-10) but says "the regulation that is more specialized/detailed in health will
+      supersede". Does that precedence rule displace the PDPL-based reporting period for health
+      data, or does the period still come from the PDPL Executive Regulations?
    g. DHA 4.18.5: who is the "UAE Information Office", and may the mapping keep only DHA?
    h. `normalized` action ids are links into the scenario's action catalogue (`roles.yaml`), not
-      words from the text; notes now say so. Accept that approach, or require text-entailed
-      actions?
+      words from the text; notes now say so. evidence-auditor holds that any actor/action not in
+      the quote stays FIX (5 clauses: `dha.pp11.4-18-1`, `uae.ai-charter.human-oversight`,
+      `uae.ai-charter.safety`, `mocai.ethics.fallback-plan`, `itu.y3172.req-ml-mng-003`). The
+      agent disagrees that renaming is required (the mapping is the purpose of `normalized`), so
+      this is a human gate: accept the mapping approach, or require text-entailed actions (the
+      engine would then need a separate clause-to-action mapping)?
+   i. DHA PDF footers read "n/52" but the PDF has 50 pages (ends in references 5.23). Is the copy
+      complete? No clause depends on the missing pages.
+   j. `policies/extracted/_inventory.json` (committed) lists the two books' filenames, page counts
+      and PDF Title/Author metadata (no text). Acceptable, or drop the books from the committed
+      inventory?
+   k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py` (P1),
+      `domain/base.py` or `docs/policy-inventory.md`. It is a human-owned file: add them, or keep
+      the note in Decisions?
 
-## Deferred MINOR findings (Phase 1 review, round 1)
+## Deferred MINOR findings (Phase 1 review)
 
 - `normalized` blocks go beyond the quote in three non-core clauses: `itu.y3172.req-ml-mng-003`,
   `uae.ai-charter.safety`, `mocai.ethics.fallback-plan` (see triage). Settle with question 7h.
@@ -147,6 +163,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 - Phase 2: `frozen=True` does not deep-freeze `list`/`dict` fields (`AgentDecision.proposed_actions`,
   `ProposedAction.parameters`, `InformationBoundary.visible_categories`). The read-only agent view
   must use tuples or frozen mappings; have test-breaker probe it.
+- Phase 2: `AgentDecision.at` accepts a naive datetime; use `AwareDatetime`.
 - Phase 2: `tests/unit/test_scenario.py` validates scenario clause references against all clauses,
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 

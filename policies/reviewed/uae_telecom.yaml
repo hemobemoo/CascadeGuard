@@ -19,8 +19,10 @@ clauses:
     status: draft
     binding: true
     notes: >-
-      Federal Law by Decree No. (3) of 2003 as amended (consolidated 2022). The [...] marks
-      skip a footnote marker. Establishes the regulator; its duties are on unreadable pages.
+      Federal Law by Decree No. (3) of 2003 as amended (consolidated 2022). Binding scope:
+      federal law establishing the telecom regulator. The PDF is an English consolidated version;
+      the Arabic text was not checked. The [...] marks skip a footnote marker. Establishes the
+      regulator; its duties are on unreadable pages (13-47).
 
   - id: illus.telecom.incident-report
     title: "ILLUSTRATIVE: operator reports a significant network incident to the regulator"

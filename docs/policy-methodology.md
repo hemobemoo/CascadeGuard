@@ -26,5 +26,7 @@ How CascadeGuard turns source documents into clauses the engine can check.
   (`binding: false`).
 - A provision absent from the reviewed corpus is reported as "not found in the reviewed corpus",
   never as a confirmed legal gap.
-- Applicability is stated in `notes`, not assumed. For example, the PDPL excludes health data that
-  has its own legislation, so Federal Law No. 2 of 2019 is the starting point for health data.
+- Applicability is stated in `notes`, not assumed. For example, the project's working reading,
+  pending human review, is that the PDPL excludes health data that has its own legislation
+  (`uae.pdpl.art2-2`, draft), so Federal Law No. 2 of 2019 (`uae.fl2-2019.art2`, draft) is the
+  starting point for health data.

@@ -18,9 +18,12 @@ clauses:
     status: draft
     binding: true
     notes: >-
-      Personal health data in the scenario is regulated by Federal Law No. 2 of 2019, so the
-      PDPL is treated as not governing it. If the portal operator were a governmental entity,
-      exclusion (b) would also apply.
+      Working reading, pending human review: personal health data in the scenario is treated as
+      regulated by Federal Law No. 2 of 2019 (uae.fl2-2019.art2), so the PDPL is treated as not
+      governing it. If the portal operator were a governmental entity, exclusion (b) would also
+      apply. The quote stops at (e); exclusions (f) and (g) follow, and (g) covers companies and
+      establishments in free zones that have special data-protection legislation (PDF pages
+      6-7). The scenario's portal operator is not placed in a free zone.
 
   - id: uae.pdpl.art9-1
     title: Reporting a personal data breach to the Bureau

@@ -15,8 +15,11 @@ clauses:
     status: draft
     binding: true
     notes: >-
-      Used to determine the applicable health-data regime: the synthetic patient portal is an
-      ICT use in the area of health, so this law applies.
+      Used to determine the applicable health-data regime. The synthetic patient portal is an ICT
+      use in the area of health, so this law is treated as applicable for this scenario, pending
+      human review (a working reading, not a legal conclusion). Binding scope: federal law,
+      applying to ICT uses in the area of health in the State, including the free zones (Art 2).
+      The PDF is an English translation; the Arabic text was not checked.
 
   - id: uae.fl2-2019.art4
     title: Confidentiality, integrity and availability of health data
@@ -43,9 +46,13 @@ clauses:
       data_category: patient_account_records
       condition: circulation is not one of the permitted cases (see uae.fl2-2019.art16)
     notes: >-
-      Para (1) is the safeguard the engine enforces: identifiable patient records may not be
-      shared outside permitted cases. Para (3) (availability to the authorised) is relevant to
-      keeping patients able to reach their own records during the lockout.
+      Binding scope: federal law, applying to ICT uses in the area of health in the State,
+      including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
+      checked. Para (1) is the safeguard the engine enforces: identifiable patient records may not
+      be shared outside permitted cases. `share_incident_status` is the scenario action id mapped
+      to circulation of the data, an interpretation. Whether lock records with mobile numbers are
+      "health data and information" is for the human. Para (3) (availability to the authorised) is
+      relevant to keeping patients able to reach their own records during the lockout.
 
   - id: uae.fl2-2019.art6
     title: Health Authority sets standards for exchange, protection and risk management
@@ -69,11 +76,13 @@ clauses:
       action: issue_determination
       condition: on how health data and information may be exchanged and protected
     notes: >-
-      Basis for the health-data oversight role's authority to determine how health data may be
-      exchanged. Mapping the scenario role to "the Health Authority" is an interpretation.
-      "shall set" is read as a power (kind permission) that the role may use; it can also be
-      read as a duty (kind obligation). `issue_determination` is the scenario action id that
-      stands for setting such standards; it is not in the text.
+      Binding scope: federal law, applying to ICT uses in the area of health in the State,
+      including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
+      checked. Basis for the health-data oversight role's authority to determine how health data
+      may be exchanged. Mapping the scenario role to "the Health Authority" is an interpretation.
+      "shall set" is read as a power (kind permission) that the role may use; it can also be read
+      as a duty (kind obligation). `issue_determination` is the scenario action id that stands for
+      setting such standards; it is not in the text.
 
   - id: uae.fl2-2019.art16
     title: Confidentiality of patient information and its exceptions
@@ -98,6 +107,8 @@ clauses:
         for health purposes; any other use needs the patient's written approval, except in the
         cases listed after this article (PDF page 5, not quoted in this clause)
     notes: >-
-      The exceptions on PDF page 5 are outside this quote and would need their own clause(s)
-      before the engine relies on them. None of them names incident coordination with a
+      Binding scope: federal law, applying to ICT uses in the area of health in the State,
+      including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
+      checked. The exceptions on PDF page 5 are outside this quote and would need their own
+      clause(s) before the engine relies on them. None of them names incident coordination with a
       telecom operator; whether exception 3 or 5 could apply is a question for a human expert.
