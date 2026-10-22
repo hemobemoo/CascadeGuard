@@ -7,6 +7,7 @@ from pydantic import Field, model_validator
 
 from cascadeguard.domain.base import DomainModel
 
+ELISION = "[...]"  # marks an omission inside a verbatim quote
 CLAUSE_ID_PATTERN = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
 # Year, year-month, full ISO date, or "unknown" when the PDF prints no date (never guessed).
 DOCUMENT_DATE_PATTERN = r"^(\d{4}(-\d{2}(-\d{2})?)?|unknown)$"
@@ -65,4 +66,7 @@ class PolicyClause(DomainModel):
             raise ValueError(f"a {self.status} clause must record source_file and page")
         if self.source_file is not None and not self.source_file.lower().endswith(".pdf"):
             raise ValueError("source_file must be a PDF filename")
+        stripped = self.text.strip()
+        if stripped.startswith(ELISION) or stripped.endswith(ELISION):
+            raise ValueError("text must not start or end with an elision")
         return self

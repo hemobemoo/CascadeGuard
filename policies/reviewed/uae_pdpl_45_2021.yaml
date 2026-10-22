@@ -5,11 +5,13 @@ clauses:
     title: Exclusions from the PDPL, including health data with its own legislation
     text: >-
       2. Provisions of this Decree by Law shall not apply to the following: a. Government Data
-      b. Governmental entities which control or process Personal Data. [...] e. Personal Health
-      Data that has legislation regulating its protection and processing.
+      b. Governmental entities which control or process Personal Data. c. Personal Data held by
+      the security and judicial authorities d. A Data Subject who processes his/her data for
+      personal purposes. e. Personal Health Data that has legislation regulating its protection
+      and processing.
     source_file: Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf
     page: 6
-    article: Article (2)(2)(a), (b), (e)
+    article: Article (2)(2)(a)-(e)
     issuer: United Arab Emirates (federal)
     jurisdiction: UAE
     document_date: "2021"

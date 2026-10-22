@@ -12,7 +12,7 @@ Each `*.yaml` file holds `clauses:`, a list of clauses extracted from one or mor
 | `title` | yes | Short human title. |
 | `text` | yes | Verbatim quotation from the extracted page. `[...]` marks an omission (e.g. interleaved columns). Illustrative clauses carry a plain-language rule, starting "Illustrative rule, not a quotation". |
 | `source_file` | yes, unless illustrative | PDF filename in `policies/sources/`. |
-| `page` | yes, unless illustrative | 1-based PDF page index, as in `policies/extracted/` (not the printed page number). |
+| `page` | yes, unless illustrative | PDF viewer page (1-based), the same index as `policies/extracted/`. Not the printed page number. |
 | `article` | no | Article or section as printed. |
 | `issuer` | yes | Issuing body. |
 | `jurisdiction` | yes | Where it applies. |
