@@ -286,5 +286,20 @@
     "metadata": {
       "CreationDate": "D:20181126100827+04'00'"
     }
+  },
+  {
+    "source_file": "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf",
+    "output": "887026278-TDRA-Telecom-Law-Final-English-o.ocr.jsonl",
+    "page_count": 47,
+    "pages_without_text": [
+      4
+    ],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "TDRA telecom law_Final_english_o",
+      "CreationDate": "D:20220228045308Z"
+    },
+    "ocr": true,
+    "derived_from": "887026278-TDRA-Telecom-Law-Final-English-o.pdf"
   }
 ]

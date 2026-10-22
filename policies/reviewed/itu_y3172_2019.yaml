@@ -26,7 +26,7 @@ clauses:
       impacting the network.
     source_file: T-REC-Y.3172-201906-I!!PDF-E.pdf
     page: 18
-    article: REQ-ML-MNG-003 (Table 7-5)
+    article: 7.5, REQ-ML-MNG-003 (Table 7-5; printed page 12)
     issuer: ITU-T
     jurisdiction: International (ITU-T Recommendation)
     document_date: "2019-06"
@@ -41,9 +41,9 @@ clauses:
       kind: obligation
       actor: telecom_operator
       action: investigate_network_fault
-      condition: effect of ML on network KPIs is degrading service
+      condition: ongoing monitoring of network operations based on the effect of ML
     notes: >-
       The [...] skips the requirement ID printed in the table margin. The requirement covers the
-      operator's own network; the reviewed text found so far has no requirement to pass
-      ML-caused effects on to dependent services in other organisations. That is a candidate
-      standards gap, to be qualified as "not found in the reviewed corpus".
+      operator's own network. Candidate finding: no requirement to pass ML-caused effects on to
+      dependent services in other organisations was found in the reviewed corpus (cf.
+      itu.y3172.req-ml-mng-003, itu.y3172.mlfo).

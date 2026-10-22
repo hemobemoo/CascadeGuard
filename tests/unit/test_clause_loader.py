@@ -153,6 +153,7 @@ def test_engine_loads_only_reviewed_and_illustrative(dirs: tuple[Path, Path]) ->
         ({"extra_field": "x"}, "unknown field"),
         ({"status": "illustrative", "binding": True, "notes": "n"}, "illustrative but binding"),
         ({"status": "illustrative", "binding": False}, "illustrative without notes"),
+        ({"source_file": "ocr/doc.ocr.pdf"}, "OCR source without the OCR flag"),
         ({"normalized": {k: v for k, v in STATED.items() if k != "basis"}}, "no basis"),
         ({"normalized": {**STATED, "basis": "assumed"}}, "unknown basis"),
         ({"normalized": {**STATED, "basis": "interpreted"}}, "interpreted, no mapping_note"),
@@ -210,3 +211,13 @@ def test_repository_interpreted_readings_have_a_mapping_note() -> None:
     for clause in load_clauses():
         if clause.normalized is not None and clause.normalized.basis == "interpreted":
             assert clause.normalized.mapping_note
+
+
+def test_ocr_clause_with_flag_loads(dirs: tuple[Path, Path]) -> None:
+    reviewed, sources = dirs
+    (sources / "ocr").mkdir()
+    (sources / "ocr" / "doc.ocr.pdf").write_bytes(b"%PDF-")
+    clause = {**VALID, "source_file": "ocr/doc.ocr.pdf", "notes": "OCR — check against image."}
+    write_clauses(reviewed, clause)
+    (loaded,) = load_clauses(reviewed, sources)
+    assert loaded.source_file == "ocr/doc.ocr.pdf"

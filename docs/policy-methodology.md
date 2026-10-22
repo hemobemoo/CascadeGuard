@@ -14,11 +14,25 @@ How CascadeGuard turns source documents into clauses the engine can check.
    marked `[...]`. The test suite verifies each quote against its cited page.
 4. **Review.** The human checks each draft against the PDF itself (text, page, article, issuer,
    date, `binding`, and the `normalized` reading) and sets `status: reviewed`. Agents never do this.
-5. **Illustrative rules.** A rule the scenario needs that no PDF supports is written as
+5. **Derived OCR sources.** An OCR'd copy of an original goes to `policies/sources/ocr/` as
+   `<original-stem>.ocr.pdf`; the original is never replaced or renamed. It is extracted to its
+   own `policies/extracted/<original-stem>.ocr.jsonl` with `"ocr": true` on every page, and the
+   inventory entry names the original it was `derived_from`. OCR text is not trusted: any quote
+   from an OCR page is corrected against the page image of the original PDF, the clause's
+   `source_file` is `ocr/<name>`, `page` is the PDF page index (the printed page goes in
+   `notes`), and `notes` must contain "OCR — check against image" (the loader rejects the clause
+   otherwise). The clause is flagged the same way in the review list.
+6. **Illustrative rules.** A rule the scenario needs that no PDF supports is written as
    `status: illustrative`, `binding: false`, with a plain-language text and a note on why it is
    needed. It is listed separately in phase reports and shown with its label in the UI.
-6. **Loading.** The engine loads only `reviewed` and `illustrative` clauses
+7. **Loading.** The engine loads only `reviewed` and `illustrative` clauses
    (`knowledge.loader.load_engine_clauses`). A malformed file fails the whole load.
+
+## OCR provenance
+
+| Derived file | Original | Supplied | Provenance | Known OCR errors |
+|---|---|---|---|---|
+| `policies/sources/ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf` (sha256 `cda5693f…`, 47 pages) | `887026278-TDRA-Telecom-Law-Final-English-o.pdf` (sha256 `f6c6d4a9…`, unchanged) | By the human, 2026-10-22 (first committed in 0a51f82 over the original by mistake; moved to `ocr/` in 428e114) | PDF metadata: ModDate 2026-10-22 21:18:56 UTC, Producer "macOS Version 12.1 (Build 21C52) Quartz PDFContext". The OCR tool is not recorded. | Words run together; broken list markers (e.g. "?", "I", "i" for item numbers, "5Requesting"); footnote digits stuck to words ("Board'", "(14)1,2"); swapped or interleaved paragraphs (human-reported: Art 28, Art 64/65, Art 14 item 21, Art 71/72 on printed page 37); misread footers. PDF page index = printed page + 2 on pages 5–47. |
 
 ## Labelling rules
 
