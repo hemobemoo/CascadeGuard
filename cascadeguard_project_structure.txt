@@ -14,7 +14,8 @@ cascadeguard/
 │                                      no requirements.txt: pyproject.toml + uv.lock replace it)
 ├── .env.example                      [P5] OPENROUTER_API_KEY, OPENROUTER_BASE_URL,
 │                                     CASCADEGUARD_MODEL — names only (never commit .env)
-├── .mcp.json                         [P0] MCP config for Claude Code (set up by the human)
+├── .mcp.json                         [P0] MCP config for Claude Code — committed, no secrets
+│                                     (keys come from ${CONTEXT7_API_KEY} etc. set with setx)
 ├── README.md                         [P0] short; how to run the demo
 ├── AGENTS.md                         [P0] single source of truth for agent rules
 ├── CLAUDE.md                         [P0] one line: @AGENTS.md
