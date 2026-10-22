@@ -1,0 +1,44 @@
+# ITU-T Y.3172 (06/2019), Architectural framework for machine learning in future networks
+# including IMT-2020. Used to map the simulated telecom AI pipeline (CascadeGuard.md s.7).
+clauses:
+  - id: itu.y3172.mlfo
+    title: Machine learning function orchestrator (MLFO)
+    text: >-
+      3.2.2 machine learning function orchestrator (MLFO): A logical node with functionalities
+      that manage and orchestrate the nodes in a machine learning pipeline.
+    source_file: T-REC-Y.3172-201906-I!!PDF-E.pdf
+    page: 8
+    article: "3.2.2"
+    issuer: ITU-T
+    jurisdiction: International (ITU-T Recommendation)
+    document_date: "2019-06"
+    status: draft
+    binding: false
+    notes: >-
+      Definition only. The simulated traffic-management model is mapped to an ML pipeline
+      managed by an MLFO inside the telecom operator.
+
+  - id: itu.y3172.req-ml-mng-003
+    title: Monitor the effect of ML on network operations and correct it
+    text: >-
+      The ML architecture is required to support capabilities to monitor the network [...]
+      operations based on the effect of ML and to update the ML models and/or policies without
+      impacting the network.
+    source_file: T-REC-Y.3172-201906-I!!PDF-E.pdf
+    page: 18
+    article: REQ-ML-MNG-003 (Table 7-5)
+    issuer: ITU-T
+    jurisdiction: International (ITU-T Recommendation)
+    document_date: "2019-06"
+    status: draft
+    binding: false
+    normalized:
+      kind: obligation
+      actor: telecom_operator
+      action: investigate_network_fault
+      condition: effect of ML on network KPIs is degrading service
+    notes: >-
+      The [...] skips the requirement ID printed in the table margin. The requirement covers the
+      operator's own network; the reviewed text found so far has no requirement to pass
+      ML-caused effects on to dependent services in other organisations. That is a candidate
+      standards gap, to be qualified as "not found in the reviewed corpus".

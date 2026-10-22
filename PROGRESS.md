@@ -4,59 +4,84 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 0 — Tooling: complete, awaiting human approval** (branch `phase-0-tooling`, PR open).
+**Phase 1 — Domain, policy extraction, and scenario: complete, awaiting human review**
+(branch `phase-1-domain-scenario`, PR open). The human must review the draft clauses (list in the
+PR and below) and set `status: reviewed` on each one that checks out.
 
 ## Done
 
-### Phase 0 — Tooling
-- uv project on Python 3.12 (`.python-version`, `pyproject.toml`, `uv.lock`), uv_build backend, src layout.
-- Dev tools: Ruff (lint + format), Pyright (strict), pytest. No runtime dependencies yet.
-- Package skeleton: `src/cascadeguard/__init__.py`, `src/cascadeguard/cli.py` (argparse stub;
-  `run` prints "not implemented" and exits 1 until Phase 2).
-- One unit test: `tests/unit/test_cli.py`.
-- `.env.example` rewritten with `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `CASCADEGUARD_MODEL`
-  (placeholders only). `.env` was not opened.
-- `.gitignore`: the two published books and their future extracted `.jsonl`, by exact filename;
-  `.ruff_cache/`, `.pytest_cache/`. Both book PDFs removed from the git index (files kept on disk).
-- `README.md` (setup, run, checks). `docs/cascadeguard-mcp.md` was already deleted on `main`.
+### Phase 0 — Tooling (merged, tag `phase-0`)
+uv project on Python 3.12, Ruff, Pyright (strict), pytest, CLI stub, `.env.example`, `.gitignore`
+(including the two books by filename), `README.md`.
+
+### Phase 1 — Domain, policy extraction, and scenario
+- **1a/1b Extraction + inventory:** `scripts/extract_pdf_text.py` → `policies/extracted/*.jsonl`
+  and `_inventory.json`. Inventory table in `docs/policy-inventory.md`. Telecom Law pages 13–47
+  have no extractable text (vector-outlined glyphs; OCR would be needed).
+- **1c Domain:** `src/cascadeguard/domain/` (`base`, `policies`, `decisions`, `repairs`,
+  `scenario`). Clause loader `src/cascadeguard/knowledge/loader.py`. Scenario loader
+  `src/cascadeguard/simulation/loader.py`.
+- **1d Scenario:** `scenarios/uae_health_access/` (`scenario.yaml`, `roles.yaml`, `README.md`).
+- **1e Clauses:** 30 clauses in `policies/reviewed/*.yaml`: 28 `draft` (verbatim, verified against
+  the extracted page by the tests) and 2 `illustrative`.
+- Docs: `specs/001-domain-and-scenario.md`, `docs/policy-methodology.md`,
+  `policies/reviewed/README.md`.
 
 Verify:
 
 ```bash
 uv sync
+uv run python scripts/extract_pdf_text.py          # regenerates policies/extracted/ (slow: the books)
 uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
-uv run cascadeguard --version
 ```
 
 ## Decisions
 
-- Repair grammar = the five types in `CascadeGuard.md` §6; lexicographic ranking as in `AGENTS.md`
-  (agreed with the human before Phase 0).
-- CLI uses stdlib `argparse` so no new dependency is needed.
-- Pyright runs in `strict` mode from the start; cheaper than tightening later.
-- Python pinned to `>=3.12,<3.13` to match the decided stack.
-- Ruff excludes `*.md`: Ruff 0.17 also formats Python blocks inside Markdown and had rewritten the
-  example in `START_PROMPT.md`. Human-authored docs are not reformatted by tools.
-- uv-managed CPython 3.12.13 is used. `uv python install` reported an error creating its
-  `3.12` minor-version link; the interpreter itself installed and works. Harmless for this project.
+- Repair grammar = the five types in `CascadeGuard.md` §6; lexicographic ranking as in `AGENTS.md`.
+- CLI uses stdlib `argparse` (no new dependency). Pyright `strict`. Ruff excludes `*.md`.
+- **Health-data regime:** Federal Law No. 2 of 2019 applies (Art. 2). The PDPL is not assumed to
+  apply, because Art. 2(2)(e) excludes health data that has its own legislation. The scenario places
+  the portal in Dubai, so the DHA Health Data Protection and Confidentiality Policy also applies.
+- **Information model:** facts carry a data category, a holder and a certainty. A role's boundary
+  lists the categories that may ever reach it. `define_minimum_data_share` widens a boundary by
+  one category.
+- **Verbatim check:** clause text must appear on its cited page, ignoring whitespace. `[...]` marks
+  an omission (two-column layouts, footnote markers); the pieces must appear in order.
+- `document_date` may be `unknown` when the PDF prints no date (it is never guessed).
+- `page` is the 1-based PDF page index used in `policies/extracted/`, not the printed page number.
+- Scenario loading lives in `simulation/loader.py` (not listed in the structure file; it is the
+  natural home, and Phase 2 builds the rest of `simulation/` around it).
+- Dev dependency `types-pyyaml` added: type stubs PyYAML needs under strict Pyright (not in the
+  AGENTS.md list; flagged for approval).
+- Draft clauses are not loaded by the engine. Until the human reviews them, the engine has only the
+  2 illustrative clauses. Phase 2 cannot start meaningfully before the review.
 
 ## Open questions for the human
 
-1. **Books in git history.** The two book PDFs were committed on `main` before Phase 0. They are now
-   untracked and ignored, but still present in earlier commits (and on GitHub if those were pushed).
-   Removing them from history needs a history rewrite and force-push to `main`. Do you want that?
-2. **Sources missing from `policies/sources/`.** Rules depending on these will be `illustrative`
-   until you add the PDFs. Decide which to add:
-   - NIS2 Directive (EU) 2022/2555 — staged incident reporting.
-   - Canada, Directive on Automated Decision-Making — human involvement, recourse.
-   - Singapore, Model AI Governance Framework (incl. agentic AI) — accountability, multi-agent controls.
-   - WHO, Ethics and governance of AI for health — accountability, inclusiveness.
-   - NCEMA business-continuity standard (AE/SCNS/NCEMA 7000) — service continuity, fallback.
-   - TDRA regulations/policies beyond the Telecom Law (e.g. incident reporting, consumer protection).
-   - Executive regulation of Federal Law No. 2 of 2019 (ICT in health fields).
-   - ITU AI Readiness Framework (if not covered by `T-AI4G-AI4GOOD-2025-6-PDF-E.pdf`; to confirm in Phase 1a).
+1. **Review the 28 draft clauses** (list in the Phase 1 PR) and set `status: reviewed`.
+   Check `binding` too, especially for the DHA policy (`unknown`).
+2. **Telecom Law pages 13–47 have no extractable text** (glyphs drawn as vector outlines; only
+   OCR could recover them, which needs a new dependency). TDRA's duties and licensee
+   obligations are probably on those pages. Two telecom rules are therefore `illustrative`. Options:
+   a readable copy of the law, a TDRA regulation PDF, or keep them illustrative.
+3. **Issuer of "UAE Policy Foundation.pdf".** It is a compilation that opens with the UAE Charter
+   for the Development and Use of AI and prints no compiler or date. Who should be recorded as
+   issuer, and should the Charter's date be recorded from another source?
+4. **PDPL Executive Regulations** (not in the corpus) set the breach-reporting period that the DHA
+   policy refers to. Add them, or keep the period unknown (which is itself a finding)?
+5. **Sources missing from `policies/sources/`.** Rules depending on these stay `illustrative` until
+   you add the PDFs: NIS2 Directive (EU) 2022/2555; Canada's Directive on Automated
+   Decision-Making; Singapore's Model AI Governance Framework (incl. agentic AI); WHO guidance on
+   AI for health; NCEMA 7000 business continuity; TDRA regulations beyond the Telecom Law;
+   Executive Regulation of Federal Law No. 2 of 2019.
+6. **Dev dependency `types-pyyaml`:** approve, or remove and relax Pyright for YAML calls?
+7. **Book PDFs in git history:** the human chose to keep them (no history rewrite). Note: checking
+   out or pulling across commit 914ee87 deletes the ignored book files from disk; restore with
+   `git show 8b03fb5:"policies/sources/<file>" > "policies/sources/<file>"`.
 
 ## Next step
 
-After approval: merge the Phase 0 PR (`gh pr merge --merge`), tag `main` as `phase-0`, push the tag.
-Then Phase 1 on branch `phase-1-domain-scenario`, starting with 1a (inventory of the 19 PDFs).
+After approval and clause review: merge the Phase 1 PR, tag `main` as `phase-1`, push the tag.
+Then Phase 2 on branch `phase-2-engine`: `simulation/state.py`, `boundaries.py`,
+`orchestrator.py`; `engine/constraints.py`, `graph.py`, `diagnosis.py`; `agents/base.py`,
+`scripted.py`; `scripted_decisions.yaml`; `expected_baseline.yaml`.

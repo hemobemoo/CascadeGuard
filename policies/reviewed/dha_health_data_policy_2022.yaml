@@ -1,0 +1,108 @@
+# Dubai Health Authority, Policy for Data and Health Information Protection and
+# Confidentiality (DHA/HRS/HISHD/PP-11, version 1, issued 10/08/2022).
+# The scenario places the synthetic portal operator under DHA jurisdiction (Dubai).
+clauses:
+  - id: dha.pp11.applicability
+    title: Applicability of the DHA policy
+    text: >-
+      Applicability: All Healthcare Entities under the Jurisdiction of Dubai Health Authority
+    source_file: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    page: 1
+    article: Cover page
+    issuer: Dubai Health Authority
+    jurisdiction: Dubai, UAE
+    document_date: "2022-08-10"
+    status: draft
+    binding: unknown
+    notes: >-
+      Applies only because the scenario places the portal operator in Dubai. Whether the policy
+      is binding (and on whom) is for the human to confirm.
+
+  - id: dha.pp11.4-18-1
+    title: Incident response and business continuity plans
+    text: >-
+      4.18.1. Entities must establish breach/incidence response management (Incident Response
+      and Business Continuity) and recovery (Incident Recovery and Disaster Recovery) plans
+      that comprise of:
+    source_file: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    page: 30
+    article: "4.18.1"
+    issuer: Dubai Health Authority
+    jurisdiction: Dubai, UAE
+    document_date: "2022-08-10"
+    status: draft
+    binding: unknown
+    normalized:
+      kind: obligation
+      actor: health_service_operator
+      action: activate_fallback_channel
+      condition: business continuity plan in place for incidents
+    notes: >-
+      Requires a continuity plan but says nothing about who may reverse an automated account
+      lock, or when. Reading it as covering a fallback access channel is an interpretation.
+
+  - id: dha.pp11.4-18-2
+    title: Investigate incidents from discovery, including whether PHI was affected
+    text: >-
+      4.18.2. Entities must thoroughly investigate the breaches/incidents starting from the
+      point of discovery until closure: aa.. Determine if the breach is related to a violation
+      of PHI.
+    source_file: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    page: 31
+    article: "4.18.2"
+    issuer: Dubai Health Authority
+    jurisdiction: Dubai, UAE
+    document_date: "2022-08-10"
+    status: draft
+    binding: unknown
+    normalized:
+      kind: obligation
+      actor: health_service_operator
+      action: raise_security_incident
+      condition: on discovery of a suspected breach or incident
+    notes: >-
+      Supports treating the fraud-model alert as a suspected incident to be investigated, not
+      as an established breach. ("aa.." is how the PDF's list marker extracts.)
+
+  - id: dha.pp11.4-18-4
+    title: Breach reporting period borrowed from the UAE Data Protection Law
+    text: >-
+      4.18.4. The Entity is required to report breaches/incidents within the designated period
+      defined by Executive Regulations of UAE Data Protection Law.
+    source_file: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    page: 32
+    article: "4.18.4"
+    issuer: Dubai Health Authority
+    jurisdiction: Dubai, UAE
+    document_date: "2022-08-10"
+    status: draft
+    binding: unknown
+    normalized:
+      kind: obligation
+      actor: health_service_operator
+      action: notify_health_data_oversight
+      condition: breach or incident; period set by PDPL Executive Regulations (not in corpus)
+    notes: >-
+      Candidate mandate-overlap finding: the period comes from a law that excludes regulated
+      health data (uae.pdpl.art2-2). The period is not known from the corpus.
+
+  - id: dha.pp11.4-18-5
+    title: Breach notifications go to the UAE Information Office and DHA
+    text: >-
+      4.18.5. Breach notifications must be reported to both the UAE Information Office and DHA
+    source_file: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    page: 32
+    article: "4.18.5"
+    issuer: Dubai Health Authority
+    jurisdiction: Dubai, UAE
+    document_date: "2022-08-10"
+    status: draft
+    binding: unknown
+    normalized:
+      kind: obligation
+      actor: health_service_operator
+      action: notify_health_data_oversight
+      condition: breach confirmed or suspected (the text does not distinguish)
+    notes: >-
+      The scenario models only the health-data oversight role, not a separate national data
+      office. The PDF continues with a DHA email address, which is left out here.

@@ -1,0 +1,61 @@
+# Federal Decree-Law No. 45 of 2021 concerning the Protection of Personal Data (PDPL).
+# Included mainly to show why it is NOT assumed to govern this scenario (CascadeGuard.md s.7).
+clauses:
+  - id: uae.pdpl.art2-2
+    title: Exclusions from the PDPL, including health data with its own legislation
+    text: >-
+      2. Provisions of this Decree by Law shall not apply to the following: a. Government Data
+      b. Governmental entities which control or process Personal Data. [...] e. Personal Health
+      Data that has legislation regulating its protection and processing.
+    source_file: Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf
+    page: 6
+    article: Article (2)(2)(a), (b), (e)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2021"
+    status: draft
+    binding: true
+    notes: >-
+      Personal health data in the scenario is regulated by Federal Law No. 2 of 2019, so the
+      PDPL is treated as not governing it. If the portal operator were a governmental entity,
+      exclusion (b) would also apply.
+
+  - id: uae.pdpl.art9-1
+    title: Reporting a personal data breach to the Bureau
+    text: >-
+      1. In addition to the obligations of the Controller stipulated in this Decree by Law, the
+      Controller shall, at the time it becomes aware of the existence of any breach or violation
+      of Personal Data of the Data Subject that would prejudice the privacy, confidentiality and
+      security of data, notify the Bureau of such breach or violation and the investigation
+      rights within the period and in accordance with the measures and requirements set by the
+      Executive Regulations of this Decree by Law,
+    source_file: Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf
+    page: 13
+    article: Article (9)(1)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2021"
+    status: draft
+    binding: true
+    notes: >-
+      Relevant because the DHA policy (dha.pp11.4-18-4) borrows this law's reporting period
+      even though uae.pdpl.art2-2 excludes regulated health data. The reporting period itself
+      is set by the Executive Regulations, which are not in the corpus.
+
+  - id: uae.pdpl.art18-1
+    title: Right to object to decisions from automated processing
+    text: >-
+      1. The Data Subject shall have the right to object to any decisions resulting from
+      automated processing, including profiling, particularly those decisions which have legal
+      impact on or adversely affect the Data Subject.
+    source_file: Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf
+    page: 21
+    article: Article (18)(1)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2021"
+    status: draft
+    binding: true
+    notes: >-
+      A recourse right against automated decisions such as the account lockout. Its
+      applicability here is uncertain because of the exclusions in uae.pdpl.art2-2.

@@ -1,0 +1,67 @@
+# Telecom regime. The Telecom Law PDF has extractable text only on pages 1-12; pages 13-47
+# (where TDRA's competences and licensee obligations would be) return no text. Rules the
+# scenario needs from those pages are therefore labelled illustrative until a readable source
+# is added. Illustrative clauses are never presented as UAE law.
+clauses:
+  - id: uae.telecom-law.art6
+    title: Establishment of TDRA
+    text: >-
+      It is hereby established an independent public authority, called the
+      “Telecommunications and Digital Government Regulating Authority” [...] for the purpose of
+      carrying out the duties and tasks entrusted to it under this Decree-Law and its [...]
+      Executive Order.
+    source_file: 887026278-TDRA-Telecom-Law-Final-English-o.pdf
+    page: 11
+    article: Article (6)
+    issuer: United Arab Emirates (federal); consolidated English text published by TDRA
+    jurisdiction: UAE
+    document_date: "2022"
+    status: draft
+    binding: true
+    notes: >-
+      Federal Law by Decree No. (3) of 2003 as amended (consolidated 2022). The [...] marks
+      skip a footnote marker. Establishes the regulator; its duties are on unreadable pages.
+
+  - id: illus.telecom.incident-report
+    title: "ILLUSTRATIVE: operator reports a significant network incident to the regulator"
+    text: >-
+      Illustrative rule, not a quotation: a licensed telecom operator reports to the telecom
+      regulator any network incident that significantly degrades a public telecommunications
+      service, within 60 minutes of becoming aware of it.
+    issuer: CascadeGuard scenario (illustrative)
+    jurisdiction: UAE (illustrative)
+    document_date: unknown
+    status: illustrative
+    binding: false
+    normalized:
+      kind: obligation
+      actor: telecom_operator
+      action: report_to_telecom_regulator
+      counterpart: telecom_regulator
+      condition: significant degradation of a public telecommunications service
+      deadline_minutes: 60
+    notes: >-
+      Needed so the telecom side has a reporting duty to simulate. The Telecom Law pages that
+      might contain such a duty have no extractable text, and no TDRA regulation is in the
+      corpus. The 60-minute deadline is a scenario assumption.
+
+  - id: illus.telecom.regulator-information-request
+    title: "ILLUSTRATIVE: regulator may request incident information from a licensee"
+    text: >-
+      Illustrative rule, not a quotation: the telecom regulator may request from a licensed
+      operator information about a network incident affecting a public telecommunications
+      service.
+    issuer: CascadeGuard scenario (illustrative)
+    jurisdiction: UAE (illustrative)
+    document_date: unknown
+    status: illustrative
+    binding: false
+    normalized:
+      kind: permission
+      actor: telecom_regulator
+      action: request_information
+      counterpart: telecom_operator
+      data_category: network_incident_status
+    notes: >-
+      Gives the regulator its telecom-only remit in the simulation. Same reason as
+      illus.telecom.incident-report: the TDRA powers are on pages with no extractable text.
