@@ -13,9 +13,11 @@ For each inject in time order:
    to the inject's minute. The inject's facts go to their holder and to recipients whose
    boundary includes the category. `opens_obligations` clauses open obligations; a clause that
    is not loaded becomes a `trigger_not_loaded` finding.
-2. Every role gets a frozen `RoleView` (`simulation/boundaries.py`): tuples and frozen models,
-   only facts inside its boundary, the loaded clauses relevant to the inject with their status
-   labels, and its own accepted actions. Views are built before any decision is applied.
+2. Every role gets a frozen `RoleView` (`simulation/boundaries.py`). It holds tuples and deep
+   copies of facts inside the role's boundary, and the role's own accepted actions. Recipients of
+   the inject also get its title, description, decision points and relevant loaded clauses (with
+   status labels). Everyone else gets only "no new inject", because inject text describes
+   events in other organisations. Views are built before any decision is applied.
 3. Each agent returns an `AgentDecision`. The engine processes them in `roles.yaml` order.
 
 Then the engine closes the run, `engine/graph.py` builds the dependency graph, and
@@ -23,20 +25,25 @@ Then the engine closes the run, `engine/graph.py` builds the dependency graph, a
 
 ## Engine rules (`engine/constraints.py`)
 
-- **Decision level.** The role and time must match. A citation of a clause the engine did not
-  load rejects the whole decision: `draft_citation` if the clause exists as a draft, otherwise
-  `unknown_citation`. Both are recorded as findings.
+- **Decision level.** Citations are always checked, even on decisions without actions. A
+  citation of a clause the engine did not load rejects the whole decision: `draft_citation` if
+  the clause exists as a draft, otherwise `unknown_citation`. A wrong role or time is
+  `wrong_role_or_time`. All are findings, logged under the role the orchestrator asked.
 - **Action level.** The action must be in the role's allowed set. `share_incident_status` needs
   a fact the sender knows. It is rejected if the category is outside the recipient's boundary
-  (`outside_recipient_boundary`), or if a loaded prohibition or data safeguard covers that
-  category (`restricted_by_clause`). `roles.yaml` preconditions are checked:
+  (`outside_recipient_boundary`). `request_information` needs a `data_category`.
+- **Restrictions (`restricted_by_clause`), on every action.** A prohibition applies to its
+  action; if it names a data category, it applies when the action touches that category, or when
+  the action names none (conservative). A data safeguard restricts its action for its category.
+  A safeguard without a data category (e.g. human oversight) is a protective duty, not a ban. `roles.yaml` preconditions are checked:
   `requires_prior`, `requires_information`, and `requires_authority`.
 - **Authority.** An obligation or permission clause naming the role (or `any`) counts if it is
   binding, or if it is an illustrative scenario rule (`binding: false`). A clause with
-  `binding: unknown` gives only `authority_uncertain`. Non-binding guidance never counts.
+  `binding: unknown` gives only `authority_uncertain`. Non-binding guidance never counts. The
+  same firmness rule decides which obligations count as triggers.
   `stated` and `interpreted` readings are treated the same.
 - Accepted effects: shares deliver the fact (boundary checked again), obligations with the same
-  role and action are fulfilled, and goals are met. Every step is appended to the log.
+  role (or `any`) and action are fulfilled, and goals are met. Every step is appended to the log.
 
 ## Diagnosis (`engine/diagnosis.py`)
 

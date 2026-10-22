@@ -41,7 +41,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   `scenario`). Clause loader `src/cascadeguard/knowledge/loader.py`. Scenario loader
   `src/cascadeguard/simulation/loader.py`.
 - **1d Scenario:** `scenarios/uae_health_access/` (`scenario.yaml`, `roles.yaml`, `README.md`).
-- **1e Clauses:** 30 clauses in `policies/reviewed/*.yaml`: 28 `draft` (verbatim, verified against
+- **1e Clauses:** 31 clauses in `policies/reviewed/*.yaml`: 29 `draft` (verbatim, verified against
   the extracted page by the tests) and 2 `illustrative`.
 - Docs: `specs/001-domain-and-scenario.md`, `docs/policy-methodology.md`,
   `policies/reviewed/README.md`.
@@ -133,9 +133,18 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   `unknown_citation`, both findings). All roles decide on the same snapshot; the engine applies
   decisions in `roles.yaml` order. Mandate overlap is not detected yet; it needs reviewed
   DHA/PDPL clauses.
+- **Phase 2 review round 1 fixes (2026-10-23):** inject text, decision points and clauses go only
+  to the inject's recipients; views hold deep copies of facts and the state keeps private
+  copies; prohibitions apply to every action kind (requests by category included); a safeguard
+  without a data category is a protective duty, never a ban (engine decision, recorded in the
+  spec); citations are checked before any early return; wrong role/time is a finding logged
+  under the real role; obligations on `any` are fulfilled by whoever acts; only firm clauses
+  are triggers. The golden summary now lists every decision-level rejection and each finding's
+  minute and role (format change only, same content).
 - **Phase 2 fixtures:** synthetic illustrative clauses in `tests/fixtures/clauses` reuse the draft
-  clause ids and mirror their `normalized` readings and binding status, so the scripted
-  decisions' citations resolve. They are labelled "SYNTHETIC FIXTURES ... not the real corpus" in
+  clause ids and behave in the engine as those clauses would: same `normalized` reading and same
+  authority/trigger outcome (binding true -> illustrative scenario rule; binding unknown kept;
+  non-binding guidance carries no `normalized`). `tests/unit/test_fixtures.py` fails on drift. They are labelled "SYNTHETIC FIXTURES ... not the real corpus" in
   every output. The real-corpus golden `scenarios/uae_health_access/expected_baseline.yaml`
   waits for the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
@@ -235,10 +244,11 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 - `normalized` blocks go beyond the quote in five clauses (see 7h and the triage). Settle with
   question 7h; evidence-auditor keeps them FIX until then.
-- Phase 2: the clause loader should reject the two book filenames as `source_file`, with a test
-  (AGENTS.md: books are never a clause source; none is cited today).
-- Phase 2: add a test that every clause `normalized` actor/action/counterpart/data_category
-  resolves in `roles.yaml` (true today per phase-auditor's probe; nothing guards it).
+- ~~Book filenames as `source_file`; `normalized` names vs `roles.yaml`~~ Done in Phase 2
+  (loader rejects book sources, duplicate YAML keys and stray `.yml` files;
+  `check_clause_references` runs on every engine run, with tests).
+- Phase 3: `RepairProposal.applies_to`, `parameters` and `citations` are still list/dict
+  (mutable inside a frozen model); use tuples / a frozen mapping before repairs are ranked.
 - ~~Deep-freeze and AwareDatetime~~ Done in Phase 2: domain lists are tuples, and `at` and
   `start_time` are `AwareDatetime`. `ProposedAction.parameters` stays a dict; the engine copies
   each decision on receipt and logs only strings.

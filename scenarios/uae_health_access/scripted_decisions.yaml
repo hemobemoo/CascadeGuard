@@ -68,7 +68,9 @@ decisions:
     at_minute: 45
     actions:
       - action_type: report_to_telecom_regulator
-    rationale: A significant degradation of a public service must be reported to the regulator.
+    rationale: >-
+      Under the illustrative scenario rule, a significant degradation of a public service is
+      reported to the regulator.
     citations:
       - clause_id: illus.telecom.incident-report
         relevance: Operator's reporting duty (illustrative scenario rule).

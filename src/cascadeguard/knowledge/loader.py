@@ -21,6 +21,28 @@ SOURCES_DIR = PROJECT_ROOT / "policies" / "sources"
 EXTRACTED_DIR = PROJECT_ROOT / "policies" / "extracted"
 
 ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
+# The two published books are context only and never a clause source (AGENTS.md).
+BOOK_MARKERS = ("Abhivardhan", "Oxford Handbook")
+
+
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate mapping keys instead of keeping the last one."""
+
+
+def _no_duplicate_keys(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict[Any, Any]:
+    keys: list[Any] = [loader.construct_object(k) for k, _ in node.value]  # pyright: ignore[reportUnknownMemberType]
+    duplicates = sorted({str(k) for k in keys if keys.count(k) > 1})
+    if duplicates:
+        raise yaml.constructor.ConstructorError(
+            None, None, f"duplicate keys {duplicates}", node.start_mark
+        )
+    return dict(loader.construct_pairs(node))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+
+
+_UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    _no_duplicate_keys,  # pyright: ignore[reportArgumentType]
+)
 
 
 class ClauseLoadError(ValueError):
@@ -31,6 +53,9 @@ def load_clauses(
     directory: Path = REVIEWED_DIR, sources_dir: Path = SOURCES_DIR
 ) -> list[PolicyClause]:
     """Load every clause of any status, rejecting malformed files and duplicate ids."""
+    strays = sorted(p.name for p in directory.glob("*.yml"))
+    if strays:
+        raise ClauseLoadError(f"clause files must end in .yaml, found {strays}")
     clauses: list[PolicyClause] = []
     for path in sorted(directory.glob("*.yaml")):
         clauses.extend(_load_file(path, sources_dir))
@@ -96,8 +121,8 @@ def _page_text(clause: PolicyClause, extracted_dir: Path) -> str | None:
 
 def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
     try:
-        raw: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
+        raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+    except yaml.YAMLError as exc:  # includes duplicate keys
         raise ClauseLoadError(f"{path.name}: invalid YAML: {exc}") from exc
     items: Any = cast(dict[str, Any], raw).get("clauses") if isinstance(raw, dict) else None
     if not isinstance(items, list):
@@ -108,6 +133,8 @@ def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
             clause = PolicyClause.model_validate(item)
         except ValidationError as exc:
             raise ClauseLoadError(f"{path.name}: clause #{index + 1}: {exc}") from exc
+        if clause.source_file is not None and any(b in clause.source_file for b in BOOK_MARKERS):
+            raise ClauseLoadError(f"{path.name}: {clause.id}: a published book is never a source")
         if clause.source_file is not None and not (sources_dir / clause.source_file).exists():
             raise ClauseLoadError(f"{path.name}: {clause.id}: unknown source_file")
         clauses.append(clause)

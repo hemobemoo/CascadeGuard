@@ -82,16 +82,22 @@ class RuleBook:
         return Authority.NONE, ()
 
     def restrictions(self, action: str, category: str | None, actor: str) -> tuple[str, ...]:
-        """Prohibitions (and data safeguards) that forbid this action for this data category."""
+        """Clauses that forbid this action, for the data category it touches (if any).
+
+        - A prohibition applies to its action. If it names a data category, it applies when the
+          action touches that category, or when the action names no category (conservative).
+        - A safeguard with a data category restricts the action for that category only.
+        - A safeguard without a data category is a protective duty (e.g. human oversight), not a
+          ban: it never blocks an action. Diagnosis uses it as context.
+        """
         found: list[str] = []
         for c in self._matching({RuleKind.PROHIBITION, RuleKind.SAFEGUARD}, action, actor):
             n = c.normalized
             assert n is not None
-            # A data rule restricts only its own category; a general prohibition always applies.
-            if n.data_category is not None:
-                applies = n.data_category == category
+            if n.kind is RuleKind.PROHIBITION:
+                applies = n.data_category is None or category in (None, n.data_category)
             else:
-                applies = n.kind is RuleKind.PROHIBITION
+                applies = n.data_category is not None and n.data_category == category
             if applies:
                 found.append(c.id)
         return tuple(found)
@@ -108,13 +114,17 @@ class RuleBook:
         )
 
     def obligations_for(self, action: str) -> tuple[str, ...]:
-        """Loaded clauses that oblige someone to take this action (a trigger)."""
+        """Firm obligations (binding, or illustrative scenario rules) to take this action.
+
+        Non-binding guidance and binding: unknown clauses are not triggers.
+        """
         return tuple(
             c.id
             for c in self.clauses.values()
             if (n := c.normalized) is not None
             and n.kind is RuleKind.OBLIGATION
             and n.action == action
+            and (c.binding is True or _is_scenario_rule(c))
         )
 
 
@@ -192,12 +202,24 @@ class ConstraintEngine:
         state = self.state
         decision = decision.model_copy(deep=True)  # the agent keeps no handle on what we log
         cited = tuple(c.clause_id for c in decision.citations)
-        if not decision.proposed_actions:
+        if not decision.proposed_actions and not cited:
             return
-        state.record("decision", role=decision.role_id, detail=decision.rationale, clause_ids=cited)
+        # Logged under the role the orchestrator asked, never the role the decision claims.
+        state.record("decision", role=expected_role, detail=decision.rationale, clause_ids=cited)
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
-            state.record("rejected", role=decision.role_id, reasons=(Reason.WRONG_ROLE_OR_TIME,))
-            return
+            claimed = f"claims role {decision.role_id} at {decision.at.isoformat()}"
+            state.record(
+                "rejected", role=expected_role, reasons=(Reason.WRONG_ROLE_OR_TIME,), detail=claimed
+            )
+            state.add_finding(
+                Finding(
+                    kind=Reason.WRONG_ROLE_OR_TIME.value,
+                    minute=state.minute,
+                    role=expected_role,
+                    detail=f"decision from {expected_role} {claimed}",
+                )
+            )
+            # Citations are still checked and recorded below; no action is taken either way.
         for clause_id in cited:
             if clause_id not in self.rules.clauses:
                 reason = (
@@ -207,7 +229,7 @@ class ConstraintEngine:
                 )
                 state.record(
                     "rejected",
-                    role=decision.role_id,
+                    role=expected_role,
                     reasons=(reason,),
                     clause_ids=(clause_id,),
                     detail="whole decision rejected: cited clause is not loaded by the engine",
@@ -216,12 +238,14 @@ class ConstraintEngine:
                     Finding(
                         kind=reason.value,
                         minute=state.minute,
-                        role=decision.role_id,
+                        role=expected_role,
                         clause_ids=(clause_id,),
-                        detail=f"{decision.role_id} cited {clause_id}, not loaded by the engine",
+                        detail=f"{expected_role} cited {clause_id}, not loaded by the engine",
                     )
                 )
                 return
+        if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
+            return
         role = state.roles.role(decision.role_id)
         for action in decision.proposed_actions:
             verdict = self.check(role, action)
@@ -262,8 +286,15 @@ class ConstraintEngine:
             if restricted:
                 reasons.append(Reason.RESTRICTED_BY_CLAUSE)
                 clause_ids.extend(restricted)
-        elif kind == REQUEST and not action.parameters.get("data_category"):
-            return Verdict(False, (Reason.MISSING_PARAMETER,), (), "data_category is required")
+        elif kind == REQUEST:
+            category = action.parameters.get("data_category")
+            if not category:
+                return Verdict(False, (Reason.MISSING_PARAMETER,), (), "data_category is required")
+            details.append(f"{category} from {action.target}")
+            restricted = self.rules.restrictions(kind, category, role.id)
+            if restricted:
+                reasons.append(Reason.RESTRICTED_BY_CLAUSE)
+                clause_ids.extend(restricted)
         else:
             restricted = self.rules.restrictions(kind, None, role.id)
             if restricted:

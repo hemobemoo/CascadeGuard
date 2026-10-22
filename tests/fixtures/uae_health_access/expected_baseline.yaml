@@ -96,8 +96,10 @@ actions:
 rejected_decisions:
 - minute: 60
   role: policy_legal_adviser
-  reason: draft_citation
-  clause: eu.gdpr.art33-1
+  reasons:
+  - draft_citation
+  clauses:
+  - eu.gdpr.art33-1
 obligations:
 - clause: illus.telecom.incident-report
   role: telecom_operator
@@ -122,9 +124,21 @@ goals:
   alert_cause_known_to_health: unmet
   network_incident_reported: met
 findings:
-- deadline_undetermined:dha.pp11.4-18-2
-- deadline_undetermined:dha.pp11.4-18-4
-- draft_citation:eu.gdpr.art33-1
+- minute: 15
+  role: health_service_operator
+  kind: deadline_undetermined
+  clauses:
+  - dha.pp11.4-18-2
+- minute: 15
+  role: health_service_operator
+  kind: deadline_undetermined
+  clauses:
+  - dha.pp11.4-18-4
+- minute: 60
+  role: policy_legal_adviser
+  kind: draft_citation
+  clauses:
+  - eu.gdpr.art33-1
 failures:
 - id: information_deadlock:network_incident_status->health_service_operator
   category: information_deadlock

@@ -27,7 +27,10 @@ class SimulationState:
         self.scenario = scenario
         self.roles = roles
         self._minute = 0
-        self._facts: dict[str, Fact] = {f.id: f for e in scenario.events for f in e.facts}
+        # Private copies: nothing outside the engine holds a reference to the canonical facts.
+        self._facts: dict[str, Fact] = {
+            f.id: f.model_copy(deep=True) for e in scenario.events for f in e.facts
+        }
         self._boundaries = {r.id: frozenset(r.boundary.visible_categories) for r in roles.roles}
         self._known: dict[str, set[str]] = {r.id: set() for r in roles.roles}
         self._done: dict[str, list[tuple[int, str]]] = {r.id: [] for r in roles.roles}
@@ -114,7 +117,7 @@ class SimulationState:
     def fulfil_obligations(self, role: str, action: str) -> tuple[ObligationStatus, ...]:
         fulfilled: list[ObligationStatus] = []
         for i, ob in enumerate(self._obligations):
-            if ob.role == role and ob.action == action and ob.fulfilled_at is None:
+            if ob.role in (role, "any") and ob.action == action and ob.fulfilled_at is None:
                 late = ob.due_at is not None and self._minute > ob.due_at
                 self._obligations[i] = ObligationStatus(
                     ob.clause_id, ob.role, ob.action, ob.opened_at, ob.due_at, self._minute, late
