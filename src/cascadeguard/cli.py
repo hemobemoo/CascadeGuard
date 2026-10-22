@@ -7,7 +7,12 @@ from pathlib import Path
 from cascadeguard import __version__
 from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
-from cascadeguard.simulation.loader import PROJECT_ROOT, SCENARIOS_DIR, load_scenario
+from cascadeguard.simulation.loader import (
+    PROJECT_ROOT,
+    SCENARIOS_DIR,
+    check_clause_references,
+    load_scenario,
+)
 from cascadeguard.simulation.orchestrator import RunResult, run
 
 REAL_CLAUSE_SET = "policies/reviewed: reviewed + illustrative clauses"
@@ -40,8 +45,9 @@ def run_scenario(
     else:
         clauses = load_engine_clauses(clauses_dir)
         label = f"SYNTHETIC FIXTURES from {_display(clauses_dir)}, not the real corpus"
-    corpus_ids = frozenset(c.id for c in corpus) | frozenset(clauses)
+    corpus_ids = frozenset(c.id for c in corpus)
     scenario, roles = load_scenario(scenario_id, set(corpus_ids), scenarios_dir)
+    check_clause_references(clauses.values(), roles)
     agents = load_scripted_agents(
         scenarios_dir / scenario_id / "scripted_decisions.yaml", scenario, roles
     )

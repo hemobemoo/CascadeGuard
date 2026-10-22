@@ -1,7 +1,9 @@
 """What each role may see at time t: a frozen, boundary-filtered view built from the state.
 
-Agents receive only a `RoleView`. It holds tuples, strings and frozen models, never a reference
-to the state, so an agent cannot change the simulation or see facts outside its boundary.
+Agents receive only a `RoleView`. It holds tuples, strings and deep copies of frozen models,
+never a reference to the state, so an agent cannot change the simulation or see facts outside its
+boundary. Inject text (title, description, decision points, clauses) goes only to the inject's
+recipients: it describes events in other organisations. Everyone else sees that time advanced.
 """
 
 from dataclasses import dataclass
@@ -26,7 +28,7 @@ class RoleView:
     instructions: str
     minute: int
     at: datetime
-    event_id: str
+    event_id: str | None  # None when the role is not a recipient of the inject
     event_title: str
     event_description: str
     decision_points: tuple[str, ...]
@@ -44,10 +46,13 @@ def view_for(
 ) -> RoleView:
     role = state.roles.role(role_id)
     boundary = state.boundary(role_id)
-    facts = tuple(f for f in state.known_facts(role_id) if f.data_category in boundary)
+    facts = tuple(
+        f.model_copy(deep=True) for f in state.known_facts(role_id) if f.data_category in boundary
+    )
+    recipient = role_id in event.recipients
     relevant = tuple(
         ClauseSummary(c.id, c.title, c.status_label)
-        for cid in event.relevant_clauses
+        for cid in (event.relevant_clauses if recipient else ())
         if (c := clauses.get(cid)) is not None
     )
     return RoleView(
@@ -56,10 +61,10 @@ def view_for(
         instructions=role.instructions,
         minute=state.minute,
         at=state.scenario.time_at(state.minute),
-        event_id=event.id,
-        event_title=event.title,
-        event_description=event.description,
-        decision_points=event.decision_points,
+        event_id=event.id if recipient else None,
+        event_title=event.title if recipient else f"T+{state.minute:02d}: no new inject for you",
+        event_description=event.description if recipient else "",
+        decision_points=event.decision_points if recipient else (),
         facts=facts,
         allowed_actions=role.allowed_actions,
         clauses=relevant,

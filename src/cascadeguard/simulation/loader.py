@@ -1,11 +1,13 @@
 """Load a scenario directory (scenario.yaml + roles.yaml) and check cross-references."""
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import yaml
 from pydantic import BaseModel, ValidationError
 
+from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -52,6 +54,24 @@ def load_scenario(
                     f"fact {fact.id}: holder {fact.holder} cannot see {fact.data_category}"
                 )
     return scenario, roles
+
+
+def check_clause_references(clauses: Iterable[PolicyClause], roles: RoleSet) -> None:
+    """Every normalized actor/counterpart must be a role (or "any"), every action in the catalogue.
+
+    A typo would otherwise grant nothing, or produce a false orphan duty, silently.
+    """
+    role_ids = {r.id for r in roles.roles} | {"any"}
+    action_ids = {a.id for a in roles.actions}
+    for clause in clauses:
+        n = clause.normalized
+        if n is None:
+            continue
+        unknown = sorted({n.actor, n.counterpart or "any"} - role_ids | ({n.action} - action_ids))
+        if unknown:
+            raise ScenarioLoadError(
+                f"{clause.id}: normalized names unknown roles/actions {unknown}"
+            )
 
 
 def _load_model[M: BaseModel](path: Path, model: type[M]) -> M:

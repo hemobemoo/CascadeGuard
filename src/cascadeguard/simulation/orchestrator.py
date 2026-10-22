@@ -50,10 +50,14 @@ class RunResult:
                 if e.kind in ("accepted", "rejected") and e.action is not None
             ],
             "rejected_decisions": [
-                {"minute": e.minute, "role": e.role, "reason": e.reasons[0], "clause": c}
+                {
+                    "minute": e.minute,
+                    "role": e.role,
+                    "reasons": list(e.reasons),
+                    **({"clauses": list(e.clause_ids)} if e.clause_ids else {}),
+                }
                 for e in self.log
                 if e.kind == "rejected" and e.action is None
-                for c in e.clause_ids[:1]
             ],
             "obligations": [
                 {
@@ -67,7 +71,15 @@ class RunResult:
                 for o in self.obligations
             ],
             "goals": {g: ("met" if m is not None else "unmet") for g, m in self.goals},
-            "findings": sorted({f"{f.kind}:{','.join(f.clause_ids)}" for f in self.findings}),
+            "findings": [
+                {
+                    "minute": f.minute,
+                    "role": f.role,
+                    "kind": f.kind,
+                    **({"clauses": list(f.clause_ids)} if f.clause_ids else {}),
+                }
+                for f in self.findings
+            ],
             "failures": [
                 {
                     "id": f.id,

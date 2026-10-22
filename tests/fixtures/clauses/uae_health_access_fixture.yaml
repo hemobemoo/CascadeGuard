@@ -1,7 +1,8 @@
 # SYNTHETIC FIXTURE CLAUSES for engine tests (AGENTS.md "Human gates"). Not quotations, not law.
-# Each mirrors the normalized reading of a draft clause with the same id, so the scripted
-# decisions' citations resolve while human review is pending. Generated once from
-# policies/reviewed/ on 2026-10-23; edit by hand if the real readings change.
+# Each stands in for the clause with the same id so the scripted decisions' citations resolve
+# while human review is pending, and behaves in the engine as that clause would: same
+# normalized reading and the same authority outcome (see each note). Generated from
+# policies/reviewed/ on 2026-10-23; tests/unit/test_fixtures.py fails if they drift.
 clauses:
 - id: dha.pp11.4-18-1
   title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-1
@@ -20,8 +21,8 @@ clauses:
     actor: health_service_operator
     action: activate_fallback_channel
     condition: business continuity plan in place for incidents
-  notes: Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause dha.pp11.4-18-1 (binding unknown). Never evidence that the real scenario works.
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause dha.pp11.4-18-1:
+    binding unknown, kept as binding: unknown (the engine treats it as uncertain authority).'
 - id: dha.pp11.4-18-2
   title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-2
   text: 'Synthetic test fixture, not a quotation and not law: stands in for dha.pp11.4-18-2 so the engine
@@ -39,8 +40,8 @@ clauses:
     actor: health_service_operator
     action: raise_security_incident
     condition: from discovery of a breach or incident until closure
-  notes: Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause dha.pp11.4-18-2 (binding unknown). Never evidence that the real scenario works.
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause dha.pp11.4-18-2:
+    binding unknown, kept as binding: unknown (the engine treats it as uncertain authority).'
 - id: dha.pp11.4-18-4
   title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-4
   text: 'Synthetic test fixture, not a quotation and not law: stands in for dha.pp11.4-18-4 so the engine
@@ -58,8 +59,8 @@ clauses:
     actor: health_service_operator
     action: notify_health_data_oversight
     condition: breach or incident; period set by PDPL Executive Regulations (not in corpus)
-  notes: Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause dha.pp11.4-18-4 (binding unknown). Never evidence that the real scenario works.
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause dha.pp11.4-18-4:
+    binding unknown, kept as binding: unknown (the engine treats it as uncertain authority).'
 - id: illus.telecom.incident-report
   title: SYNTHETIC FIXTURE mirroring illus.telecom.incident-report
   text: 'Synthetic test fixture, not a quotation and not law: stands in for illus.telecom.incident-report
@@ -77,9 +78,8 @@ clauses:
     counterpart: telecom_regulator
     condition: significant degradation of a public telecommunications service
     deadline_minutes: 60
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause illus.telecom.incident-report (real binding: false). Never evidence that the real scenario
-    works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause illus.telecom.incident-report:
+    an illustrative scenario rule already; copied as is.'
 - id: illus.telecom.regulator-information-request
   title: SYNTHETIC FIXTURE mirroring illus.telecom.regulator-information-request
   text: 'Synthetic test fixture, not a quotation and not law: stands in for illus.telecom.regulator-information-request
@@ -96,9 +96,8 @@ clauses:
     action: request_information
     counterpart: telecom_operator
     data_category: network_incident_status
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause illus.telecom.regulator-information-request (real binding: false). Never evidence that the
-    real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause illus.telecom.regulator-information-request:
+    an illustrative scenario rule already; copied as is.'
 - id: itu.y3172.req-ml-mng-003
   title: SYNTHETIC FIXTURE mirroring itu.y3172.req-ml-mng-003
   text: 'Synthetic test fixture, not a quotation and not law: stands in for itu.y3172.req-ml-mng-003
@@ -108,17 +107,9 @@ clauses:
   document_date: unknown
   status: illustrative
   binding: false
-  normalized:
-    basis: interpreted
-    mapping_note: The text is a capability requirement on the ML architecture; the telecom operator
-      running that architecture is read as the actor, and monitoring the effect of ML as investigating
-      a network fault.
-    kind: obligation
-    actor: telecom_operator
-    action: investigate_network_fault
-    condition: ongoing monitoring of network operations based on the effect of ML
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause itu.y3172.req-ml-mng-003 (real binding: false). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause itu.y3172.req-ml-mng-003:
+    non-binding guidance; its normalized reading is left out because the engine never takes authority,
+    triggers or bans from guidance.'
 - id: mocai.ethics.fallback-plan
   title: SYNTHETIC FIXTURE mirroring mocai.ethics.fallback-plan
   text: 'Synthetic test fixture, not a quotation and not law: stands in for mocai.ethics.fallback-plan
@@ -128,16 +119,9 @@ clauses:
   document_date: unknown
   status: illustrative
   binding: false
-  normalized:
-    basis: interpreted
-    mapping_note: The text names no actor and asks for safeguards that enable a fallback plan; this
-      is read as the health operator activating a fallback channel when its AI service has problems.
-    kind: safeguard
-    actor: health_service_operator
-    action: activate_fallback_channel
-    condition: in case of problems
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause mocai.ethics.fallback-plan (real binding: false). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause mocai.ethics.fallback-plan:
+    non-binding guidance; its normalized reading is left out because the engine never takes authority,
+    triggers or bans from guidance.'
 - id: nist.ai-rmf.manage-4-3
   title: SYNTHETIC FIXTURE mirroring nist.ai-rmf.manage-4-3
   text: 'Synthetic test fixture, not a quotation and not law: stands in for nist.ai-rmf.manage-4-3 so
@@ -147,8 +131,9 @@ clauses:
   document_date: unknown
   status: illustrative
   binding: false
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause nist.ai-rmf.manage-4-3 (real binding: false). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause nist.ai-rmf.manage-4-3:
+    non-binding guidance; its normalized reading is left out because the engine never takes authority,
+    triggers or bans from guidance.'
 - id: uae.ai-charter.human-oversight
   title: SYNTHETIC FIXTURE mirroring uae.ai-charter.human-oversight
   text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.ai-charter.human-oversight
@@ -158,17 +143,9 @@ clauses:
   document_date: unknown
   status: illustrative
   binding: false
-  normalized:
-    basis: interpreted
-    mapping_note: The text names no actor or action; human oversight to correct AI errors is read as
-      the health operator reviewing automated lockouts.
-    kind: safeguard
-    actor: health_service_operator
-    action: review_automated_lockouts
-    condition: an AI output may be erroneous
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause uae.ai-charter.human-oversight (real binding: false). Never evidence that the real scenario
-    works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.ai-charter.human-oversight:
+    non-binding guidance; its normalized reading is left out because the engine never takes authority,
+    triggers or bans from guidance.'
 - id: uae.fl2-2019.art16
   title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art16
   text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art16 so the
@@ -187,9 +164,10 @@ clauses:
     action: share_incident_status
     data_category: patient_account_records
     condition: for health purposes; any other use needs the patient's written approval, except in the
-      cases listed after this article (PDF page 5, not quoted in this clause)
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause uae.fl2-2019.art16 (real binding: true). Never evidence that the real scenario works.'
+      cases listed in Art 16 items 1-5 (PDF page 5, not quoted in this clause)
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art16:
+    binding: true, shown as an illustrative scenario rule with binding: false, which the engine treats
+    like a binding clause.'
 - id: uae.fl2-2019.art2
   title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art2
   text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art2 so the
@@ -199,8 +177,9 @@ clauses:
   document_date: unknown
   status: illustrative
   binding: false
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause uae.fl2-2019.art2 (real binding: true). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art2:
+    binding: true, shown as an illustrative scenario rule with binding: false, which the engine treats
+    like a binding clause.'
 - id: uae.fl2-2019.art4
   title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art4
   text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art4 so the
@@ -220,8 +199,9 @@ clauses:
     action: share_incident_status
     data_category: patient_account_records
     condition: circulation is not one of the permitted cases (including, but not limited to, uae.fl2-2019.art16)
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause uae.fl2-2019.art4 (real binding: true). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art4:
+    binding: true, shown as an illustrative scenario rule with binding: false, which the engine treats
+    like a binding clause.'
 - id: uae.fl2-2019.art6
   title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art6
   text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art6 so the
@@ -240,8 +220,9 @@ clauses:
     actor: health_data_oversight
     action: issue_determination
     condition: on how health data and information may be exchanged and protected
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause uae.fl2-2019.art6 (real binding: true). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art6:
+    binding: true, shown as an illustrative scenario rule with binding: false, which the engine treats
+    like a binding clause.'
 - id: uae.pdpl.art2-2
   title: SYNTHETIC FIXTURE mirroring uae.pdpl.art2-2
   text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.pdpl.art2-2 so the engine
@@ -251,5 +232,6 @@ clauses:
   document_date: unknown
   status: illustrative
   binding: false
-  notes: 'Fixture only (tests/fixtures). Mirrors the normalized reading and binding status of the draft
-    clause uae.pdpl.art2-2 (real binding: true). Never evidence that the real scenario works.'
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.pdpl.art2-2:
+    binding: true, shown as an illustrative scenario rule with binding: false, which the engine treats
+    like a binding clause.'
