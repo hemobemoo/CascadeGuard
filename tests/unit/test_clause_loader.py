@@ -29,6 +29,18 @@ VALID: dict[str, Any] = {
     "binding": True,
 }
 
+STATED: dict[str, Any] = {
+    "basis": "stated",
+    "kind": "obligation",
+    "actor": "telecom_operator",
+    "action": "report_to_telecom_regulator",
+}
+INTERPRETED: dict[str, Any] = {
+    **STATED,
+    "basis": "interpreted",
+    "mapping_note": "The text names no actor; the operator is inferred.",
+}
+
 
 def write_clauses(directory: Path, *clauses: dict[str, Any]) -> None:
     (directory / "clauses.yaml").write_text(yaml.safe_dump({"clauses": list(clauses)}), "utf-8")
@@ -141,6 +153,11 @@ def test_engine_loads_only_reviewed_and_illustrative(dirs: tuple[Path, Path]) ->
         ({"extra_field": "x"}, "unknown field"),
         ({"status": "illustrative", "binding": True, "notes": "n"}, "illustrative but binding"),
         ({"status": "illustrative", "binding": False}, "illustrative without notes"),
+        ({"normalized": {k: v for k, v in STATED.items() if k != "basis"}}, "no basis"),
+        ({"normalized": {**STATED, "basis": "assumed"}}, "unknown basis"),
+        ({"normalized": {**STATED, "basis": "interpreted"}}, "interpreted, no mapping_note"),
+        ({"normalized": {**INTERPRETED, "mapping_note": "  "}}, "interpreted, blank note"),
+        ({"normalized": {**INTERPRETED, "mapping_note": "one\ntwo"}}, "multi-line note"),
     ],
 )
 def test_malformed_clause_rejects_whole_load(
@@ -173,3 +190,23 @@ def test_quote_check_honours_elisions_and_order(tmp_path: Path) -> None:
     assert quote_found_on_page(clause, tmp_path)
     reordered = clause.model_copy(update={"text": "gamma delta. [...] Alpha beta"})
     assert not quote_found_on_page(reordered, tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("normalized", "label"),
+    [(None, "draft"), (STATED, "draft"), (INTERPRETED, "draft (interpreted)")],
+)
+def test_normalized_basis_loads_and_shows_in_the_label(
+    dirs: tuple[Path, Path], normalized: dict[str, Any] | None, label: str
+) -> None:
+    reviewed, sources = dirs
+    clause = {**VALID} if normalized is None else {**VALID, "normalized": normalized}
+    write_clauses(reviewed, clause)
+    (loaded,) = load_clauses(reviewed, sources)
+    assert loaded.status_label == label
+
+
+def test_repository_interpreted_readings_have_a_mapping_note() -> None:
+    for clause in load_clauses():
+        if clause.normalized is not None and clause.normalized.basis == "interpreted":
+            assert clause.normalized.mapping_note

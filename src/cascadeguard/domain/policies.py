@@ -26,9 +26,23 @@ class RuleKind(StrEnum):
     SAFEGUARD = "safeguard"
 
 
-class NormalizedRule(DomainModel):
-    """Machine-checkable reading of a clause. It is an interpretation, not the clause text."""
+class NormalizedBasis(StrEnum):
+    # The text names the actor and the duty or permission; only role names are mapped
+    # (e.g. Licensees -> telecom_operator).
+    STATED = "stated"
+    # The actor or action is inferred; mapping_note gives a one-line justification.
+    INTERPRETED = "interpreted"
 
+
+class NormalizedRule(DomainModel):
+    """Machine-checkable reading of a clause. It is an interpretation, not the clause text.
+
+    The engine treats both bases the same; reports and the UI show "interpreted" next to the
+    clause's status label (PolicyClause.status_label).
+    """
+
+    basis: NormalizedBasis
+    mapping_note: str | None = None  # required when basis is interpreted; one line
     kind: RuleKind
     actor: str  # role id that bears the rule, or "any"
     action: str  # action id from the scenario's action catalogue, or a short verb phrase
@@ -36,6 +50,15 @@ class NormalizedRule(DomainModel):
     data_category: str | None = None
     condition: str | None = None
     deadline_minutes: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _check_basis(self) -> Self:
+        note = (self.mapping_note or "").strip()
+        if self.basis is NormalizedBasis.INTERPRETED and not note:
+            raise ValueError("an interpreted normalized reading needs a mapping_note")
+        if "\n" in note:
+            raise ValueError("mapping_note must be one line")
+        return self
 
 
 class PolicyClause(DomainModel):
@@ -70,3 +93,10 @@ class PolicyClause(DomainModel):
         if stripped.startswith(ELISION) or stripped.endswith(ELISION):
             raise ValueError("text must not start or end with an elision")
         return self
+
+    @property
+    def status_label(self) -> str:
+        """The label reports and the UI show next to the clause, e.g. "draft (interpreted)"."""
+        if self.normalized is not None and self.normalized.basis is NormalizedBasis.INTERPRETED:
+            return f"{self.status} (interpreted)"
+        return str(self.status)
