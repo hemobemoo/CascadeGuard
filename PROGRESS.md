@@ -4,15 +4,34 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 1 — Domain, policy extraction, and scenario: built; review loop done (3 rounds), human gates open**
-(branch `phase-1-domain-scenario`, PR open). The human must review the draft clauses (list in the
-PR and below) and set `status: reviewed` on each one that checks out.
+**Phase 2 — Engine with scripted agents: built on `phase-2-engine`, review loop next.**
+Phase 1 (PR #2) stays open until the human has reviewed the core clause set, then merges.
+Phase 2 runs against synthetic fixture clauses (`tests/fixtures/clauses`) while that review is
+pending.
 
 ## Done
 
 ### Phase 0 — Tooling (merged, tag `phase-0`)
 uv project on Python 3.12, Ruff, Pyright (strict), pytest, CLI stub, `.env.example`, `.gitignore`
 (including the two books by filename), `README.md`.
+
+### Phase 2 — Engine with scripted agents (branch `phase-2-engine`)
+- `simulation/state.py`, `boundaries.py`, `orchestrator.py`; `engine/constraints.py`,
+  `graph.py` (NetworkX), `diagnosis.py`; `agents/base.py`, `scripted.py`; `domain/findings.py`.
+- Scenario data: `roles.yaml` action preconditions, `scenario.yaml` recovery goals and
+  `opens_obligations`, `scripted_decisions.yaml`.
+- `cascadeguard run uae_health_access [--clauses DIR]` prints the clause set (with status labels),
+  timeline, accepted/rejected actions, obligations, goals, findings and diagnosed failures.
+- Golden: `tests/fixtures/uae_health_access/expected_baseline.yaml` (synthetic fixtures).
+  Spec: `specs/002-engine-and-diagnosis.md`; `docs/architecture.md`.
+
+Verify:
+
+```bash
+uv run cascadeguard run uae_health_access --clauses tests/fixtures/clauses   # fixture baseline
+uv run cascadeguard run uae_health_access                                    # real clause set
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 1 — Domain, policy extraction, and scenario
 - **1a/1b Extraction + inventory:** `scripts/extract_pdf_text.py` → `policies/extracted/*.jsonl`
@@ -107,6 +126,21 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   at the old commit `9f67523`, whose ancestors still contain the books; only GitHub Support can
   remove it. Other clones made before 2026-10-22 must be re-cloned.
 
+- **Phase 2 engine decisions (2026-10-23):** authority comes from an obligation or permission
+  clause that is binding, or from an illustrative scenario rule (`binding: false`).
+  `binding: unknown` gives only "authority uncertain"; non-binding guidance never gives
+  authority. A citation of an unloaded clause rejects the whole decision (`draft_citation` or
+  `unknown_citation`, both findings). All roles decide on the same snapshot; the engine applies
+  decisions in `roles.yaml` order. Mandate overlap is not detected yet; it needs reviewed
+  DHA/PDPL clauses.
+- **Phase 2 fixtures:** synthetic illustrative clauses in `tests/fixtures/clauses` reuse the draft
+  clause ids and mirror their `normalized` readings and binding status, so the scripted
+  decisions' citations resolve. They are labelled "SYNTHETIC FIXTURES ... not the real corpus" in
+  every output. The real-corpus golden `scenarios/uae_health_access/expected_baseline.yaml`
+  waits for the core-set review.
+- **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
+  confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+
 ## Minimal core set for Phase 2
 
 The engine needs these reviewed (or confirmed illustrative) to run the real baseline. The other
@@ -194,17 +228,17 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   (AGENTS.md: books are never a clause source; none is cited today).
 - Phase 2: add a test that every clause `normalized` actor/action/counterpart/data_category
   resolves in `roles.yaml` (true today per phase-auditor's probe; nothing guards it).
-- Phase 2: `frozen=True` does not deep-freeze `list`/`dict` fields (`AgentDecision.proposed_actions`,
-  `ProposedAction.parameters`, `InformationBoundary.visible_categories`). The read-only agent view
-  must use tuples or frozen mappings; have test-breaker probe it.
-- Phase 2: `AgentDecision.at` accepts a naive datetime; use `AwareDatetime`.
+- ~~Deep-freeze and AwareDatetime~~ Done in Phase 2: domain lists are tuples, and `at` and
+  `start_time` are `AwareDatetime`. `ProposedAction.parameters` stays a dict; the engine copies
+  each decision on receipt and logs only strings.
 - Phase 2: `tests/unit/test_scenario.py` validates scenario clause references against all clauses,
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
 
-1. Phase 2 on `phase-2-engine` (branched from `phase-1-domain-scenario`), against synthetic
-   fixture clauses under `tests/fixtures/`, picking up the Phase 2 notes under "Deferred MINOR
-   findings" and using `PolicyClause.status_label` wherever a clause is reported.
-2. In parallel, the human reviews clauses (core set first), answers question 7, and confirms
-   194103a. Merge PR #2 once the core set is reviewed.
+1. Run the Phase 2 review loop on `phase-2-engine` (phase-auditor, test-breaker, and
+   evidence-auditor for the diagnosis and report wording). Fix BLOCKER and MAJOR findings, then
+   open the Phase 2 PR (base `phase-1-domain-scenario` until PR #2 merges).
+2. In parallel, the human reviews clauses (core set first), answers question 7 and confirms
+   194103a. Merge PR #2 once the core set is reviewed, then add the real-corpus golden
+   `scenarios/uae_health_access/expected_baseline.yaml`.
