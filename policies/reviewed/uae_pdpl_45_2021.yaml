@@ -40,9 +40,12 @@ clauses:
     status: draft
     binding: true
     notes: >-
-      Relevant because the DHA policy (dha.pp11.4-18-4) borrows this law's reporting period
-      even though uae.pdpl.art2-2 excludes regulated health data. The reporting period itself
-      is set by the Executive Regulations, which are not in the corpus.
+      Binding on controllers within the PDPL's scope, subject to the exclusions in
+      uae.pdpl.art2-2. The quote stops at a comma; the sentence continues "provided that the
+      reporting is accompanied by the following data and documents:". Candidate
+      mandate-overlap finding: the DHA policy (dha.pp11.4-18-4) appears to borrow this law's
+      reporting period although uae.pdpl.art2-2 may exclude regulated health data. The period
+      itself is set by the Executive Regulations, which are not in the corpus.
 
   - id: uae.pdpl.art18-1
     title: Right to object to decisions from automated processing
@@ -60,4 +63,9 @@ clauses:
     binding: true
     notes: >-
       A recourse right against automated decisions such as the account lockout. Its
-      applicability here is uncertain because of the exclusions in uae.pdpl.art2-2.
+      applicability here is uncertain because of the exclusions in uae.pdpl.art2-2. Qualified
+      by Art 18(2) (PDF pages 21-22): the Data Subject "may not object" in listed cases
+      (contract, automated processing required under other legislation, prior consent). Art
+      18(4) (PDF page 22) has the Controller "include the human element in reviewing automated
+      processing decisions at the request of the Data Subject"; a candidate owner for lockout
+      review if the PDPL applies.

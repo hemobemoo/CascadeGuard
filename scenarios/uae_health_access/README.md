@@ -17,26 +17,33 @@ and all patient data is synthetic.
 ## Why it is hard
 
 - **Information deadlock.** The health operator needs to know the failure is network-side, but
-  network data is outside its information boundary. No clause in the reviewed corpus authorises
-  a telecom-to-health status share.
-- **Orphan duty.** No clause assigns anyone to review and reverse an automated lockout.
-  Human-oversight principles (the UAE AI Charter, MOCAI ethics) say it should happen, but name
-  no owner or deadline.
-- **Mandate overlap.** The DHA policy sets the breach-reporting period by reference to the PDPL
-  Executive Regulations, but the PDPL excludes health data that has its own legislation.
-- **Undefined trigger.** No reviewed clause triggers escalation when an AI fraud alert may be a
-  false positive caused by another organisation's AI.
+  network data is outside its information boundary. No clause authorising a telecom-to-health
+  status share was found in the corpus (cf. `uae.fl2-2019.art4`, `uae.fl2-2019.art16`; draft,
+  unreviewed). Candidate finding.
+- **Orphan duty.** No owner for reviewing and reversing an automated lockout was found in the
+  corpus for this scenario. Human-oversight principles (`uae.ai-charter.human-oversight`,
+  `mocai.ethics.contest-redress`) say it should happen but name no owner or deadline; PDPL
+  Art 18(4) assigns review to the Controller on request, but its applicability is uncertain
+  (`uae.pdpl.art18-1`, `uae.pdpl.art2-2`). All draft, unreviewed. Candidate finding.
+- **Mandate overlap.** The DHA policy appears to set the breach-reporting period by reference
+  to the PDPL Executive Regulations (`dha.pp11.4-18-4`), while the PDPL may exclude health data
+  that has its own legislation (`uae.pdpl.art2-2`). Draft, unreviewed. Candidate finding.
+- **Undefined trigger.** No clause was found that triggers escalation when an AI fraud alert may
+  be a false positive caused by another organisation's AI (cf. `dha.pp11.4-18-2`; draft,
+  unreviewed). Candidate finding.
 
 These are hypotheses for the engine to test (Phase 2), not findings yet. Any gap is reported as
 *not found in the reviewed corpus*, never as a confirmed legal gap.
 
 ## Applicable health-data regime
 
-The portal is an ICT use in the area of health, so Federal Law No. 2 of 2019 applies
-(`uae.fl2-2019.art2`). The PDPL excludes personal health data that has its own legislation
-(`uae.pdpl.art2-2`), so it is not assumed to govern the scenario. The scenario places the portal
-operator in Dubai, so the DHA Health Data Protection and Confidentiality Policy also applies
-(`dha.pp11.applicability`).
+This is the project's reading of draft, unreviewed clauses, pending human review; it is not a
+legal conclusion. The portal is an ICT use in the area of health, so Federal Law No. 2 of 2019 is
+treated as applicable for this scenario (`uae.fl2-2019.art2`, draft). The PDPL excludes personal
+health data that has its own legislation (`uae.pdpl.art2-2`, draft), so it is not assumed to
+govern the scenario. The scenario places the portal operator in Dubai, so the DHA Health Data
+Protection and Confidentiality Policy is treated as applicable too (`dha.pp11.applicability`,
+draft, `binding: unknown`).
 
 ## Files
 

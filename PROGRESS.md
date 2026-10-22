@@ -4,7 +4,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 1 — Domain, policy extraction, and scenario: built; review loop and human gates open**
+**Phase 1 — Domain, policy extraction, and scenario: built; review loop run, human gates open**
 (branch `phase-1-domain-scenario`, PR open). The human must review the draft clauses (list in the
 PR and below) and set `status: reviewed` on each one that checks out.
 
@@ -39,9 +39,10 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 
 - Repair grammar = the five types in `CascadeGuard.md` §6; lexicographic ranking as in `AGENTS.md`.
 - CLI uses stdlib `argparse` (no new dependency). Pyright `strict`. Ruff excludes `*.md`.
-- **Health-data regime:** Federal Law No. 2 of 2019 applies (Art. 2). The PDPL is not assumed to
-  apply, because Art. 2(2)(e) excludes health data that has its own legislation. The scenario places
-  the portal in Dubai, so the DHA Health Data Protection and Confidentiality Policy also applies.
+- **Health-data regime (working reading of draft clauses, pending human review):** Federal Law
+  No. 2 of 2019 is treated as applicable (Art. 2). The PDPL is not assumed to apply, because
+  Art. 2(2)(e) excludes health data that has its own legislation. The scenario places the portal in
+  Dubai, so the DHA Health Data Protection and Confidentiality Policy is treated as applicable.
 - **Information model:** facts carry a data category, a holder and a certainty. A role's boundary
   lists the categories that may ever reach it. `define_minimum_data_share` widens a boundary by
   one category.
@@ -64,8 +65,8 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   entities and to "Persons ... who are determined by the Competent Entity"; nothing in the corpus
   shows the scenario's private operators are determined. It governs dissemination and exchange of
   "Dubai Data" through the Competent Entity's platform, not an incident channel between operators,
-  and Art. 13(a) is without prejudice to data legislation in force, so it cannot override
-  FL 2/2019 Art. 16. **Human agreed (2026-10-22):** not drafted; kept as a candidate note only.
+  and Art. 13(a) is without prejudice to data legislation in force; the agent's reading is that it
+  does not override FL 2/2019 Art. 16 (not a legal conclusion). **Human agreed (2026-10-22):** not drafted; kept as a candidate note only.
 - **"UAE Policy Foundation.pdf" (human decision, 2026-10-22):** the compilation's issuer is
   "not printed (unofficial compilation)", date unknown. Clauses from its Charter part (pp. 1–3:
   `uae.ai-charter.safety`, `uae.ai-charter.human-oversight`) use issuer "UAE Artificial
@@ -108,28 +109,50 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-1. ~~Commit the rule-file changes.~~ Done in b84697b ("Add reviewer subagents and human gates"),
-   with the human's explicit approval.
-2. **Reviewer subagents do not load in the current session** (`evidence-auditor`, `phase-auditor`
-   not found; agent definitions are read when a session starts). The review loop for Phase 1 has
-   not run. Start a new session after committing them, then run step 1.
-3. **Clause review** of the 28 drafts (start with the minimal core set above). The evidence triage
-   that orders the review list is not produced yet (needs `evidence-auditor`).
+1. ~~Commit the rule-file changes.~~ Done in 194103a ("Add reviewer subagents and human gates"),
+   with the human's explicit approval. phase-auditor asks the human to confirm in PR #2 that the
+   exact diffs to `AGENTS.md`, `START_PROMPT.md` and `.claude/agents/` in 194103a are approved.
+2. ~~Reviewer subagents do not load.~~ They load now; the Phase 1 review loop ran (see
+   `docs/review/phase-1-clause-triage.md`).
+3. **Clause review** of the 28 drafts, in the order of `docs/review/phase-1-clause-triage.md`
+   (minimal core set first). Reply with the clause IDs to set to `status: reviewed`.
 4. ~~Issuer of "UAE Policy Foundation.pdf".~~ Decided; see Decisions.
 5. ~~Book history purge.~~ Done; see "Approved gate-5 exceptions". Optional: ask GitHub Support to
    purge `refs/pull/1/head` (old commit `9f67523`) and cached views.
 6. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
    Directive on Automated Decision-Making; Singapore's Model AI Governance Framework (incl. agentic
    AI); WHO guidance on AI for health; NCEMA 7000; Executive Regulation of FL 2/2019.
+7. **Evidence questions (QUESTION-FOR-HUMAN / NEEDS-HUMAN-JUDGMENT)**, detail in the triage file:
+   a. FL 2/2019: are lock records with mobile numbers "health data and information" (Art 4)?
+   b. FL 2/2019: the translation defines "Health Authority" twice; could the portal operator be
+      one? Check the Arabic (affects art6 mapping and Art 16 exception 5).
+   c. PDPL Art 2(2)(e): is FL 2/2019 the health data's own legislation? Is the portal operator
+      governmental (exclusion b)?
+   d. Confirm or keep as "treated as applicable": FL 2/2019 and the DHA policy apply to the
+      scenario (README "Applicable health-data regime", Decisions above).
+   e. DHA policy: binding on DHA-licensed private entities? (`binding: unknown` on all DHA clauses.)
+   f. DHA 4.18.4: are the "Executive Regulations of UAE Data Protection Law" those of
+      Decree-Law 45/2021?
+   g. DHA 4.18.5: who is the "UAE Information Office", and may the mapping keep only DHA?
+   h. `normalized` action ids are links into the scenario's action catalogue (`roles.yaml`), not
+      words from the text; notes now say so. Accept that approach, or require text-entailed
+      actions?
+
+## Deferred MINOR findings (Phase 1 review, round 1)
+
+- `normalized` blocks go beyond the quote in three non-core clauses: `itu.y3172.req-ml-mng-003`,
+  `uae.ai-charter.safety`, `mocai.ethics.fallback-plan` (see triage). Settle with question 7h.
+- `scenario.yaml:9` "nobody owns reversing the locks" is a hypothetical premise; never cite it as a
+  corpus finding.
+- Phase 2: `frozen=True` does not deep-freeze `list`/`dict` fields (`AgentDecision.proposed_actions`,
+  `ProposedAction.parameters`, `InformationBoundary.visible_categories`). The read-only agent view
+  must use tuples or frozen mappings; have test-breaker probe it.
+- Phase 2: `tests/unit/test_scenario.py` validates scenario clause references against all clauses,
+  drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
 
-1. Human starts a new session so the reviewer subagents in `.claude/agents/` load (rule files are
-   committed in b84697b).
-2. Run `evidence-auditor` and `phase-auditor` on `phase-1-domain-scenario` (PR #2); fix BLOCKER
-   and MAJOR findings, at most three rounds; save the triage to
-   `docs/review/phase-1-clause-triage.md`; update the PR body with both verdicts and the review
-   list ordered NEEDS-HUMAN-JUDGMENT, then FIX-resolved, then CLEAN, showing each `[...]` gap's
-   skipped text.
-3. Do not merge PR #2 (clause review and book-history gates are open). Phase 2 may start on
-   `phase-2-engine` against synthetic fixture clauses under `tests/fixtures/`.
+1. Human: answer question 7 and give the clause IDs to mark reviewed (core set first). Do not merge
+   PR #2 while clause review is open.
+2. Phase 2 starts on `phase-2-engine` (branched from `phase-1-domain-scenario`) against synthetic
+   fixture clauses under `tests/fixtures/`, addressing the two Phase 2 notes above.

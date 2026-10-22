@@ -63,7 +63,10 @@ clauses:
     binding: false
     notes: >-
       Binding in the EU for high-risk AI systems; not binding in the UAE. Precedent for a
-      human able to reverse an automated lockout.
+      human able to reverse an automated lockout. Qualified by the Art 14(4) chapeau (PDF page
+      60): the system "shall be provided to the deployer in such a way that natural persons to
+      whom human oversight is assigned are enabled, as appropriate and proportionate". It is a
+      design duty on the provider, not a free-standing right to reverse.
 
   - id: eu.ai-act.art73-1
     title: "EU AI Act: providers report serious incidents"
@@ -97,8 +100,10 @@ clauses:
     status: draft
     binding: false
     notes: >-
-      Not binding in the UAE. Article 3(49)(b) covers serious disruption of critical
-      infrastructure, the closest precedent for the telecom-side failure.
+      Not binding in the UAE. Article 3(49)(b) (PDF page 49) covers "a serious and
+      irreversible disruption of the management or operation of critical infrastructure"; the
+      closest precedent for the telecom-side failure, though a recoverable degradation may not
+      be "irreversible".
 
   - id: eu.gdpr.art22-3
     title: "GDPR: human intervention and right to contest automated decisions"
@@ -134,8 +139,11 @@ clauses:
     status: draft
     binding: false
     notes: >-
-      Not binding in the UAE. Precedent with an explicit deadline and risk threshold, which the
-      UAE health-data texts in the corpus do not state.
+      Not binding in the UAE. Precedent with an explicit regulator-notification deadline. No
+      explicit regulator-notification deadline was found in the reviewed corpus for UAE health
+      data (see dha.pp11.4-18-4, uae.pdpl.art9-1); candidate finding, not a confirmed gap. The
+      DHA policy does state a risk threshold for informing data subjects (4.18.10, PDF page 33)
+      and "immediately" for processor-to-controller notice (4.18.7).
 
   - id: oecd.ai-incidents.definition
     title: "OECD: definition of an AI incident"
