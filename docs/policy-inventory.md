@@ -24,8 +24,21 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 15 | `T-REC-Y.3172-201906-I!!PDF-E.pdf` | ITU-T Y.3172, ML in future networks | ITU-T | 2019-06 | 34 | 6, 32, 33 (blank) | Yes (requirement IDs sit in a margin column) |
 | 16 | `The Oxford Handbook of AI Governance…pdf` | *The Oxford Handbook of AI Governance* (book) | Bullock, Chen et al. (eds.) | — | 1006 | — | Yes. **Book: context only, not committed** |
 | 17 | `UAE Federal Law No. 2 of 2019…Health Fields..pdf` | Federal Law No. 2 of 2019 on ICT in Health Fields (English translation) | UAE (federal) | 2019 | 7 | — | Yes |
-| 18 | `UAE Policy Foundation.pdf` | Compilation opening with the UAE Charter for the Development and Use of AI | not printed (compilation) | not printed | 16 | — | Yes |
+| 18 | `UAE Policy Foundation.pdf` | Unofficial compilation of UAE policy pages (contents below) | not printed (unofficial compilation); Charter part: UAE AI, Digital Economy and Remote Work Applications Office (human decision) | unknown; Charter part: 2024-07 (human decision) | 16 | — | Yes |
 | 19 | `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf` | UAE National Strategy for AI 2031 | UAE Government (not printed on extracted pages) | not printed | 25 | 1, 25 (covers) | Yes |
+
+## Contents of `UAE Policy Foundation.pdf`
+
+An unofficial compilation (issuer and date not printed). Each part keeps its own issuer and date
+when a clause is drafted from it; only the Charter part has been decided by the human.
+
+| Pages | Document | Issuer / date used for clauses |
+|---|---|---|
+| 1–3 | UAE Charter for the Development and Use of Artificial Intelligence | UAE AI, Digital Economy and Remote Work Applications Office · 2024-07 · binding false |
+| 3–4 | Personal Data Protection Law (summary of Federal Decree-Law No. 45 of 2021) | not decided (summary, not the law; quote the law itself) |
+| 4–5 | Data and privacy protection: list of other related laws (consumer protection, ICT in health, cybercrimes, IAM policy, electronic transactions, Constitution Art. 31, IP, credit information, Dubai Data law, UAE Data Office) | not decided (summaries only) |
+| 5–7 | The National Cyber Security Policy for Artificial Intelligence (summary) | not decided |
+| 7–16 | UAE National Digital Government Strategy 2025: dimensions, objectives, KPIs, maturity model, SDGs, alignment with national strategies (pp. 12–14) and local eGovernment strategies (pp. 14–16, incl. Abu Dhabi "Once only" policy, p. 16) | not decided |
 
 ## Pages that need the human
 

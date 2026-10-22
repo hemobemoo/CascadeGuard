@@ -65,8 +65,27 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   shows the scenario's private operators are determined. It governs dissemination and exchange of
   "Dubai Data" through the Competent Entity's platform, not an incident channel between operators,
   and Art. 13(a) is without prejudice to data legislation in force, so it cannot override
-  FL 2/2019 Art. 16. Whether it could support a telecom-to-health status share is a question for
-  the human (candidate only).
+  FL 2/2019 Art. 16. **Human agreed (2026-10-22):** not drafted; kept as a candidate note only.
+- **"UAE Policy Foundation.pdf" (human decision, 2026-10-22):** the compilation's issuer is
+  "not printed (unofficial compilation)", date unknown. Clauses from its Charter part (pp. 1–3:
+  `uae.ai-charter.safety`, `uae.ai-charter.human-oversight`) use issuer "UAE Artificial
+  Intelligence, Digital Economy and Remote Work Applications Office", date 2024-07, binding false.
+  The other parts and their pages are listed in `docs/policy-inventory.md`.
+
+## Approved gate-5 exceptions
+
+- **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
+  copied to `C:\AI for Good Lab Hackathon UAE\CascadeGuard-book-backup\` (with a full
+  pre-purge `git bundle` of all refs). History was rewritten with
+  `uvx git-filter-repo --force --invert-paths --path-glob "*Abhivardhan*" --path-glob "*Oxford Handbook*"`
+  (`--force` because this is a working clone, not a fresh one). `phase-1-domain-scenario` already
+  sat on the rewritten `main` (no rebase needed); tag `phase-0` points at the rewritten Phase 0
+  merge `51191ce`; branch `phase-0-tooling` deleted locally and on GitHub; `main`,
+  `phase-1-domain-scenario` and `phase-0` force-pushed. `git log --all -- "*Abhivardhan*" "*Oxford*"`
+  returns nothing; PR #2 head is the rewritten `d49da75`. The books stay on disk in
+  `policies/sources/` (ignored). **Residual:** GitHub keeps the read-only ref `refs/pull/1/head`
+  at the old commit `9f67523`, whose ancestors still contain the books; only GitHub Support can
+  remove it. Other clones made before 2026-10-22 must be re-cloned.
 
 ## Minimal core set for Phase 2
 
@@ -96,13 +115,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
    not run. Start a new session after committing them, then run step 1.
 3. **Clause review** of the 28 drafts (start with the minimal core set above). The evidence triage
    that orders the review list is not produced yet (needs `evidence-auditor`).
-4. **Issuer of "UAE Policy Foundation.pdf".** The human's decision did not reach this session;
-   still recorded as "UAE Government (compiled document; compiler not stated in the PDF)".
-5. **Book history purge.** Listed by the human as an open gate (force-push and history rewrite,
-   AGENTS.md gate 5). Earlier the human said to keep the books in history; the exact instruction
-   needs confirming before anything is rewritten. Note: checking out or pulling across commit
-   914ee87 deletes the ignored book files from disk; restore with
-   `git show 8b03fb5:"policies/sources/<file>" > "policies/sources/<file>"`.
+4. ~~Issuer of "UAE Policy Foundation.pdf".~~ Decided; see Decisions.
+5. ~~Book history purge.~~ Done; see "Approved gate-5 exceptions". Optional: ask GitHub Support to
+   purge `refs/pull/1/head` (old commit `9f67523`) and cached views.
 6. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
    Directive on Automated Decision-Making; Singapore's Model AI Governance Framework (incl. agentic
    AI); WHO guidance on AI for health; NCEMA 7000; Executive Regulation of FL 2/2019.
