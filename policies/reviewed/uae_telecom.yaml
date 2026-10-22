@@ -36,6 +36,7 @@ clauses:
     status: illustrative
     binding: false
     normalized:
+      basis: stated
       kind: obligation
       actor: telecom_operator
       action: report_to_telecom_regulator
@@ -59,6 +60,7 @@ clauses:
     status: illustrative
     binding: false
     normalized:
+      basis: stated
       kind: permission
       actor: telecom_regulator
       action: request_information

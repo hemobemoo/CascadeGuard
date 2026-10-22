@@ -19,7 +19,7 @@ Each `*.yaml` file holds `clauses:`, a list of clauses extracted from one or mor
 | `document_date` | yes | `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, or `unknown` if the PDF prints no date. |
 | `status` | yes | See below. |
 | `binding` | yes | `true`, `false`, or `unknown`. Foreign law is `false` for the UAE. |
-| `normalized` | no | Machine-checkable reading: `kind` (obligation, prohibition, permission, safeguard), `actor`, `action`, `counterpart`, `data_category`, `condition`, `deadline_minutes`. This is an interpretation, reviewed with the clause. |
+| `normalized` | no | Machine-checkable reading: `basis`, `mapping_note`, `kind` (obligation, prohibition, permission, safeguard), `actor`, `action`, `counterpart`, `data_category`, `condition`, `deadline_minutes`. `actor` and `action` link to the scenario's `roles.yaml`. `basis: stated` means the text names the actor and the duty or permission and only role names are mapped (e.g. Licensees → `telecom_operator`). `basis: interpreted` means the actor or action is inferred; `mapping_note` (one line, required) says why. If the text only gives a power to regulate, it is never read as an obligation to act; such a rule becomes `illustrative`. The engine treats both bases the same; reports and the UI show "interpreted" next to the status label. Reviewed with the clause. |
 | `notes` | required if illustrative | Context, applicability doubts, and why an illustrative rule is needed. |
 
 ## Status

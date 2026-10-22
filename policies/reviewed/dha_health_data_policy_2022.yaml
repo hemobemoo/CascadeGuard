@@ -33,6 +33,11 @@ clauses:
     status: draft
     binding: unknown
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text obliges Entities to establish continuity and recovery plans; activating a
+        fallback access channel is read as acting on such a plan, and Entities is mapped to
+        health_service_operator.
       kind: obligation
       actor: health_service_operator
       action: activate_fallback_channel
@@ -58,6 +63,11 @@ clauses:
     status: draft
     binding: unknown
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text obliges Entities to investigate breaches/incidents from discovery to closure;
+        raise_security_incident stands for opening that investigation, and Entities is mapped to
+        health_service_operator.
       kind: obligation
       actor: health_service_operator
       action: raise_security_incident
@@ -84,6 +94,10 @@ clauses:
     status: draft
     binding: unknown
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text obliges the Entity to report breaches/incidents but names no recipient here; the
+        recipient (DHA, mapped to health_data_oversight) is taken from 4.18.5.
       kind: obligation
       actor: health_service_operator
       action: notify_health_data_oversight
@@ -111,6 +125,11 @@ clauses:
     status: draft
     binding: unknown
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The sentence is passive; the reporting Entity is inferred from 4.18.4 and mapped to
+        health_service_operator, DHA is mapped to health_data_oversight, and the UAE Information
+        Office is not modelled.
       kind: obligation
       actor: health_service_operator
       action: notify_health_data_oversight

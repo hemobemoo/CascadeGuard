@@ -61,6 +61,12 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   Art. 4 and PDPL Art. 2(2) are now quoted in full instead of with gaps.
 - `PolicyClause.binding` and `page` are strict (no "yes"/1/"3" coercion), with tests
   (phase-auditor round 2).
+- **`normalized` basis (human decision 5h, 2026-10-23):** `normalized` keeps its links to
+  `roles.yaml` actions and records `basis: stated | interpreted`; `interpreted` needs a one-line
+  `mapping_note` (the loader rejects it otherwise). A power to regulate is never read as an
+  obligation to act (such a rule becomes illustrative). The engine treats both bases the same;
+  reports and the UI must show `PolicyClause.status_label` (e.g. "draft (interpreted)").
+  All 14 `normalized` blocks have a basis: 12 interpreted, the 2 illustrative ones stated.
 - Draft clauses are not loaded by the engine. Phase 2 may be built against synthetic fixture
   clauses under `tests/fixtures/` (AGENTS.md "Human gates"); fixtures never prove the real scenario.
 - **Dubai Law No. 26 of 2015 is not drafted as a clause.** Art. 3 applies it to government

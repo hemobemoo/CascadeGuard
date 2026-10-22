@@ -16,6 +16,11 @@ clauses:
     status: draft
     binding: false
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text says the country encourages modifying or removing risky systems and names no
+        actor; this is read as non-binding support for the telecom operator suspending its own
+        risky model.
       kind: permission
       actor: telecom_operator
       action: suspend_ai_traffic_model
@@ -23,7 +28,7 @@ clauses:
     notes: >-
       Policy charter, not law. Supports suspending the traffic-management model. The text names
       no actor and says "encourages"; `telecom_operator`, `kind: permission` and
-      `suspend_ai_traffic_model` are the scenario's mapping, an interpretation (question 5h).
+      `suspend_ai_traffic_model` are the scenario's mapping, an interpretation.
 
   - id: uae.ai-charter.human-oversight
     title: "Charter: human oversight to correct errors"
@@ -40,6 +45,10 @@ clauses:
     status: draft
     binding: false
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text names no actor or action; human oversight to correct AI errors is read as the
+        health operator reviewing automated lockouts.
       kind: safeguard
       actor: health_service_operator
       action: review_automated_lockouts
@@ -81,10 +90,14 @@ clauses:
     status: draft
     binding: false
     normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text names no actor and asks for safeguards that enable a fallback plan; this is read
+        as the health operator activating a fallback channel when its AI service has problems.
       kind: safeguard
       actor: health_service_operator
       action: activate_fallback_channel
       condition: in case of problems
     notes: >-
       Guidance, not law. The text names no actor or action; `health_service_operator` and
-      `activate_fallback_channel` are the scenario's mapping, an interpretation (question 5h).
+      `activate_fallback_channel` are the scenario's mapping, an interpretation.
