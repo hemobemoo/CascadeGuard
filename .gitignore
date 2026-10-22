@@ -28,3 +28,13 @@ data/
 Thumbs.db
 .vscode/
 .idea/
+
+# Published books: context only, never committed (AGENTS.md)
+policies/sources/Artificial Intelligence Ethics and International Law - 2nd -- Abhivardhan --.pdf
+policies/sources/The Oxford Handbook of AI Governance (Oxford Handbooks) -- Justin B. Bullock (editor), Yu-Che Chen (editor), Johannes --.pdf
+policies/extracted/Artificial Intelligence Ethics and International Law - 2nd -- Abhivardhan --.jsonl
+policies/extracted/The Oxford Handbook of AI Governance (Oxford Handbooks) -- Justin B. Bullock (editor), Yu-Che Chen (editor), Johannes --.jsonl
+
+# Tool caches
+.ruff_cache/
+.pytest_cache/
