@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Cross-agency policy crash-testing for AI-dependent public services"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "pdfplumber>=0.11.10",
+    "pydantic>=2.14.1",
+    "pyyaml>=6.0.3",
+]
 
 [project.scripts]
 cascadeguard = "cascadeguard.cli:main"
@@ -18,6 +22,7 @@ dev = [
     "pyright>=1.1.414",
     "pytest>=9.1.1",
     "ruff>=0.17.1",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.ruff]
