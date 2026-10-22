@@ -4,8 +4,13 @@
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
       }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@playwright/mcp@latest"]
     },
     "github": {
       "type": "http",
@@ -14,29 +19,12 @@
         "Authorization": "Bearer ${GITHUB_PAT}"
       }
     },
-    "playwright": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": ["/c", "npx","-y", "@playwright/mcp@latest"]
-    },
     "firecrawl": {
       "type": "http",
       "url": "https://mcp.firecrawl.dev/v2/mcp",
       "headers": {
         "Authorization": "Bearer ${FIRECRAWL_API_KEY}"
       }
-    },
-    "phoenix": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@arizeai/phoenix-mcp@latest",
-        "--baseUrl",
-        "${PHOENIX_BASE_URL:-http://localhost:6006}"
-      ]
     }
   }
 }
