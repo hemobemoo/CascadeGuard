@@ -44,7 +44,7 @@ every DHA clause now points to `dha.pp11.applicability` for its `binding: unknow
 |---|---|---|---|---|---|
 | 12 | `dha.pp11.applicability` | Health Data Protection and Confidentiality Policy_EN2022810559.pdf | 1 | NEEDS-HUMAN-JUDGMENT | Does the policy bind a DHA-licensed private operator? Scope §3.5 (p.9): "All users accessing and using health information in healthcare sector in the Emirate of Dubai". Cover says Effective 10/10/2022, footer says Nov 10, 2022; `document_date` uses the issue date 2022-08-10. |
 | 13 | `dha.pp11.4-18-5` | same | 32 | NEEDS-HUMAN-JUDGMENT (after 5h) | `basis: interpreted`. The text requires notice to "both the UAE Information Office and DHA"; only DHA is modelled (question h2). |
-| 13a | `uae.telecom-law.art14-5` | ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf | 14 (printed 12) | **OCR — check against image** (new, not yet audited) | Item 5 of Art 14: "Requesting any information required for the activities of TDRA;". Quoted from the OCR copy, corrected against the page image. A power to regulate requests, read (`interpreted`) as a regulator permission. Candidate source for `illus.telecom.regulator-information-request`. |
+| 13a | `uae.telecom-law.art14-5` | ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf | 14 (printed 12) | **OCR — check against image**; NEEDS-HUMAN-JUDGMENT (audited 2026-10-23) | Item 5 of Art 14: "Requesting any information required for the activities of TDRA;". Quoted from the OCR copy, corrected against the page image. A power to regulate requests, read (`interpreted`) as a regulator permission. Candidate source for `illus.telecom.regulator-information-request`. Quote verified against the page image. Question 7m: may a power to issue rules be read as a regulator permission, with inferred counterpart and data category? |
 | 14 | `uae.telecom-law.art6` | 887026278-TDRA-Telecom-Law-Final-English-o.pdf | 11 | FIX resolved | Binding scope and "English consolidated version, Arabic not checked" added. Gaps below. Footnote 1 = TRA→TDRA rename by Decree-Law 23/2020. |
 | 15 | `itu.y3172.req-ml-mng-003` | T-REC-Y.3172-201906-I!!PDF-E.pdf | 18 | FIX resolved (after 5h) | `basis: interpreted`. Condition now taken from the quote; article "7.5, REQ-ML-MNG-003 (Table 7-5; printed page 12)"; gap note worded as a candidate finding. |
 | 16 | `uae.ai-charter.safety` | UAE Policy Foundation.pdf | 1 | CLEAN (after 5h) | `basis: interpreted`; mapping_note covers actor, kind and action. |
@@ -93,6 +93,10 @@ every DHA clause now points to `dha.pp11.applicability` for its `binding: unknow
 - Round 2 — evidence-auditor **FAIL** (2 MAJOR: art2 note not actually reworded; DHA §4.2
   definition and supersession omitted); phase-auditor **FAIL** (3 MAJOR: art2 note; PDPL art2-2
   note; methodology applicability line). All fixed in the round-2 commit.
+- 2026-10-23, after 5h — evidence-auditor on the six 5h clauses: **FAIL (MINOR only)**: 3 CLEAN,
+  2 NEEDS-HUMAN-JUDGMENT (question h2), 1 MINOR FIX resolved. On the three telecom clauses:
+  **FAIL (MINOR only)**: art14-5 NEEDS-HUMAN-JUDGMENT (7m), regulator-information-request CLEAN,
+  incident-report FIX resolved (delegation note qualified).
 - Round 3 — evidence-auditor **FAIL, no BLOCKER or MAJOR**: 6 clauses stay FIX only on question
   5h (`normalized` mapping); new MINORs. phase-auditor **PASS** (all "Done when" criteria proven;
   MINORs and human questions only). The round limit is reached: 5h is a human gate.
