@@ -6,21 +6,20 @@ checked against the extracted PDF text before the human reviews them.
 """
 
 import json
-import re
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, cast
 
 import yaml
 from pydantic import ValidationError
 
-from cascadeguard.domain.policies import ClauseStatus, PolicyClause
+from cascadeguard.domain.policies import ELISION, ClauseStatus, PolicyClause
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REVIEWED_DIR = PROJECT_ROOT / "policies" / "reviewed"
 SOURCES_DIR = PROJECT_ROOT / "policies" / "sources"
 EXTRACTED_DIR = PROJECT_ROOT / "policies" / "extracted"
 
-ELISION = "[...]"
 ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
 
 
@@ -56,28 +55,43 @@ def quote_found_on_page(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DI
     The text may mark an omission with ELISION ("[...]"), e.g. where two-column layouts
     interleave on extraction; every piece must then appear on the page, in order.
     """
+    return skipped_texts(clause, extracted_dir) is not None
+
+
+def skipped_texts(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DIR) -> list[str] | None:
+    """The page text each ELISION skips, in order; None if the quote is not on its page."""
+    page_text = _page_text(clause, extracted_dir)
+    if page_text is None:
+        return None
+    kept = [i for i, ch in enumerate(page_text) if not ch.isspace()]
+    haystack = "".join(page_text[i] for i in kept)
+    spans: list[tuple[int, int]] = []
+    position = 0
+    for piece in clause.text.split(ELISION):
+        needle = _squash(piece)
+        found = haystack.find(needle, position)
+        if found < 0:
+            return None
+        spans.append((found, found + len(needle)))
+        position = found + len(needle)
+    return [
+        page_text[kept[end] : kept[start - 1] + 1] if start > end else ""
+        for (_, end), (start, _) in pairwise(spans)
+    ]
+
+
+def _page_text(clause: PolicyClause, extracted_dir: Path) -> str | None:
     if clause.source_file is None or clause.page is None:
-        return False
+        return None
     jsonl = extracted_dir / f"{Path(clause.source_file).stem}.jsonl"
     if not jsonl.exists():
-        return False
+        return None
     with jsonl.open(encoding="utf-8") as lines:
         for line in lines:
             record = json.loads(line)
             if record["page"] == clause.page:
-                return _pieces_in_order(clause.text, record["text"])
-    return False
-
-
-def _pieces_in_order(quote: str, page_text: str) -> bool:
-    haystack = _squash(page_text)
-    position = 0
-    for piece in quote.split(ELISION):
-        found = haystack.find(_squash(piece), position)
-        if found < 0:
-            return False
-        position = found + len(_squash(piece))
-    return True
+                return str(record["text"])
+    return None
 
 
 def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
@@ -101,4 +115,4 @@ def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
 
 
 def _squash(text: str) -> str:
-    return re.sub(r"\s+", "", text)
+    return "".join(ch for ch in text if not ch.isspace())

@@ -23,12 +23,14 @@ clauses:
     text: >-
       Upon using the information and communication technology in the areas of health, it shall
       be committed to the following: 1. To keep the confidentiality of health data and
-      information by not allowing to circulate them in cases other than the permitted. [...]
-      3. To ensure the availability of health data and information to the authorised thereof
+      information by not allowing to circulate them in cases other than the permitted. 2. To
+      ensure the validity and credibility of the health data and information by keeping their
+      safety from the non-authorised damage, amendment, alteration, deletion or addition. 3. To
+      ensure the availability of health data and information to the authorised thereof
       and facilitate the access thereto, if needed.
     source_file: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
     page: 3
-    article: Article (4)(1) and (4)(3)
+    article: Article (4)
     issuer: United Arab Emirates (federal)
     jurisdiction: UAE
     document_date: "2019"
