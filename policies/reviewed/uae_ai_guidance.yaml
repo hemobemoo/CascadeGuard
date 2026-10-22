@@ -20,7 +20,10 @@ clauses:
       actor: telecom_operator
       action: suspend_ai_traffic_model
       condition: the AI system poses risks
-    notes: Policy charter, not law. Supports suspending the traffic-management model.
+    notes: >-
+      Policy charter, not law. Supports suspending the traffic-management model. The text names
+      no actor and says "encourages"; `telecom_operator`, `kind: permission` and
+      `suspend_ai_traffic_model` are the scenario's mapping, an interpretation (question 5h).
 
   - id: uae.ai-charter.human-oversight
     title: "Charter: human oversight to correct errors"
@@ -81,5 +84,7 @@ clauses:
       kind: safeguard
       actor: health_service_operator
       action: activate_fallback_channel
-      condition: the AI-dependent service fails
-    notes: Guidance, not law.
+      condition: in case of problems
+    notes: >-
+      Guidance, not law. The text names no actor or action; `health_service_operator` and
+      `activate_fallback_channel` are the scenario's mapping, an interpretation (question 5h).

@@ -114,7 +114,7 @@ clauses:
       kind: obligation
       actor: health_service_operator
       action: notify_health_data_oversight
-      condition: breach confirmed or suspected (the text does not distinguish)
+      condition: a breach/incident report under 4.18.4 (dha.pp11.4-18-4)
     notes: >-
       Binding status: see dha.pp11.applicability. The text names "both the UAE Information Office
       and DHA"; the scenario models only the health-data oversight role, not a separate national

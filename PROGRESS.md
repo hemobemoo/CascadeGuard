@@ -4,7 +4,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 1 — Domain, policy extraction, and scenario: built; review loop run, human gates open**
+**Phase 1 — Domain, policy extraction, and scenario: built; review loop done (3 rounds), human gates open**
 (branch `phase-1-domain-scenario`, PR open). The human must review the draft clauses (list in the
 PR and below) and set `status: reviewed` on each one that checks out.
 
@@ -114,8 +114,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 1. ~~Commit the rule-file changes.~~ Done in 194103a ("Add reviewer subagents and human gates"),
    with the human's explicit approval. phase-auditor asks the human to confirm in PR #2 that the
    exact diffs to `AGENTS.md`, `START_PROMPT.md` and `.claude/agents/` in 194103a are approved.
-2. ~~Reviewer subagents do not load.~~ They load now; the Phase 1 review loop ran (see
-   `docs/review/phase-1-clause-triage.md`).
+2. ~~Reviewer subagents do not load.~~ They load now. The Phase 1 review loop ran three rounds
+   (2026-10-22/23): phase-auditor **PASS**; evidence-auditor **FAIL with no BLOCKER/MAJOR**, only
+   question 7h and MINORs. Verdicts in `docs/review/phase-1-clause-triage.md` and PR #2.
 3. **Clause review** of the 28 drafts, in the order of `docs/review/phase-1-clause-triage.md`
    (minimal core set first). Reply with the clause IDs to set to `status: reviewed`.
 4. ~~Issuer of "UAE Policy Foundation.pdf".~~ Decided; see Decisions.
@@ -156,10 +157,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Deferred MINOR findings (Phase 1 review)
 
-- `normalized` blocks go beyond the quote in three non-core clauses: `itu.y3172.req-ml-mng-003`,
-  `uae.ai-charter.safety`, `mocai.ethics.fallback-plan` (see triage). Settle with question 7h.
-- `scenario.yaml:9` "nobody owns reversing the locks" is a hypothetical premise; never cite it as a
-  corpus finding.
+- `normalized` blocks go beyond the quote in five clauses (see 7h and the triage). Settle with
+  question 7h; evidence-auditor keeps them FIX until then.
+- Phase 2: the clause loader should reject the two book filenames as `source_file`, with a test
+  (AGENTS.md: books are never a clause source; none is cited today).
+- Phase 2: add a test that every clause `normalized` actor/action/counterpart/data_category
+  resolves in `roles.yaml` (true today per phase-auditor's probe; nothing guards it).
 - Phase 2: `frozen=True` does not deep-freeze `list`/`dict` fields (`AgentDecision.proposed_actions`,
   `ProposedAction.parameters`, `InformationBoundary.visible_categories`). The read-only agent view
   must use tuples or frozen mappings; have test-breaker probe it.
