@@ -1,0 +1,107 @@
+CascadeGuard — target repository structure
+==========================================
+
+Create folders and modules ONLY when the current phase needs them.
+"[P0]" etc. marks the phase in which each item first appears (see START_PROMPT.md).
+Items marked [later] are deferred until the core loop works end to end.
+
+cascadeguard/
+├── pyproject.toml                    [P0]
+├── uv.lock                           [P0] committed
+├── .python-version                   [P0] 3.12
+├── .gitignore                        [P0] includes .venv/, data/, .env, .phoenix/
+│                                     (.venv/ is created by `uv sync` — never commit it;
+│                                      no requirements.txt: pyproject.toml + uv.lock replace it)
+├── .env.example                      [P5] OPENROUTER_API_KEY, OPENROUTER_BASE_URL,
+│                                     CASCADEGUARD_MODEL — names only (never commit .env)
+├── .mcp.json                         [P0] MCP config for Claude Code (set up by the human)
+├── README.md                         [P0] short; how to run the demo
+├── AGENTS.md                         [P0] single source of truth for agent rules
+├── CLAUDE.md                         [P0] one line: @AGENTS.md
+├── CascadeGuard.md                   [P0] project concept (authoritative)
+├── REFERENCE_LINKS.md                [P0]
+│
+├── docs/
+│   ├── architecture.md               [P2] one page, updated as the build progresses
+│   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
+│   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
+│
+├── specs/                            one short spec per phase (max ~1 page each)
+│   ├── 001-domain-and-scenario.md    [P1]
+│   ├── 002-engine-and-diagnosis.md   [P2]
+│   ├── 003-repair-and-replay.md      [P3]
+│   └── 004-demo-ui.md                [P4]
+│
+├── src/cascadeguard/
+│   ├── __init__.py
+│   ├── cli.py                        [P2] `cascadeguard run <scenario> [--repair <id>]`
+│   │
+│   ├── domain/                       [P1] Pydantic v2 models only — no logic, no I/O
+│   │   ├── scenario.py               Scenario, TimelineEvent, Role, InformationBoundary
+│   │   ├── policies.py               PolicyClause, Obligation, Prohibition, Safeguard, Provenance
+│   │   ├── decisions.py              AgentDecision, ProposedAction, Citation
+│   │   ├── findings.py               ConstraintViolation, CoordinationFailure, Finding
+│   │   └── repairs.py                RepairOperation (closed set), RepairProposal
+│   │
+│   ├── knowledge/                    [P1]
+│   │   ├── loader.py                 load + validate reviewed clauses
+│   │   └── retrieval.py              [P5] clause lookup for LLM agents (keyword first; embeddings only if needed)
+│   │
+│   ├── simulation/                   [P2]
+│   │   ├── state.py                  canonical state + append-only event log
+│   │   ├── boundaries.py             what each role is allowed to see at time t
+│   │   ├── orchestrator.py           advances the timeline; collects proposals; calls engine
+│   │   └── replay.py                 [P3] re-run identical incident with a repair applied
+│   │
+│   ├── engine/                       [P2] deterministic — the only code that changes state
+│   │   ├── constraints.py            accept / reject proposed actions against clauses
+│   │   ├── graph.py                  NetworkX dependency graph (roles, data flows, obligations)
+│   │   ├── diagnosis.py              locate the cross-agency coordination failure
+│   │   └── repair_search.py          [P3] enumerate + rank repairs from the closed grammar
+│   │
+│   ├── agents/
+│   │   ├── base.py                   [P2] Agent protocol: observe(view) -> AgentDecision
+│   │   ├── scripted.py               [P2] decisions read from scenario data (no LLM)
+│   │   ├── llm.py                    [P5] LLM-backed agent, same protocol, structured output
+│   │   └── cache.py                  [P5] record/replay cache keyed by hash(role, view, prompt version)
+│   │
+│   ├── storage/
+│   │   └── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
+│   │
+│   ├── ui/                           [P4] NiceGUI (no separate frontend)
+│   │   ├── app.py
+│   │   ├── timeline.py
+│   │   ├── graph_view.py             ui.echarts graph series
+│   │   └── replay_view.py            baseline vs replay side by side
+│   │
+│   └── observability/
+│       └── tracing.py                [P6] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
+│
+├── policies/
+│   ├── sources/                      [P0] the 19 original PDFs — never modified; engine never reads them
+│   │   └── web/                      [later] Firecrawl/web material — unverified
+│   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
+│   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
+│       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
+│
+├── scripts/
+│   └── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
+│
+├── scenarios/
+│   └── uae_health_access/            [P1]
+│       ├── scenario.yaml             timeline of events
+│       ├── roles.yaml                roles + information boundaries
+│       ├── scripted_decisions.yaml   [P2] decisions used by ScriptedAgent
+│       ├── expected_baseline.yaml    golden: the failure that MUST reproduce
+│       └── README.md                 plain-language narrative of the incident
+│
+├── data/                             gitignored — DuckDB file, LLM cache, exports
+│
+└── tests/
+    ├── unit/                         [P1+]
+    ├── integration/                  [P2+] full loop with ScriptedAgent
+    ├── golden/                       [P3] baseline + replay outputs must match snapshots
+    └── e2e/                          [later] Playwright smoke test of the demo flow
+
+Deferred until the core loop works: api/ (NiceGUI already runs on FastAPI),
+docker/, web ingestion scripts, docs/threat-model.md, Playwright e2e.
