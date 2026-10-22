@@ -18,10 +18,10 @@ and all patient data is synthetic.
 
 - **Information deadlock.** The health operator needs to know the failure is network-side, but
   network data is outside its information boundary. No clause authorising a telecom-to-health
-  status share was found in the reviewed corpus (Telecom Law pp.13-47 unreadable; cf.
+  status share was found in the reviewed corpus (Telecom Law pp.13-47 checked only in the OCR copy; cf.
   `uae.fl2-2019.art4`, `uae.fl2-2019.art16`; draft, unreviewed). Candidate finding.
 - **Orphan duty.** No owner for reviewing and reversing an automated lockout was found in the
-  reviewed corpus for this scenario (Telecom Law pp.13-47 unreadable). Human-oversight principles
+  reviewed corpus for this scenario (Telecom Law pp.13-47 checked only in the OCR copy). Human-oversight principles
   (`uae.ai-charter.human-oversight`, `mocai.ethics.contest-redress`) say it should happen but name
   no owner or deadline; PDPL Art 18(4) assigns review to the Controller on request, but its
   applicability is uncertain (`uae.pdpl.art18-1`, `uae.pdpl.art2-2`). All draft, unreviewed.

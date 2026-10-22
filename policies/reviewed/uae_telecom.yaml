@@ -23,7 +23,8 @@ clauses:
       Federal Law by Decree No. (3) of 2003 as amended (consolidated 2022). Binding scope:
       federal law establishing the telecom regulator. The PDF is an English consolidated version;
       the Arabic text was not checked. The [...] marks skip a footnote marker. Establishes the
-      regulator; its duties are on unreadable pages (13-47).
+      regulator; its duties are on pages 13-47, which have no text in the original and were
+      checked only in the OCR copy.
 
   - id: uae.telecom-law.art14-5
     title: "TDRA competence: rules on requesting information for its activities"
@@ -55,8 +56,9 @@ clauses:
       14 chapeau: "TDRA shall have the competence to issue Licenses in accordance with the
       provisions of the Law, as well as issue regulations, instructions, decisions and rules
       regulating the following:". It is a power to regulate requests, not a stated duty on
-      licensees to answer. Art 14 carries footnotes 1 and 2 (replaced by Decree-Law 5/2008;
-      items added by amendment 23/2020). Binding scope: federal law; the PDF is an English
+      licensees to answer. Art 14 carries footnotes 1 and 2 (the article was replaced by
+      Decree-Law 5/2008; items 15-23 were added by Amendment No. (23) of 2020, and item 5 is not
+      among them). Binding scope: federal law; the PDF is an English
       consolidated version and the Arabic text was not checked. Candidate source for
       illus.telecom.regulator-information-request.
 
@@ -80,8 +82,10 @@ clauses:
       condition: significant degradation of a public telecommunications service
       deadline_minutes: 60
     notes: >-
-      Needed so the telecom side has a reporting duty to simulate. The Law delegates this to
-      TDRA regulations / the Executive Order, which are not in the reviewed corpus. Checked in
+      Needed so the telecom side has a reporting duty to simulate. No operator
+      incident-reporting duty was found in the reviewed corpus. The Law appears to delegate this
+      to TDRA regulations / the Executive Order (Art 12, Art 14), which are not in the reviewed
+      corpus (candidate finding, not a confirmed gap). Checked in
       the OCR'd copy against the page images: Art 12 (oversight of the sector and Licensees),
       Art 13 (ensure Licensees meet quality standards), Art 14(3) (TDRA rules on conditions,
       level and scope of services, incl. emergency services and quality) and Art 30 (Licensees

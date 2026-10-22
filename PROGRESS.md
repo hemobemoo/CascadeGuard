@@ -175,6 +175,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
    k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py` (P1),
       `domain/base.py` or `docs/policy-inventory.md`. It is a human-owned file: add them, or keep
       the note in Decisions?
+   m. `uae.telecom-law.art14-5` (OCR copy): Art 14 gives TDRA power to issue rules on
+      "Requesting any information required for the activities of TDRA"; the clause reads it
+      (`interpreted`) as a permission for the regulator to ask an operator for incident status,
+      inferring counterpart and data category too. Acceptable (5h covers actor/action, and the
+      no-power-to-obligation rule covers obligations only), or record it without the permission
+      reading? Also confirm that citing the derived OCR copy (not the original) is acceptable.
    l. GitHub residual from the book purge: the read-only ref `refs/pull/1/head` still points at
       the pre-purge commit `9f67523`, whose history contains both books (they stay downloadable
       through PR #1). Only GitHub Support can remove it. The human decides whether to contact
