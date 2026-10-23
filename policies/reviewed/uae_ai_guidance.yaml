@@ -15,20 +15,10 @@ clauses:
     document_date: "2024-07"
     status: draft
     binding: false
-    normalized:
-      basis: interpreted
-      mapping_note: >-
-        The text says the country encourages modifying or removing risky systems and names no
-        actor; this is read as non-binding support for the telecom operator suspending its own
-        risky model.
-      kind: permission
-      actor: telecom_operator
-      action: suspend_ai_traffic_model
-      condition: the AI system poses risks
     notes: >-
-      Policy charter, not law. Supports suspending the traffic-management model. The text names
-      no actor and says "encourages"; `telecom_operator`, `kind: permission` and
-      `suspend_ai_traffic_model` are the scenario's mapping, an interpretation.
+      Policy charter, not law: a non-binding principle. The text names no actor and says
+      "encourages", which is not a permission, so it carries no permission mapping (human
+      decision 4d, 2026-10-24). Context for suspending the traffic-management model only.
 
   - id: uae.ai-charter.human-oversight
     title: "Charter: human oversight to correct errors"
@@ -94,11 +84,14 @@ clauses:
       basis: interpreted
       mapping_note: >-
         The text names no actor and asks for safeguards that enable a fallback plan; this is read
-        as the health operator activating a fallback channel when its AI service has problems.
+        as the health operator keeping a fallback plan in place (maintain_fallback_plan), not as
+        authority to activate a fallback channel, consistent with h2 (human decision 4d,
+        2026-10-24).
       kind: safeguard
       actor: health_service_operator
-      action: activate_fallback_channel
+      action: maintain_fallback_plan
       condition: in case of problems
     notes: >-
       Guidance, not law. The text names no actor or action; `health_service_operator` and
-      `activate_fallback_channel` are the scenario's mapping, an interpretation.
+      `maintain_fallback_plan` are the scenario's mapping, an interpretation (4d, consistent with
+      h2 for dha.pp11.4-18-1).

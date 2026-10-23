@@ -42,9 +42,10 @@ clauses:
     normalized:
       basis: interpreted
       mapping_note: >-
-        Art 14 gives TDRA competence to issue rules regulating information requests and names no
-        addressee or data type in item 5; this is read as a permission for the telecom regulator
-        to request information. No counterpart or data category is inferred.
+        Art 14 gives TDRA competence to issue rules regulating information requests; item 5 names
+        no addressee or data type. It is a power to issue rules, not a permission to request
+        information in this incident (7m), so the regulator's authority to request is uncertain.
+        No counterpart or data category is inferred.
       kind: permission
       actor: telecom_regulator
       action: request_information

@@ -32,17 +32,9 @@ clauses:
     document_date: "2019-06"
     status: draft
     binding: false
-    normalized:
-      basis: interpreted
-      mapping_note: >-
-        The text is a capability requirement on the ML architecture; the telecom operator running
-        that architecture is read as the actor, and monitoring the effect of ML as investigating a
-        network fault.
-      kind: obligation
-      actor: telecom_operator
-      action: investigate_network_fault
-      condition: ongoing monitoring of network operations based on the effect of ML
     notes: >-
+      A design requirement on the ML architecture, not an operational duty: it carries no action
+      mapping and is kept as standards and gap-analysis context (human decision 4d, 2026-10-24).
       The [...] skips the requirement ID printed in the table margin. The requirement covers the
       operator's own network. Candidate finding: no requirement to pass ML-caused effects on to
       dependent services in other organisations was found in the reviewed corpus (cf.
