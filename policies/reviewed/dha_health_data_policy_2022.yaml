@@ -42,7 +42,8 @@ clauses:
       kind: obligation
       actor: health_service_operator
       action: maintain_fallback_plan
-      condition: business continuity plan in place for incidents
+      condition: >-
+        standing obligation; no trigger stated in the text
     notes: >-
       Binding status: see dha.pp11.applicability. Requires entities to establish continuity and
       recovery plans; the listed plan contents (PDF pages 30-31) do not mention a fallback
@@ -129,15 +130,17 @@ clauses:
     normalized:
       basis: interpreted
       mapping_note: >-
-        The sentence is passive; the reporting Entity is inferred from 4.18.4 and mapped to
-        health_service_operator, DHA is mapped to health_data_oversight, and the UAE Information
-        Office is not modelled.
+        The sentence is passive and names no actor; the actor (the Entity, mapped to
+        health_service_operator) is taken from dha.pp11.4-18-4, outside this quote. DHA is mapped
+        to health_data_oversight; the UAE Information Office is out of scope (h2).
       kind: obligation
       actor: health_service_operator
       action: notify_health_data_oversight
-      condition: a breach/incident report under 4.18.4 (dha.pp11.4-18-4)
+      condition: >-
+        a breach notification
     notes: >-
       Binding status: see dha.pp11.applicability. The text names "both the UAE Information Office
       and DHA"; only DHA (health_data_oversight) is modelled. The UAE Information Office is out of
-      scope for this slice (human decision h2, 2026-10-23). The PDF continues with a DHA email
-      address, which is left out here.
+      scope for this slice (human decision h2, 2026-10-23). The quote stops before
+      "(HISH@dha.gov.ae).", a contact address; no qualifier is lost. Whether to quote 4.18.4 and
+      4.18.5 as one clause is open (PROGRESS 3p).

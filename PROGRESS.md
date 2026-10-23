@@ -153,7 +153,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 | `uae.fl2-2019.art6` | Basis for the health-data oversight role's determinations |
 | `dha.pp11.4-18-2` | Alert is investigated as a suspected incident, not a proven breach |
 | `dha.pp11.4-18-4` | Breach-reporting period (unknown: candidate finding) |
-| `dha.pp11.4-18-1` | Continuity plan: basis for a fallback channel |
+| `dha.pp11.4-18-1` | A continuity plan must exist (h2); activation authority uncertain |
 | `uae.ai-charter.human-oversight` | Human oversight principle with no owner (orphan-duty evidence) |
 | `illus.telecom.incident-report` | Already illustrative: telecom reporting duty |
 | `illus.telecom.regulator-information-request` | Already illustrative: regulator's telecom remit |
