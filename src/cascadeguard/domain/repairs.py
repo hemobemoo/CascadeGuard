@@ -56,7 +56,7 @@ class RepairEdit(DomainModel):
     data_category: str | None = None
     counterpart: str | None = None  # share recipient, or the role asked for a determination
     trigger_event: str | None = None  # scenario event id that opens the new obligation
-    deadline_minutes: int | None = Field(default=None, ge=0)
+    deadline_minutes: int | None = Field(default=None, ge=0, strict=True)  # no coercion
 
     @model_validator(mode="after")
     def _check_parameters(self) -> Self:

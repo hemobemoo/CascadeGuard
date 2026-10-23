@@ -5,6 +5,7 @@ At each inject every role decides on the same snapshot (views are built before a
 applied), then the engine processes the decisions in roles.yaml order. Same inputs, same run.
 """
 
+import copy
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -113,7 +114,9 @@ def run(
     for event in scenario.events:
         engine.release(event)
         views = {r.id: view_for(state, r.id, event, loaded) for r in roles.roles}
-        decisions = [(r.id, agents[r.id].observe(views[r.id])) for r in roles.roles]
+        # Each decision is copied as soon as it is returned, so a later agent in the same
+        # step cannot alter an earlier one before the engine processes it.
+        decisions = [(r.id, copy.deepcopy(agents[r.id].observe(views[r.id]))) for r in roles.roles]
         for role_id, decision in decisions:
             engine.process(decision, expected_role=role_id)
     engine.close(scenario.events[-1].at_minute)

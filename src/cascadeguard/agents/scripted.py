@@ -11,7 +11,7 @@ import yaml
 from pydantic import Field, ValidationError
 
 from cascadeguard.domain.base import DomainModel
-from cascadeguard.domain.decisions import AgentDecision, Citation, ProposedAction
+from cascadeguard.domain.decisions import AgentDecision, Citation, GapClaim, ProposedAction
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.simulation.boundaries import RoleView
 
@@ -23,6 +23,7 @@ class ScriptedEntry(DomainModel):
     rationale: str
     citations: tuple[Citation, ...] = ()
     uncertainty: tuple[str, ...] = ()
+    gap_claims: tuple[GapClaim, ...] = ()
 
 
 class ScriptedDecisions(DomainModel):
@@ -58,6 +59,7 @@ class ScriptedAgent:
             rationale=entry.rationale,
             citations=entry.citations,
             uncertainty=entry.uncertainty,
+            gap_claims=entry.gap_claims,
         )
 
 
