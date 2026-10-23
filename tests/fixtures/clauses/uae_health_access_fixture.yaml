@@ -1,0 +1,257 @@
+# SYNTHETIC FIXTURE CLAUSES for engine tests (AGENTS.md "Human gates"). Not quotations, not law.
+# Each stands in for the clause with the same id so the scripted decisions' citations resolve,
+# and behaves in the engine as that clause would: same normalized reading and the same
+# authority outcome (see each note). Regenerated from policies/reviewed/ on 2026-10-23 after
+# the core-set review; tests/unit/test_fixtures.py fails if they drift.
+# Exception: DHA fixtures keep binding: unknown on an illustrative clause so they mirror
+# "authority uncertain"; policies/reviewed never allows that (human decision 7u).
+clauses:
+- id: dha.pp11.4-18-1
+  title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-1
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for dha.pp11.4-18-1 so the engine
+    can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: unknown
+  normalized:
+    basis: interpreted
+    mapping_note: The text obliges Entities to establish continuity and recovery plans; this is read
+      as a duty that a fallback plan exists (maintain_fallback_plan), not as authority to activate a
+      fallback channel (human decision h2, 2026-10-23). Entities is mapped to health_service_operator.
+    kind: obligation
+    actor: health_service_operator
+    action: maintain_fallback_plan
+    condition: standing obligation; no trigger stated in the text
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause dha.pp11.4-18-1
+    (reviewed): binding unknown, kept as binding: unknown (the engine treats it as uncertain authority).'
+- id: dha.pp11.4-18-2
+  title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-2
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for dha.pp11.4-18-2 so the engine
+    can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: unknown
+  normalized:
+    basis: interpreted
+    mapping_note: The text obliges Entities to investigate breaches/incidents from discovery to closure;
+      raise_security_incident stands for opening that investigation, and Entities is mapped to health_service_operator.
+    kind: obligation
+    actor: health_service_operator
+    action: raise_security_incident
+    condition: from discovery of a breach or incident until closure
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause dha.pp11.4-18-2
+    (reviewed): binding unknown, kept as binding: unknown (the engine treats it as uncertain authority).'
+- id: dha.pp11.4-18-4
+  title: SYNTHETIC FIXTURE mirroring dha.pp11.4-18-4
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for dha.pp11.4-18-4 so the engine
+    can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: unknown
+  normalized:
+    basis: interpreted
+    mapping_note: The text obliges the Entity to report breaches/incidents but names no recipient here;
+      the recipient (DHA, mapped to health_data_oversight) is taken from 4.18.5.
+    kind: obligation
+    actor: health_service_operator
+    action: notify_health_data_oversight
+    condition: breach or incident; period set by PDPL Executive Regulations (not in corpus)
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause dha.pp11.4-18-4
+    (reviewed): binding unknown, kept as binding: unknown (the engine treats it as uncertain authority).'
+- id: illus.telecom.incident-report
+  title: SYNTHETIC FIXTURE mirroring illus.telecom.incident-report
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for illus.telecom.incident-report
+    so the engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  normalized:
+    basis: stated
+    kind: obligation
+    actor: telecom_operator
+    action: report_to_telecom_regulator
+    counterpart: telecom_regulator
+    condition: significant degradation of a public telecommunications service
+    deadline_minutes: 60
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause illus.telecom.incident-report
+    (illustrative): an illustrative scenario rule already; copied as is.'
+- id: illus.telecom.regulator-information-request
+  title: SYNTHETIC FIXTURE mirroring illus.telecom.regulator-information-request
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for illus.telecom.regulator-information-request
+    so the engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  normalized:
+    basis: stated
+    kind: permission
+    actor: telecom_regulator
+    action: request_information
+    counterpart: telecom_operator
+    data_category: network_incident_status
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause illus.telecom.regulator-information-request
+    (illustrative): an illustrative scenario rule already; copied as is.'
+- id: itu.y3172.req-ml-mng-003
+  title: SYNTHETIC FIXTURE mirroring itu.y3172.req-ml-mng-003
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for itu.y3172.req-ml-mng-003
+    so the engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause itu.y3172.req-ml-mng-003
+    (draft): non-binding guidance; its normalized reading is left out because the engine never takes
+    authority, triggers or bans from guidance.'
+- id: mocai.ethics.fallback-plan
+  title: SYNTHETIC FIXTURE mirroring mocai.ethics.fallback-plan
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for mocai.ethics.fallback-plan
+    so the engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause mocai.ethics.fallback-plan
+    (draft): non-binding guidance; its safeguard reading is kept (safeguards without a data category
+    never grant authority, trigger or ban) so citation scope works as with the real clause.'
+  normalized:
+    basis: interpreted
+    mapping_note: The text names no actor and asks for safeguards that enable a fallback plan; this
+      is read as the health operator activating a fallback channel when its AI service has problems.
+    kind: safeguard
+    actor: health_service_operator
+    action: activate_fallback_channel
+    condition: in case of problems
+- id: nist.ai-rmf.manage-4-3
+  title: SYNTHETIC FIXTURE mirroring nist.ai-rmf.manage-4-3
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for nist.ai-rmf.manage-4-3 so
+    the engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause nist.ai-rmf.manage-4-3
+    (draft): non-binding guidance; its normalized reading is left out because the engine never takes
+    authority, triggers or bans from guidance.'
+- id: uae.ai-charter.human-oversight
+  title: SYNTHETIC FIXTURE mirroring uae.ai-charter.human-oversight
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.ai-charter.human-oversight
+    so the engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.ai-charter.human-oversight
+    (reviewed): non-binding guidance; its safeguard reading is kept (safeguards without a data category
+    never grant authority, trigger or ban) so citation scope works as with the real clause.'
+  normalized:
+    basis: interpreted
+    mapping_note: The text names no actor or action; human oversight to correct AI errors is read as
+      the health operator reviewing automated lockouts.
+    kind: safeguard
+    actor: health_service_operator
+    action: review_automated_lockouts
+    condition: an AI output may be erroneous
+- id: uae.fl2-2019.art16
+  title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art16
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art16 so the
+    engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  normalized:
+    basis: interpreted
+    mapping_note: The text binds whoever circulates patient information (actor any); sharing incident
+      status with lock records is read as using that information. Modelled as a conditional prohibition
+      (human decision 7t).
+    kind: prohibition
+    actor: any
+    action: share_incident_status
+    data_category: patient_account_records
+    condition: for health purposes; any other use needs the patient's written approval, except in the
+      cases listed in Art 16 items 1-5 (PDF page 5, not quoted in this clause)
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art16
+    (reviewed): binding: true, shown as an illustrative scenario rule with binding: false, which the
+    engine treats like a binding clause.'
+- id: uae.fl2-2019.art2
+  title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art2
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art2 so the
+    engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art2
+    (reviewed): binding: true, shown as an illustrative scenario rule with binding: false, which the
+    engine treats like a binding clause.'
+- id: uae.fl2-2019.art4
+  title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art4
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art4 so the
+    engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  normalized:
+    basis: interpreted
+    mapping_note: The text commits whoever uses ICT in health not to circulate health data outside permitted
+      cases; sharing incident status with lock records is read as such circulation, and the user is
+      mapped to health_service_operator.
+    kind: prohibition
+    actor: health_service_operator
+    action: share_incident_status
+    data_category: patient_account_records
+    condition: circulation is not one of the permitted cases (including, but not limited to, uae.fl2-2019.art16)
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art4
+    (reviewed): binding: true, shown as an illustrative scenario rule with binding: false, which the
+    engine treats like a binding clause.'
+- id: uae.fl2-2019.art6
+  title: SYNTHETIC FIXTURE mirroring uae.fl2-2019.art6
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.fl2-2019.art6 so the
+    engine can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  normalized:
+    basis: interpreted
+    mapping_note: The Health Authority's power to set standards for exchanging and protecting health
+      data is read as a permission for health_data_oversight to issue a determination; it is not read
+      as a duty to act.
+    kind: permission
+    actor: health_data_oversight
+    action: issue_determination
+    condition: on how health data and information may be exchanged and protected
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.fl2-2019.art6
+    (reviewed): binding: true, shown as an illustrative scenario rule with binding: false, which the
+    engine treats like a binding clause.'
+- id: uae.pdpl.art2-2
+  title: SYNTHETIC FIXTURE mirroring uae.pdpl.art2-2
+  text: 'Synthetic test fixture, not a quotation and not law: stands in for uae.pdpl.art2-2 so the engine
+    can be tested while human review is pending.'
+  issuer: CascadeGuard test fixture (synthetic)
+  jurisdiction: synthetic
+  document_date: unknown
+  status: illustrative
+  binding: false
+  notes: 'Fixture only (tests/fixtures), never evidence that the real scenario works. Real clause uae.pdpl.art2-2
+    (reviewed): binding: true, shown as an illustrative scenario rule with binding: false, which the
+    engine treats like a binding clause.'

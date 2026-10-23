@@ -4,15 +4,36 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 1 — Domain, policy extraction, and scenario: built; review loop done (3 rounds), human gates open**
-(branch `phase-1-domain-scenario`, PR open). The human must review the draft clauses (list in the
-PR and below) and set `status: reviewed` on each one that checks out.
+**Phase 2 — Engine with scripted agents: PR #3 open against `main`, waiting for the human.**
+Phase 1 merged (PR #2, tag `phase-1`) after the human reviewed the core set. Phase 2 now runs on
+the real clause set with a real-corpus golden, plus the synthetic fixture golden. The round-3
+review fixes are covered by tests but were not re-reviewed by an agent (human decision: no fourth
+round; the Phase 3 review loop covers them). The changes for the human decisions of 2026-10-23
+(7n, 7r, 7t/7v, h2, 7m) are also not yet agent-reviewed; Phase 3's review loop covers them.
 
 ## Done
 
 ### Phase 0 — Tooling (merged, tag `phase-0`)
 uv project on Python 3.12, Ruff, Pyright (strict), pytest, CLI stub, `.env.example`, `.gitignore`
 (including the two books by filename), `README.md`.
+
+### Phase 2 — Engine with scripted agents (branch `phase-2-engine`)
+- `simulation/state.py`, `boundaries.py`, `orchestrator.py`; `engine/constraints.py`,
+  `graph.py` (NetworkX), `diagnosis.py`; `agents/base.py`, `scripted.py`; `domain/findings.py`.
+- Scenario data: `roles.yaml` action preconditions, `scenario.yaml` recovery goals and
+  `opens_obligations`, `scripted_decisions.yaml`.
+- `cascadeguard run uae_health_access [--clauses DIR]` prints the clause set (with status labels),
+  timeline, accepted/rejected actions, obligations, goals, findings and diagnosed failures.
+- Golden: `tests/fixtures/uae_health_access/expected_baseline.yaml` (synthetic fixtures).
+  Spec: `specs/002-engine-and-diagnosis.md`; `docs/architecture.md`.
+
+Verify:
+
+```bash
+uv run cascadeguard run uae_health_access --clauses tests/fixtures/clauses   # fixture baseline
+uv run cascadeguard run uae_health_access                                    # real clause set
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 1 — Domain, policy extraction, and scenario
 - **1a/1b Extraction + inventory:** `scripts/extract_pdf_text.py` → `policies/extracted/*.jsonl`
@@ -22,7 +43,7 @@ uv project on Python 3.12, Ruff, Pyright (strict), pytest, CLI stub, `.env.examp
   `scenario`). Clause loader `src/cascadeguard/knowledge/loader.py`. Scenario loader
   `src/cascadeguard/simulation/loader.py`.
 - **1d Scenario:** `scenarios/uae_health_access/` (`scenario.yaml`, `roles.yaml`, `README.md`).
-- **1e Clauses:** 30 clauses in `policies/reviewed/*.yaml`: 28 `draft` (verbatim, verified against
+- **1e Clauses:** 31 clauses in `policies/reviewed/*.yaml`: 29 `draft` (verbatim, verified against
   the extracted page by the tests) and 2 `illustrative`.
 - Docs: `specs/001-domain-and-scenario.md`, `docs/policy-methodology.md`,
   `policies/reviewed/README.md`.
@@ -93,6 +114,46 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   Intelligence, Digital Economy and Remote Work Applications Office", date 2024-07, binding false.
   The other parts and their pages are listed in `docs/policy-inventory.md`.
 
+- **Phase 2 engine decisions (2026-10-23):** authority comes from an obligation or permission
+  clause that is binding, or from an illustrative scenario rule (`binding: false`).
+  `binding: unknown` gives only "authority uncertain"; non-binding guidance never gives
+  authority. A citation of an unloaded clause rejects the whole decision (`draft_citation` or
+  `unknown_citation`, both findings). All roles decide on the same snapshot; the engine applies
+  decisions in `roles.yaml` order. Mandate overlap is not detected yet; it needs reviewed
+  DHA/PDPL clauses.
+- **Phase 2 review round 3 (2026-10-23, last round):** phase-auditor FAIL only on question 7o
+  (no code change); test-breaker FAIL (BLOCKERs: inject text and decision points still told each
+  recipient about the other organisation; a misspelt request category dodged a prohibition;
+  MAJOR: clause data categories unchecked). Fixed after the round, not re-reviewed: decision
+  points name one role and go only to it; inject descriptions hold only what all recipients may
+  know; request and clause categories must be scenario categories (`unknown_data_category`);
+  empty impostor decisions are findings; the summary lists every fact delivery and goal minute.
+  Each fix has a test, mutation-checked against the old text.
+- **Phase 2 review round 2 fixes (2026-10-23):** decisions re-validated from plain data
+  (constructed objects and subclassed containers rejected or normalised); a share delivers
+  exactly the fact it checked; no fact is released before its inject; every bad citation is a
+  finding; self-targeted shares rejected; only obligation clauses open obligations, and
+  `binding: unknown` ones are marked uncertain; book names refused case-insensitively and
+  `source_file` must resolve inside `policies/sources`; stray files, subdirectories, extra keys
+  and blank text refused; every clause id in the CLI carries its status label; fresh-process
+  determinism test with three hash seeds. Requests for a category outside the requester's own
+  boundary stay accepted (documented in the spec).
+- **Phase 2 review round 1 fixes (2026-10-23):** inject text, decision points and clauses go only
+  to the inject's recipients; views hold deep copies of facts and the state keeps private
+  copies; prohibitions apply to every action kind (requests by category included); a safeguard
+  without a data category is a protective duty, never a ban (engine decision, recorded in the
+  spec); citations are checked before any early return; wrong role/time is a finding logged
+  under the real role; obligations on `any` are fulfilled by whoever acts; only firm clauses
+  are triggers. The golden summary now lists every decision-level rejection and each finding's
+  minute and role (format change only, same content).
+- **Phase 2 fixtures:** synthetic illustrative clauses in `tests/fixtures/clauses` reuse the draft
+  clause ids and behave in the engine as those clauses would: same `normalized` reading and same
+  authority/trigger outcome (binding true -> illustrative scenario rule; binding unknown kept;
+  non-binding guidance carries no `normalized`). `tests/unit/test_fixtures.py` fails on drift. They are labelled "SYNTHETIC FIXTURES ... not the real corpus" in
+  every output. The real-corpus golden `scenarios/uae_health_access/expected_baseline.yaml`
+  waits for the core-set review.
+- **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
+  confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
 - **Human decisions, 2026-10-23 (answers to "Waiting on human"):**
   - Core set **reviewed** (`status: reviewed`, commit "Reviewed by human: ..."):
     `uae.fl2-2019.art2`, `uae.pdpl.art2-2`, `uae.fl2-2019.art4`, `uae.fl2-2019.art16`,
@@ -198,21 +259,21 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
 - `normalized` blocks go beyond the quote in five clauses (see the triage). Settled by
   decision 5h (basis/mapping_note) and open questions h2 and 7p; they are now
   NEEDS-HUMAN-JUDGMENT, not FIX.
-- Phase 2: the clause loader should reject the two book filenames as `source_file`, with a test
-  (AGENTS.md: books are never a clause source; none is cited today).
-- Phase 2: add a test that every clause `normalized` actor/action/counterpart/data_category
-  resolves in `roles.yaml` (true today per phase-auditor's probe; nothing guards it).
-- Phase 2: `frozen=True` does not deep-freeze `list`/`dict` fields (`AgentDecision.proposed_actions`,
-  `ProposedAction.parameters`, `InformationBoundary.visible_categories`). The read-only agent view
-  must use tuples or frozen mappings; have test-breaker probe it.
-- Phase 2: `AgentDecision.at` accepts a naive datetime; use `AwareDatetime`.
+- ~~Book filenames as `source_file`; `normalized` names vs `roles.yaml`~~ Done in Phase 2
+  (loader rejects book sources, duplicate YAML keys and stray `.yml` files;
+  `check_clause_references` runs on every engine run, with tests).
+- Phase 3: `RepairProposal.applies_to`, `parameters` and `citations` are still list/dict
+  (mutable inside a frozen model); use tuples / a frozen mapping before repairs are ranked.
+- ~~Deep-freeze and AwareDatetime~~ Done in Phase 2: domain lists are tuples, and `at` and
+  `start_time` are `AwareDatetime`. `ProposedAction.parameters` stays a dict; the engine copies
+  each decision on receipt and logs only strings.
 - Phase 2: `tests/unit/test_scenario.py` validates scenario clause references against all clauses,
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
 
-1. Phase 2 on `phase-2-engine` (branched from `phase-1-domain-scenario`), against synthetic
-   fixture clauses under `tests/fixtures/`, picking up the Phase 2 notes under "Deferred MINOR
-   findings" and using `PolicyClause.status_label` wherever a clause is reported.
-2. In parallel, the human reviews clauses (core set first), answers question 7, and confirms
-   194103a. Merge PR #2 once the core set is reviewed.
+1. Human: decide whether PR #3 (Phase 2) merges now. The auto-merge rule does not apply: the
+   Phase 2 reviewers did not all PASS (round 3), and the human chose no fourth round.
+2. After PR #3 merges: tag `phase-2`, start Phase 3 (repair and replay) on `phase-3-repair`,
+   and make its review loop cover the unreviewed Phase 2 changes listed under "Current phase".
+3. Open human items are under "Waiting on human" (remaining 20 draft clauses, questions 3a-3x).

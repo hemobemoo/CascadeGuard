@@ -1,0 +1,249 @@
+"""Engine rules from the human decisions of 2026-10-23: 7n, 7r, 7t/7v, h2, 7m, 7u."""
+
+from typing import Any
+
+import pytest
+
+from cascadeguard.domain.decisions import AgentDecision, Citation, ProposedAction
+from cascadeguard.domain.policies import ClauseStatus, PolicyClause
+from cascadeguard.domain.scenario import RoleSet, Scenario
+from cascadeguard.engine.constraints import Authority, ConstraintEngine, Reason, RuleBook
+from cascadeguard.knowledge.loader import load_clauses, load_engine_clauses
+from cascadeguard.simulation.loader import load_scenario
+from cascadeguard.simulation.state import SimulationState
+
+HEALTH, TELECOM, OVERSIGHT = "health_service_operator", "telecom_operator", "health_data_oversight"
+
+
+def clause(cid: str, binding: Any = False, status: str = "illustrative", **n: Any) -> PolicyClause:
+    data: dict[str, Any] = {
+        "id": cid,
+        "title": cid,
+        "text": "Synthetic test clause.",
+        "issuer": "i",
+        "jurisdiction": "j",
+        "document_date": "unknown",
+        "status": status,
+        "binding": binding,
+        "notes": "n",
+        "normalized": {"basis": "stated", **n},
+    }
+    if status != "illustrative":
+        data |= {"source_file": "doc.pdf", "page": 1}
+    return PolicyClause.model_validate(data)
+
+
+@pytest.fixture(scope="module")
+def world() -> tuple[Scenario, RoleSet]:
+    return load_scenario("uae_health_access", {c.id for c in load_clauses()})
+
+
+def engine_at(
+    world: tuple[Scenario, RoleSet], minute: int, *rules: PolicyClause
+) -> ConstraintEngine:
+    scenario, roles = world
+    engine = ConstraintEngine(
+        SimulationState(scenario, roles), {c.id: c for c in rules}, frozenset()
+    )
+    for event in scenario.events:
+        if event.at_minute <= minute:
+            engine.release(event)
+    return engine
+
+
+def decide(
+    world: tuple[Scenario, RoleSet],
+    role: str,
+    minute: int,
+    *actions: str,
+    cite: tuple[str, ...] = (),
+    rationale: str = "x",
+) -> AgentDecision:
+    return AgentDecision(
+        role_id=role,
+        at=world[0].time_at(minute),
+        proposed_actions=tuple(ProposedAction(action_type=a) for a in actions),
+        rationale=rationale,
+        citations=tuple(Citation(clause_id=c, relevance="x") for c in cite),
+        uncertainty=(),
+    )
+
+
+def decision_findings(engine: ConstraintEngine) -> list[str]:
+    return [f.kind for f in engine.state.findings if f.kind != "trigger_not_loaded"]
+
+
+# ---- 7t: conditional prohibitions hold the action as "authority uncertain" ----
+
+
+def test_a_conditional_prohibition_requires_a_determination(
+    world: tuple[Scenario, RoleSet],
+) -> None:
+    conditional = clause(
+        "c.ban",
+        kind="prohibition",
+        actor="any",
+        action="raise_security_incident",
+        condition="unless an exception applies",
+    )
+    engine = engine_at(world, 15, conditional)
+    verdict = engine.check(
+        world[1].role(HEALTH), ProposedAction(action_type="raise_security_incident")
+    )
+    assert verdict.reasons == (Reason.AUTHORITY_UNCERTAIN,)
+    assert "requires determination" in verdict.detail
+    assert verdict.clause_ids == ("c.ban",)
+
+
+def test_an_unconditional_prohibition_still_rejects_outright(
+    world: tuple[Scenario, RoleSet],
+) -> None:
+    flat = clause("f.ban", kind="prohibition", actor="any", action="raise_security_incident")
+    engine = engine_at(world, 15, flat)
+    verdict = engine.check(
+        world[1].role(HEALTH), ProposedAction(action_type="raise_security_incident")
+    )
+    assert verdict.reasons == (Reason.RESTRICTED_BY_CLAUSE,)
+
+
+def test_real_art4_and_art16_are_conditional_prohibitions() -> None:
+    clauses = load_engine_clauses()
+    rules = RuleBook(clauses)
+    for cid in ("uae.fl2-2019.art4", "uae.fl2-2019.art16"):
+        normalized = clauses[cid].normalized
+        assert normalized is not None
+        assert normalized.kind == "prohibition"
+        assert rules.is_conditional(cid), cid
+
+
+# ---- 7v / 7m: conditional permissions give only uncertain authority ----
+
+
+@pytest.mark.parametrize("binding", [True, False])
+def test_a_conditional_permission_gives_only_uncertain_authority(binding: bool) -> None:
+    status = "reviewed" if binding else "illustrative"
+    rules = RuleBook(
+        {
+            "p": clause(
+                "p",
+                binding,
+                status,
+                kind="permission",
+                actor=OVERSIGHT,
+                action="issue_determination",
+                condition="on a matter in its remit",
+            )
+        }
+    )
+    assert rules.authority(OVERSIGHT, "issue_determination")[0] is Authority.UNCERTAIN
+
+
+def test_real_art6_and_art14_5_give_uncertain_authority() -> None:
+    corpus = {c.id: c for c in load_clauses()}
+    rules = RuleBook(corpus)
+    assert rules.authority(OVERSIGHT, "issue_determination") == (
+        Authority.UNCERTAIN,
+        ("uae.fl2-2019.art6",),
+    )
+    art14 = RuleBook({"uae.telecom-law.art14-5": corpus["uae.telecom-law.art14-5"]})
+    assert art14.authority("telecom_regulator", "request_information")[0] is Authority.UNCERTAIN
+
+
+# ---- h2: a duty to keep a fallback plan implies only uncertain activation authority ----
+
+
+def test_fallback_plan_duty_implies_only_uncertain_activation_authority(
+    world: tuple[Scenario, RoleSet],
+) -> None:
+    plan = clause("plan", kind="obligation", actor=HEALTH, action="maintain_fallback_plan")
+    engine = engine_at(world, 60, plan)
+    verdict = engine.check(
+        world[1].role(HEALTH), ProposedAction(action_type="activate_fallback_channel")
+    )
+    assert verdict.reasons == (Reason.AUTHORITY_UNCERTAIN,)
+    assert verdict.clause_ids == ("plan",)
+    without = engine_at(world, 60)
+    bare = without.check(
+        world[1].role(HEALTH), ProposedAction(action_type="activate_fallback_channel")
+    )
+    assert bare.reasons == (Reason.NO_AUTHORITY,)
+
+
+def test_real_4_18_1_maps_to_maintaining_a_plan_not_activating() -> None:
+    n = load_engine_clauses()["dha.pp11.4-18-1"].normalized
+    assert n is not None and n.action == "maintain_fallback_plan"
+
+
+# ---- 7n: a citation must concern the citing role or its action ----
+
+
+def test_out_of_scope_citation_rejects_the_decision(world: tuple[Scenario, RoleSet]) -> None:
+    telecom_rule = clause(
+        "t.rule", kind="obligation", actor=TELECOM, action="report_to_telecom_regulator"
+    )
+    engine = engine_at(world, 15, telecom_rule)
+    engine.process(decide(world, HEALTH, 15, "raise_security_incident", cite=("t.rule",)), HEALTH)
+    assert decision_findings(engine) == ["citation_out_of_scope"]
+    assert not engine.state.has_done(HEALTH, "raise_security_incident")
+
+
+@pytest.mark.parametrize(
+    ("rule", "action"),
+    [
+        ({"actor": HEALTH, "action": "notify_health_data_oversight"}, "raise_security_incident"),
+        ({"actor": "any", "action": "share_incident_status"}, "raise_security_incident"),
+        ({"actor": TELECOM, "action": "raise_security_incident"}, "raise_security_incident"),
+    ],
+)
+def test_in_scope_citations_are_accepted(
+    world: tuple[Scenario, RoleSet], rule: dict[str, str], action: str
+) -> None:
+    engine = engine_at(world, 15, clause("r", kind="obligation", **rule))
+    engine.process(decide(world, HEALTH, 15, action, cite=("r",)), HEALTH)
+    assert decision_findings(engine) == []
+    assert engine.state.has_done(HEALTH, action)
+
+
+def test_policy_analysis_may_cite_any_loaded_clause(world: tuple[Scenario, RoleSet]) -> None:
+    other = clause("t.rule", kind="obligation", actor=TELECOM, action="report_to_telecom_regulator")
+    engine = engine_at(world, 45, other)
+    adviser = "policy_legal_adviser"
+    engine.process(decide(world, adviser, 45, "provide_policy_analysis", cite=("t.rule",)), adviser)
+    assert decision_findings(engine) == []
+
+
+# ---- 7r: legal-gap claims need citations ----
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["CONFIRMED LEGAL GAP: UAE law has no provision on this.", "There is a regulatory gap here."],
+)
+def test_uncited_gap_claim_rejects_the_decision(world: tuple[Scenario, RoleSet], text: str) -> None:
+    engine = engine_at(world, 45)
+    adviser = "policy_legal_adviser"
+    engine.process(decide(world, adviser, 45, "provide_policy_analysis", rationale=text), adviser)
+    assert decision_findings(engine) == ["uncited_gap_claim"]
+    assert not engine.state.has_done(adviser, "provide_policy_analysis")
+
+
+def test_cited_gap_analysis_is_accepted(world: tuple[Scenario, RoleSet]) -> None:
+    rule = clause("r", kind="obligation", actor=HEALTH, action="raise_security_incident")
+    engine = engine_at(world, 45, rule)
+    adviser = "policy_legal_adviser"
+    text = "Candidate finding: no provision on lockout review was found in the reviewed corpus."
+    engine.process(
+        decide(world, adviser, 45, "provide_policy_analysis", cite=("r",), rationale=text), adviser
+    )
+    assert decision_findings(engine) == []
+
+
+# ---- 7u: binding: unknown on an illustrative clause is for fixtures only ----
+
+
+def test_real_clauses_never_use_binding_unknown_on_illustrative_rules() -> None:
+    """In policies/reviewed, binding: unknown appears only on draft (agent proposal awaiting the
+    human) or reviewed (set by the human) clauses, never on illustrative ones."""
+    for c in load_clauses():
+        if c.binding == "unknown":
+            assert c.status in (ClauseStatus.DRAFT, ClauseStatus.REVIEWED), c.id
