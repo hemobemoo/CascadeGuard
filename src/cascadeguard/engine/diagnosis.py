@@ -15,9 +15,9 @@ from cascadeguard.simulation.state import SimulationState
 def qualification(clause_set: str, uncertain: bool = False) -> str:
     if uncertain:
         return (
-            f"Uncertain in the loaded clause set ({clause_set}): only clauses with binding: "
-            "unknown were found. This is not a confirmed legal or standards gap; it needs expert "
-            "review."
+            f"Uncertain in the loaded clause set ({clause_set}): only uncertain authority was "
+            "found (binding unknown, conditional, or implied); it requires a determination. This "
+            "is not a confirmed legal or standards gap; it needs expert review."
         )
     return (
         f"Not found in the loaded clause set ({clause_set}). An absent provision is not a "
@@ -126,13 +126,17 @@ def diagnose(
                 for e in _rejections(log, action, Reason.NO_AUTHORITY, Reason.AUTHORITY_UNCERTAIN)
             ]
             if spec.requires_authority:
-                verdicts = {role: rules.authority(role, action) for role in candidates}
+                verdicts = {
+                    role: rules.authority(role, action, spec.uncertain_authority_from)
+                    for role in candidates
+                }
                 if not any(a is Authority.AUTHORISED for a, _ in verdicts.values()):
                     unsure = sorted(
                         {c for a, cs in verdicts.values() if a is Authority.UNCERTAIN for c in cs}
                     )
                     detail = (
-                        f" Candidate owner clauses have binding: unknown ({', '.join(unsure)})."
+                        f" Only uncertain authority was found ({', '.join(unsure)}): binding "
+                        "unknown, conditional, or implied; it requires a determination."
                         if unsure
                         else ""
                     )

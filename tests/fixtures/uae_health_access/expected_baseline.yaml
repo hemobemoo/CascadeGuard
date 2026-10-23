@@ -26,7 +26,7 @@ actions:
   verdict: rejected
   reasons:
   - outside_recipient_boundary
-  - restricted_by_clause
+  - authority_uncertain
 - minute: 30
   role: telecom_operator
   action: share_incident_status
@@ -76,7 +76,9 @@ actions:
 - minute: 60
   role: health_data_oversight
   action: issue_determination
-  verdict: accepted
+  verdict: rejected
+  reasons:
+  - authority_uncertain
 - minute: 60
   role: public_access_inclusion
   action: assess_access_impact

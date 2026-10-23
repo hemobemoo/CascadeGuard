@@ -22,6 +22,7 @@
 #                         a clause with binding: unknown only makes authority uncertain
 #   requires_information  the role must have seen a fact in each listed category
 #   requires_prior        the role must already have had each listed action accepted
+#   uncertain_authority_from  an obligation to a listed action gives only uncertain authority
 
 actions:
   - id: investigate_network_fault
@@ -49,6 +50,10 @@ actions:
   - id: activate_fallback_channel
     description: Open an alternative access or authentication channel for affected patients.
     requires_authority: true
+    # A duty to keep a fallback plan does not say who may activate it (human decision h2).
+    uncertain_authority_from: [maintain_fallback_plan]
+  - id: maintain_fallback_plan
+    description: Keep a continuity and recovery (fallback) plan in place for incidents.
   - id: assess_access_impact
     description: Assess which user groups are affected and how, from aggregate data.
   - id: recommend_measure
@@ -86,6 +91,7 @@ roles:
       - review_automated_lockouts
       - reverse_automated_lockouts
       - activate_fallback_channel
+      - maintain_fallback_plan
       - share_incident_status
       - request_information
       - request_determination

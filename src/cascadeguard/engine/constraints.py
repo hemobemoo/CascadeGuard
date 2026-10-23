@@ -4,6 +4,7 @@ This is the only code that changes simulation state in response to agents. Check
 clause's `normalized` reading; `stated` and `interpreted` readings are treated the same.
 """
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -15,6 +16,17 @@ from cascadeguard.simulation.state import SimulationState
 
 SHARE = "share_incident_status"
 REQUEST = "request_information"
+ANALYSIS = "provide_policy_analysis"  # may cite any loaded clause: analysing provisions is its job
+# Text declaring a legal or standards gap; such a claim needs citations (AGENTS.md, 7r).
+GAP_CLAIM = re.compile(
+    r"\b(?:legal|regulatory|policy|standards?) gap\b|\bno (?:legal )?provision\b"
+    r"|\bgap in the law\b|\bnot regulated\b|\bno law\b",
+    re.IGNORECASE,
+)
+REQUIRES_DETERMINATION = (
+    "authority uncertain - requires determination (the clause depends on a condition the engine "
+    "cannot evaluate; it never decides the condition is met)"
+)
 
 
 class Reason(StrEnum):
@@ -23,6 +35,8 @@ class Reason(StrEnum):
     MALFORMED_DECISION = "malformed_decision"  # not a valid AgentDecision
     UNKNOWN_CITATION = "unknown_citation"  # clause id not in the corpus at all
     DRAFT_CITATION = "draft_citation"  # clause exists but is not loaded (draft, not reviewed)
+    CITATION_OUT_OF_SCOPE = "citation_out_of_scope"  # cited clause concerns neither role nor action
+    UNCITED_GAP_CLAIM = "uncited_gap_claim"  # declares a legal gap without any citation
     WRONG_ROLE_OR_TIME = "wrong_role_or_time"
     NOT_ALLOWED_ACTION = "not_allowed_action"
     UNKNOWN_TARGET = "unknown_target"
@@ -40,7 +54,7 @@ class Reason(StrEnum):
 
 class Authority(StrEnum):
     AUTHORISED = "authorised"
-    UNCERTAIN = "uncertain"  # only clauses with binding: unknown support it
+    UNCERTAIN = "uncertain"  # binding unknown, conditional, or only implied: requires determination
     NONE = "none"
 
 
@@ -69,21 +83,53 @@ class RuleBook:
             and n.actor in (actor, "any")
         ]
 
-    def authority(self, role: str, action: str) -> tuple[Authority, tuple[str, ...]]:
+    def authority(
+        self, role: str, action: str, implied_by: tuple[str, ...] = ()
+    ) -> tuple[Authority, tuple[str, ...]]:
         """Does a loaded clause make this role responsible for, or permit it, this action?
 
-        A clause counts if it is binding, or if it is an illustrative scenario rule (binding
-        false). A clause with binding: unknown only makes the authority uncertain; non-binding
-        guidance (binding false, not illustrative) never counts.
+        - Firm: an obligation, or an unconditional permission, that is binding or an
+          illustrative scenario rule (binding false).
+        - Uncertain (requires determination): a clause with binding: unknown; a permission whose
+          `condition` the engine cannot evaluate (decision 7v); or no direct clause but a firm or
+          binding-unknown obligation to one of `implied_by` (e.g. a duty to keep a fallback plan
+          implies only uncertain authority to activate it, decision h2).
+        - Non-binding guidance (binding false, not illustrative) never counts.
         """
         candidates = self._matching({RuleKind.OBLIGATION, RuleKind.PERMISSION}, action, role)
-        firm = [c.id for c in candidates if c.binding is True or _is_scenario_rule(c)]
+        firm = [c.id for c in candidates if _counts(c) and not _conditional_permission(c)]
         if firm:
             return Authority.AUTHORISED, tuple(firm)
-        unsure = [c.id for c in candidates if c.binding == "unknown"]
+        unsure = [
+            c.id
+            for c in candidates
+            if c.binding == "unknown" or (_counts(c) and _conditional_permission(c))
+        ]
         if unsure:
             return Authority.UNCERTAIN, tuple(unsure)
+        implied = [
+            c.id
+            for prior in implied_by
+            for c in self._matching({RuleKind.OBLIGATION}, prior, role)
+            if _counts(c) or c.binding == "unknown"
+        ]
+        if implied:
+            return Authority.UNCERTAIN, tuple(dict.fromkeys(implied))
         return Authority.NONE, ()
+
+    def is_conditional(self, clause_id: str) -> bool:
+        """A prohibition, safeguard or permission whose condition the engine cannot evaluate."""
+        n = self.clauses[clause_id].normalized
+        return n is not None and n.kind is not RuleKind.OBLIGATION and bool(n.condition)
+
+    def concerns(self, clause_id: str, role: str, actions: tuple[str, ...]) -> bool:
+        """Does a cited clause concern the citing role or one of its actions? (decision 7n)"""
+        if ANALYSIS in actions:
+            return True
+        n = self.clauses[clause_id].normalized
+        if n is None:
+            return False
+        return n.actor in (role, "any") or n.counterpart == role or n.action in actions
 
     def restrictions(self, action: str, category: str | None, actor: str) -> tuple[str, ...]:
         """Clauses that forbid this action, for the data category it touches (if any).
@@ -134,6 +180,16 @@ class RuleBook:
 
 def _is_scenario_rule(clause: PolicyClause) -> bool:
     return clause.status is ClauseStatus.ILLUSTRATIVE and clause.binding is False
+
+
+def _counts(clause: PolicyClause) -> bool:
+    """Binding, or an illustrative scenario rule: may give firm authority or a trigger."""
+    return clause.binding is True or _is_scenario_rule(clause)
+
+
+def _conditional_permission(clause: PolicyClause) -> bool:
+    n = clause.normalized
+    return n is not None and n.kind is RuleKind.PERMISSION and bool(n.condition)
 
 
 class ConstraintEngine:
@@ -289,6 +345,28 @@ class ConstraintEngine:
             )
         if bad_citations:
             return
+        actions = tuple(a.action_type for a in decision.proposed_actions)
+        out_of_scope = [
+            c for c in dict.fromkeys(cited) if not self.rules.concerns(c, expected_role, actions)
+        ]
+        for clause_id in out_of_scope:  # decision 7n: same handling as unknown citations
+            self._reject_decision(
+                expected_role,
+                Reason.CITATION_OUT_OF_SCOPE,
+                (clause_id,),
+                f"{expected_role} cited {clause_id}, concerning neither the role nor its action",
+            )
+        if out_of_scope:
+            return
+        claim_text = " ".join((decision.rationale, *decision.uncertainty))
+        if not cited and GAP_CLAIM.search(claim_text):  # decision 7r
+            self._reject_decision(
+                expected_role,
+                Reason.UNCITED_GAP_CLAIM,
+                (),
+                f"{expected_role} declared a legal gap without citing any clause",
+            )
+            return
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             return
         role = state.roles.role(decision.role_id)
@@ -305,6 +383,21 @@ class ConstraintEngine:
             )
             if verdict.accepted:
                 self._apply(role, action, verdict)
+
+    def _reject_decision(
+        self, role: str, reason: Reason, clause_ids: tuple[str, ...], detail: str
+    ) -> None:
+        state = self.state
+        state.record("rejected", role=role, reasons=(reason,), clause_ids=clause_ids, detail=detail)
+        state.add_finding(
+            Finding(
+                kind=reason.value,
+                minute=state.minute,
+                role=role,
+                clause_ids=clause_ids,
+                detail=detail,
+            )
+        )
 
     def check(self, role: Role, action: ProposedAction) -> Verdict:
         state = self.state
@@ -331,10 +424,7 @@ class ConstraintEngine:
             details.append(f"{fact.id} ({fact.data_category}) to {action.target}")
             if fact.data_category not in state.boundary(action.target):
                 reasons.append(Reason.OUTSIDE_RECIPIENT_BOUNDARY)
-            restricted = self.rules.restrictions(kind, fact.data_category, role.id)
-            if restricted:
-                reasons.append(Reason.RESTRICTED_BY_CLAUSE)
-                clause_ids.extend(restricted)
+            self._restrict(kind, fact.data_category, role.id, reasons, clause_ids, details)
         elif kind == REQUEST:
             category = action.parameters.get("data_category")
             if not category:
@@ -344,15 +434,9 @@ class ConstraintEngine:
                     False, (Reason.UNKNOWN_DATA_CATEGORY,), (), f"unknown category {category!r}"
                 )
             details.append(f"{category} from {action.target}")
-            restricted = self.rules.restrictions(kind, category, role.id)
-            if restricted:
-                reasons.append(Reason.RESTRICTED_BY_CLAUSE)
-                clause_ids.extend(restricted)
+            self._restrict(kind, category, role.id, reasons, clause_ids, details)
         else:
-            restricted = self.rules.restrictions(kind, None, role.id)
-            if restricted:
-                reasons.append(Reason.RESTRICTED_BY_CLAUSE)
-                clause_ids.extend(restricted)
+            self._restrict(kind, None, role.id, reasons, clause_ids, details)
 
         missing_prior = [p for p in spec.requires_prior if not state.has_done(role.id, p)]
         if missing_prior:
@@ -365,15 +449,39 @@ class ConstraintEngine:
             reasons.append(Reason.MISSING_INFORMATION)
             details.append("has not seen " + ", ".join(missing_info))
         if spec.requires_authority:
-            authority, supporting = self.rules.authority(role.id, kind)
+            authority, supporting = self.rules.authority(
+                role.id, kind, spec.uncertain_authority_from
+            )
             if authority is Authority.NONE:
                 reasons.append(Reason.NO_AUTHORITY)
                 details.append("no loaded clause gives this role authority")
             elif authority is Authority.UNCERTAIN:
-                reasons.append(Reason.AUTHORITY_UNCERTAIN)
-                details.append("only clauses with binding: unknown support it")
+                if Reason.AUTHORITY_UNCERTAIN not in reasons:
+                    reasons.append(Reason.AUTHORITY_UNCERTAIN)
+                details.append(REQUIRES_DETERMINATION)
             clause_ids.extend(supporting)
         return Verdict(not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details), fact_id)
+
+    def _restrict(
+        self,
+        kind: str,
+        category: str | None,
+        actor: str,
+        reasons: list[Reason],
+        clause_ids: list[str],
+        details: list[str],
+    ) -> None:
+        """Unconditional bans reject outright; conditional ones (decision 7t) hold the action as
+        authority uncertain - requires determination."""
+        restricted = self.rules.restrictions(kind, category, actor)
+        firm = [c for c in restricted if not self.rules.is_conditional(c)]
+        conditional = [c for c in restricted if self.rules.is_conditional(c)]
+        if firm:
+            reasons.append(Reason.RESTRICTED_BY_CLAUSE)
+        if conditional:
+            reasons.append(Reason.AUTHORITY_UNCERTAIN)
+            details.append(REQUIRES_DETERMINATION)
+        clause_ids.extend(firm + conditional)
 
     def _apply(self, role: Role, action: ProposedAction, verdict: Verdict) -> None:
         state = self.state
