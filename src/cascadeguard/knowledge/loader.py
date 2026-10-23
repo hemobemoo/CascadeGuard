@@ -5,6 +5,7 @@ The engine reads clauses only through `load_engine_clauses`, which admits `revie
 checked against the extracted PDF text before the human reviews them.
 """
 
+import hashlib
 import json
 from itertools import pairwise
 from pathlib import Path
@@ -19,6 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REVIEWED_DIR = PROJECT_ROOT / "policies" / "reviewed"
 SOURCES_DIR = PROJECT_ROOT / "policies" / "sources"
 EXTRACTED_DIR = PROJECT_ROOT / "policies" / "extracted"
+APPROVALS_FILE = PROJECT_ROOT / "policies" / "approvals.yaml"
 
 ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
 # The two published books are context only and never a clause source (AGENTS.md).
@@ -80,6 +82,26 @@ def load_engine_clauses(
 ) -> dict[str, PolicyClause]:
     """Clauses the engine may use: `reviewed` and `illustrative` only, keyed by id."""
     return {c.id: c for c in load_clauses(directory, sources_dir) if c.status in ENGINE_STATUSES}
+
+
+def clause_digest(clause: PolicyClause) -> str:
+    """SHA-256 of every field except `status`: any edit to a clause changes its digest."""
+    content = clause.model_dump(mode="json", exclude={"status"})
+    return hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def load_approvals(path: Path = APPROVALS_FILE) -> tuple[dict[str, str], tuple[str, ...]]:
+    """The human's approved digests and the clauses awaiting re-approval (approvals.yaml)."""
+    raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+    if not isinstance(raw, dict) or set(cast(dict[str, Any], raw)) != {
+        "approved",
+        "reapproval_needed",
+    }:
+        raise ClauseLoadError(f"{path.name}: expected 'approved' and 'reapproval_needed'")
+    data = cast(dict[str, Any], raw)
+    approved = cast(dict[str, str], data["approved"] or {})
+    pending = cast(list[str], data["reapproval_needed"] or [])
+    return dict(approved), tuple(pending)
 
 
 def quote_found_on_page(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DIR) -> bool:
