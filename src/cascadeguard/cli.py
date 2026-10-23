@@ -15,7 +15,13 @@ from cascadeguard.agents.scripted import ScriptedAgent, load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import RuleBook
-from cascadeguard.engine.repair_search import ReplayComparison, SearchResult, search
+from cascadeguard.engine.repair_search import (
+    RANKING,
+    SCRIPTED_LIMIT_NOTE,
+    ReplayComparison,
+    SearchResult,
+    search,
+)
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
 from cascadeguard.simulation.loader import (
     PROJECT_ROOT,
@@ -216,7 +222,8 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
 
 def format_search(result: SearchResult) -> str:
     labels = dict(result.loaded_clauses)
-    lines = ["Candidate repairs, ranked (lexicographic; see AGENTS.md)"]
+    lines = ["Candidate repairs, ranked (lexicographic; see AGENTS.md and ADR 0001)"]
+    lines.append(f"Order: {RANKING}")
     lines.append(f"Clause set: {result.clause_set}")
     lines.append("Every repair rule is hypothetical. 'requires authorization': no reviewed,")
     lines.append("binding clause supports the permission it creates; it needs human and")
@@ -231,8 +238,12 @@ def format_search(result: SearchResult) -> str:
             f"     {c.outcome}; critical blockers removed {c.critical_blockers_removed}; "
             f"{len(p.edits)} edit(s){auth}"
         )
-        if c.new_conflicts:
-            lines.append(f"     new conflicts: {', '.join(c.new_conflicts)}")
+        if c.masked:
+            lines.append(f"     masked (goal met another way): {', '.join(c.masked)}")
+        tags = c.conflict_tags()
+        for fid in c.new_conflicts:
+            tag = f"  [{tags[fid]}: {SCRIPTED_LIMIT_NOTE}]" if fid in tags else ""
+            lines.append(f"     new conflict: {fid}{tag}")
     lines.append("")
     lines.append("Discarded by the hard filter")
     if not result.discarded:

@@ -11,7 +11,11 @@ from pathlib import Path
 from typing import Any, cast
 
 from cascadeguard.domain.findings import CoordinationFailure
-from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
+from cascadeguard.engine.repair_search import (
+    SCRIPTED_LIMIT_NOTE,
+    ReplayComparison,
+    SearchResult,
+)
 from cascadeguard.simulation.orchestrator import RunResult
 
 SCRIPTED_NOTE = (
@@ -76,7 +80,7 @@ def comparison_export(c: ReplayComparison) -> dict[str, Any]:
     labels = dict(c.replay.loaded_clauses)
     by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
     data = c.summary()
-    for key in ("failures_removed", "failures_remaining", "new_conflicts"):
+    for key in ("failures_removed", "failures_masked", "failures_remaining", "new_conflicts"):
         data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
     data["targets_clauses"] = _labelled((x.clause_id for x in c.proposal.citations), labels)
     data["note"] = f"{REPAIR_NOTE} {SCRIPTED_NOTE}"
@@ -119,14 +123,18 @@ def comparison_markdown(c: ReplayComparison) -> str:
     lines += ["", "## Diagnosed failures", ""]
     by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
     for title, ids in (
-        ("No longer blocking (the goal it blocked is met, or its cause is gone)", c.removed),
+        ("Removed (the repair removes its cause)", c.removed),
+        ("Masked (goal met another way; the cause is still present)", c.masked),
         ("Remaining", c.remaining),
         ("New conflicts introduced by the repair", c.new_conflicts),
     ):
         lines.append(f"**{title}:**" + ("" if ids else " none"))
+        tags = c.conflict_tags()
         for fid in ids:
             f = by_id[fid]
             lines.append(f"- `{fid}`: {f.description} Clauses: {cite(f.clause_ids)}.")
+            if fid in tags:
+                lines.append(f"  Tag `{tags[fid]}`: {SCRIPTED_LIMIT_NOTE}.")
             lines.append(f"  _{f.qualification}_")
         lines.append("")
     lines += ["## Actions whose verdict changed", ""]

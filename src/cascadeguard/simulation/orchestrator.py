@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from cascadeguard.agents.base import Agent
+from cascadeguard.agents.scripted import ScriptedAgent
 from cascadeguard.domain.findings import CoordinationFailure, Finding, LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
@@ -31,7 +32,10 @@ class RunResult:
     goals: tuple[tuple[str, int | None], ...]  # (goal id, minute met or None)
     findings: tuple[Finding, ...]
     failures: tuple[CoordinationFailure, ...]
+    # Every failure whose cause is still present, including those behind goals met another way.
+    causes: tuple[CoordinationFailure, ...]
     graph: DependencyGraph
+    scripted: bool  # every role was a ScriptedAgent (they do not adapt to a repair)
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
@@ -122,6 +126,7 @@ def run(
     engine.close(scenario.events[-1].at_minute)
     graph = build_graph(state, loaded)
     failures = diagnose(state, graph, engine.rules, clause_set)
+    causes = diagnose(state, graph, engine.rules, clause_set, include_met=True)
     return RunResult(
         scenario_id=scenario.id,
         clause_set=clause_set,
@@ -131,5 +136,7 @@ def run(
         goals=tuple((g.id, state.goal_met_at(g.id)) for g in scenario.recovery_goals),
         findings=state.findings,
         failures=failures,
+        causes=causes,
         graph=graph,
+        scripted=all(isinstance(a, ScriptedAgent) for a in agents.values()),
     )

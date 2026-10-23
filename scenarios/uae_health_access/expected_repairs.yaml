@@ -1,223 +1,293 @@
 # Golden: repair search and two replays on the real clause set (Phase 3).
 # Reviewed core set + illustrative telecom rules; repair rules are hypothetical.
-# successful: clears every diagnosed failure and meets every critical goal.
+# Ranking: ADR 0001 (human decisions 4a, 4b, 4e, 2026-10-24).
+# successful: meets every critical goal and leaves no failure blocking; two failures are
+#   masked (goal met another way), not removed.
 # unsuccessful: clears the information deadlock, but the lockouts stay unresolved.
 # Regenerate only for a deliberate change, explained in the commit message and the PR.
 search:
   max_edits: 2
+  ranking: hard filter; clean repairs before repairs with new conflicts; most critical
+    blockers removed (masked ones do not count); fewest edits; fewest roles touched;
+    fewest clauses cited; fewest new conflicts; not requiring authorization; repair_id
   ranked:
   - rank: 1
-    repair: owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
-    edits: 2
-    requires_authorization: true
-    critical_blockers_removed: 4
-    outcome: resolved
-    unmet_critical_goals: []
-    new_conflicts: []
-  - rank: 2
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
-    edits: 2
-    requires_authorization: true
-    critical_blockers_removed: 4
-    outcome: resolved
-    unmet_critical_goals: []
-    new_conflicts: []
-  - rank: 3
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m
-    edits: 1
-    requires_authorization: true
-    critical_blockers_removed: 3
-    outcome: partial
-    unmet_critical_goals:
-    - alert_cause_known_to_health
-    new_conflicts: []
-  - rank: 4
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+owner.reverse_automated_lockouts.health_service_operator
-    edits: 2
-    requires_authorization: true
-    critical_blockers_removed: 3
-    outcome: partial
-    unmet_critical_goals:
-    - alert_cause_known_to_health
-    new_conflicts: []
-  - rank: 5
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
-    edits: 2
-    requires_authorization: true
-    critical_blockers_removed: 3
-    outcome: partial
-    unmet_critical_goals:
-    - alert_cause_known_to_health
-    new_conflicts: []
-  - rank: 6
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
-    edits: 2
-    requires_authorization: true
-    critical_blockers_removed: 3
-    outcome: introduces new conflict
-    unmet_critical_goals:
-    - alert_cause_known_to_health
-    new_conflicts:
-    - temporal_infeasibility:request_determination
-  - rank: 7
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
-    edits: 2
-    requires_authorization: true
-    critical_blockers_removed: 3
-    outcome: introduces new conflict
-    unmet_critical_goals:
-    - alert_cause_known_to_health
-    new_conflicts:
-    - temporal_infeasibility:request_determination
-  - rank: 8
     repair: owner.reverse_automated_lockouts.health_service_operator+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
+    blockers_masked: []
     outcome: partial
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts: []
-  - rank: 9
+    new_conflict_tags: {}
+  - rank: 2
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+owner.reverse_automated_lockouts.health_service_operator
+    edits: 2
+    requires_authorization: true
+    critical_blockers_removed: 2
+    blockers_masked:
+    - undefined_trigger:review_automated_lockouts
+    outcome: partial
+    unmet_critical_goals:
+    - alert_cause_known_to_health
+    new_conflicts: []
+    new_conflict_tags: {}
+  - rank: 3
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
+    edits: 2
+    requires_authorization: true
+    critical_blockers_removed: 2
+    blockers_masked:
+    - orphan_duty:reverse_automated_lockouts
+    outcome: partial
+    unmet_critical_goals:
+    - alert_cause_known_to_health
+    new_conflicts: []
+    new_conflict_tags: {}
+  - rank: 4
+    repair: owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+    edits: 2
+    requires_authorization: true
+    critical_blockers_removed: 2
+    blockers_masked:
+    - orphan_duty:activate_fallback_channel
+    - undefined_trigger:review_automated_lockouts
+    outcome: resolved
+    unmet_critical_goals: []
+    new_conflicts: []
+    new_conflict_tags: {}
+  - rank: 5
     repair: share.network_incident_status.telecom_operator.health_service_operator+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
+    blockers_masked: []
     outcome: partial
     unmet_critical_goals:
     - patient_access_restored
     new_conflicts: []
-  - rank: 10
+    new_conflict_tags: {}
+  - rank: 6
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
+    edits: 2
+    requires_authorization: true
+    critical_blockers_removed: 2
+    blockers_masked:
+    - orphan_duty:reverse_automated_lockouts
+    - undefined_trigger:review_automated_lockouts
+    outcome: resolved
+    unmet_critical_goals: []
+    new_conflicts: []
+    new_conflict_tags: {}
+  - rank: 7
     repair: trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 1
     requires_authorization: false
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: partial
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts: []
-  - rank: 11
+    new_conflict_tags: {}
+  - rank: 8
     repair: owner.reverse_automated_lockouts.health_service_operator
     edits: 1
     requires_authorization: true
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: partial
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts: []
-  - rank: 12
+    new_conflict_tags: {}
+  - rank: 9
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m
+    edits: 1
+    requires_authorization: true
+    critical_blockers_removed: 1
+    blockers_masked:
+    - orphan_duty:reverse_automated_lockouts
+    - undefined_trigger:review_automated_lockouts
+    outcome: partial
+    unmet_critical_goals:
+    - alert_cause_known_to_health
+    new_conflicts: []
+    new_conflict_tags: {}
+  - rank: 10
     repair: share.network_incident_status.telecom_operator.health_service_operator
     edits: 1
     requires_authorization: true
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: partial
     unmet_critical_goals:
     - patient_access_restored
     new_conflicts: []
-  - rank: 13
+    new_conflict_tags: {}
+  - rank: 11
     repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: false
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
-  - rank: 14
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
+  - rank: 12
     repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: false
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
+  - rank: 13
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
+    edits: 2
+    requires_authorization: true
+    critical_blockers_removed: 1
+    blockers_masked:
+    - orphan_duty:reverse_automated_lockouts
+    - undefined_trigger:review_automated_lockouts
+    outcome: introduces new conflict
+    unmet_critical_goals:
+    - alert_cause_known_to_health
+    new_conflicts:
+    - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
+  - rank: 14
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
+    edits: 2
+    requires_authorization: true
+    critical_blockers_removed: 1
+    blockers_masked:
+    - orphan_duty:reverse_automated_lockouts
+    - undefined_trigger:review_automated_lockouts
+    outcome: introduces new conflict
+    unmet_critical_goals:
+    - alert_cause_known_to_health
+    new_conflicts:
+    - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 15
     repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 16
     repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 17
     repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 18
     repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 19
     repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
     edits: 1
     requires_authorization: false
     critical_blockers_removed: 0
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 20
     repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 1
     requires_authorization: false
     critical_blockers_removed: 0
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 21
     repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 2
     requires_authorization: false
     critical_blockers_removed: 0
+    blockers_masked: []
     outcome: introduces new conflict
     unmet_critical_goals:
     - patient_access_restored
     - alert_cause_known_to_health
     new_conflicts:
     - temporal_infeasibility:request_determination
+    new_conflict_tags:
+      temporal_infeasibility:request_determination: scripted_agent_limit
   discarded:
   - repair: share.patient_account_records.health_service_operator.telecom_operator
-    reason: would permit an action a loaded clause restricts (a repair never decides that a condition
-      is met)
+    reason: would permit an action a loaded clause restricts (a repair never decides
+      that a condition is met)
     clauses:
     - uae.fl2-2019.art16
     - uae.fl2-2019.art4
@@ -247,11 +317,13 @@ successful:
       replay: met at T+45
   failures_removed:
   - information_deadlock:network_incident_status->health_service_operator
-  - orphan_duty:activate_fallback_channel
   - orphan_duty:reverse_automated_lockouts
+  failures_masked:
+  - orphan_duty:activate_fallback_channel
   - undefined_trigger:review_automated_lockouts
   failures_remaining: []
   new_conflicts: []
+  new_conflict_tags: {}
   changed_actions:
   - minute: 30
     role: telecom_operator
@@ -293,11 +365,13 @@ unsuccessful:
       replay: met at T+45
   failures_removed:
   - information_deadlock:network_incident_status->health_service_operator
+  failures_masked: []
   failures_remaining:
   - orphan_duty:activate_fallback_channel
   - orphan_duty:reverse_automated_lockouts
   - undefined_trigger:review_automated_lockouts
   new_conflicts: []
+  new_conflict_tags: {}
   changed_actions:
   - minute: 30
     role: telecom_operator

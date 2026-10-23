@@ -247,6 +247,24 @@ def test_ranking_tie_breaks_in_order() -> None:
     assert ordered == [trigger, owner, owner_cited, share, pair]
 
 
+def test_a_clean_repair_outranks_one_with_a_new_conflict_that_removes_more() -> None:
+    """Human decision 4e: clean repairs first, whatever the blocker count; among repairs with
+    new conflicts, fewer conflicts break the remaining ties."""
+    w = load_world("uae_health_access")
+    base = w.baseline()
+    p = _comparison(w, (OWNER,)).proposal
+    new = [f.model_copy(update={"id": f"new:{i}"}) for i, f in enumerate(base.failures[:2])]
+    clean = ReplayComparison(p, base, replace(base, failures=(), causes=base.failures[1:]), ())
+    one = replace(base, failures=(new[0],), causes=(new[0],))
+    two = replace(base, failures=tuple(new), causes=tuple(new))
+    critical = tuple(g.id for g in w.scenario.recovery_goals if g.critical)
+    conflict_one = ReplayComparison(p, base, one, critical)
+    conflict_two = ReplayComparison(p, base, two, critical)
+    assert conflict_one.critical_blockers_removed > clean.critical_blockers_removed
+    ordered = sorted([conflict_two, conflict_one, clean], key=rank_key)
+    assert ordered == [clean, conflict_one, conflict_two]
+
+
 # ---- labels and qualifications everywhere ----
 
 
