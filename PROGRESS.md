@@ -172,7 +172,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   authority/trigger outcome (binding true -> illustrative scenario rule; binding unknown kept;
   non-binding guidance carries no `normalized`). `tests/unit/test_fixtures.py` fails on drift. They are labelled "SYNTHETIC FIXTURES ... not the real corpus" in
   every output. The real-corpus golden `scenarios/uae_health_access/expected_baseline.yaml`
-  waits for the core-set review.
+  was added in 392f162 after the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
 - **Human decisions, 2026-10-23 (answers to "Waiting on human"):**
@@ -246,6 +246,21 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   The scripted telecom T+30 uncertainty "No clause found that authorises this share." was removed
   (an uncited gap-style line; it never appeared in a golden). Expected-repairs golden regenerated:
   only repair ids (trigger/deadline suffix) and the sorted order of one discard's clauses changed.
+- **Phase 3 review round 2 (2026-10-23).** phase-auditor PASS (QUESTION-FOR-HUMAN items only:
+  4a-4c; MINORs fixed: rule text, stale PROGRESS line). test-breaker FAIL: BLOCKERs (share
+  authorization checked only the named sender although the widened boundary lets any role
+  send; gap claims could pass with a negated qualifier or a paraphrase), MAJOR (decision
+  requester `action`/`counterpart` unchecked), MINORs (non-strict deadline, decisions mutable
+  between collection and processing, weak identity and patient-record tests). All fixed with
+  tests, each mutation-checked: a share needs a reviewed basis for every possible sender; gap
+  claims only in the structured `AgentDecision.gap_claims` (citations + fixed qualification;
+  free-text gap wording rejected; `overstated_gap_claim`); requester parameters checked;
+  `deadline_minutes` strict; the orchestrator copies each decision on return; identity test
+  compares fact releases both ways and every agent view, for both golden repairs. Two tests
+  changed on purpose with the rule: cited free-text gap analysis is now rejected (use a
+  GapClaim), and a reviewed share clause naming only one sender no longer exempts a share.
+  `RepairProposal.requires_authorization` is computed by the engine (`proposal()`); replay
+  does not use it.
 - **`RepairProposal` shape (Phase 3 decision).** `operation`/`applies_to`/`parameters` became
   `edits: tuple[RepairEdit, ...]`, because the ranking counts repair edits and a repair can need
   two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with

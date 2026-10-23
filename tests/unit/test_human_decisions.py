@@ -3,8 +3,15 @@
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
-from cascadeguard.domain.decisions import AgentDecision, Citation, ProposedAction
+from cascadeguard.domain.decisions import (
+    GAP_QUALIFICATION,
+    AgentDecision,
+    Citation,
+    GapClaim,
+    ProposedAction,
+)
 from cascadeguard.domain.policies import ClauseStatus, PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import Authority, ConstraintEngine, Reason, RuleBook
@@ -227,15 +234,53 @@ def test_uncited_gap_claim_rejects_the_decision(world: tuple[Scenario, RoleSet],
     assert not engine.state.has_done(adviser, "provide_policy_analysis")
 
 
-def test_cited_gap_analysis_is_accepted(world: tuple[Scenario, RoleSet]) -> None:
+def gap_claim(statement: str, *cite: str) -> GapClaim:
+    return GapClaim(
+        statement=statement,
+        citations=tuple(Citation(clause_id=c, relevance="x") for c in cite),
+        qualification=GAP_QUALIFICATION,
+    )
+
+
+def test_a_structured_gap_claim_is_accepted_and_kept_as_a_candidate(
+    world: tuple[Scenario, RoleSet],
+) -> None:
     rule = clause("r", kind="obligation", actor=HEALTH, action="raise_security_incident")
     engine = engine_at(world, 45, rule)
     adviser = "policy_legal_adviser"
-    text = "Candidate finding: no provision on lockout review was found in the reviewed corpus."
-    engine.process(
-        decide(world, adviser, 45, "provide_policy_analysis", cite=("r",), rationale=text), adviser
-    )
-    assert decision_findings(engine) == []
+    decision = decide(world, adviser, 45, "provide_policy_analysis", rationale="Analysis.")
+    claim = gap_claim("No loaded clause assigns review of automated lockouts.", "r")
+    engine.process(decision.model_copy(update={"gap_claims": (claim,)}), adviser)
+    assert decision_findings(engine) == ["candidate_gap_claim"]
+    assert engine.state.has_done(adviser, "provide_policy_analysis")
+    assert GAP_QUALIFICATION in engine.state.findings[-1].detail
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"citations": ()},  # a gap claim must cite
+        {"qualification": "confirmed legal gap"},  # only the fixed qualification
+        {"qualification": "not a candidate finding"},
+    ],
+)
+def test_gap_claim_schema_requires_citations_and_the_fixed_qualification(
+    bad: dict[str, Any],
+) -> None:
+    data = gap_claim("No clause found.", "r").model_dump() | bad
+    with pytest.raises(ValidationError):
+        GapClaim.model_validate(data)
+
+
+def test_a_gap_claim_stated_as_certain_is_rejected(world: tuple[Scenario, RoleSet]) -> None:
+    rule = clause("r", kind="obligation", actor=HEALTH, action="raise_security_incident")
+    engine = engine_at(world, 45, rule)
+    adviser = "policy_legal_adviser"
+    decision = decide(world, adviser, 45, "provide_policy_analysis", rationale="Analysis.")
+    claim = gap_claim("UAE law definitively has no rule on this.", "r")
+    engine.process(decision.model_copy(update={"gap_claims": (claim,)}), adviser)
+    assert decision_findings(engine) == ["overstated_gap_claim"]
+    assert not engine.state.has_done(adviser, "provide_policy_analysis")
 
 
 # ---- 7u: binding: unknown on an illustrative clause is for fixtures only ----
@@ -285,21 +330,30 @@ def test_gap_claims_in_other_words_still_need_citations(
     assert decision_findings(engine) == ["uncited_gap_claim"]
 
 
-def test_a_cited_gap_claim_must_be_qualified(world: tuple[Scenario, RoleSet]) -> None:
+@pytest.mark.parametrize(
+    "text",
+    [
+        "There is a legal gap here, definitely.",
+        # Phase 3 review round 2: a negated qualifier or a paraphrase must not pass.
+        "This is not a candidate finding: UAE law has a confirmed legal gap on fallback "
+        "activation.",
+        "The statute is silent about who activates the fallback channel; this is definitively a "
+        "hole in UAE law.",
+        "UAE legislation does not cover fallback activation at all; confirmed.",
+        "Candidate finding: no provision on lockout review was found in the reviewed corpus.",
+    ],
+)
+def test_gap_wording_in_free_text_is_rejected_even_when_cited(
+    world: tuple[Scenario, RoleSet], text: str
+) -> None:
+    """A gap may be stated only in a GapClaim; cited free text does not make it acceptable."""
     rule = clause("r", kind="obligation", actor=TELECOM, action="report_to_telecom_regulator")
     engine = engine_at(world, 45, rule)
     engine.process(
-        decide(
-            world,
-            TELECOM,
-            45,
-            "report_to_telecom_regulator",
-            cite=("r",),
-            rationale="There is a legal gap here, definitely.",
-        ),
+        decide(world, TELECOM, 45, "report_to_telecom_regulator", cite=("r",), rationale=text),
         TELECOM,
     )
-    assert decision_findings(engine) == ["unqualified_gap_claim"]
+    assert decision_findings(engine) == ["uncited_gap_claim"]
     assert not engine.state.has_done(TELECOM, "report_to_telecom_regulator")
 
 

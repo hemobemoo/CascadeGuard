@@ -329,30 +329,45 @@ def _restricted_by(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> tuple[s
     return rules.restrictions(edit.action, None, edit.role)
 
 
-def _share_basis(edit: RepairEdit, rules: RuleBook) -> bool:
-    """A reviewed, binding, unconditional clause already permits or obliges this exact share."""
-    for c in rules.clauses.values():
-        n = c.normalized
-        if (
-            n is not None
+def share_senders(edit: RepairEdit, roles: RoleSet) -> tuple[str, ...]:
+    """Every role that could send the category to the counterpart once the counterpart's boundary
+    is widened: any role allowed to share that may itself see the category."""
+    assert edit.data_category is not None
+    return tuple(
+        r.id
+        for r in roles.roles
+        if r.id != edit.counterpart
+        and SHARE in r.allowed_actions
+        and edit.data_category in r.boundary.visible_categories
+    )
+
+
+def _share_basis(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> bool:
+    """For every possible sender, a reviewed, binding, unconditional clause already permits or
+    obliges sharing this category with the counterpart."""
+
+    def covered(sender: str) -> bool:
+        return any(
+            (n := c.normalized) is not None
             and c.status is ClauseStatus.REVIEWED
             and c.binding is True
             and n.kind in (RuleKind.OBLIGATION, RuleKind.PERMISSION)
             and n.action == SHARE
             and n.data_category == edit.data_category
-            and n.actor in (edit.role, "any")
+            and n.actor in (sender, "any")
             and n.counterpart in (edit.counterpart, None)
             and not n.condition
-        ):
-            return True
-    return False
+            for c in rules.clauses.values()
+        )
+
+    return all(covered(s) for s in share_senders(edit, roles))
 
 
 def _needs_authorization(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> bool:
     """True if the edit creates a permission that no reviewed, binding clause already gives."""
     op = edit.operation
     if op is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
-        return not _share_basis(edit, rules)
+        return not _share_basis(edit, rules, roles)
     if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
         return False  # a duty to ask for a determination grants no permission
     assert edit.action is not None

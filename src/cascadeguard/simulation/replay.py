@@ -25,6 +25,7 @@ from cascadeguard.simulation.loader import check_clause_references
 from cascadeguard.simulation.orchestrator import RunResult, run
 
 SHARE = "share_incident_status"
+DETERMINER_ACTION = "issue_determination"
 REPAIR_PREFIX = "repair."
 REPAIR_LABEL = "hypothetical repair rule (not a source clause)"
 REPAIR_ISSUER = "CascadeGuard repair search (hypothetical)"
@@ -39,8 +40,9 @@ def _rule(edit: RepairEdit) -> PolicyClause:
     if op is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
         kind, action = "permission", SHARE
         text = (
-            f"{edit.counterpart} may receive facts in the category {edit.data_category} "
-            f"(sent by {edit.role}, or delivered by an inject it receives), and nothing more."
+            f"{edit.counterpart} may receive facts in the category {edit.data_category}, "
+            f"from {edit.role} (the original holder) or any other role that holds them, or "
+            "through an inject it receives; no other category."
         )
     elif op is RepairOperationType.ASSIGN_OWNER:
         kind, action = "obligation", edit.action
@@ -106,6 +108,13 @@ def apply_repair(
             assert edit.counterpart is not None and edit.data_category is not None
             widen.setdefault(edit.counterpart, []).append(edit.data_category)
     check_clause_references([repaired[repair_clause_id(e)] for e in proposal.edits], roles)
+    for edit in proposal.edits:
+        if edit.operation is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
+            assert edit.action is not None and edit.counterpart is not None
+            if edit.action not in roles.role(edit.role).allowed_actions:
+                raise ValueError(f"{edit.edit_id}: {edit.role} may not {edit.action}")
+            if DETERMINER_ACTION not in roles.role(edit.counterpart).allowed_actions:
+                raise ValueError(f"{edit.edit_id}: {edit.counterpart} issues no determinations")
     for rule in (repaired[repair_clause_id(e)] for e in proposal.edits):
         n = rule.normalized
         assert n is not None

@@ -121,7 +121,8 @@ def test_a_replay_that_delivers_a_restricted_category_to_a_new_role_is_discarded
     [
         ({"actor": "telecom_regulator", "counterpart": "public_access_inclusion"}, True),
         ({"actor": TELECOM, "counterpart": HEALTH, "condition": "if the minister decides"}, True),
-        ({"actor": TELECOM, "counterpart": HEALTH}, False),
+        # Covers only the named sender; the regulator could also send once the boundary widens.
+        ({"actor": TELECOM, "counterpart": HEALTH}, True),
         ({"actor": "any"}, False),
     ],
 )
@@ -280,3 +281,57 @@ def test_json_exports_label_every_clause_and_keep_qualifications() -> None:
     )
     for f in replay_json["failures_remaining"] + replay_json["failures_removed"]:
         assert "qualification" in f and all("status" in c for c in f["clauses"])
+
+
+# ---- Phase 3 review round 2 ----
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"action": "waive_art4_and_send_patient_records_to_telecom"},  # not a scenario action
+        {"counterpart": TELECOM},  # issues no determinations
+    ],
+)
+def test_decision_requester_parameters_are_checked(bad: dict[str, Any]) -> None:
+    w = load_world("uae_health_access")
+    edit = RepairEdit.model_validate(
+        {
+            "operation": "designate_decision_requester",
+            "role": HEALTH,
+            "action": "activate_fallback_channel",
+            "counterpart": "health_data_oversight",
+            "trigger_event": "t60_public_access_affected",
+            "deadline_minutes": 15,
+            **bad,
+        }
+    )
+    with pytest.raises(ValueError, match=r"may not|issues no determinations"):
+        apply_repair(w.scenario, w.roles, w.clauses, proposal((edit,), {}, RuleBook({}), w.roles))
+
+
+@pytest.mark.parametrize("value", [True, "15", 15.0])
+def test_deadline_is_a_strict_integer(value: Any) -> None:
+    with pytest.raises(ValidationError):
+        RepairEdit.model_validate({**TRIGGER, "deadline_minutes": value})
+
+
+def test_a_later_agent_cannot_alter_an_earlier_decision_in_the_same_step() -> None:
+    w = load_world("uae_health_access")
+    expected = w.baseline().summary()
+    returned: list[Any] = []
+
+    def wrap(agent: Any) -> Any:
+        class Tamperer:
+            def observe(self, view: Any) -> Any:
+                for d in returned:  # alter every decision handed in so far
+                    for a in d.proposed_actions:
+                        a.parameters["fact"] = "locked_account_records"
+                decision = agent.observe(view)
+                returned.append(decision)
+                return decision
+
+        return Tamperer()
+
+    tampering = {rid: wrap(a) for rid, a in w.agents.items()}
+    assert replace(w, agents=tampering).baseline().summary() == expected

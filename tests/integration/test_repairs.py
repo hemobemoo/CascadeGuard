@@ -14,6 +14,8 @@ import yaml
 from cascadeguard.cli import load_world, main, run_scenario, search_repairs
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.engine.repair_search import ReplayComparison, SearchResult, search
+from cascadeguard.simulation.boundaries import RoleView
+from cascadeguard.simulation.orchestrator import run
 from cascadeguard.simulation.replay import REPAIR_LABEL, replay
 from cascadeguard.storage.audit import AuditStore
 from cascadeguard.storage.export import comparison_markdown
@@ -68,13 +70,16 @@ def test_hard_filter_discards_the_patient_record_share_under_art4_and_art16(
 
 
 def test_no_replay_releases_patient_records_to_telecom(found: SearchResult) -> None:
+    """Checked by data category, so a new patient fact would be caught too."""
+    w = load_world("uae_health_access")
+    category = {f.id: f.data_category for e in w.scenario.events for f in e.facts}
     for c in found.ranked:
         released = {
-            e.detail
+            category[e.detail]
             for e in c.replay.log
             if e.kind == "fact_released" and e.role == "telecom_operator"
         }
-        assert "locked_account_records" not in released, c.proposal.repair_id
+        assert "patient_account_records" not in released, c.proposal.repair_id
 
 
 def test_ranking_is_lexicographic(found: SearchResult) -> None:
@@ -92,21 +97,56 @@ def test_a_repair_that_adds_an_unfulfilled_duty_is_recorded_as_a_new_conflict(
         assert c.new_conflicts == ("temporal_infeasibility:request_determination",)
 
 
-def test_replay_is_the_identical_incident_except_for_the_repair(found: SearchResult) -> None:
-    """Same injects, same fact releases from injects, same decisions; only the repair's own
-    effects differ (the share is accepted, and the health operator may now see the status)."""
-    c = found.comparison(SHARE)
-    base, rep = c.baseline.log, c.replay.log
-    injects = [(e.minute, e.detail) for e in base if e.kind == "inject"]
-    assert injects == [(e.minute, e.detail) for e in rep if e.kind == "inject"]
-    decisions = [(e.minute, e.role, e.detail) for e in base if e.kind == "decision"]
-    assert decisions == [(e.minute, e.role, e.detail) for e in rep if e.kind == "decision"]
-    extra = {(e.minute, e.role, e.detail) for e in rep if e.kind == "fact_released"} - {
-        (e.minute, e.role, e.detail) for e in base if e.kind == "fact_released"
-    }
-    assert {(role, fact) for _, role, fact in extra} == {
+@pytest.mark.parametrize("repair_id", [SHARE, SUCCESS])
+def test_replay_is_the_identical_incident_except_for_the_repair(repair_id: str) -> None:
+    """Same injects and decisions; fact releases differ (in both directions) only by the status
+    now reaching the health operator; agent views differ only in that role's facts and its own
+    accepted actions."""
+    w = load_world("uae_health_access")
+    seen: dict[str, list[RoleView]] = {"baseline": [], "replay": []}
+
+    def recording(run_kind: str) -> dict[str, Any]:
+        def wrap(agent: Any) -> Any:
+            class Recorder:
+                def observe(self, view: RoleView) -> Any:
+                    seen[run_kind].append(view)
+                    return agent.observe(view)
+
+            return Recorder()
+
+        return {rid: wrap(a) for rid, a in w.agents.items()}
+
+    found = search_repairs("uae_health_access")
+    p = found.comparison(repair_id).proposal
+    base = run(w.scenario, w.roles, w.clauses, w.corpus_ids, recording("baseline"), w.label)
+    rep = replay(w.scenario, w.roles, w.clauses, w.corpus_ids, recording("replay"), w.label, p)
+
+    def entries(result: Any, kind: str) -> list[tuple[Any, ...]]:
+        return [(e.minute, e.role, e.detail) for e in result.log if e.kind == kind]
+
+    assert entries(base, "inject") == entries(rep, "inject")
+    assert entries(base, "decision") == entries(rep, "decision")
+    before, after = set(entries(base, "fact_released")), set(entries(rep, "fact_released"))
+    assert before <= after
+    assert {(role, fact) for _, role, fact in after - before} == {
         ("health_service_operator", "otp_delivery_status")
     }
+    assert len(seen["baseline"]) == len(seen["replay"]) == 36
+    flipped = {
+        (a["role"], f"T+{a['minute']:02d} {a['action']}")
+        for a in found.comparison(repair_id).changed_actions()
+        if a["replay"] == "accepted"
+    }
+    for b, r in zip(seen["baseline"], seen["replay"], strict=True):
+        assert replace(b, facts=r.facts, own_history=r.own_history) == r
+        extra_history = {(r.role_id, h) for h in set(r.own_history) - set(b.own_history)}
+        assert set(b.own_history) <= set(r.own_history)
+        assert extra_history <= flipped
+        if b.role_id != "health_service_operator":
+            assert b.facts == r.facts
+        else:
+            assert {f.id for f in r.facts} - {f.id for f in b.facts} <= {"otp_delivery_status"}
+            assert {f.id for f in b.facts} <= {f.id for f in r.facts}
 
 
 def test_search_does_not_change_the_baseline(found: SearchResult) -> None:

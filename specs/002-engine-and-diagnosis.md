@@ -103,12 +103,15 @@ only JSON. Whether untrusted agents must run in a separate process is a question
   `provide_policy_analysis` that proposes it may cite any loaded clause. Disallowed actions never
   widen scope (Phase 3 review). A mismatch rejects the decision and is a
   `citation_out_of_scope` finding.
-- **Gap claims (7r).** A decision whose rationale or uncertainty declares a legal or standards
-  gap (including absence wording such as "no clause authorises", "the law is silent",
-  "nothing in the regulations") is rejected as `uncited_gap_claim` without a citation, and as
-  `unqualified_gap_claim` if cited but not qualified ("reviewed corpus", "candidate finding",
-  "not a confirmed", "needs expert review"). Free-text detection is a backstop; Phase 5 should
-  give LLM agents a structured gap-claim field.
+- **Gap claims (7r).** A suspected gap may be stated only in `AgentDecision.gap_claims`: each
+  `GapClaim` must cite at least one clause (checked like every citation) and carry the fixed
+  qualification "absent from the reviewed corpus; candidate finding, not a confirmed gap".
+  Accepted claims are kept as `candidate_gap_claim` findings. Gap wording in free text
+  (rationale or uncertainty: "gap", "silent", "does not cover", "no clause", "nothing in the
+  regulations", ...) rejects the decision as `uncited_gap_claim`, whatever else it says, so a
+  negated or paraphrased qualifier cannot pass; a claim statement that asserts certainty
+  ("confirmed", "definitively", ...) is `overstated_gap_claim`. The broad pattern may reject
+  harmless wording; that is the intended trade-off (Phase 3 review rounds 1-2).
 - **Citable clauses.** A citation must be a loaded clause that is also in the corpus
   (`policies/reviewed/`); hypothetical repair rules loaded in a replay are `unknown_citation`.
 - **Known limits.** 7q: agents share the Python process; frozen views are the slice's boundary

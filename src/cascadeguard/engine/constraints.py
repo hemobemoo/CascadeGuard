@@ -17,22 +17,23 @@ from cascadeguard.simulation.state import SimulationState
 SHARE = "share_incident_status"
 REQUEST = "request_information"
 ANALYSIS = "provide_policy_analysis"  # may cite any loaded clause: analysing provisions is its job
-# Text declaring a legal or standards gap. Such a claim needs citations (7r) and an explicit
-# qualification (AGENTS.md: "cited evidence and an explicit qualification"). Free-text detection
-# is a backstop, not a proof: it errs towards treating hedged absence statements as claims.
+# Gap wording. A suspected gap may be stated only in a structured `GapClaim` (citations plus the
+# fixed GAP_QUALIFICATION), never in free text: rationale or uncertainty matching this pattern
+# is rejected whatever else it says (decision 7r; AGENTS.md "cited evidence and an explicit
+# qualification"). The pattern is deliberately broad: a false alarm costs a rejected decision,
+# a miss lets an unqualified gap claim through.
 GAP_CLAIM = re.compile(
-    r"\b(?:legal|regulatory|policy|standards?) gaps?\b|\bthere is a gap\b|\bgaps? (?:in|exists?)\b"
-    r"|\bno (?:legal |applicable |specific )?(?:provisions?|clauses?|rules?|laws?|regulations?"
-    r"|legal basis|authority)\b"
-    r"|\bnothing in the (?:laws?|regulations?|rules?|corpus|clauses?|policy|policies)\b"
-    r"|\b(?:laws?|regulations?|rules?|policy|policies) (?:is|are) silent\b|\bsilent on\b"
-    r"|\blacuna\b|\bunregulated\b|\bnot regulated\b|\bnot (?:covered|addressed) by\b",
+    r"\bgaps?\b|\blacuna\b|\bloophole\b|\bhole in\b|\bsilent\b|\bunregulated\b"
+    r"|\bnot regulated\b|\bnot (?:covered|addressed|provided for)\b"
+    r"|\b(?:does|do|did) not (?:cover|address|regulate|provide for)\b"
+    r"|\bno (?:legal |applicable |specific |explicit )?(?:provisions?|clauses?|rules?|laws?"
+    r"|regulations?|legal basis|authority)\b"
+    r"|\bnothing in the (?:laws?|legislation|regulations?|rules?|corpus|clauses?|polic(?:y|ies))\b",
     re.IGNORECASE,
 )
-# Wording that qualifies a gap claim as absence from the corpus, not a confirmed gap.
-GAP_QUALIFIED = re.compile(
-    r"\b(?:reviewed corpus|loaded clause set|candidate finding|not a confirmed"
-    r"|(?:needs|requires|pending) expert review)\b",
+# A GapClaim statement must not overstate: the qualification says "not a confirmed gap".
+OVERSTATED = re.compile(
+    r"\b(?:confirmed|definitive(?:ly)?|certain(?:ly)?|clearly|undoubtedly|proven|established)\b",
     re.IGNORECASE,
 )
 REQUIRES_DETERMINATION = (
@@ -48,8 +49,10 @@ class Reason(StrEnum):
     UNKNOWN_CITATION = "unknown_citation"  # clause id not in the corpus at all
     DRAFT_CITATION = "draft_citation"  # clause exists but is not loaded (draft, not reviewed)
     CITATION_OUT_OF_SCOPE = "citation_out_of_scope"  # cited clause concerns neither role nor action
-    UNCITED_GAP_CLAIM = "uncited_gap_claim"  # declares a legal gap without any citation
-    UNQUALIFIED_GAP_CLAIM = "unqualified_gap_claim"  # cited, but not qualified as a candidate
+    # gap wording in free text instead of a GapClaim (which requires citations and the fixed
+    # qualification)
+    UNCITED_GAP_CLAIM = "uncited_gap_claim"
+    OVERSTATED_GAP_CLAIM = "overstated_gap_claim"  # a GapClaim statement that claims certainty
     WRONG_ROLE_OR_TIME = "wrong_role_or_time"
     NOT_ALLOWED_ACTION = "not_allowed_action"
     UNKNOWN_TARGET = "unknown_target"
@@ -314,7 +317,10 @@ class ConstraintEngine:
                 )
             )
             return
-        cited = tuple(c.clause_id for c in decision.citations)
+        cited = tuple(
+            c.clause_id
+            for c in (*decision.citations, *(c for g in decision.gap_claims for c in g.citations))
+        )
         impostor = decision.role_id != expected_role or decision.at != state.scenario.time_at(
             state.minute
         )
@@ -385,25 +391,39 @@ class ConstraintEngine:
             )
         if out_of_scope:
             return
-        claim_text = " ".join((decision.rationale, *decision.uncertainty))
-        if GAP_CLAIM.search(claim_text):  # decision 7r; AGENTS.md: cited and qualified
-            if not cited:
-                self._reject_decision(
-                    expected_role,
-                    Reason.UNCITED_GAP_CLAIM,
-                    (),
-                    f"{expected_role} declared a legal gap without citing any clause",
+        # Decision 7r; AGENTS.md: a gap is stated only in a GapClaim, which the schema makes
+        # cite clauses and carry the fixed qualification. Gap wording elsewhere is rejected.
+        if GAP_CLAIM.search(" ".join((decision.rationale, *decision.uncertainty))):
+            self._reject_decision(
+                expected_role,
+                Reason.UNCITED_GAP_CLAIM,
+                (),
+                f"{expected_role} stated a legal gap in free text instead of a cited, qualified "
+                "gap claim",
+            )
+            return
+        overstated = [g for g in decision.gap_claims if OVERSTATED.search(g.statement)]
+        if overstated:
+            self._reject_decision(
+                expected_role,
+                Reason.OVERSTATED_GAP_CLAIM,
+                tuple(c.clause_id for g in overstated for c in g.citations),
+                f"{expected_role} stated a gap as certain; a gap claim is only a candidate finding",
+            )
+            return
+        if decision.role_id == expected_role and decision.at == state.scenario.time_at(
+            state.minute
+        ):
+            for g in decision.gap_claims:  # kept visible, always with the fixed qualification
+                state.add_finding(
+                    Finding(
+                        kind="candidate_gap_claim",
+                        minute=state.minute,
+                        role=expected_role,
+                        clause_ids=tuple(c.clause_id for c in g.citations),
+                        detail=f"{g.statement} ({g.qualification})",
+                    )
                 )
-                return
-            if not GAP_QUALIFIED.search(claim_text):
-                self._reject_decision(
-                    expected_role,
-                    Reason.UNQUALIFIED_GAP_CLAIM,
-                    cited,
-                    f"{expected_role} declared a legal gap without qualifying it as absent from "
-                    "the reviewed corpus (a candidate finding, not a confirmed gap)",
-                )
-                return
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             return
         role = state.roles.role(decision.role_id)

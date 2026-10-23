@@ -32,7 +32,9 @@ changes are the repair's own: each edit becomes an illustrative clause `repair.<
 labelled "hypothetical repair rule (not a source clause)", triggers are appended to their
 event's `opens_obligations`, and a data share widens one boundary by one category. Source
 clauses and the input objects are never changed. The proposal is re-validated from plain data,
-and each edit must name an action its role may take. Agents cannot cite repair rules: a
+and each edit must name an action its role may take; a decision requester must be allowed
+the action it asks about, and its counterpart must be able to issue determinations.
+`deadline_minutes` is a strict integer. Agents cannot cite repair rules: a
 citation must be a loaded clause from the corpus (`unknown_citation` otherwise).
 
 A data share widens the recipient's boundary (the information model in `roles.yaml`), so facts in
@@ -68,8 +70,10 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
   "introduces new conflict". Outcomes otherwise: resolved (every critical goal met), partial,
   no effect.
 - **`requires_authorization`** is true when an edit creates a permission that no reviewed,
-  binding clause already gives: a data share without a reviewed, binding, unconditional clause
-  for that category whose actor (or `any`) and counterpart (or none) match, or an owner,
+  binding clause already gives: a data share unless, for every role that could send the
+  category once the boundary widens (allowed to share and able to see it), a reviewed, binding,
+  unconditional clause for that category names that role (or `any`) and the counterpart (or
+  none), or an owner,
   trigger or fallback rule for an action that requires authority the role lacks. A duty to ask
   for a determination, or to take an action that needs no authority, creates no permission.
 
