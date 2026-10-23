@@ -13,8 +13,8 @@ import yaml
 
 from cascadeguard.cli import load_world, main, run_scenario, search_repairs
 from cascadeguard.engine.constraints import RuleBook
-from cascadeguard.engine.repair_search import SearchResult, search
-from cascadeguard.simulation.replay import REPAIR_LABEL, ReplayComparison, replay
+from cascadeguard.engine.repair_search import ReplayComparison, SearchResult, search
+from cascadeguard.simulation.replay import REPAIR_LABEL, replay
 from cascadeguard.storage.audit import AuditStore
 from cascadeguard.storage.export import comparison_markdown
 
@@ -158,7 +158,7 @@ def test_dynamic_hard_filter_discards_a_replay_that_lifts_a_restriction() -> Non
 
     result = search(baseline, w.scenario, w.roles, RuleBook(w.clauses), leaky)
     assert not result.ranked
-    lifted = [d for d in result.discarded if d.reason.startswith("replay accepted")]
+    lifted = [d for d in result.discarded if d.reason.startswith("the replay got around")]
     assert lifted
     assert all(set(d.clause_ids) == {"uae.fl2-2019.art4", "uae.fl2-2019.art16"} for d in lifted)
 

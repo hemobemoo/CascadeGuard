@@ -13,7 +13,8 @@ uv run cascadeguard run uae_health_access --repair <id> [--export DIR] [--audit 
 ## Repair grammar (`domain/repairs.py`)
 
 A `RepairProposal` is one or more `RepairEdit`s; `repair_id` is the sorted edit ids joined by
-`+`. Each edit is one of the five operation types with typed parameters only (no free text);
+`+`. An edit id names every parameter (trigger edits end in `.<event>.<deadline>m`), so two
+different edits never share an id. Each edit is one of the five operation types with typed parameters only (no free text);
 missing or extra parameters are rejected. Proposals are immutable (tuples).
 
 | Operation | Parameters | Hypothetical rule in the replay |
@@ -30,13 +31,18 @@ Identical incident: same scenario (seed, timeline, facts), same agents, same cla
 changes are the repair's own: each edit becomes an illustrative clause `repair.<edit id>`
 labelled "hypothetical repair rule (not a source clause)", triggers are appended to their
 event's `opens_obligations`, and a data share widens one boundary by one category. Source
-clauses and the input objects are never changed.
+clauses and the input objects are never changed. The proposal is re-validated from plain data,
+and each edit must name an action its role may take. Agents cannot cite repair rules: a
+citation must be a loaded clause from the corpus (`unknown_citation` otherwise).
 
 A data share widens the recipient's boundary (the information model in `roles.yaml`), so facts in
 that category reach it through injects it receives as well as through accepted shares; who sends
 them does not matter. Candidates therefore name only the category's original holder.
 
-## Search (`engine/repair_search.py`)
+## Search and judgement (`engine/repair_search.py`)
+
+The engine judges replays: `ReplayComparison` (outcome, blockers, new conflicts) and the
+ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only applies and reruns.
 
 1. **Candidates** come only from the baseline: one edit per diagnosed failure and candidate role
    (information deadlock: data share from the original holder; orphan duty: owner, or fallback
@@ -46,8 +52,10 @@ them does not matter. Candidates therefore name only the category's original hol
    role first attempted the action; the deadline is the time to the next inject.
 2. **Hard filter.** An edit whose action a loaded prohibition or safeguard restricts
    (conditional or not) is discarded with the clauses: a repair never decides a condition is met.
-   After replay, a repair is also discarded if any action the baseline held back under a
-   prohibition or safeguard is accepted.
+   A data share is checked for every role as sender, because the widened boundary lets the
+   category arrive from anyone. After replay, a repair is also discarded if any action the
+   baseline held back under a prohibition or safeguard is accepted, or if a fact whose category
+   a prohibition or safeguard names reaches a role it did not reach in the baseline.
 3. **Replay** every combination of up to `MAX_EDITS = 2` safe edits.
 4. **Rank** lexicographically: most critical blockers removed, fewest edits, not requiring
    authorization, fewest roles touched, fewest clauses cited, `repair_id`.
@@ -60,7 +68,8 @@ them does not matter. Candidates therefore name only the category's original hol
   "introduces new conflict". Outcomes otherwise: resolved (every critical goal met), partial,
   no effect.
 - **`requires_authorization`** is true when an edit creates a permission that no reviewed,
-  binding clause already gives: a data share without a reviewed share basis, or an owner,
+  binding clause already gives: a data share without a reviewed, binding, unconditional clause
+  for that category whose actor (or `any`) and counterpart (or none) match, or an owner,
   trigger or fallback rule for an action that requires authority the role lacks. A duty to ask
   for a determination, or to take an action that needs no authority, creates no permission.
 
@@ -75,9 +84,11 @@ them does not matter. Candidates therefore name only the category's original hol
 ## Audit and exports
 
 - `storage/audit.py`: DuckDB (default `data/audit.duckdb`, gitignored), append-only tables
-  `runs`, `events`, `findings`, `failures`, `comparisons`. Written only with `--audit`.
-- `storage/export.py`: JSON (the comparison summary) and Markdown. Every clause id carries its
-  status label; failures keep their qualification.
+  `runs`, `events`, `findings`, `failures`, `comparisons`, `repairs` (ranked and discarded
+  candidates). Written only with `--audit` (`run`, `run --repair`, `repairs`).
+- `storage/export.py`: JSON and Markdown for baselines, searches and replays. Every clause id
+  carries its status label (JSON `{"id", "status"}`); every failure keeps its description and
+  qualification.
 
 ## Done when
 

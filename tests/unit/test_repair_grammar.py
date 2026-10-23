@@ -108,7 +108,7 @@ def test_apply_repair_changes_only_what_the_edits_name() -> None:
     s, r, c = apply_repair(scenario, roles, clauses, _proposal(SHARE, TRIGGER))
     assert set(c) - set(clauses) == {
         "repair.share.network_incident_status.telecom_operator.health_service_operator",
-        "repair.trigger.review_automated_lockouts.health_service_operator",
+        "repair.trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m",
     }
     assert {k: c[k] for k in clauses} == clauses
     assert r.role(HEALTH).boundary.visible_categories[-1] == "network_incident_status"

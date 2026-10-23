@@ -8,13 +8,14 @@ import argparse
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from cascadeguard import __version__
 from cascadeguard.agents.scripted import ScriptedAgent, load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import RuleBook
-from cascadeguard.engine.repair_search import SearchResult, search
+from cascadeguard.engine.repair_search import ReplayComparison, SearchResult, search
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
 from cascadeguard.simulation.loader import (
     PROJECT_ROOT,
@@ -23,9 +24,15 @@ from cascadeguard.simulation.loader import (
     load_scenario,
 )
 from cascadeguard.simulation.orchestrator import RunResult, run
-from cascadeguard.simulation.replay import ReplayComparison, replay
+from cascadeguard.simulation.replay import replay
 from cascadeguard.storage.audit import DEFAULT_DB, AuditStore
-from cascadeguard.storage.export import comparison_markdown, write_exports
+from cascadeguard.storage.export import (
+    comparison_export,
+    comparison_markdown,
+    run_export,
+    search_export,
+    write_exports,
+)
 
 REAL_CLAUSE_SET = "policies/reviewed: reviewed + illustrative clauses"
 
@@ -66,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
     repairs_cmd.add_argument("scenario")
     repairs_cmd.add_argument("--clauses", type=Path, default=None)
     repairs_cmd.add_argument("--export", type=Path, default=None)
+    repairs_cmd.add_argument("--audit", type=Path, nargs="?", const=DEFAULT_DB, default=None)
     return parser
 
 
@@ -207,12 +215,14 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
 
 
 def format_search(result: SearchResult) -> str:
-    labels = dict(result.ranked[0].baseline.loaded_clauses) if result.ranked else {}
+    labels = dict(result.loaded_clauses)
     lines = ["Candidate repairs, ranked (lexicographic; see AGENTS.md)"]
-    if result.ranked:
-        lines.append(f"Clause set: {result.ranked[0].baseline.clause_set}")
-    lines.append("Every repair rule is hypothetical. 'requires authorization': no reviewed clause")
-    lines.append("supports the permission it creates; it needs human and institutional approval.")
+    lines.append(f"Clause set: {result.clause_set}")
+    lines.append("Every repair rule is hypothetical. 'requires authorization': no reviewed,")
+    lines.append("binding clause supports the permission it creates; it needs human and")
+    lines.append("institutional approval.")
+    if not result.ranked:
+        lines.append("  no candidate repair passed the hard filter")
     for i, c in enumerate(result.ranked, 1):
         p = c.proposal
         auth = ", requires authorization" if p.requires_authorization else ""
@@ -233,7 +243,7 @@ def format_search(result: SearchResult) -> str:
     return "\n".join(lines)
 
 
-def _export(directory: Path, name: str, data: dict[str, object], markdown: str) -> None:
+def _export(directory: Path, name: str, data: dict[str, Any], markdown: str) -> None:
     for path in write_exports(directory, name, data, markdown):
         print(f"exported {_display(path)}")
 
@@ -257,7 +267,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _export(
                 args.export,
                 f"{args.scenario}-replay-{args.repair}",
-                comparison.summary(),
+                comparison_export(comparison),
                 markdown,
             )
         if args.audit is not None:
@@ -280,7 +290,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _export(
                 args.export,
                 f"{args.scenario}-baseline",
-                result.summary(),
+                run_export(result),
                 _text_markdown(f"Baseline: {args.scenario}", text),
             )
         if args.audit is not None:
@@ -299,9 +309,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             _export(
                 args.export,
                 f"{args.scenario}-repairs",
-                found.summary(),
+                search_export(found),
                 _text_markdown(f"Repairs: {args.scenario}", text),
             )
+        if args.audit is not None:
+            store = AuditStore(args.audit)
+            try:
+                base = store.record_search(run_scenario(args.scenario, args.clauses), found)
+            finally:
+                store.close()
+            print(f"audit: baseline run {base} and its candidates in {_display(args.audit)}")
         return 0
     parser.print_help()
     return 0

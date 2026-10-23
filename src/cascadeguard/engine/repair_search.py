@@ -1,15 +1,21 @@
-"""Search the closed repair grammar for the smallest safe repair (AGENTS.md, CascadeGuard.md §6).
+"""Search the closed repair grammar for the smallest safe repair (AGENTS.md, CascadeGuard.md §6),
+and judge each replay. Judging lives here, in the engine: `simulation/replay.py` only applies a
+repair and reruns the incident.
 
 1. Candidate edits come only from the baseline's diagnosed failures and blocked data shares.
-2. Hard filter: an edit under which a restricted action (prohibition or safeguard, conditional
-   or not) would become permitted is discarded with its reason. A repair never decides that a
-   condition is met. After replay, any action accepted that the baseline held back under a
-   restriction also discards the repair.
+2. Hard filter, before replay: an edit under which a restricted action (prohibition or
+   safeguard, conditional or not) would become permitted is discarded with its reason. A data
+   share widens the recipient's boundary whoever sends, so it is checked for every role. A repair
+   never decides that a condition is met.
 3. Every remaining repair of up to MAX_EDITS edits is replayed on the identical incident.
+   Hard filter, after replay: the repair is discarded if the replay accepts an action the
+   baseline held back under a prohibition or safeguard, or delivers to a new role a fact whose
+   category a prohibition or safeguard names.
 4. Ranking is lexicographic: most critical blockers removed, fewest edits, then repairs not
-   requiring authorization, fewest roles and clauses touched, and repair_id.
+   requiring authorization, fewest roles touched, fewest clauses cited, and repair_id.
 
-A repair that creates a permission with no reviewed basis is marked requires_authorization.
+A repair that creates a permission with no reviewed, binding, unconditional basis is marked
+requires_authorization.
 """
 
 from collections.abc import Callable
@@ -29,11 +35,106 @@ from cascadeguard.domain.repairs import (
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import SHARE, Authority, Reason, RuleBook
 from cascadeguard.simulation.orchestrator import RunResult
-from cascadeguard.simulation.replay import ReplayComparison
 
 MAX_EDITS = 2
 DETERMINER_ACTION = "issue_determination"
 _HELD_BACK = {Reason.RESTRICTED_BY_CLAUSE.value, Reason.AUTHORITY_UNCERTAIN.value}
+_RESTRICTING = (RuleKind.PROHIBITION, RuleKind.SAFEGUARD)
+
+
+@dataclass(frozen=True, slots=True)
+class ReplayComparison:
+    """Baseline versus replay of the identical incident with one repair (engine judgement)."""
+
+    proposal: RepairProposal
+    baseline: RunResult
+    replay: RunResult
+    critical_goals: tuple[str, ...]
+
+    @property
+    def removed(self) -> tuple[str, ...]:
+        """Baseline failures the replay no longer diagnoses ("no longer blocking"). Diagnosis
+        explains only unmet goals, so a failure can stop blocking because its goal is met
+        another way; its uncertainty in the clause set is unchanged."""
+        after = {f.id for f in self.replay.failures}
+        return tuple(f.id for f in self.baseline.failures if f.id not in after)
+
+    @property
+    def remaining(self) -> tuple[str, ...]:
+        before = {f.id for f in self.baseline.failures}
+        return tuple(f.id for f in self.replay.failures if f.id in before)
+
+    @property
+    def new_conflicts(self) -> tuple[str, ...]:
+        """Failures the repair introduced."""
+        before = {f.id for f in self.baseline.failures}
+        return tuple(f.id for f in self.replay.failures if f.id not in before)
+
+    @property
+    def critical_blockers_removed(self) -> int:
+        critical = set(self.critical_goals)
+        gone = set(self.removed)
+        return sum(1 for f in self.baseline.failures if f.id in gone and critical & set(f.goals))
+
+    @property
+    def unmet_critical_goals(self) -> tuple[str, ...]:
+        met = dict(self.replay.goals)
+        return tuple(g for g in self.critical_goals if met.get(g) is None)
+
+    @property
+    def outcome(self) -> str:
+        if self.new_conflicts:
+            return "introduces new conflict"
+        if not self.unmet_critical_goals:
+            return "resolved"
+        return "partial" if self.removed else "no effect"
+
+    def changed_actions(self) -> list[dict[str, Any]]:
+        """Actions whose verdict differs between baseline and replay (same minute, role, action)."""
+
+        def verdicts(result: RunResult) -> dict[tuple[int, str, str, str], str]:
+            return {
+                (e.minute, e.role or "", e.action, e.target or ""): e.kind
+                for e in result.log
+                if e.kind in ("accepted", "rejected") and e.action is not None
+            }
+
+        before, after = verdicts(self.baseline), verdicts(self.replay)
+        return [
+            {
+                "minute": k[0],
+                "role": k[1],
+                "action": k[2],
+                **({"target": k[3]} if k[3] else {}),
+                "baseline": before.get(k, "not proposed"),
+                "replay": after.get(k, "not proposed"),
+            }
+            for k in sorted({*before, *after})
+            if before.get(k) != after.get(k)
+        ]
+
+    def summary(self) -> dict[str, Any]:
+        base_goals, new_goals = dict(self.baseline.goals), dict(self.replay.goals)
+
+        def goal(m: int | None) -> str:
+            return f"met at T+{m}" if m is not None else "unmet"
+
+        return {
+            "scenario": self.baseline.scenario_id,
+            "clause_set": self.baseline.clause_set,
+            "repair": self.proposal.repair_id,
+            "requires_authorization": self.proposal.requires_authorization,
+            "edits": [e.model_dump(mode="json", exclude_none=True) for e in self.proposal.edits],
+            "outcome": self.outcome,
+            "goals": {
+                g: {"baseline": goal(base_goals[g]), "replay": goal(new_goals[g])}
+                for g in base_goals
+            },
+            "failures_removed": list(self.removed),
+            "failures_remaining": list(self.remaining),
+            "new_conflicts": list(self.new_conflicts),
+            "changed_actions": self.changed_actions(),
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +148,8 @@ class Discarded:
 
 @dataclass(frozen=True, slots=True)
 class SearchResult:
+    clause_set: str  # the baseline's clause-set label, shown with every result
+    loaded_clauses: tuple[tuple[str, str], ...]  # the baseline's (clause id, status label)
     ranked: tuple[ReplayComparison, ...]
     discarded: tuple[Discarded, ...]
 
@@ -100,7 +203,8 @@ def _trigger(
         return None
     first = min(minutes)
     events = scenario.events
-    index = next(i for i, e in enumerate(events) if e.at_minute == first)
+    index = next((i for i, e in enumerate(events) if e.at_minute == first), None)
+    assert index is not None, f"no inject at T+{first}"  # agents decide only at injects
     nxt = events[index + 1].at_minute if index + 1 < len(events) else first
     return events[index].id, nxt - first
 
@@ -214,26 +318,41 @@ def candidate_edits(
     return dict(sorted(out.items(), key=lambda kv: kv[0].edit_id))
 
 
-def _restricted_by(edit: RepairEdit, rules: RuleBook) -> tuple[str, ...]:
+def _restricted_by(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> tuple[str, ...]:
     if edit.operation is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
-        return rules.restrictions(SHARE, edit.data_category, edit.role)
+        # The widened boundary lets the category arrive from any role, not only the named sender.
+        found = {
+            c for r in roles.roles for c in rules.restrictions(SHARE, edit.data_category, r.id)
+        }
+        return tuple(sorted(found))
     assert edit.action is not None
     return rules.restrictions(edit.action, None, edit.role)
 
 
+def _share_basis(edit: RepairEdit, rules: RuleBook) -> bool:
+    """A reviewed, binding, unconditional clause already permits or obliges this exact share."""
+    for c in rules.clauses.values():
+        n = c.normalized
+        if (
+            n is not None
+            and c.status is ClauseStatus.REVIEWED
+            and c.binding is True
+            and n.kind in (RuleKind.OBLIGATION, RuleKind.PERMISSION)
+            and n.action == SHARE
+            and n.data_category == edit.data_category
+            and n.actor in (edit.role, "any")
+            and n.counterpart in (edit.counterpart, None)
+            and not n.condition
+        ):
+            return True
+    return False
+
+
 def _needs_authorization(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> bool:
-    """True if the edit creates a permission that no reviewed clause already gives."""
-
-    def reviewed(ids: tuple[str, ...]) -> bool:
-        return any(
-            rules.clauses[c].status is ClauseStatus.REVIEWED and rules.clauses[c].binding is True
-            for c in ids
-        )
-
+    """True if the edit creates a permission that no reviewed, binding clause already gives."""
     op = edit.operation
     if op is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
-        assert edit.data_category is not None
-        return not reviewed(rules.share_basis(edit.data_category))
+        return not _share_basis(edit, rules)
     if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
         return False  # a duty to ask for a determination grants no permission
     assert edit.action is not None
@@ -241,34 +360,57 @@ def _needs_authorization(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> b
     if not spec.requires_authority:
         return False
     authority, supporting = rules.authority(edit.role, edit.action, spec.uncertain_authority_from)
-    return not (authority is Authority.AUTHORISED and reviewed(supporting))
+    reviewed = any(
+        rules.clauses[c].status is ClauseStatus.REVIEWED and rules.clauses[c].binding is True
+        for c in supporting
+    )
+    return not (authority is Authority.AUTHORISED and reviewed)
 
 
-def _released_restriction(comparison: ReplayComparison, rules: RuleBook) -> tuple[str, ...]:
-    """Prohibitions or safeguards that held an action back in the baseline that the replay
-    accepted. Authority clauses (e.g. a binding-unknown duty) do not count: a repair may add
-    authority, never lift a restriction."""
+def _restricting_clauses(rules: RuleBook, ids: tuple[str, ...]) -> list[str]:
+    return [
+        c
+        for c in ids
+        if c in rules.clauses
+        and (n := rules.clauses[c].normalized) is not None
+        and n.kind in _RESTRICTING
+    ]
+
+
+def _lifted_restrictions(
+    comparison: ReplayComparison, rules: RuleBook, scenario: Scenario
+) -> tuple[str, ...]:
+    """Restrictions the replay got around: an action the baseline held back under a prohibition
+    or safeguard is accepted, or a fact whose category a prohibition or safeguard names reaches
+    a role it did not reach in the baseline. Authority clauses (e.g. a binding-unknown duty) do
+    not count: a repair may add authority, never lift a restriction."""
 
     def key(e: LogEntry) -> tuple[int, str | None, str | None, str | None, str | None]:
         return (e.minute, e.role, e.action, e.target, e.data_category)
 
     accepted = {key(e) for e in comparison.replay.log if e.kind == "accepted"}
-    return tuple(
-        sorted(
-            {
-                c
-                for e in comparison.baseline.log
-                if e.kind == "rejected"
-                and e.action is not None
-                and _HELD_BACK & set(e.reasons)
-                and key(e) in accepted
-                for c in e.clause_ids
-                if c in rules.clauses
-                and (n := rules.clauses[c].normalized) is not None
-                and n.kind in (RuleKind.PROHIBITION, RuleKind.SAFEGUARD)
-            }
-        )
-    )
+    lifted = {
+        c
+        for e in comparison.baseline.log
+        if e.kind == "rejected"
+        and e.action is not None
+        and _HELD_BACK & set(e.reasons)
+        and key(e) in accepted
+        for c in _restricting_clauses(rules, e.clause_ids)
+    }
+    category = {f.id: f.data_category for e in scenario.events for f in e.facts}
+    restricted_categories: dict[str, list[str]] = {}
+    for c in rules.clauses.values():
+        n = c.normalized
+        if n is not None and n.kind in _RESTRICTING and n.data_category is not None:
+            restricted_categories.setdefault(n.data_category, []).append(c.id)
+
+    def released(result: RunResult) -> set[tuple[str | None, str]]:
+        return {(e.role, e.detail) for e in result.log if e.kind == "fact_released"}
+
+    for _, fact in released(comparison.replay) - released(comparison.baseline):
+        lifted.update(restricted_categories.get(category.get(fact, ""), ()))
+    return tuple(sorted(lifted))
 
 
 def proposal(
@@ -291,7 +433,7 @@ def proposal(
     )
 
 
-def _rank_key(c: ReplayComparison) -> tuple[int, int, bool, int, int, str]:
+def rank_key(c: ReplayComparison) -> tuple[int, int, bool, int, int, str]:
     p = c.proposal
     roles_touched = {r for e in p.edits for r in (e.role, e.counterpart) if r is not None}
     return (
@@ -314,8 +456,8 @@ def search(
     edits = candidate_edits(baseline, scenario, roles, rules)
     discarded: list[Discarded] = []
     safe: list[RepairEdit] = []
-    for edit, _ in edits.items():
-        restricted = _restricted_by(edit, rules)
+    for edit in edits:
+        restricted = _restricted_by(edit, rules, roles)
         if restricted:
             discarded.append(
                 Discarded(
@@ -333,11 +475,16 @@ def search(
         for combo in combinations(safe, size):
             p = proposal(combo, edits, rules, roles)
             comparison = ReplayComparison(p, baseline, replay(p), critical)
-            released = _released_restriction(comparison, rules)
-            if released:
+            lifted = _lifted_restrictions(comparison, rules, scenario)
+            if lifted:
                 discarded.append(
-                    Discarded(p.repair_id, "replay accepted an action held back by", released)
+                    Discarded(p.repair_id, "the replay got around a restriction", lifted)
                 )
             else:
                 compared.append(comparison)
-    return SearchResult(tuple(sorted(compared, key=_rank_key)), tuple(discarded))
+    return SearchResult(
+        baseline.clause_set,
+        baseline.loaded_clauses,
+        tuple(sorted(compared, key=rank_key)),
+        tuple(discarded),
+    )
