@@ -11,8 +11,11 @@ repair and reruns the incident.
    Hard filter, after replay: the repair is discarded if the replay accepts an action the
    baseline held back under a prohibition or safeguard, or delivers to a new role a fact whose
    category a prohibition or safeguard names.
-4. Ranking is lexicographic: most critical blockers removed, fewest edits, then repairs not
-   requiring authorization, fewest roles touched, fewest clauses cited, and repair_id.
+4. Ranking is lexicographic (ADR 0001): clean repairs (no new conflict) above any repair that
+   introduces one; within each group most critical blockers removed (cause removed, not merely
+   masked), fewest edits, fewest roles touched, fewest clauses cited; then fewest new conflicts,
+   repairs not requiring authorization, and repair_id. Repairs with new conflicts are ranked
+   lower, never discarded: they are the failed repairs CascadeGuard.md section 6 records.
 
 A repair that creates a permission with no reviewed, binding, unconditional basis is marked
 requires_authorization.
@@ -36,8 +39,14 @@ from cascadeguard.domain.repairs import (
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import SHARE, Authority, Reason, RuleBook
 from cascadeguard.simulation.orchestrator import RunResult
+from cascadeguard.simulation.replay import REPAIR_PREFIX
 
 MAX_EDITS = 2
+SCRIPTED_LIMIT = "scripted_agent_limit"
+SCRIPTED_LIMIT_NOTE = (
+    "scripted-agent limit: a duty the repair adds was never attempted because scripted agents do "
+    "not adapt to a repair; revisit with LLM agents (Phase 5)"
+)
 DETERMINER_ACTION = "issue_determination"
 _HELD_BACK = {Reason.RESTRICTED_BY_CLAUSE.value, Reason.AUTHORITY_UNCERTAIN.value}
 _RESTRICTING = (RuleKind.PROHIBITION, RuleKind.SAFEGUARD)
@@ -54,11 +63,20 @@ class ReplayComparison:
 
     @property
     def removed(self) -> tuple[str, ...]:
-        """Baseline failures the replay no longer diagnoses ("no longer blocking"). Diagnosis
-        explains only unmet goals, so a failure can stop blocking because its goal is met
-        another way; its uncertainty in the clause set is unchanged."""
-        after = {f.id for f in self.replay.failures}
-        return tuple(f.id for f in self.baseline.failures if f.id not in after)
+        """Baseline failures whose cause the repair removed: the replay's diagnosis, examining
+        met goals too, no longer finds them."""
+        present = {f.id for f in self.replay.causes}
+        return tuple(f.id for f in self.baseline.failures if f.id not in present)
+
+    @property
+    def masked(self) -> tuple[str, ...]:
+        """Baseline failures that no longer block only because their goal was met another way
+        ("masked (goal met another way)"): the cause is still present, so they are not removed."""
+        blocking = {f.id for f in self.replay.failures}
+        present = {f.id for f in self.replay.causes}
+        return tuple(
+            f.id for f in self.baseline.failures if f.id in present and f.id not in blocking
+        )
 
     @property
     def remaining(self) -> tuple[str, ...]:
@@ -70,6 +88,26 @@ class ReplayComparison:
         """Failures the repair introduced."""
         before = {f.id for f in self.baseline.failures}
         return tuple(f.id for f in self.replay.failures if f.id not in before)
+
+    def conflict_tags(self) -> dict[str, str]:
+        """New conflicts that are only an unfulfilled duty caused by the scripted-agent limit: a
+        missed obligation from a repair rule whose role never attempted the action, in a replay
+        run entirely by scripted agents. Tagged for Phase 5, still counted as new conflicts."""
+        if not self.replay.scripted:
+            return {}
+        new = set(self.new_conflicts)
+        tags: dict[str, str] = {}
+        for f in self.replay.failures:
+            if f.id not in new or f.category is not FailureCategory.TEMPORAL_INFEASIBILITY:
+                continue
+            missed = [o for o in self.replay.obligations if o.missed and o.action == f.subject]
+            if missed and all(
+                o.clause_id.startswith(REPAIR_PREFIX)
+                and not _attempts(self.replay.log, o.role, o.action)
+                for o in missed
+            ):
+                tags[f.id] = SCRIPTED_LIMIT
+        return tags
 
     @property
     def critical_blockers_removed(self) -> int:
@@ -132,8 +170,10 @@ class ReplayComparison:
                 for g in base_goals
             },
             "failures_removed": list(self.removed),
+            "failures_masked": list(self.masked),
             "failures_remaining": list(self.remaining),
             "new_conflicts": list(self.new_conflicts),
+            "new_conflict_tags": self.conflict_tags(),
             "changed_actions": self.changed_actions(),
         }
 
@@ -166,6 +206,7 @@ class SearchResult:
     def summary(self) -> dict[str, Any]:
         return {
             "max_edits": MAX_EDITS,
+            "ranking": RANKING,
             "ranked": [
                 {
                     "rank": i + 1,
@@ -173,9 +214,11 @@ class SearchResult:
                     "edits": len(c.proposal.edits),
                     "requires_authorization": c.proposal.requires_authorization,
                     "critical_blockers_removed": c.critical_blockers_removed,
+                    "blockers_masked": list(c.masked),
                     "outcome": c.outcome,
                     "unmet_critical_goals": list(c.unmet_critical_goals),
                     "new_conflicts": list(c.new_conflicts),
+                    "new_conflict_tags": c.conflict_tags(),
                 }
                 for i, c in enumerate(self.ranked)
             ],
@@ -454,15 +497,24 @@ def proposal(
     )
 
 
-def rank_key(c: ReplayComparison) -> tuple[int, int, bool, int, int, str]:
+RANKING = (
+    "hard filter; clean repairs before repairs with new conflicts; most critical blockers "
+    "removed (masked ones do not count); fewest edits; fewest roles touched; fewest clauses "
+    "cited; fewest new conflicts; not requiring authorization; repair_id"
+)
+
+
+def rank_key(c: ReplayComparison) -> tuple[bool, int, int, int, int, int, bool, str]:
     p = c.proposal
     roles_touched = {r for e in p.edits for r in (e.role, e.counterpart) if r is not None}
     return (
+        bool(c.new_conflicts),
         -c.critical_blockers_removed,
         len(p.edits),
-        p.requires_authorization,
         len(roles_touched),
         len(p.citations),
+        len(c.new_conflicts),
+        p.requires_authorization,
         p.repair_id,
     )
 

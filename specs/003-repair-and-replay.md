@@ -59,16 +59,28 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
    baseline held back under a prohibition or safeguard is accepted, or if a fact whose category
    a prohibition or safeguard names reaches a role it did not reach in the baseline.
 3. **Replay** every combination of up to `MAX_EDITS = 2` safe edits.
-4. **Rank** lexicographically: most critical blockers removed, fewest edits, not requiring
-   authorization, fewest roles touched, fewest clauses cited, `repair_id`.
+4. **Rank** lexicographically (human decisions 4a, 4b, 4e, 2026-10-24; ADR
+   `docs/decisions/0001-repair-ranking.md`):
+   1. hard filters (step 2), unchanged;
+   2. clean repairs (no new conflict) above any repair that introduces a new conflict;
+   3. within each group: most critical blockers removed, fewest edits, fewest roles touched,
+      fewest clauses cited;
+   4. among repairs with new conflicts: fewest new conflicts;
+   5. then not requiring authorization, then `repair_id`.
 
-- A *critical blocker* is a baseline failure that blocks a critical goal. It counts as removed
-  when the replay no longer diagnoses it ("no longer blocking"): diagnosis only explains unmet
-  goals, so a failure can stop blocking because its goal is met another way (e.g. the fallback
-  orphan duty once the locks are reversed). Its uncertainty in the clause set is unchanged.
+- A *critical blocker* is a baseline failure that blocks a critical goal. It counts as
+  **removed** only when the repair removes its cause: the replay is diagnosed a second time with
+  met goals examined too (`diagnose(include_met=True)`, `RunResult.causes`), and the failure is
+  no longer found. A failure that no longer blocks only because its goal was met another way
+  (e.g. the fallback orphan duty once the locks are reversed under owner + share) is
+  **masked (goal met another way)**: it is reported, but not counted as removed.
 - **New conflicts** are replay failures the baseline did not have; the outcome is then
-  "introduces new conflict". Outcomes otherwise: resolved (every critical goal met), partial,
-  no effect.
+  "introduces new conflict". Such repairs are ranked below every clean repair and never
+  discarded: they are the failed repairs `CascadeGuard.md` §6 records, with the new conflict
+  named. A new conflict that is a missed obligation from a repair rule whose role never
+  attempted the action, in a replay run only by scripted agents, is tagged
+  `scripted_agent_limit` (revisit in Phase 5). Outcomes otherwise: resolved (every critical
+  goal met), partial, no effect.
 - **`requires_authorization`** is true when an edit creates a permission that no reviewed,
   binding clause already gives: a data share unless, for every role that could send the
   category once the boundary widens (allowed to share and able to see it), a reviewed, binding,
@@ -98,7 +110,7 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
 
 - `tests/integration/test_repairs.py` reproduces `scenarios/uae_health_access/expected_repairs.yaml`:
   the ranked search, one successful repair (owner of lock reversal + minimum status share:
-  every failure cleared) and one unsuccessful repair (status share only: the information
+  every critical goal met, no failure blocking, two masked) and one unsuccessful repair (status share only: the information
   deadlock clears but the lockouts stay unresolved). The baseline golden still reproduces.
 - The patient-record share is discarded under FL 2/2019 Art 4 and Art 16, and no replay
   releases patient records to the telecom operator.

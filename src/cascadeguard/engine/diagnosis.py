@@ -67,8 +67,15 @@ def _rejections(log: tuple[LogEntry, ...], action: str, *reasons: Reason) -> lis
 
 
 def diagnose(
-    state: SimulationState, graph: DependencyGraph, rules: RuleBook, clause_set: str
+    state: SimulationState,
+    graph: DependencyGraph,
+    rules: RuleBook,
+    clause_set: str,
+    include_met: bool = False,
 ) -> tuple[CoordinationFailure, ...]:
+    """Failures behind unmet critical goals. With include_met, met goals are examined too: the
+    result lists every failure whose cause is still present, even where the goal was met another
+    way (used to tell a removed blocker from a masked one)."""
     out = _Collector(clause_set)
     log = state.log
 
@@ -110,7 +117,7 @@ def diagnose(
         )
 
     for goal in state.scenario.recovery_goals:
-        if not goal.critical or state.goal_met_at(goal.id) is not None:
+        if not goal.critical or (not include_met and state.goal_met_at(goal.id) is not None):
             continue
         if goal.known_by is not None:
             deadlock(goal.known_by.role, goal.known_by.data_category, goal.id)

@@ -43,14 +43,22 @@ The closed repair grammar is the five edit types in `CascadeGuard.md` §6:
 assign owner, add escalation trigger, define minimum data-share, add fallback-channel rule,
 designate decision-requester.
 
-Ranking is lexicographic and deterministic:
+Ranking is lexicographic and deterministic (`CascadeGuard.md` §6; ADR
+`docs/decisions/0001-repair-ranking.md`):
 
 1. Hard filter: discard any repair under which a prohibited action becomes permitted or a
    safeguard is violated. Record each discarded repair with its reason.
-2. Most critical blockers removed.
-3. Fewest repair edits.
-4. Tie-breaks: repairs not requiring authorization first, then fewest roles and clauses
-   touched, then `repair_id`.
+2. Clean repairs (no new conflict) rank above any repair that introduces a new conflict.
+3. Within each group: most critical blockers removed, then fewest repair edits, then fewest
+   roles touched, then fewest clauses cited.
+4. Among repairs with new conflicts, fewest new conflicts breaks the remaining ties.
+5. Final tie-breaks: repairs not requiring authorization first, then `repair_id`.
+
+A blocker counts as removed only when the repair removes its cause. A blocker that no longer
+blocks only because its goal was met another way is reported as "masked (goal met another
+way)", not removed. Repairs with a new conflict are ranked lower, never discarded: they stay in
+the output as failed repairs with the new conflict named. A new conflict that is only an
+unfulfilled duty caused by the scripted-agent limit is tagged `scripted_agent_limit`.
 
 A repair that creates a permission not supported by a `reviewed` clause is marked
 `requires_authorization: true` and shown as needing human and institutional approval.

@@ -11,8 +11,9 @@ import duckdb
 import pytest
 import yaml
 
-from cascadeguard.cli import load_world, main, run_scenario, search_repairs
+from cascadeguard.cli import format_search, load_world, main, run_scenario, search_repairs
 from cascadeguard.engine.constraints import RuleBook
+from cascadeguard.engine.repair_search import SCRIPTED_LIMIT as SCRIPTED
 from cascadeguard.engine.repair_search import ReplayComparison, SearchResult, search
 from cascadeguard.simulation.boundaries import RoleView
 from cascadeguard.simulation.orchestrator import run
@@ -46,10 +47,26 @@ def test_search_and_both_replays_reproduce_the_golden(found: SearchResult) -> No
 
 
 def test_successful_repair_resolves_every_failure(found: SearchResult) -> None:
-    best = found.ranked[0]
-    assert best.proposal.repair_id == SUCCESS
+    best = found.comparison(SUCCESS)
     assert best.outcome == "resolved"
     assert not best.unmet_critical_goals and not best.remaining and not best.new_conflicts
+
+
+def test_blockers_hidden_by_a_goal_met_another_way_are_masked_not_removed(
+    found: SearchResult,
+) -> None:
+    """Human decision 4a: only a repair that removes a blocker's cause removes it."""
+    c = found.comparison(SUCCESS)
+    assert c.removed == (
+        "information_deadlock:network_incident_status->health_service_operator",
+        "orphan_duty:reverse_automated_lockouts",
+    )
+    assert c.masked == (
+        "orphan_duty:activate_fallback_channel",
+        "undefined_trigger:review_automated_lockouts",
+    )
+    assert c.critical_blockers_removed == 2
+    assert "masked (goal met another way)" in format_search(found)
 
 
 def test_unsuccessful_repair_clears_the_deadlock_but_not_the_lockout(found: SearchResult) -> None:
@@ -83,8 +100,18 @@ def test_no_replay_releases_patient_records_to_telecom(found: SearchResult) -> N
 
 
 def test_ranking_is_lexicographic(found: SearchResult) -> None:
-    keys = [(-c.critical_blockers_removed, len(c.proposal.edits)) for c in found.ranked]
+    keys = [
+        (bool(c.new_conflicts), -c.critical_blockers_removed, len(c.proposal.edits))
+        for c in found.ranked
+    ]
     assert keys == sorted(keys)
+
+
+def test_repairs_with_new_conflicts_rank_below_every_clean_repair(found: SearchResult) -> None:
+    """Human decision 4e: ranked lower, never discarded."""
+    flags = [bool(c.new_conflicts) for c in found.ranked]
+    assert True in flags and flags == sorted(flags)
+    assert not any(d.repair_id.startswith("requester.") for d in found.discarded)
 
 
 def test_a_repair_that_adds_an_unfulfilled_duty_is_recorded_as_a_new_conflict(
@@ -95,6 +122,9 @@ def test_a_repair_that_adds_an_unfulfilled_duty_is_recorded_as_a_new_conflict(
     for c in requester:
         assert c.outcome == "introduces new conflict"
         assert c.new_conflicts == ("temporal_infeasibility:request_determination",)
+        # Only the scripted-agent limit: the requester never attempts the new duty (4e).
+        assert c.conflict_tags() == {"temporal_infeasibility:request_determination": SCRIPTED}
+        assert not replace(c, replay=replace(c.replay, scripted=False)).conflict_tags()
 
 
 @pytest.mark.parametrize("repair_id", [SHARE, SUCCESS])
