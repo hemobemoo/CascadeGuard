@@ -65,6 +65,7 @@ class Verdict:
     clause_ids: tuple[str, ...]  # clauses that decided it (authority or restriction)
     detail: str
     fact_id: str | None = None  # the fact a share delivers: read once, checked, then applied
+    data_category: str | None = None  # the category a share or request touches
 
 
 class RuleBook:
@@ -377,6 +378,7 @@ class ConstraintEngine:
                 role=role.id,
                 action=action.action_type,
                 target=action.target,
+                data_category=verdict.data_category,
                 detail=verdict.detail,
                 reasons=tuple(r.value for r in verdict.reasons),
                 clause_ids=verdict.clause_ids,
@@ -415,12 +417,14 @@ class ConstraintEngine:
         if kind in (SHARE, REQUEST) and action.target == role.id:
             return Verdict(False, (Reason.SELF_TARGET,), (), "a role cannot target itself")
         fact_id: str | None = None
+        category: str | None = None
         if kind == SHARE:
             fact_id = action.parameters.get("fact", "")
             fact = state.fact(fact_id)
             if fact is None or fact not in state.known_facts(role.id):
                 return Verdict(False, (Reason.FACT_NOT_KNOWN,), (), "sender does not know it")
             assert action.target is not None
+            category = fact.data_category
             details.append(f"{fact.id} ({fact.data_category}) to {action.target}")
             if fact.data_category not in state.boundary(action.target):
                 reasons.append(Reason.OUTSIDE_RECIPIENT_BOUNDARY)
@@ -460,7 +464,9 @@ class ConstraintEngine:
                     reasons.append(Reason.AUTHORITY_UNCERTAIN)
                 details.append(REQUIRES_DETERMINATION)
             clause_ids.extend(supporting)
-        return Verdict(not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details), fact_id)
+        return Verdict(
+            not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details), fact_id, category
+        )
 
     def _restrict(
         self,

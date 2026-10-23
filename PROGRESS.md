@@ -4,20 +4,41 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 2 — Engine with scripted agents: PR #3 open against `main`, waiting for the human.**
-Phase 1 merged (PR #2, tag `phase-1`) after the human reviewed the core set. Phase 2 now runs on
-the real clause set with a real-corpus golden, plus the synthetic fixture golden. The round-3
-review fixes are covered by tests but were not re-reviewed by an agent (human decision: no fourth
-round; the Phase 3 review loop covers them). The changes for the human decisions of 2026-10-23
-(7n, 7r, 7t/7v, h2, 7m) are also not yet agent-reviewed; Phase 3's review loop covers them.
+**Phase 3 — Repair and replay: branch `phase-3-repair`, review loop running.** Phase 2 merged
+(PR #3, tag `phase-2`) on 2026-10-23. The Phase 3 review loop's first round also covers the
+Phase 2 commits no reviewer re-checked: 9bdd45a (round-3 fixes) and 392f162 (decisions 7n, 7r,
+7t, 7v, h2).
 
 ## Done
+
+### Phase 3 — Repair and replay (branch `phase-3-repair`)
+- `domain/repairs.py`: `RepairEdit` (five operation types, typed parameters only) and an
+  immutable `RepairProposal` (tuples; canonical `repair_id`).
+- `simulation/replay.py`: applies a repair as hypothetical rules (`repair.<edit id>`), trigger
+  events and one boundary widening, reruns the identical incident, and compares
+  (`ReplayComparison`: goals, failures no longer blocking / remaining / new, changed verdicts).
+- `engine/repair_search.py`: candidates from diagnosed failures and restricted shares, hard
+  filter (static and after replay), replay of every combination up to 2 edits, lexicographic
+  ranking, `requires_authorization`.
+- `storage/audit.py` (DuckDB, `--audit`), `storage/export.py` (JSON + Markdown, `--export`).
+- CLI: `cascadeguard repairs <scenario>`; `cascadeguard run <scenario> --repair <id>`.
+- Golden: `scenarios/uae_health_access/expected_repairs.yaml` (search + one successful and one
+  unsuccessful replay, real clause set). Spec: `specs/003-repair-and-replay.md`.
+
+Verify:
+
+```bash
+uv run cascadeguard repairs uae_health_access
+uv run cascadeguard run uae_health_access --repair owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+uv run cascadeguard run uae_health_access --repair share.network_incident_status.telecom_operator.health_service_operator
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 0 — Tooling (merged, tag `phase-0`)
 uv project on Python 3.12, Ruff, Pyright (strict), pytest, CLI stub, `.env.example`, `.gitignore`
 (including the two books by filename), `README.md`.
 
-### Phase 2 — Engine with scripted agents (branch `phase-2-engine`)
+### Phase 2 — Engine with scripted agents (merged, PR #3, tag `phase-2`)
 - `simulation/state.py`, `boundaries.py`, `orchestrator.py`; `engine/constraints.py`,
   `graph.py` (NetworkX), `diagnosis.py`; `agents/base.py`, `scripted.py`; `domain/findings.py`.
 - Scenario data: `roles.yaml` action preconditions, `scenario.yaml` recovery goals and
@@ -185,6 +206,30 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
     re-reviewed, and the Phase 3 review loop covers them.
   - README: one line on source ownership with a link to each official source (added).
 
+- **Human decisions, 2026-10-23 (second set):**
+  - PR #3 merged; `main` tagged `phase-2`; Phase 3 started.
+  - The post-review edit to `dha.pp11.4-18-1` stays; the edits in 9b7b7fa are accepted.
+  - New gate-1 rule (rule-file change approved by the human): any edit to a `status: reviewed`
+    clause sets it back to `draft` in the same commit and lists it for re-approval.
+    `policies/approvals.yaml` holds the approved digest of each reviewed clause (baseline: the
+    core set with the 9b7b7fa edits); `tests/unit/test_approvals.py` enforces the rule.
+  - 3w: keep quoting the 2024 text. Checked on EUR-Lex (2026-10-23): Regulation (EU)
+    2026/1744 (Digital Omnibus on AI, 8 July 2026, applies from 27 July 2026) amends
+    Regulations 2024/1689, 2018/1139 and 2023/1230. It does not amend AI Act Art 14 or Art 73
+    (it inserts Art 75(1a), a derogation from Art 73 for providers under the AI Office's
+    competence), and it does not amend the GDPR, for which EUR-Lex lists only corrigenda (two
+    amendment proposals, 52025PC0501 and 52025PC0837, are pending). All five `eu.*` clauses
+    carry a dated "unchanged by the 2026 amendment" note; none was changed in substance.
+  - 3x: the README note stays; no clause quotes `AIGuide_EN_v1-online.pdf` (inventory note).
+  - Remaining open questions are collected for the end of Phase 3; none blocks it.
+  - The 20 drafts stay draft; the human is told only if a Phase 3 repair needs one (none does).
+- **Phase 3 engine decisions (2026-10-23):** a minimum data share widens the recipient's boundary
+  (the Phase 1 information model), so it works the same whoever sends; candidates name the
+  category's original holder. Search combines up to 2 edits. Repair rules are illustrative
+  clauses labelled "hypothetical repair rule (not a source clause)". A failure "no longer
+  blocking" may be gone only because its goal is met another way. `LogEntry.data_category`
+  records the category a share or request touched (not in the golden summaries).
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -221,8 +266,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human decisions,
-2026-10-23"). Still open:
+Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v, 3w, 3x (see Decisions). The human
+answers the questions below together at the end of Phase 3; none blocks Phase 3. Re-approval
+needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open:
 
 1. **Clause review** of the remaining 20 drafts (all clauses outside the core set, including
    `uae.telecom-law.art14-5`, flagged "OCR - check against image"), in the order of
@@ -248,11 +294,7 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
    k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py`, `domain/base.py`
       or `docs/policy-inventory.md`. Add them?
    p. Should `dha.pp11.4-18-4` and `4-18-5` become one clause quoting both paragraphs?
-   w. EUR-Lex lists the EU AI Act as amended by Regulation (EU) 2026/1744 (July 2026). The
-      `eu.ai-act.*` clauses quote the 2024 text in `policies/sources/`. Add the consolidated
-      version and re-check Art 14(4)(d), 73(1), 73(3), or keep the 2024 text as the precedent?
-   x. `AIGuide_EN_v1-online.pdf`: no official source was found for the README sources table.
-      Where does it come from?
+   (w and x answered 2026-10-23.)
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -262,8 +304,8 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
 - ~~Book filenames as `source_file`; `normalized` names vs `roles.yaml`~~ Done in Phase 2
   (loader rejects book sources, duplicate YAML keys and stray `.yml` files;
   `check_clause_references` runs on every engine run, with tests).
-- Phase 3: `RepairProposal.applies_to`, `parameters` and `citations` are still list/dict
-  (mutable inside a frozen model); use tuples / a frozen mapping before repairs are ranked.
+- ~~`RepairProposal` list/dict fields~~ Done in Phase 3: edits and citations are tuples of
+  frozen models with typed parameters.
 - ~~Deep-freeze and AwareDatetime~~ Done in Phase 2: domain lists are tuples, and `at` and
   `start_time` are `AwareDatetime`. `ProposedAction.parameters` stays a dict; the engine copies
   each decision on receipt and logs only strings.
@@ -272,8 +314,9 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
 
 ## Next step
 
-1. Human: decide whether PR #3 (Phase 2) merges now. The auto-merge rule does not apply: the
-   Phase 2 reviewers did not all PASS (round 3), and the human chose no fourth round.
-2. After PR #3 merges: tag `phase-2`, start Phase 3 (repair and replay) on `phase-3-repair`,
-   and make its review loop cover the unreviewed Phase 2 changes listed under "Current phase".
-3. Open human items are under "Waiting on human" (remaining 20 draft clauses, questions 3a-3x).
+1. Finish the Phase 3 review loop (phase-auditor, test-breaker, evidence-auditor), with the
+   Phase 2 commits 9bdd45a and 392f162 in the first round; fix BLOCKER/MAJOR findings; open the
+   Phase 3 PR with the verdicts.
+2. Human, at the end of Phase 3: answer 3a-3f, 3i-3k, 3p together; review the remaining 20
+   drafts when convenient (no Phase 3 repair needs one).
+3. Then Phase 4 (NiceGUI demo UI).
