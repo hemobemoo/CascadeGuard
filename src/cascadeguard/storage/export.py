@@ -1,25 +1,92 @@
-"""Export a baseline-vs-replay comparison as JSON and Markdown.
+"""Export runs, repair searches and baseline-vs-replay comparisons as JSON and Markdown.
 
-Every clause id is printed with its status label. Repair rules are hypothetical and say so;
-diagnosed failures keep their qualification (never a confirmed legal gap).
+Every clause id carries its status label (JSON: {"id", "status"}). Repair rules are
+hypothetical and say so; every diagnosed failure keeps its qualification (never a confirmed
+legal gap).
 """
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from cascadeguard.simulation.replay import ReplayComparison
+from cascadeguard.domain.findings import CoordinationFailure
+from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
+from cascadeguard.simulation.orchestrator import RunResult
 
 SCRIPTED_NOTE = (
     "Scripted agents replay the same decisions; they do not adapt to the repair. A new "
     "obligation that no scripted decision fulfils shows up as a missed obligation."
 )
+REPAIR_NOTE = (
+    "Repair rules are hypothetical coordination rules for the simulation, not proposals of law. "
+    "'requires_authorization': no reviewed, binding clause supports the permission it creates; "
+    "it needs human and institutional approval."
+)
+
+
+def _labelled(ids: Iterable[str], labels: dict[str, str]) -> list[dict[str, str]]:
+    return [{"id": i, "status": labels.get(i, "not loaded")} for i in ids]
+
+
+def _label_clause_fields(data: Any, labels: dict[str, str]) -> Any:
+    """Replace every "clauses" list and "clause" id in plain data with labelled entries."""
+    if isinstance(data, dict):
+        out: dict[str, Any] = {}
+        for key, value in cast(dict[str, Any], data).items():
+            if key == "clauses" and isinstance(value, list):
+                out[key] = _labelled((str(v) for v in cast(list[Any], value)), labels)
+            elif key == "clause" and isinstance(value, str):
+                out[key] = _labelled((value,), labels)[0]
+            else:
+                out[key] = _label_clause_fields(value, labels)
+        return out
+    if isinstance(data, list):
+        return [_label_clause_fields(v, labels) for v in cast(list[Any], data)]
+    return data
+
+
+def _failure(f: CoordinationFailure, labels: dict[str, str]) -> dict[str, Any]:
+    return {
+        "id": f.id,
+        "category": f.category.value,
+        "goals": list(f.goals),
+        "roles": list(f.roles),
+        "clauses": _labelled(f.clause_ids, labels),
+        "description": f.description,
+        "qualification": f.qualification,
+    }
+
+
+def run_export(result: RunResult) -> dict[str, Any]:
+    labels = dict(result.loaded_clauses)
+    data = _label_clause_fields(result.summary(), labels)
+    data["failures"] = [_failure(f, labels) for f in result.failures]
+    data["loaded_clauses"] = _labelled(labels, labels)
+    return data
+
+
+def search_export(result: SearchResult) -> dict[str, Any]:
+    labels = dict(result.loaded_clauses)
+    data = _label_clause_fields(result.summary(), labels)
+    return {"clause_set": result.clause_set, "note": REPAIR_NOTE, **data}
+
+
+def comparison_export(c: ReplayComparison) -> dict[str, Any]:
+    labels = dict(c.replay.loaded_clauses)
+    by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
+    data = c.summary()
+    for key in ("failures_removed", "failures_remaining", "new_conflicts"):
+        data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
+    data["targets_clauses"] = _labelled((x.clause_id for x in c.proposal.citations), labels)
+    data["note"] = f"{REPAIR_NOTE} {SCRIPTED_NOTE}"
+    return data
 
 
 def comparison_markdown(c: ReplayComparison) -> str:
     labels = dict(c.replay.loaded_clauses)
 
-    def cite(ids: tuple[str, ...] | list[str]) -> str:
+    def cite(ids: Iterable[str]) -> str:
         return ", ".join(f"`{i}` [{labels.get(i, 'not loaded')}]" for i in ids) or "none"
 
     s = c.summary()
@@ -32,7 +99,7 @@ def comparison_markdown(c: ReplayComparison) -> str:
         f"- Outcome: **{c.outcome}**",
         "- Requires authorization: "
         + (
-            "**yes**: creates a permission with no reviewed basis; needs human and "
+            "**yes**: creates a permission with no reviewed, binding basis; needs human and "
             "institutional approval"
             if p.requires_authorization
             else "no"
@@ -46,7 +113,7 @@ def comparison_markdown(c: ReplayComparison) -> str:
             f"{k}={v}" for k, v in e.model_dump(exclude_none=True).items() if k != "operation"
         )
         lines.append(f"- `{e.operation.value}`: {params}")
-    lines += ["", f"Clauses the repair targets: {cite([x.clause_id for x in p.citations])}", ""]
+    lines += ["", f"Clauses the repair targets: {cite(x.clause_id for x in p.citations)}", ""]
     lines += ["## Recovery goals", "", "| Goal | Baseline | Replay |", "|---|---|---|"]
     lines += [f"| {g} | {v['baseline']} | {v['replay']} |" for g, v in s["goals"].items()]
     lines += ["", "## Diagnosed failures", ""]
@@ -60,8 +127,7 @@ def comparison_markdown(c: ReplayComparison) -> str:
         for fid in ids:
             f = by_id[fid]
             lines.append(f"- `{fid}`: {f.description} Clauses: {cite(f.clause_ids)}.")
-            if fid not in c.removed:
-                lines.append(f"  _{f.qualification}_")
+            lines.append(f"  _{f.qualification}_")
         lines.append("")
     lines += ["## Actions whose verdict changed", ""]
     for a in s["changed_actions"]:

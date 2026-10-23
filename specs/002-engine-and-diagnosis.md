@@ -99,10 +99,18 @@ only JSON. Whether untrusted agents must run in a separate process is a question
   a fallback plan (`dha.pp11.4-18-1` -> `maintain_fallback_plan`) does not say who may activate
   the fallback channel.
 - **Citation scope (7n).** A cited clause must concern the citing role (actor, counterpart or
-  `any`) or one of its actions; `provide_policy_analysis` may cite any loaded clause. A mismatch
-  rejects the decision and is a `citation_out_of_scope` finding.
+  `any`) or one of the actions it proposes that it is allowed to take; a role allowed
+  `provide_policy_analysis` that proposes it may cite any loaded clause. Disallowed actions never
+  widen scope (Phase 3 review). A mismatch rejects the decision and is a
+  `citation_out_of_scope` finding.
 - **Gap claims (7r).** A decision whose rationale or uncertainty declares a legal or standards
-  gap without any citation is rejected as `uncited_gap_claim`.
+  gap (including absence wording such as "no clause authorises", "the law is silent",
+  "nothing in the regulations") is rejected as `uncited_gap_claim` without a citation, and as
+  `unqualified_gap_claim` if cited but not qualified ("reviewed corpus", "candidate finding",
+  "not a confirmed", "needs expert review"). Free-text detection is a backstop; Phase 5 should
+  give LLM agents a structured gap-claim field.
+- **Citable clauses.** A citation must be a loaded clause that is also in the corpus
+  (`policies/reviewed/`); hypothetical repair rules loaded in a replay are `unknown_citation`.
 - **Known limits.** 7q: agents share the Python process; frozen views are the slice's boundary
   (see "Threat model"). 7s: mandate overlap is not detected until the DHA and PDPL clauses it
   needs are reviewed; it is never inferred from fixtures.

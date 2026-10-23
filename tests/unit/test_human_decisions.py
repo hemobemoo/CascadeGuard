@@ -43,7 +43,7 @@ def engine_at(
 ) -> ConstraintEngine:
     scenario, roles = world
     engine = ConstraintEngine(
-        SimulationState(scenario, roles), {c.id: c for c in rules}, frozenset()
+        SimulationState(scenario, roles), {c.id: c for c in rules}, frozenset(c.id for c in rules)
     )
     for event in scenario.events:
         if event.at_minute <= minute:
@@ -247,3 +247,77 @@ def test_real_clauses_never_use_binding_unknown_on_illustrative_rules() -> None:
     for c in load_clauses():
         if c.binding == "unknown":
             assert c.status in (ClauseStatus.DRAFT, ClauseStatus.REVIEWED), c.id
+
+
+# ---- Phase 3 review round 1: bypasses of 7n and 7r ----
+
+
+@pytest.mark.parametrize("extra", ["provide_policy_analysis", "issue_determination"])
+def test_a_disallowed_action_does_not_widen_citation_scope(
+    world: tuple[Scenario, RoleSet], extra: str
+) -> None:
+    """Adding an action the role may not take (even provide_policy_analysis) must not make an
+    out-of-scope citation acceptable."""
+    rule = clause("h.rule", kind="obligation", actor=OVERSIGHT, action=extra)
+    engine = engine_at(world, 45, rule)
+    engine.process(decide(world, TELECOM, 45, "monitor", extra, cite=("h.rule",)), TELECOM)
+    assert decision_findings(engine) == ["citation_out_of_scope"]
+    assert not engine.state.has_done(TELECOM, "monitor")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The law is silent on who may reverse the locks.",
+        "No clause authorises this; nothing in the regulations covers it.",
+        "Lacuna: unregulated area",
+        "No clause found that authorises this share.",
+        "This is not covered by any rule.",
+    ],
+)
+def test_gap_claims_in_other_words_still_need_citations(
+    world: tuple[Scenario, RoleSet], text: str
+) -> None:
+    engine = engine_at(world, 45)
+    engine.process(
+        decide(world, TELECOM, 45, "report_to_telecom_regulator", rationale=text), TELECOM
+    )
+    assert decision_findings(engine) == ["uncited_gap_claim"]
+
+
+def test_a_cited_gap_claim_must_be_qualified(world: tuple[Scenario, RoleSet]) -> None:
+    rule = clause("r", kind="obligation", actor=TELECOM, action="report_to_telecom_regulator")
+    engine = engine_at(world, 45, rule)
+    engine.process(
+        decide(
+            world,
+            TELECOM,
+            45,
+            "report_to_telecom_regulator",
+            cite=("r",),
+            rationale="There is a legal gap here, definitely.",
+        ),
+        TELECOM,
+    )
+    assert decision_findings(engine) == ["unqualified_gap_claim"]
+    assert not engine.state.has_done(TELECOM, "report_to_telecom_regulator")
+
+
+def test_loaded_clauses_outside_the_corpus_are_not_citable(
+    world: tuple[Scenario, RoleSet],
+) -> None:
+    """A hypothetical repair rule is loaded in a replay but is not a policies/reviewed clause."""
+    scenario, roles = world
+    rule = clause(
+        "repair.owner.review_automated_lockouts.health_service_operator",
+        kind="obligation",
+        actor=HEALTH,
+        action="review_automated_lockouts",
+    )
+    engine = ConstraintEngine(SimulationState(scenario, roles), {rule.id: rule}, frozenset())
+    for event in scenario.events:
+        if event.at_minute <= 45:
+            engine.release(event)
+    engine.process(decide(world, HEALTH, 45, "review_automated_lockouts", cite=(rule.id,)), HEALTH)
+    assert decision_findings(engine) == ["unknown_citation"]
+    assert not engine.state.has_done(HEALTH, "review_automated_lockouts")

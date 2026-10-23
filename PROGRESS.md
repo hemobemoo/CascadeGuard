@@ -230,6 +230,27 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   blocking" may be gone only because its goal is met another way. `LogEntry.data_category`
   records the category a share or request touched (not in the golden summaries).
 
+- **Phase 3 review round 1 (2026-10-23).** evidence-auditor PASS (MINORs fixed: EUR-Lex URL in
+  the five EU notes, OECD truncation note, CLI wording, scripted uncertainty). phase-auditor FAIL
+  (MAJOR: replay judgement outside `engine/`; JSON exports without labels/qualifications).
+  test-breaker FAIL (BLOCKERs in Phase 2 code: 7n scope widened by disallowed actions; 7r narrow
+  regex and no qualification check; MAJORs: share filter only for the named sender, share
+  authorization ignored roles/conditions, repair rules citable in replays, search output lost
+  labels when nothing ranked). All fixed with tests, each mutation-checked:
+  `ReplayComparison` moved to `engine/repair_search.py`; scope uses allowed actions only; gap
+  claims need a citation and a qualification (`unqualified_gap_claim`); citations must be corpus
+  clauses; share edits checked for every sender and new restricted-category deliveries discard a
+  repair; `SearchResult` carries the clause set and labels; JSON exports label every clause and
+  keep qualifications; repair ids include trigger and deadline; proposals re-validated in replay;
+  ScriptedAgent returns copies; `document_date` must be a real date; audit `repairs` table.
+  The scripted telecom T+30 uncertainty "No clause found that authorises this share." was removed
+  (an uncited gap-style line; it never appeared in a golden). Expected-repairs golden regenerated:
+  only repair ids (trigger/deadline suffix) and the sorted order of one discard's clauses changed.
+- **`RepairProposal` shape (Phase 3 decision).** `operation`/`applies_to`/`parameters` became
+  `edits: tuple[RepairEdit, ...]`, because the ranking counts repair edits and a repair can need
+  two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
+  typed parameters.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -295,6 +316,23 @@ needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Stil
       or `docs/policy-inventory.md`. Add them?
    p. Should `dha.pp11.4-18-4` and `4-18-5` become one clause quoting both paragraphs?
    (w and x answered 2026-10-23.)
+   k. (extended) The structure file also does not list `storage/export.py`, `policies/approvals.yaml`
+      or `scenarios/uae_health_access/expected_repairs.yaml` (it puts P3 goldens in `tests/golden/`).
+4. **Phase 3 review questions (round 1), for the end of Phase 3:**
+   a. "Critical blockers removed" counts a failure as removed when the replay no longer diagnoses
+      it, even if it is only masked because its goal was met another way (e.g. the fallback orphan
+      duty under "owner + share"). Keep this, or count only blockers whose cause the repair
+      removes? It changes the ranking.
+   b. Tie-breaks: roles touched first, then clauses cited (not a combined count, and not clauses
+      the repair changes). Intended?
+   c. Gate-1 rule change in AGENTS.md (8333dfa): the phase-auditor asks you to confirm it in the
+      PR (recorded here as approved in chat on 2026-10-23).
+   d. Draft-clause mappings to settle at review (evidence-auditor): `mocai.ethics.fallback-plan`
+      maps to `activate_fallback_channel` (h2 suggests `maintain_fallback_plan`);
+      `itu.y3172.req-ml-mng-003` maps a design requirement to `investigate_network_fault`;
+      `uae.ai-charter.safety` maps "encourages" to a permission; `uae.telecom-law.art14-5`
+      mapping note says "read as a permission" while 7m says it is not one in this incident;
+      `dha.pp11.4-18-5` actor comes from 4.18.4 (3p); `dha.pp11.applicability` binding (3d/3e).
 
 ## Deferred MINOR findings (Phase 1 review)
 

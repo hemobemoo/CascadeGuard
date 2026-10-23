@@ -15,7 +15,7 @@ search:
     unmet_critical_goals: []
     new_conflicts: []
   - rank: 2
-    repair: fallback.activate_fallback_channel.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 4
@@ -23,7 +23,7 @@ search:
     unmet_critical_goals: []
     new_conflicts: []
   - rank: 3
-    repair: fallback.activate_fallback_channel.health_service_operator
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m
     edits: 1
     requires_authorization: true
     critical_blockers_removed: 3
@@ -32,7 +32,7 @@ search:
     - alert_cause_known_to_health
     new_conflicts: []
   - rank: 4
-    repair: fallback.activate_fallback_channel.health_service_operator+owner.reverse_automated_lockouts.health_service_operator
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+owner.reverse_automated_lockouts.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 3
@@ -41,7 +41,7 @@ search:
     - alert_cause_known_to_health
     new_conflicts: []
   - rank: 5
-    repair: fallback.activate_fallback_channel.health_service_operator+trigger.review_automated_lockouts.health_service_operator
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 3
@@ -50,7 +50,7 @@ search:
     - alert_cause_known_to_health
     new_conflicts: []
   - rank: 6
-    repair: fallback.activate_fallback_channel.health_service_operator+requester.activate_fallback_channel.health_service_operator.health_data_oversight
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 3
@@ -60,7 +60,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 7
-    repair: fallback.activate_fallback_channel.health_service_operator+requester.activate_fallback_channel.health_service_operator.telecom_regulator
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 3
@@ -70,7 +70,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 8
-    repair: owner.reverse_automated_lockouts.health_service_operator+trigger.review_automated_lockouts.health_service_operator
+    repair: owner.reverse_automated_lockouts.health_service_operator+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
@@ -80,7 +80,7 @@ search:
     - alert_cause_known_to_health
     new_conflicts: []
   - rank: 9
-    repair: share.network_incident_status.telecom_operator.health_service_operator+trigger.review_automated_lockouts.health_service_operator
+    repair: share.network_incident_status.telecom_operator.health_service_operator+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
@@ -89,7 +89,7 @@ search:
     - patient_access_restored
     new_conflicts: []
   - rank: 10
-    repair: trigger.review_automated_lockouts.health_service_operator
+    repair: trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 1
     requires_authorization: false
     critical_blockers_removed: 1
@@ -118,7 +118,7 @@ search:
     - patient_access_restored
     new_conflicts: []
   - rank: 13
-    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight+trigger.review_automated_lockouts.health_service_operator
+    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: false
     critical_blockers_removed: 1
@@ -129,7 +129,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 14
-    repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator+trigger.review_automated_lockouts.health_service_operator
+    repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: false
     critical_blockers_removed: 1
@@ -140,7 +140,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 15
-    repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.health_data_oversight
+    repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
@@ -151,7 +151,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 16
-    repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.telecom_regulator
+    repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
@@ -162,7 +162,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 17
-    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight+share.network_incident_status.telecom_operator.health_service_operator
+    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
@@ -172,7 +172,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 18
-    repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator+share.network_incident_status.telecom_operator.health_service_operator
+    repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m+share.network_incident_status.telecom_operator.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
@@ -182,7 +182,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 19
-    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight
+    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
     edits: 1
     requires_authorization: false
     critical_blockers_removed: 0
@@ -193,7 +193,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 20
-    repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator
+    repair: requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 1
     requires_authorization: false
     critical_blockers_removed: 0
@@ -204,7 +204,7 @@ search:
     new_conflicts:
     - temporal_infeasibility:request_determination
   - rank: 21
-    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight+requester.activate_fallback_channel.health_service_operator.telecom_regulator
+    repair: requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 2
     requires_authorization: false
     critical_blockers_removed: 0
@@ -219,8 +219,8 @@ search:
     reason: would permit an action a loaded clause restricts (a repair never decides that a condition
       is met)
     clauses:
-    - uae.fl2-2019.art4
     - uae.fl2-2019.art16
+    - uae.fl2-2019.art4
 successful:
   scenario: uae_health_access
   clause_set: 'policies/reviewed: reviewed + illustrative clauses'

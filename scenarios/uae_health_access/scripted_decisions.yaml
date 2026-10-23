@@ -39,7 +39,6 @@ decisions:
     citations: []  # no clause concerns this share; the engine checks the recipient's boundary
     uncertainty:
       - Root cause not yet confirmed.
-      - No clause found that authorises this share.
 
   - role: health_service_operator
     at_minute: 30

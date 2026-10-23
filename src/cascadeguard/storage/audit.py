@@ -1,7 +1,8 @@
 """Audit trail in a local DuckDB file (default data/audit.duckdb, gitignored).
 
 Records every run (baseline or replay) with its event log, findings and diagnosed failures,
-plus each repair comparison. Append-only: rows are never updated or deleted.
+each repair comparison, and each repair search (ranked and discarded candidates).
+Append-only: rows are never updated or deleted.
 """
 
 import json
@@ -10,8 +11,8 @@ from typing import Any
 
 import duckdb
 
+from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
 from cascadeguard.simulation.orchestrator import RunResult
-from cascadeguard.simulation.replay import ReplayComparison
 
 DEFAULT_DB = Path(__file__).resolve().parents[3] / "data" / "audit.duckdb"
 
@@ -42,6 +43,12 @@ CREATE TABLE IF NOT EXISTS failures (
 CREATE TABLE IF NOT EXISTS comparisons (
     baseline_run_id INTEGER NOT NULL, replay_run_id INTEGER NOT NULL, repair_id VARCHAR NOT NULL,
     requires_authorization BOOLEAN NOT NULL, outcome VARCHAR NOT NULL, summary JSON NOT NULL
+);
+CREATE TABLE IF NOT EXISTS repairs (
+    baseline_run_id INTEGER NOT NULL, repair_id VARCHAR NOT NULL,
+    rank INTEGER,                        -- NULL when discarded by the hard filter
+    edits INTEGER, requires_authorization BOOLEAN, critical_blockers_removed INTEGER,
+    outcome VARCHAR, discarded_reason VARCHAR, clause_ids VARCHAR[]
 );
 """
 
@@ -136,3 +143,29 @@ class AuditStore:
             ],
         )
         return base, rep
+
+    def record_search(self, baseline: RunResult, result: SearchResult) -> int:
+        """Record the baseline run and every candidate: ranked ones with their outcome,
+        discarded ones with the reason and the restricting clauses."""
+        base = self.record_run(baseline, "baseline")
+        rows: list[list[Any]] = [
+            [
+                base,
+                c.proposal.repair_id,
+                rank,
+                len(c.proposal.edits),
+                c.proposal.requires_authorization,
+                c.critical_blockers_removed,
+                c.outcome,
+                None,
+                [x.clause_id for x in c.proposal.citations],
+            ]
+            for rank, c in enumerate(result.ranked, 1)
+        ]
+        rows += [
+            [base, d.repair_id, None, None, None, None, None, d.reason, list(d.clause_ids)]
+            for d in result.discarded
+        ]
+        if rows:
+            self.con.executemany("INSERT INTO repairs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+        return base

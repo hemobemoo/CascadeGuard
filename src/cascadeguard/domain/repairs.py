@@ -75,18 +75,20 @@ class RepairEdit(DomainModel):
 
     @property
     def edit_id(self) -> str:
-        """Stable id, also used in the hypothetical rule's clause id."""
+        """Stable id, also used in the hypothetical rule's clause id. It names every parameter,
+        so two different edits never share an id."""
         op = self.operation
+        when = f".{self.trigger_event}.{self.deadline_minutes}m" if self.trigger_event else ""
         if op is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
             return f"share.{self.data_category}.{self.role}.{self.counterpart}"
         if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
-            return f"requester.{self.action}.{self.role}.{self.counterpart}"
+            return f"requester.{self.action}.{self.role}.{self.counterpart}{when}"
         prefix = {
             RepairOperationType.ASSIGN_OWNER: "owner",
             RepairOperationType.ADD_ESCALATION_TRIGGER: "trigger",
             RepairOperationType.ADD_FALLBACK_CHANNEL: "fallback",
         }[op]
-        return f"{prefix}.{self.action}.{self.role}"
+        return f"{prefix}.{self.action}.{self.role}{when}"
 
 
 class RepairProposal(DomainModel):

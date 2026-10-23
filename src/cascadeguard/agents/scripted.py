@@ -3,6 +3,7 @@
 This is the test baseline and the demo fallback (AGENTS.md "Determinism and replay").
 """
 
+import copy
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +53,8 @@ class ScriptedAgent:
         return AgentDecision(
             role_id=self.role_id,
             at=view.at,
-            proposed_actions=entry.actions,
+            # Fresh copies: an agent's output must never alias data shared across runs.
+            proposed_actions=copy.deepcopy(entry.actions),
             rationale=entry.rationale,
             citations=entry.citations,
             uncertainty=entry.uncertainty,

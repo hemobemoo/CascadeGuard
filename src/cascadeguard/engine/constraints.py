@@ -17,10 +17,22 @@ from cascadeguard.simulation.state import SimulationState
 SHARE = "share_incident_status"
 REQUEST = "request_information"
 ANALYSIS = "provide_policy_analysis"  # may cite any loaded clause: analysing provisions is its job
-# Text declaring a legal or standards gap; such a claim needs citations (AGENTS.md, 7r).
+# Text declaring a legal or standards gap. Such a claim needs citations (7r) and an explicit
+# qualification (AGENTS.md: "cited evidence and an explicit qualification"). Free-text detection
+# is a backstop, not a proof: it errs towards treating hedged absence statements as claims.
 GAP_CLAIM = re.compile(
-    r"\b(?:legal|regulatory|policy|standards?) gap\b|\bno (?:legal )?provision\b"
-    r"|\bgap in the law\b|\bnot regulated\b|\bno law\b",
+    r"\b(?:legal|regulatory|policy|standards?) gaps?\b|\bthere is a gap\b|\bgaps? (?:in|exists?)\b"
+    r"|\bno (?:legal |applicable |specific )?(?:provisions?|clauses?|rules?|laws?|regulations?"
+    r"|legal basis|authority)\b"
+    r"|\bnothing in the (?:laws?|regulations?|rules?|corpus|clauses?|policy|policies)\b"
+    r"|\b(?:laws?|regulations?|rules?|policy|policies) (?:is|are) silent\b|\bsilent on\b"
+    r"|\blacuna\b|\bunregulated\b|\bnot regulated\b|\bnot (?:covered|addressed) by\b",
+    re.IGNORECASE,
+)
+# Wording that qualifies a gap claim as absence from the corpus, not a confirmed gap.
+GAP_QUALIFIED = re.compile(
+    r"\b(?:reviewed corpus|loaded clause set|candidate finding|not a confirmed"
+    r"|(?:needs|requires|pending) expert review)\b",
     re.IGNORECASE,
 )
 REQUIRES_DETERMINATION = (
@@ -37,6 +49,7 @@ class Reason(StrEnum):
     DRAFT_CITATION = "draft_citation"  # clause exists but is not loaded (draft, not reviewed)
     CITATION_OUT_OF_SCOPE = "citation_out_of_scope"  # cited clause concerns neither role nor action
     UNCITED_GAP_CLAIM = "uncited_gap_claim"  # declares a legal gap without any citation
+    UNQUALIFIED_GAP_CLAIM = "unqualified_gap_claim"  # cited, but not qualified as a candidate
     WRONG_ROLE_OR_TIME = "wrong_role_or_time"
     NOT_ALLOWED_ACTION = "not_allowed_action"
     UNKNOWN_TARGET = "unknown_target"
@@ -262,7 +275,9 @@ class ConstraintEngine:
             role=n.actor,
             action=n.action,
             clause_ids=(clause_id,),
-            detail="" if firm else "uncertain: binding unknown",
+            detail=""
+            if firm
+            else f"uncertain: binding {'unknown' if clause.binding == 'unknown' else 'false'}",
         )
         if n.deadline_minutes is None:
             state.add_finding(
@@ -321,7 +336,13 @@ class ConstraintEngine:
                 )
             )
             # Citations are still checked and recorded below; no action is taken either way.
-        bad_citations = [cid for cid in dict.fromkeys(cited) if cid not in self.rules.clauses]
+        # A citation must be a loaded clause from policies/reviewed: hypothetical repair rules
+        # loaded in a replay are not citable (they are not in the corpus).
+        bad_citations = [
+            cid
+            for cid in dict.fromkeys(cited)
+            if cid not in self.rules.clauses or cid not in self.corpus_clause_ids
+        ]
         for clause_id in bad_citations:  # every bad citation is its own finding
             reason = (
                 Reason.DRAFT_CITATION
@@ -333,7 +354,7 @@ class ConstraintEngine:
                 role=expected_role,
                 reasons=(reason,),
                 clause_ids=(clause_id,),
-                detail="whole decision rejected: cited clause is not loaded by the engine",
+                detail="whole decision rejected: cited clause is not a loaded corpus clause",
             )
             state.add_finding(
                 Finding(
@@ -341,12 +362,17 @@ class ConstraintEngine:
                     minute=state.minute,
                     role=expected_role,
                     clause_ids=(clause_id,),
-                    detail=f"{expected_role} cited {clause_id}, not loaded by the engine",
+                    detail=f"{expected_role} cited {clause_id}, not a loaded corpus clause",
                 )
             )
         if bad_citations:
             return
-        actions = tuple(a.action_type for a in decision.proposed_actions)
+        # Scope is judged only over actions the role may take: adding a disallowed action (or
+        # provide_policy_analysis without being allowed it) must not widen what it may cite.
+        allowed = state.roles.role(expected_role).allowed_actions
+        actions = tuple(
+            a.action_type for a in decision.proposed_actions if a.action_type in allowed
+        )
         out_of_scope = [
             c for c in dict.fromkeys(cited) if not self.rules.concerns(c, expected_role, actions)
         ]
@@ -360,14 +386,24 @@ class ConstraintEngine:
         if out_of_scope:
             return
         claim_text = " ".join((decision.rationale, *decision.uncertainty))
-        if not cited and GAP_CLAIM.search(claim_text):  # decision 7r
-            self._reject_decision(
-                expected_role,
-                Reason.UNCITED_GAP_CLAIM,
-                (),
-                f"{expected_role} declared a legal gap without citing any clause",
-            )
-            return
+        if GAP_CLAIM.search(claim_text):  # decision 7r; AGENTS.md: cited and qualified
+            if not cited:
+                self._reject_decision(
+                    expected_role,
+                    Reason.UNCITED_GAP_CLAIM,
+                    (),
+                    f"{expected_role} declared a legal gap without citing any clause",
+                )
+                return
+            if not GAP_QUALIFIED.search(claim_text):
+                self._reject_decision(
+                    expected_role,
+                    Reason.UNQUALIFIED_GAP_CLAIM,
+                    cited,
+                    f"{expected_role} declared a legal gap without qualifying it as absent from "
+                    "the reviewed corpus (a candidate finding, not a confirmed gap)",
+                )
+                return
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             return
         role = state.roles.role(decision.role_id)

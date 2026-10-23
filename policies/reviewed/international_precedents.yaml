@@ -67,7 +67,7 @@ clauses:
       60): the system "shall be provided to the deployer in such a way that natural persons to
       whom human oversight is assigned are enabled, as appropriate and proportionate". It is a
       design duty on the provider, not a free-standing right to reverse.
-      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744; checked on EUR-Lex, 2026-10-23).
+      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus).
 
   - id: eu.ai-act.art73-1
     title: "EU AI Act: providers report serious incidents"
@@ -85,7 +85,7 @@ clauses:
     binding: false
     notes: >-
       Not binding in the UAE. Precedent for AI serious-incident reporting.
-      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744; checked on EUR-Lex, 2026-10-23). Regulation (EU) 2026/1744 inserts Article 75(1a), a derogation from Article 73 for providers under the AI Office's competence, who report to the AI Office instead; Article 73's text is not amended.
+      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus). Regulation (EU) 2026/1744 inserts Article 75(1a), a derogation from Article 73 for providers under the AI Office's competence, who report to the AI Office instead; Article 73's text is not amended.
 
   - id: eu.ai-act.art73-3
     title: "EU AI Act: two-day report for critical-infrastructure disruption"
@@ -107,7 +107,7 @@ clauses:
       irreversible disruption of the management or operation of critical infrastructure"; the
       closest precedent for the telecom-side failure, though a recoverable degradation may not
       be "irreversible".
-      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744; checked on EUR-Lex, 2026-10-23). Regulation (EU) 2026/1744 inserts Article 75(1a), a derogation from Article 73 for providers under the AI Office's competence, who report to the AI Office instead; Article 73's text is not amended.
+      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus). Regulation (EU) 2026/1744 inserts Article 75(1a), a derogation from Article 73 for providers under the AI Office's competence, who report to the AI Office instead; Article 73's text is not amended.
 
   - id: eu.gdpr.art22-3
     title: "GDPR: human intervention and right to contest automated decisions"
@@ -128,7 +128,7 @@ clauses:
       Not binding in the UAE. Precedent for contesting an automated lockout. The PDF is the
       consolidated text, which states it is a documentation tool with no legal effect (PDF
       page 1).
-      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744 does not amend Regulation (EU) 2016/679; EUR-Lex lists only corrigenda for it; checked on EUR-Lex, 2026-10-23).
+      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744 does not amend Regulation (EU) 2016/679; EUR-Lex lists only corrigenda for it; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus).
 
   - id: eu.gdpr.art33-1
     title: "GDPR: breach notification within 72 hours unless unlikely to result in risk"
@@ -154,7 +154,7 @@ clauses:
       and "immediately" for processor-to-controller notice (4.18.7). The PDF is the
       consolidated text, which states it is a documentation tool with no legal effect (PDF
       page 1).
-      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744 does not amend Regulation (EU) 2016/679; EUR-Lex lists only corrigenda for it; checked on EUR-Lex, 2026-10-23).
+      Unchanged by the 2026 amendment (Regulation (EU) 2026/1744 does not amend Regulation (EU) 2016/679; EUR-Lex lists only corrigenda for it; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus).
 
   - id: oecd.ai-incidents.definition
     title: "OECD: definition of an AI incident"
@@ -171,4 +171,6 @@ clauses:
     document_date: "2025-02"
     status: draft
     binding: false
-    notes: Common terminology for classifying the scenario's cascade as an AI incident.
+    notes: >-
+      Common terminology for classifying the scenario's cascade as an AI incident. The quote
+      stops after harm (b); harms (c) and (d) follow on the same page.
