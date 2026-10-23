@@ -12,7 +12,7 @@ from cascadeguard.domain.decisions import Citation
 from cascadeguard.domain.findings import LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.repairs import RepairEdit, RepairProposal
-from cascadeguard.engine.constraints import RuleBook
+from cascadeguard.engine.constraints import AGENT_STATEMENT, RuleBook
 from cascadeguard.engine.repair_search import (
     ReplayComparison,
     SearchResult,
@@ -23,6 +23,7 @@ from cascadeguard.engine.repair_search import (
 )
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.replay import apply_repair
+from cascadeguard.storage.audit import AuditStore
 from cascadeguard.storage.export import comparison_export, run_export, search_export
 
 HEALTH, TELECOM = "health_service_operator", "telecom_operator"
@@ -335,3 +336,63 @@ def test_a_later_agent_cannot_alter_an_earlier_decision_in_the_same_step() -> No
 
     tampering = {rid: wrap(a) for rid, a in w.agents.items()}
     assert replace(w, agents=tampering).baseline().summary() == expected
+
+
+# ---- Phase 3 review round 3 (fixed after the last round; not re-reviewed) ----
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "UAE law lacks any provision on who may reverse automated lockouts; this omission is "
+        "definitive.",
+        "The legislation is entirely mute on lock reversal, so nobody is legally empowered.",
+        "Federal law contains no statute assigning this duty; it is a legislative void.",
+    ],
+)
+def test_agent_free_text_is_stored_only_as_a_labelled_agent_statement(
+    tmp_path: Any, text: str
+) -> None:
+    """Wording the gap pattern misses is never a finding and never stored unlabelled."""
+    w = load_world("uae_health_access")
+    adviser = "policy_legal_adviser"
+
+    class Adviser:
+        def observe(self, view: Any) -> Any:
+            return w.agents[adviser].observe(view).model_copy(update={"rationale": text})
+
+    result = replace(w, agents={**w.agents, adviser: Adviser()}).baseline()  # type: ignore[dict-item]
+    statements = [e.detail for e in result.log if e.kind == "decision" and text in e.detail]
+    assert statements
+    assert all(d == f"{AGENT_STATEMENT}{text}" for d in statements)
+    assert not any(text in f.detail for f in result.findings)
+    store = AuditStore(tmp_path / "a.duckdb")
+    try:
+        store.record_run(result, "baseline")
+        rows = store.con.execute(
+            "SELECT detail FROM events WHERE kind = 'decision' AND detail LIKE ?", [f"%{text}%"]
+        ).fetchall()
+    finally:
+        store.close()
+    assert rows and all(r[0].startswith(AGENT_STATEMENT) for r in rows)
+
+
+def test_requester_needs_authorization_when_requesting_requires_authority() -> None:
+    w = load_world("uae_health_access")
+    actions = tuple(
+        a.model_copy(update={"requires_authority": True}) if a.id == "request_determination" else a
+        for a in w.roles.actions
+    )
+    roles = w.roles.model_copy(update={"actions": actions})
+    edit = RepairEdit.model_validate(
+        {
+            "operation": "designate_decision_requester",
+            "role": HEALTH,
+            "action": "activate_fallback_channel",
+            "counterpart": "health_data_oversight",
+            "trigger_event": "t60_public_access_affected",
+            "deadline_minutes": 15,
+        }
+    )
+    assert proposal((edit,), {}, RuleBook(w.clauses), roles).requires_authorization is True
+    assert proposal((edit,), {}, RuleBook(w.clauses), w.roles).requires_authorization is False

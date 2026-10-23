@@ -36,6 +36,7 @@ OVERSTATED = re.compile(
     r"\b(?:confirmed|definitive(?:ly)?|certain(?:ly)?|clearly|undoubtedly|proven|established)\b",
     re.IGNORECASE,
 )
+AGENT_STATEMENT = "agent statement (unverified; not a finding or a legal conclusion): "
 REQUIRES_DETERMINATION = (
     "authority uncertain - requires determination (the clause depends on a condition the engine "
     "cannot evaluate; it never decides the condition is met)"
@@ -327,7 +328,14 @@ class ConstraintEngine:
         if not decision.proposed_actions and not cited and not impostor:
             return
         # Logged under the role the orchestrator asked, never the role the decision claims.
-        state.record("decision", role=expected_role, detail=decision.rationale, clause_ids=cited)
+        # Agent free text is untrusted: stored only under a fixed label, never as a finding or a
+        # legal conclusion. Suspected gaps count only as structured GapClaims.
+        state.record(
+            "decision",
+            role=expected_role,
+            detail=f"{AGENT_STATEMENT}{decision.rationale}",
+            clause_ids=cited,
+        )
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             claimed = f"claims role {decision.role_id} at {decision.at.isoformat()}"
             state.record(
