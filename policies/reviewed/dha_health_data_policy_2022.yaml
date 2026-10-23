@@ -30,23 +30,25 @@ clauses:
     issuer: Dubai Health Authority
     jurisdiction: Dubai, UAE
     document_date: "2022-08-10"
-    status: draft
+    status: reviewed
     binding: unknown
     normalized:
       basis: interpreted
       mapping_note: >-
-        The text obliges Entities to establish continuity and recovery plans; activating a
-        fallback access channel is read as acting on such a plan, and Entities is mapped to
+        The text obliges Entities to establish continuity and recovery plans; this is read as a
+        duty that a fallback plan exists (maintain_fallback_plan), not as authority to activate a
+        fallback channel (human decision h2, 2026-10-23). Entities is mapped to
         health_service_operator.
       kind: obligation
       actor: health_service_operator
-      action: activate_fallback_channel
+      action: maintain_fallback_plan
       condition: business continuity plan in place for incidents
     notes: >-
       Binding status: see dha.pp11.applicability. Requires entities to establish continuity and
       recovery plans; the listed plan contents (PDF pages 30-31) do not mention a fallback
-      channel, and it says nothing about who may reverse an automated account lock, or when.
-      Mapping it to `activate_fallback_channel` is an interpretation.
+      channel, and it says nothing about who may reverse an automated account lock, or when. Human
+      decision h2: it supports only that a fallback plan must exist. Authority to activate a
+      fallback channel stays uncertain (requires determination).
 
   - id: dha.pp11.4-18-2
     title: Investigate incidents from discovery, including whether PHI was affected
@@ -60,7 +62,7 @@ clauses:
     issuer: Dubai Health Authority
     jurisdiction: Dubai, UAE
     document_date: "2022-08-10"
-    status: draft
+    status: reviewed
     binding: unknown
     normalized:
       basis: interpreted
@@ -91,7 +93,7 @@ clauses:
     issuer: Dubai Health Authority
     jurisdiction: Dubai, UAE
     document_date: "2022-08-10"
-    status: draft
+    status: reviewed
     binding: unknown
     normalized:
       basis: interpreted
@@ -136,5 +138,6 @@ clauses:
       condition: a breach/incident report under 4.18.4 (dha.pp11.4-18-4)
     notes: >-
       Binding status: see dha.pp11.applicability. The text names "both the UAE Information Office
-      and DHA"; the scenario models only the health-data oversight role, not a separate national
-      data office. The PDF continues with a DHA email address, which is left out here.
+      and DHA"; only DHA (health_data_oversight) is modelled. The UAE Information Office is out of
+      scope for this slice (human decision h2, 2026-10-23). The PDF continues with a DHA email
+      address, which is left out here.
