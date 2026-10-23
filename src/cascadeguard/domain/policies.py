@@ -94,6 +94,8 @@ class PolicyClause(DomainModel):
         if (self.source_file or "").startswith(OCR_DIR) and OCR_FLAG not in (self.notes or ""):
             raise ValueError(f"a clause quoted from an OCR'd copy must say {OCR_FLAG!r} in notes")
         stripped = self.text.strip()
+        if not stripped:
+            raise ValueError("text must not be blank")
         if stripped.startswith(ELISION) or stripped.endswith(ELISION):
             raise ValueError("text must not start or end with an elision")
         return self

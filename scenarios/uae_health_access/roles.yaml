@@ -16,6 +16,13 @@
 #   aggregate_access_impact   counts of affected/locked accounts and affected groups, no identities
 #   public_channel_status     availability of alternative access channels
 #   regulatory_reports        incident reports and notifications submitted to oversight roles
+#
+# Action preconditions the engine checks (Phase 2):
+#   requires_authority    a loaded obligation/permission clause must name the role (or "any");
+#                         a clause with binding: unknown only makes authority uncertain
+#   requires_information  the role must have seen a fact in each listed category
+#   requires_prior        the role must already have had each listed action accepted
+#   uncertain_authority_from  an obligation to a listed action gives only uncertain authority
 
 actions:
   - id: investigate_network_fault
@@ -36,8 +43,17 @@ actions:
     description: Put automated account locks under human review.
   - id: reverse_automated_lockouts
     description: Unlock accounts locked by the fraud-risk model after review.
+    requires_authority: true
+    # Disputing the alert needs evidence that the failure is network-side.
+    requires_information: [network_incident_status]
+    requires_prior: [review_automated_lockouts]
   - id: activate_fallback_channel
     description: Open an alternative access or authentication channel for affected patients.
+    requires_authority: true
+    # A duty to keep a fallback plan does not say who may activate it (human decision h2).
+    uncertain_authority_from: [maintain_fallback_plan]
+  - id: maintain_fallback_plan
+    description: Keep a continuity and recovery (fallback) plan in place for incidents.
   - id: assess_access_impact
     description: Assess which user groups are affected and how, from aggregate data.
   - id: recommend_measure
@@ -46,6 +62,7 @@ actions:
     description: Ask the competent role for a determination (e.g. whether a data share is permitted).
   - id: issue_determination
     description: Issue a determination within the role's own remit.
+    requires_authority: true
   - id: provide_policy_analysis
     description: Give cited analysis of applicable provisions, uncertainty and suspected gaps.
   - id: monitor
@@ -74,6 +91,7 @@ roles:
       - review_automated_lockouts
       - reverse_automated_lockouts
       - activate_fallback_channel
+      - maintain_fallback_plan
       - share_incident_status
       - request_information
       - request_determination
