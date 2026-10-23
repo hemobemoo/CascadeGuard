@@ -108,6 +108,9 @@ class Action(DomainModel):
     requires_information: tuple[str, ...] = ()
     # The acting role must already have had each of these actions accepted.
     requires_prior: tuple[str, ...] = ()
+    # An obligation to one of these actions gives only uncertain authority for this one (e.g. a
+    # duty to keep a fallback plan, but no clause on who may activate it: decision h2).
+    uncertain_authority_from: tuple[str, ...] = ()
 
 
 class Role(DomainModel):
@@ -135,7 +138,7 @@ class RoleSet(DomainModel):
             if unknown:
                 raise ValueError(f"role {role.id} allows unknown actions: {unknown}")
         for action in self.actions:
-            unknown = sorted(set(action.requires_prior) - known)
+            unknown = sorted({*action.requires_prior, *action.uncertain_authority_from} - known)
             if unknown:
                 raise ValueError(f"action {action.id} requires unknown actions: {unknown}")
         return self

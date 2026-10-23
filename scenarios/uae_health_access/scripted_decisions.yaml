@@ -11,9 +11,7 @@ decisions:
     rationale: >-
       SMS latency rose sharply 20 minutes after a traffic-model update; investigate the ML
       pipeline, not only congestion.
-    citations:
-      - clause_id: itu.y3172.req-ml-mng-003
-        relevance: Monitoring the effect of ML on network operations.
+    citations: []  # the ITU requirement is still a draft; investigating needs no authority
     uncertainty:
       - Whether the model update caused the latency.
 
@@ -38,11 +36,10 @@ decisions:
     rationale: >-
       Tell the health portal that OTP delivery is degraded network-side. The status holds no
       personal data.
-    citations:
-      - clause_id: nist.ai-rmf.manage-4-3
-        relevance: Incident communication to relevant AI actors (non-binding precedent).
+    citations: []  # no clause concerns this share; the engine checks the recipient's boundary
     uncertainty:
       - Root cause not yet confirmed.
+      - No clause found that authorises this share.
 
   - role: health_service_operator
     at_minute: 30
@@ -158,9 +155,7 @@ decisions:
       the telecom operator for this incident.
     citations:
       - clause_id: uae.fl2-2019.art6
-        relevance: Authority to set controls on exchanging health data.
-      - clause_id: uae.fl2-2019.art4
-        relevance: Health data may not circulate outside permitted cases.
+        relevance: Authority to set controls on exchanging health data (conditional).
     uncertainty:
       - Whether a minimal status share in the other direction is permitted is not decided here.
 
@@ -173,9 +168,7 @@ decisions:
         parameters: {measure: activate_fallback_channel}
     rationale: >-
       SMS-only users and users over 65 are most affected. Recommend an alternative access channel.
-    citations:
-      - clause_id: mocai.ethics.fallback-plan
-        relevance: AI systems should enable a fallback plan (non-binding guidance).
+    citations: []  # MOCAI fallback guidance concerns the health operator, not this role
     uncertainty: []
 
   - role: policy_legal_adviser

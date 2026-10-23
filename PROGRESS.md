@@ -4,11 +4,12 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 2 — Engine with scripted agents: built on `phase-2-engine`, review loop done (3 rounds),
-PR open, human gates open.**
-Phase 1 (PR #2) stays open until the human has reviewed the core clause set, then merges.
-Phase 2 runs against synthetic fixture clauses (`tests/fixtures/clauses`) while that review is
-pending.
+**Phase 2 — Engine with scripted agents: PR #3 open against `main`, waiting for the human.**
+Phase 1 merged (PR #2, tag `phase-1`) after the human reviewed the core set. Phase 2 now runs on
+the real clause set with a real-corpus golden, plus the synthetic fixture golden. The round-3
+review fixes are covered by tests but were not re-reviewed by an agent (human decision: no fourth
+round; the Phase 3 review loop covers them). The changes for the human decisions of 2026-10-23
+(7n, 7r, 7t/7v, h2, 7m) are also not yet agent-reviewed; Phase 3's review loop covers them.
 
 ## Done
 
@@ -271,9 +272,8 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
 
 ## Next step
 
-1. Phase 2 PR is open (base `phase-1-domain-scenario`). It must not merge while gates are open:
-   7o (fixture-only golden), 194103a confirmation, and the Phase 2 questions 7n, 7q-7v.
-2. The human reviews clauses (core set first) and answers question 7. Merge PR #2 once the core
-   set is reviewed; then retarget the Phase 2 PR to `main`, add the real-corpus golden
-   `scenarios/uae_health_access/expected_baseline.yaml`, and re-run the Phase 2 reviewers.
-3. Phase 3 (repair and replay) starts after the Phase 2 PR merges.
+1. Human: decide whether PR #3 (Phase 2) merges now. The auto-merge rule does not apply: the
+   Phase 2 reviewers did not all PASS (round 3), and the human chose no fourth round.
+2. After PR #3 merges: tag `phase-2`, start Phase 3 (repair and replay) on `phase-3-repair`,
+   and make its review loop cover the unreviewed Phase 2 changes listed under "Current phase".
+3. Open human items are under "Waiting on human" (remaining 20 draft clauses, questions 3a-3x).

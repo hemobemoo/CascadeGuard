@@ -87,13 +87,33 @@ only JSON. Whether untrusted agents must run in a separate process is a question
   clauses' `normalized` readings and binding status, under the same ids. They are labelled
   "SYNTHETIC FIXTURES ... not the real corpus" everywhere. They are for tests only.
 
+## Human decisions applied (2026-10-23)
+
+- **Conditional rules (7t/7v).** A prohibition, safeguard or permission with a `condition` is
+  conditional: the engine cannot evaluate the condition and never decides it is met. A
+  conditional prohibition holds the action as `authority_uncertain` ("requires determination")
+  instead of a flat ban; a conditional permission gives only uncertain authority. Art 4 and Art
+  16 of FL 2/2019 are conditional prohibitions; Art 6 is a conditional permission.
+- **Implied authority (h2).** `roles.yaml` `uncertain_authority_from`: a firm or binding-unknown
+  obligation to one of these actions gives only uncertain authority for this one. A duty to keep
+  a fallback plan (`dha.pp11.4-18-1` -> `maintain_fallback_plan`) does not say who may activate
+  the fallback channel.
+- **Citation scope (7n).** A cited clause must concern the citing role (actor, counterpart or
+  `any`) or one of its actions; `provide_policy_analysis` may cite any loaded clause. A mismatch
+  rejects the decision and is a `citation_out_of_scope` finding.
+- **Gap claims (7r).** A decision whose rationale or uncertainty declares a legal or standards
+  gap without any citation is rejected as `uncited_gap_claim`.
+- **Known limits.** 7q: agents share the Python process; frozen views are the slice's boundary
+  (see "Threat model"). 7s: mandate overlap is not detected until the DHA and PDPL clauses it
+  needs are reviewed; it is never inferred from fixtures.
+
 ## Done when
 
-- `tests/integration/test_baseline.py` reproduces
-  `tests/fixtures/uae_health_access/expected_baseline.yaml` exactly, twice, with the same
-  result.
-- `tests/unit/test_boundaries.py` shows that no role ever sees a fact outside its boundary, and
-  that views hold no state and no mutable containers.
-
-The real-corpus golden `scenarios/uae_health_access/expected_baseline.yaml` is added after the
-human reviews the core clause set (gate 1).
+- `tests/integration/test_real_baseline.py` reproduces
+  `scenarios/uae_health_access/expected_baseline.yaml` exactly on the real clause set (the
+  human-reviewed core set plus the illustrative telecom rules).
+- `tests/integration/test_baseline.py` reproduces the synthetic fixture golden
+  `tests/fixtures/uae_health_access/expected_baseline.yaml` (accepted for Phase 2 by the human,
+  7o), and runs are identical across processes and hash seeds.
+- `tests/unit/test_boundaries.py`, `test_view_isolation.py` and `test_round3_probes.py` show
+  that no role sees a fact or inject text outside its boundary.

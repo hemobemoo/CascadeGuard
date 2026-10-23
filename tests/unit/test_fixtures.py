@@ -25,7 +25,12 @@ def test_fixtures_mirror_the_real_normalized_reading_and_authority() -> None:
     for cid, fixture in fixtures.items():
         source = real[cid]
         guidance = source.binding is False and source.status is not ClauseStatus.ILLUSTRATIVE
-        assert fixture.normalized == (None if guidance else source.normalized), cid
+        # Guidance keeps only safeguard readings (never authority, triggers or bans), so that
+        # citation scope (decision 7n) works the same as with the real clause.
+        keep = not guidance or (
+            source.normalized is not None and source.normalized.kind == "safeguard"
+        )
+        assert fixture.normalized == (source.normalized if keep else None), cid
         assert (fixture.binding == "unknown") == (source.binding == "unknown"), cid
         n = source.normalized
         if n is not None and n.actor != "any":
