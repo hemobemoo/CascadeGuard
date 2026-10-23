@@ -1,0 +1,305 @@
+[
+  {
+    "source_file": "5 AI RMF Core - Excerpt from the NIST AI Risk Management Framework 1.0 (2023)..pdf",
+    "output": "5 AI RMF Core - Excerpt from the NIST AI Risk Management Framework 1.0 (2023)..jsonl",
+    "page_count": 10,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261019210633+00'00'"
+    }
+  },
+  {
+    "source_file": "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
+    "output": "887026278-TDRA-Telecom-Law-Final-English-o.jsonl",
+    "page_count": 47,
+    "pages_without_text": [
+      4,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "TDRA telecom law_Final_english_o",
+      "CreationDate": "D:20220228045308Z"
+    }
+  },
+  {
+    "source_file": "AI-Adoption-Guideline-in-Government-Services-Eng.pdf",
+    "output": "AI-Adoption-Guideline-in-Government-Services-Eng.jsonl",
+    "page_count": 65,
+    "pages_without_text": [
+      2,
+      5,
+      56,
+      59,
+      62,
+      65
+    ],
+    "image_pages_without_text": [
+      2,
+      5,
+      56,
+      59,
+      62,
+      65
+    ],
+    "metadata": {
+      "CreationDate": "D:20230504120349+03'00'"
+    }
+  },
+  {
+    "source_file": "AIGuide_EN_v1-online.pdf",
+    "output": "AIGuide_EN_v1-online.jsonl",
+    "page_count": 39,
+    "pages_without_text": [
+      1
+    ],
+    "image_pages_without_text": [
+      1
+    ],
+    "metadata": {
+      "CreationDate": "D:20200209134356+04'00'"
+    }
+  },
+  {
+    "source_file": "Artificial Intelligence Ethics and International Law - 2nd -- Abhivardhan --.pdf",
+    "output": "Artificial Intelligence Ethics and International Law - 2nd -- Abhivardhan --.jsonl",
+    "page_count": 270,
+    "pages_without_text": [
+      1,
+      2,
+      4,
+      182,
+      256
+    ],
+    "image_pages_without_text": [
+      1,
+      2,
+      182,
+      256
+    ],
+    "metadata": {
+      "Title": "Artificial Intelligence Ethics and International Law - 2nd Edition: Practical approaches to AI governance",
+      "Author": "Abhivardhan;",
+      "CreationDate": "D:20261006025021+00'00'"
+    }
+  },
+  {
+    "source_file": "Dubai Law No. (26) of 2015.pdf",
+    "output": "Dubai Law No. (26) of 2015.jsonl",
+    "page_count": 9,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "Law No. (26) of 2015 Regulating Data Dissemination and Exchange in the Emirate of Dubai",
+      "Author": "Momar",
+      "CreationDate": "D:20230817133201+04'00'"
+    }
+  },
+  {
+    "source_file": "EU AI Act, Regulation (EU) 2024-1689.pdf",
+    "output": "EU AI Act, Regulation (EU) 2024-1689.jsonl",
+    "page_count": 144,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence and amending Regulations (EC) No 300/2008, (EU) No 167/2013, (EU) No 168/2013, (EU) 2018/858, (EU) 2018/1139 and (EU) 2019/2144 and Directives 2014/90/EU, (EU) 2016/797 and (EU) 2020/1828 (Artificial Intelligence Act)Text with EEA relevance.",
+      "Author": "Publications Office of the European Union L-2985 Luxembourg LUXEMBOURG",
+      "CreationDate": "D:20240711144717+02'00'"
+    }
+  },
+  {
+    "source_file": "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf",
+    "output": "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.jsonl",
+    "page_count": 29,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Author": "Buthaina Alremeithi",
+      "CreationDate": "D:20240124101404+04'00'"
+    }
+  },
+  {
+    "source_file": "GDPR-Regulation (EU) 2016-679.pdf",
+    "output": "GDPR-Regulation (EU) 2016-679.jsonl",
+    "page_count": 78,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "CL2016R0679EN0000020.0001.3bi_cp 1..1",
+      "Author": "Publications Office",
+      "CreationDate": "D:201806041455+05'30'"
+    }
+  },
+  {
+    "source_file": "Health Data Protection and Confidentiality Policy_EN2022810559.pdf",
+    "output": "Health Data Protection and Confidentiality Policy_EN2022810559.jsonl",
+    "page_count": 50,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "Subject: Developing Policies and Procedures",
+      "Author": "Dr.Abod",
+      "CreationDate": "D:20240930125111+04'00'"
+    }
+  },
+  {
+    "source_file": "MOCAI-AI-Ethics-EN-1.pdf",
+    "output": "MOCAI-AI-Ethics-EN-1.jsonl",
+    "page_count": 25,
+    "pages_without_text": [
+      25
+    ],
+    "image_pages_without_text": [
+      25
+    ],
+    "metadata": {
+      "CreationDate": "D:20221221121227+04'00'"
+    }
+  },
+  {
+    "source_file": "OCED-Towards a common reporting framework for AI incidents.pdf",
+    "output": "OCED-Towards a common reporting framework for AI incidents.jsonl",
+    "page_count": 27,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "Towards a common reporting framework for AI incidents (EN)",
+      "Author": "OECD",
+      "CreationDate": "D:20250304114739+01'00'"
+    }
+  },
+  {
+    "source_file": "Responsible-Metaverse-Self-governance-Framework-2023-EN.pdf",
+    "output": "Responsible-Metaverse-Self-governance-Framework-2023-EN.jsonl",
+    "page_count": 35,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20231004093900+04'00'"
+    }
+  },
+  {
+    "source_file": "T-AI4G-AI4GOOD-2025-6-PDF-E.pdf",
+    "output": "T-AI4G-AI4GOOD-2025-6-PDF-E.jsonl",
+    "page_count": 55,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "AI Ready – Analysis Towards a Standardized Readiness Framework",
+      "Author": "ITU",
+      "CreationDate": "D:20260113114628+01'00'"
+    }
+  },
+  {
+    "source_file": "T-REC-Y.3172-201906-I!!PDF-E.pdf",
+    "output": "T-REC-Y.3172-201906-I!!PDF-E.jsonl",
+    "page_count": 34,
+    "pages_without_text": [
+      6,
+      32,
+      33
+    ],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "ITU-T Rec. Y.3172 (06/2019) Architectural framework for machine learning in future networks including IMT-2020 ",
+      "Author": "ITU-T ",
+      "CreationDate": "D:20190807092016+02'00'"
+    }
+  },
+  {
+    "source_file": "The Oxford Handbook of AI Governance (Oxford Handbooks) -- Justin B. Bullock (editor), Yu-Che Chen (editor), Johannes --.pdf",
+    "output": "The Oxford Handbook of AI Governance (Oxford Handbooks) -- Justin B. Bullock (editor), Yu-Che Chen (editor), Johannes --.jsonl",
+    "page_count": 1006,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20240304172523-05'00'"
+    }
+  },
+  {
+    "source_file": "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf",
+    "output": "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..jsonl",
+    "page_count": 7,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261019230628+00'00'"
+    }
+  },
+  {
+    "source_file": "UAE Policy Foundation.pdf",
+    "output": "UAE Policy Foundation.jsonl",
+    "page_count": 16,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261017213054+00'00'"
+    }
+  },
+  {
+    "source_file": "UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf",
+    "output": "UAE-National-Strategy-for-Artificial-Intelligence-2031.jsonl",
+    "page_count": 25,
+    "pages_without_text": [
+      1,
+      25
+    ],
+    "image_pages_without_text": [
+      1,
+      25
+    ],
+    "metadata": {
+      "CreationDate": "D:20181126100827+04'00'"
+    }
+  },
+  {
+    "source_file": "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf",
+    "output": "887026278-TDRA-Telecom-Law-Final-English-o.ocr.jsonl",
+    "page_count": 47,
+    "pages_without_text": [
+      4
+    ],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "TDRA telecom law_Final_english_o",
+      "CreationDate": "D:20220228045308Z"
+    },
+    "ocr": true,
+    "derived_from": "887026278-TDRA-Telecom-Law-Final-English-o.pdf"
+  }
+]

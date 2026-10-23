@@ -1,0 +1,123 @@
+# Telecom regime. The original Telecom Law PDF has extractable text only on pages 1-12 (except
+# the title page 4); pages 13-47 return no text. An OCR'd copy supplied by the human
+# (policies/sources/ocr/, a derived source) covers them; any quote from it is corrected against
+# the page image and flagged "OCR — check against image". Illustrative clauses are never
+# presented as UAE law.
+clauses:
+  - id: uae.telecom-law.art6
+    title: Establishment of TDRA
+    text: >-
+      It is hereby established an independent public authority, called the
+      “Telecommunications and Digital Government Regulating Authority” [...] for the purpose of
+      carrying out the duties and tasks entrusted to it under this Decree-Law and its [...]
+      Executive Order.
+    source_file: 887026278-TDRA-Telecom-Law-Final-English-o.pdf
+    page: 11
+    article: Article (6)
+    issuer: United Arab Emirates (federal); consolidated English text published by TDRA
+    jurisdiction: UAE
+    document_date: "2022"
+    status: draft
+    binding: true
+    notes: >-
+      Viewer page 11 (printed page 09). Federal Law by Decree No. (3) of 2003 as amended
+      (consolidated 2022). Binding scope:
+      federal law establishing the telecom regulator. The PDF is an English consolidated version;
+      the Arabic text was not checked. The [...] marks skip a footnote marker. Establishes the
+      regulator; its duties are on pages 13-47, which have no text in the original and were
+      checked only in the OCR copy.
+
+  - id: uae.telecom-law.art14-5
+    title: "TDRA competence: rules on requesting information for its activities"
+    text: >-
+      Requesting any information required for the activities of TDRA;
+    source_file: ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf
+    page: 14
+    article: Article (14)(5)
+    issuer: United Arab Emirates (federal); consolidated English text published by TDRA
+    jurisdiction: UAE
+    document_date: "2022"
+    status: draft
+    binding: true
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        Art 14 gives TDRA competence to issue rules regulating information requests and names no
+        addressee or data type in item 5; this is read as a permission for the telecom regulator
+        to request information. No counterpart or data category is inferred.
+      kind: permission
+      actor: telecom_regulator
+      action: request_information
+      condition: >-
+        only as provided in TDRA regulations, instructions or decisions issued under Art 14, which
+        are not in the reviewed corpus
+    notes: >-
+      OCR — check against image. Quoted from the OCR'd copy, viewer page 14 (printed page 12),
+      corrected against the page image of the original PDF; the OCR text runs words together and
+      turns the item marker "5" into "5Requesting". Item 5 of the list governed by the Art 14
+      chapeau: "TDRA shall have the competence to issue Licenses in accordance with the provisions
+      of the Law, as well as issue regulations, instructions, decisions and rules regulating the
+      following:". It is a power to regulate requests, not a stated duty on licensees to answer.
+      Art 14 carries footnotes 1 and 2 (the article was replaced by Decree-Law 5/2008; items 15-23
+      were added by Amendment No. (23) of 2020, and item 5 is not among them). Binding scope:
+      federal law; confers rule-making competence on TDRA (Art 14 chapeau) and imposes no stated
+      duty on licensees; the PDF is an English consolidated version and the Arabic text was not
+      checked. Candidate source for illus.telecom.regulator-information-request. Human decision 7m
+      (2026-10-23): a power to issue rules on requesting information is not a permission to
+      request it in this incident; the reading stays interpreted, with the result "authority
+      uncertain". illus.telecom.regulator-information-request stays loaded.
+
+  - id: illus.telecom.incident-report
+    title: "ILLUSTRATIVE: operator reports a significant network incident to the regulator"
+    text: >-
+      Illustrative rule, not a quotation: a licensed telecom operator reports to the telecom
+      regulator any network incident that significantly degrades a public telecommunications
+      service, within 60 minutes of becoming aware of it.
+    issuer: CascadeGuard scenario (illustrative)
+    jurisdiction: UAE (illustrative)
+    document_date: unknown
+    status: illustrative
+    binding: false
+    normalized:
+      basis: stated
+      kind: obligation
+      actor: telecom_operator
+      action: report_to_telecom_regulator
+      counterpart: telecom_regulator
+      condition: significant degradation of a public telecommunications service
+      deadline_minutes: 60
+    notes: >-
+      Needed so the telecom side has a reporting duty to simulate. No operator
+      incident-reporting duty was found in the reviewed corpus. The Law appears to delegate this
+      to TDRA regulations / the Executive Order (Art 12, Art 14), which are not in the reviewed
+      corpus (candidate finding, not a confirmed gap). Checked in
+      the OCR'd copy against the page images: Art 12 (oversight of the sector and Licensees),
+      Art 13 (ensure Licensees meet quality standards), Art 14(3) (TDRA rules on conditions,
+      level and scope of services, incl. emergency services and quality) and Art 30 (Licensees
+      consider quality needs and non-discrimination) state no incident-reporting duty or
+      deadline. The 60-minute deadline is a scenario assumption.
+
+  - id: illus.telecom.regulator-information-request
+    title: "ILLUSTRATIVE: regulator may request incident information from a licensee"
+    text: >-
+      Illustrative rule, not a quotation: the telecom regulator may request from a licensed
+      operator information about a network incident affecting a public telecommunications
+      service.
+    issuer: CascadeGuard scenario (illustrative)
+    jurisdiction: UAE (illustrative)
+    document_date: unknown
+    status: illustrative
+    binding: false
+    normalized:
+      basis: stated
+      kind: permission
+      actor: telecom_regulator
+      action: request_information
+      counterpart: telecom_operator
+      data_category: network_incident_status
+    notes: >-
+      Gives the regulator its telecom-only remit in the simulation. Art 12, 13, 14(3) and 30 do
+      not state it. Art 14(5) (uae.telecom-law.art14-5, draft) gives TDRA competence to issue
+      rules on "Requesting any information required for the activities of TDRA"; when that
+      clause is reviewed, this illustrative rule can be retired in its favour. Until then the
+      engine keeps this one, because draft clauses are not loaded.

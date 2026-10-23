@@ -1,0 +1,168 @@
+# International precedents and frameworks. None of these is UAE law; they inform gap analysis
+# only (CascadeGuard.md s.7).
+clauses:
+  - id: nist.ai-rmf.govern-2-1
+    title: "NIST AI RMF: roles, responsibilities and lines of communication are documented"
+    text: >-
+      Govern 2.1: Roles and responsibilities and lines of communication related to mapping,
+      measuring, and managing AI risks are documented and are clear to individuals and teams
+      throughout the organization.
+    source_file: 5 AI RMF Core - Excerpt from the NIST AI Risk Management Framework 1.0 (2023)..pdf
+    page: 3
+    article: GOVERN 2.1
+    issuer: US National Institute of Standards and Technology (NIST)
+    jurisdiction: United States (voluntary framework)
+    document_date: "2023"
+    status: draft
+    binding: false
+
+  - id: nist.ai-rmf.manage-2-4
+    title: "NIST AI RMF: assigned responsibility to supersede, disengage or deactivate AI"
+    text: >-
+      Manage 2.4: Mechanisms are in place and applied, and responsibilities are assigned and
+      understood, to supersede, disengage, or deactivate AI systems that demonstrate
+      performance or outcomes inconsistent with intended use.
+    source_file: 5 AI RMF Core - Excerpt from the NIST AI Risk Management Framework 1.0 (2023)..pdf
+    page: 10
+    article: MANAGE 2.4
+    issuer: US National Institute of Standards and Technology (NIST)
+    jurisdiction: United States (voluntary framework)
+    document_date: "2023"
+    status: draft
+    binding: false
+    notes: Precedent for assigning an owner to reverse an automated decision.
+
+  - id: nist.ai-rmf.manage-4-3
+    title: "NIST AI RMF: incidents communicated to relevant AI actors"
+    text: >-
+      Manage 4.3: Incidents and errors are communicated to relevant AI actors, including
+      affected communities. Processes for tracking, responding to, and recovering from
+      incidents and errors are followed and documented.
+    source_file: 5 AI RMF Core - Excerpt from the NIST AI Risk Management Framework 1.0 (2023)..pdf
+    page: 10
+    article: MANAGE 4.3
+    issuer: US National Institute of Standards and Technology (NIST)
+    jurisdiction: United States (voluntary framework)
+    document_date: "2023"
+    status: draft
+    binding: false
+    notes: Precedent for cross-organisation incident communication.
+
+  - id: eu.ai-act.art14-4-d
+    title: "EU AI Act: humans can disregard, override or reverse high-risk AI output"
+    text: >-
+      (d) to decide, in any particular situation, not to use the high-risk AI system or to
+      otherwise disregard, override or reverse the output of the high-risk AI system;
+    source_file: EU AI Act, Regulation (EU) 2024-1689.pdf
+    page: 61
+    article: Article 14(4)(d)
+    issuer: European Union
+    jurisdiction: EU
+    document_date: "2024-06-13"
+    status: draft
+    binding: false
+    notes: >-
+      Binding in the EU for high-risk AI systems; not binding in the UAE. Precedent for a
+      human able to reverse an automated lockout. Qualified by the Art 14(4) chapeau (PDF page
+      60): the system "shall be provided to the deployer in such a way that natural persons to
+      whom human oversight is assigned are enabled, as appropriate and proportionate". It is a
+      design duty on the provider, not a free-standing right to reverse.
+
+  - id: eu.ai-act.art73-1
+    title: "EU AI Act: providers report serious incidents"
+    text: >-
+      1. Providers of high-risk AI systems placed on the Union market shall report any serious
+      incident to the market surveillance authorities of the Member States where that incident
+      occurred.
+    source_file: EU AI Act, Regulation (EU) 2024-1689.pdf
+    page: 101
+    article: Article 73(1)
+    issuer: European Union
+    jurisdiction: EU
+    document_date: "2024-06-13"
+    status: draft
+    binding: false
+    notes: Not binding in the UAE. Precedent for AI serious-incident reporting.
+
+  - id: eu.ai-act.art73-3
+    title: "EU AI Act: two-day report for critical-infrastructure disruption"
+    text: >-
+      3. Notwithstanding paragraph 2 of this Article, in the event of a widespread infringement
+      or a serious incident as defined in Article 3, point (49)(b), the report referred to in
+      paragraph 1 of this Article shall be provided immediately, and not later than two days
+      after the provider or, where applicable, the deployer becomes aware of that incident.
+    source_file: EU AI Act, Regulation (EU) 2024-1689.pdf
+    page: 102
+    article: Article 73(3)
+    issuer: European Union
+    jurisdiction: EU
+    document_date: "2024-06-13"
+    status: draft
+    binding: false
+    notes: >-
+      Not binding in the UAE. Article 3(49)(b) (PDF page 49) covers "a serious and
+      irreversible disruption of the management or operation of critical infrastructure"; the
+      closest precedent for the telecom-side failure, though a recoverable degradation may not
+      be "irreversible".
+
+  - id: eu.gdpr.art22-3
+    title: "GDPR: human intervention and right to contest automated decisions"
+    text: >-
+      3. In the cases referred to in points (a) and (c) of paragraph 2, the data controller
+      shall implement suitable measures to safeguard the data subject's rights and freedoms and
+      legitimate interests, at least the right to obtain human intervention on the part of the
+      controller, to express his or her point of view and to contest the decision.
+    source_file: GDPR-Regulation (EU) 2016-679.pdf
+    page: 21
+    article: Article 22(3)
+    issuer: European Union
+    jurisdiction: EU
+    document_date: "2016-04-27"
+    status: draft
+    binding: false
+    notes: >-
+      Not binding in the UAE. Precedent for contesting an automated lockout. The PDF is the
+      consolidated text, which states it is a documentation tool with no legal effect (PDF
+      page 1).
+
+  - id: eu.gdpr.art33-1
+    title: "GDPR: breach notification within 72 hours unless unlikely to result in risk"
+    text: >-
+      1. In the case of a personal data breach, the controller shall without undue delay and,
+      where feasible, not later than 72 hours after having become aware of it, notify the
+      personal data breach to the supervisory authority competent in accordance with Article
+      55, unless the personal data breach is unlikely to result in a risk to the rights and
+      freedoms of natural persons.
+    source_file: GDPR-Regulation (EU) 2016-679.pdf
+    page: 29
+    article: Article 33(1)
+    issuer: European Union
+    jurisdiction: EU
+    document_date: "2016-04-27"
+    status: draft
+    binding: false
+    notes: >-
+      Not binding in the UAE. Precedent with an explicit regulator-notification deadline. No
+      explicit regulator-notification deadline was found in the reviewed corpus for UAE health
+      data (see dha.pp11.4-18-4, uae.pdpl.art9-1); candidate finding, not a confirmed gap. The
+      DHA policy does state a risk threshold for informing data subjects (4.18.10, PDF page 33)
+      and "immediately" for processor-to-controller notice (4.18.7). The PDF is the
+      consolidated text, which states it is a documentation tool with no legal effect (PDF
+      page 1).
+
+  - id: oecd.ai-incidents.definition
+    title: "OECD: definition of an AI incident"
+    text: >-
+      An AI incident is an event, circumstance or series of events where the development, use
+      or malfunction of one or more AI systems directly or indirectly leads to any of the
+      following harms: (a) injury or harm to the health of a person or groups of people; (b)
+      disruption of the management and operation of critical infrastructure;
+    source_file: OCED-Towards a common reporting framework for AI incidents.pdf
+    page: 11
+    article: Box 1.1
+    issuer: OECD
+    jurisdiction: International (OECD paper)
+    document_date: "2025-02"
+    status: draft
+    binding: false
+    notes: Common terminology for classifying the scenario's cascade as an AI incident.

@@ -130,21 +130,72 @@ Ask before adding any dependency not listed here.
 - All roles use the same configured model; roles differ by boundary-filtered view,
   allowed action set, and role instructions (stored in the scenario's `roles.yaml`).
 
+## Review loop (independent reviewers)
+
+Three read-only reviewer subagents are defined in `.claude/agents/`:
+
+- `phase-auditor` — phase scope, "Done when" criteria, full checks, rules in this file.
+- `evidence-auditor` — clauses, quotes, `[...]` gaps, pages, `binding`, `normalized`, legal claims;
+  returns a per-clause triage (CLEAN / FIX / NEEDS-HUMAN-JUDGMENT).
+- `test-breaker` — adversarial probes of the boundary, determinism, replay, citations and repairs,
+  and tests that prove nothing (from Phase 2 on).
+
+They are development tooling, not part of the product. The six institutional roles stay code in
+this repository, as `START_PROMPT.md` says.
+
+How to run the loop:
+
+1. Before ending a phase, and after any change to clauses or to `engine/`, `simulation/` or
+   `agents/`, call the relevant reviewers in parallel, each in a fresh context. Give each the
+   phase number and the branch name only. Do not pass your own reasoning or conclusions.
+2. Fix every BLOCKER and MAJOR finding. Record MINOR findings in `PROGRESS.md` if you defer them.
+3. Re-run the reviewers that failed. At most three rounds. If a finding is still open after
+   round three, or you disagree with a reviewer, it becomes a human gate.
+4. Never edit a test, golden file or expected output just to make a reviewer or check pass;
+   explain the change in the commit message and the PR.
+5. Paste each reviewer's final verdict and the evidence triage into the PR body, and save the
+   triage to `docs/review/phase-N-clause-triage.md`.
+
+## Human gates (always stop and ask)
+
+Work without asking unless one of these applies. When one does, record it under
+"Waiting on human" in `PROGRESS.md`, continue with any work it does not block, and raise it in
+the PR or your report.
+
+1. Setting any clause to `status: reviewed`. Only on the human's explicit list of clause IDs,
+   committed as `Reviewed by human: <ids>`.
+2. Any reviewer finding marked QUESTION-FOR-HUMAN or NEEDS-HUMAN-JUDGMENT.
+3. Any dependency not listed in this file.
+4. Anything that costs money (Phase 5 smoke test, model choice, paid services).
+5. Irreversible git actions: force-push, history rewrite, deleting branches or tags, changing
+   repository visibility. Approved one-time exceptions are recorded in `PROGRESS.md`.
+6. Changes to `AGENTS.md`, `START_PROMPT.md`, `CascadeGuard.md`, `.claude/agents/` or `.mcp.json`.
+7. Any policy or standards gap stated as a conclusion in the report, README or demo text.
+8. A requirement that is ambiguous or conflicts with `CascadeGuard.md`.
+
+While a gate blocks real data, build and test against synthetic fixtures under `tests/fixtures/`
+(marked `status: illustrative` and clearly synthetic). Never use fixtures to claim the real
+scenario works.
+
 ## Git workflow
 
 - One branch per phase: `phase-N-<short-name>`. Small, focused commits with clear messages.
   Never push to `main` directly. Exception: if the repository has no commits yet, the first
   commit (existing docs only) goes to `main`.
-- At the end of a phase: run the checks below, update `PROGRESS.md`, push the branch, open a
-  PR with `gh pr create` whose body is the phase report, then stop.
-- After the human approves: merge the PR with `gh pr merge --merge`, tag `main` as `phase-N`,
-  and push the tag.
+- At the end of a phase: run the checks below and the review loop, update `PROGRESS.md`, push
+  the branch, and open a PR with `gh pr create` whose body is the phase report plus the reviewer
+  verdicts.
+- Auto-merge: if all reviewers return PASS, all checks pass, and no human gate is open for this
+  phase, merge with `gh pr merge --merge`, tag `main` as `phase-N`, push the tag, update
+  `PROGRESS.md`, and start the next phase.
+- Otherwise stop after opening the PR and wait for the human.
 - Never commit `.env`, `data/`, secrets, or the two published books and their extracted text.
 - Never touch other repositories.
 
 ## Working rules
 
-- Work in the current phase only (see `START_PROMPT.md`). Stop and report at the end of each phase.
+- Work in the current phase only (see `START_PROMPT.md`). At the end of each phase, report in the
+  PR; stop only if the auto-merge conditions in the git workflow are not met.
 - Keep `PROGRESS.md` current. It is the hand-off between sessions; a new session must read it
   before doing anything. It holds: current phase and status, what is done (with the commands to
   verify it), decisions made and why, open questions for the human, and the exact next step.
@@ -155,6 +206,8 @@ Ask before adding any dependency not listed here.
 - Keep docs short. Update `docs/architecture.md` when structure changes; add an ADR in
   `docs/decisions/` only for a real decision with trade-offs.
 - If a requirement is ambiguous or conflicts with `CascadeGuard.md`, ask. Don't guess silently.
+- Never report something as done, verified or passing unless a command or reviewer in this
+  session showed it. Say "not checked" otherwise.
 
 ## Tools and MCP servers
 

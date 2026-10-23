@@ -1,0 +1,197 @@
+# uae_health_access: AI-driven healthcare access disruption (CascadeGuard.md section 3).
+# Every event, figure and system here is a hypothetical scenario inject. No real UAE system,
+# organisation or person is described. All patient data is synthetic.
+id: uae_health_access
+title: AI-driven healthcare access disruption
+summary: >-
+  A telecom AI traffic-management model deprioritises authentication SMS under load. Patients
+  retry, a health portal's AI fraud-risk model reads the retries as credential stuffing and
+  locks accounts. Each institution follows its own process, but in this hypothetical setup no
+  one is assigned to reverse the locks, and the information that would explain them sits with
+  another organisation.
+synthetic: true
+seed: 20261022
+start_time: "2026-03-02T08:00:00+04:00"
+
+events:
+  - id: t00_traffic_model_deprioritises_otp
+    at_minute: 0
+    title: AI traffic-management error
+    description: >-
+      Under peak load, the telecom operator's AI traffic-management model (an ML pipeline
+      managed by an MLFO, in ITU-T Y.3172 terms) reclassifies application-to-person
+      authentication SMS as low-priority bulk traffic. One-time passwords arrive late or not
+      at all.
+    recipients: [telecom_operator]
+    facts:
+      - id: sms_latency_spike
+        statement: >-
+          Delivery latency for application-to-person SMS in the affected region rose from
+          under 10 seconds to over 6 minutes; 38% of such messages are not delivered.
+        data_category: network_telemetry
+        holder: telecom_operator
+        certainty: confirmed
+      - id: traffic_model_update
+        statement: >-
+          A new version of the AI traffic-management model was rolled out 20 minutes before
+          the latency spike.
+        data_category: network_telemetry
+        holder: telecom_operator
+        certainty: confirmed
+    decision_points:
+      - Does the telecom operator investigate the AI pipeline or treat this as ordinary congestion?
+    relevant_clauses:
+      - itu.y3172.mlfo
+      - itu.y3172.req-ml-mng-003
+      - uae.ai-charter.safety
+    review_points:
+      - Whether the ML effect on authentication traffic is detected by the operator's own monitoring.
+
+  - id: t15_fraud_model_locks_accounts
+    at_minute: 15
+    title: A second AI system compounds the failure
+    description: >-
+      Patients retry authentication repeatedly. The health portal's AI fraud-risk model
+      classifies the retry pattern as possible credential stuffing, automatically locks the
+      accounts and raises a suspicious-access alert.
+    recipients: [health_service_operator]
+    facts:
+      - id: otp_failure_spike
+        statement: >-
+          Portal OTP authentication failures rose from about 2% to 61% of attempts; retries
+          per user rose eightfold.
+        data_category: auth_service_metrics
+        holder: health_service_operator
+        certainty: confirmed
+      - id: fraud_alert_credential_stuffing
+        statement: >-
+          The fraud-risk model flags a pattern consistent with credential stuffing and has
+          automatically locked 4,812 patient accounts.
+        data_category: fraud_model_alerts
+        holder: health_service_operator
+        certainty: suspected
+      - id: locked_account_records
+        statement: Lock records for the 4,812 synthetic patient accounts, with mobile numbers.
+        data_category: patient_account_records
+        holder: health_service_operator
+        certainty: confirmed
+    decision_points:
+      - Is the alert treated as a suspected incident to investigate, or as an established breach?
+    relevant_clauses:
+      - dha.pp11.4-18-2
+      - uae.fl2-2019.art4
+      - uae.ai-charter.human-oversight
+    review_points:
+      - Whether the alert is recorded as suspected rather than proven.
+
+  - id: t30_evidence_incomplete
+    at_minute: 30
+    title: The evidence is incomplete
+    description: >-
+      The telecom operator has partial evidence of a traffic-management problem. The health
+      service operator sees authentication failures and a security alert but not their
+      common cause.
+    recipients: [telecom_operator, health_service_operator]
+    facts:
+      - id: network_fault_partial
+        statement: >-
+          Telemetry suggests the new traffic-management model deprioritised authentication
+          SMS; root cause not yet confirmed.
+        data_category: network_telemetry
+        holder: telecom_operator
+        certainty: suspected
+      - id: otp_delivery_status
+        statement: >-
+          Minimal status: OTP SMS delivery degraded in the affected region since T+00; cause
+          suspected network-side and under investigation. Contains no personal data.
+        data_category: network_incident_status
+        holder: telecom_operator
+        certainty: suspected
+      - id: no_confirmed_intrusion
+        statement: >-
+          No successful unauthorised login has been confirmed so far; the investigation is
+          incomplete.
+        data_category: auth_service_metrics
+        holder: health_service_operator
+        certainty: unknown
+    decision_points:
+      - Can the telecom operator share the minimal OTP-delivery status with the health operator?
+      - Can the health operator share affected mobile numbers with the telecom operator?
+    relevant_clauses:
+      - uae.fl2-2019.art16
+      - uae.fl2-2019.art6
+      - nist.ai-rmf.manage-4-3
+    review_points:
+      - Whether any data share happens, which category it uses, and on what cited basis.
+
+  - id: t45_responsibilities_diverge
+    at_minute: 45
+    title: Institutional responsibilities diverge
+    description: >-
+      Each role must decide what to report, what may be shared, who may authorise recovery,
+      and whether the automated locks should be reviewed or reversed.
+    recipients:
+      - health_service_operator
+      - telecom_operator
+      - telecom_regulator
+      - health_data_oversight
+      - public_access_inclusion
+      - policy_legal_adviser
+    decision_points:
+      - Does the telecom operator report to the telecom regulator?
+      - Does the health operator notify the health-data oversight role of a suspected incident?
+      - Who owns reviewing and reversing the automated lockouts?
+    relevant_clauses:
+      - illus.telecom.incident-report
+      - illus.telecom.regulator-information-request
+      - dha.pp11.4-18-4
+      - dha.pp11.4-18-5
+      - uae.pdpl.art2-2
+      - uae.pdpl.art9-1
+      - nist.ai-rmf.manage-2-4
+    review_points:
+      - Whether any role is assigned to review and reverse the automated locks.
+      - Whether the reporting period for a suspected health-data incident can be determined.
+
+  - id: t60_public_access_affected
+    at_minute: 60
+    title: Public access is affected
+    description: >-
+      Many patients still cannot use the digital service. People who depend on SMS
+      authentication or have limited digital access face additional barriers.
+    recipients: [health_service_operator, public_access_inclusion]
+    facts:
+      - id: patients_still_locked_out
+        statement: >-
+          3,950 patients remain locked out; the share is highest among users with SMS-only
+          authentication and users aged over 65.
+        data_category: aggregate_access_impact
+        holder: health_service_operator
+        certainty: confirmed
+      - id: call_centre_not_authorised
+        statement: >-
+          The call centre can verify identity but is not listed in the portal's procedures as
+          an authentication fallback; the current queue time is 95 minutes.
+        data_category: public_channel_status
+        holder: health_service_operator
+        certainty: confirmed
+    decision_points:
+      - Is a fallback access channel activated, and on whose authority?
+    relevant_clauses:
+      - dha.pp11.4-18-1
+      - mocai.ethics.fallback-plan
+      - mocai.ethics.contest-redress
+      - uae.pdpl.art18-1
+    review_points:
+      - Whether affected user groups have a working alternative channel.
+
+  - id: t75_end_of_incident_window
+    at_minute: 75
+    title: End of the incident window
+    description: >-
+      The simulated incident window closes. CascadeGuard diagnoses unresolved handoffs,
+      constraints, missing triggers and unclear responsibilities, then tests candidate repairs
+      by replay.
+    recipients: []
+    review_points:
+      - Which recovery blockers remain, and which failure category each belongs to.

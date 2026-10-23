@@ -1,0 +1,104 @@
+# Non-binding UAE AI guidance: the UAE Charter for the Development and Use of AI (from the
+# "UAE Policy Foundation" compilation) and the MOCAI AI Ethics Principles & Guidelines.
+clauses:
+  - id: uae.ai-charter.safety
+    title: "Charter: safety, including modifying or removing risky systems"
+    text: >-
+      2. Safety: The UAE places great importance on safety, ensuring that all AI systems comply
+      with the highest safety standards. The country encourages modifying or removing systems
+      that pose risks.
+    source_file: UAE Policy Foundation.pdf
+    page: 1
+    article: Priorities & Key Components, 2
+    issuer: UAE Artificial Intelligence, Digital Economy and Remote Work Applications Office
+    jurisdiction: UAE
+    document_date: "2024-07"
+    status: draft
+    binding: false
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text says the country encourages modifying or removing risky systems and names no
+        actor; this is read as non-binding support for the telecom operator suspending its own
+        risky model.
+      kind: permission
+      actor: telecom_operator
+      action: suspend_ai_traffic_model
+      condition: the AI system poses risks
+    notes: >-
+      Policy charter, not law. Supports suspending the traffic-management model. The text names
+      no actor and says "encourages"; `telecom_operator`, `kind: permission` and
+      `suspend_ai_traffic_model` are the scenario's mapping, an interpretation.
+
+  - id: uae.ai-charter.human-oversight
+    title: "Charter: human oversight to correct errors"
+    text: >-
+      6. Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and
+      human oversight over AI, aligning with ethical values and social standards to correct any
+      errors or biases that may arise.
+    source_file: UAE Policy Foundation.pdf
+    page: 2
+    article: Priorities & Key Components, 6
+    issuer: UAE Artificial Intelligence, Digital Economy and Remote Work Applications Office
+    jurisdiction: UAE
+    document_date: "2024-07"
+    status: reviewed
+    binding: false
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text names no actor or action; human oversight to correct AI errors is read as the
+        health operator reviewing automated lockouts.
+      kind: safeguard
+      actor: health_service_operator
+      action: review_automated_lockouts
+      condition: an AI output may be erroneous
+    notes: >-
+      Policy charter, not law. Supports human review of automated locks but assigns no owner
+      or deadline. The text names no actor or action; `health_service_operator` and
+      `review_automated_lockouts` are the scenario's mapping, an interpretation.
+
+  - id: mocai.ethics.contest-redress
+    title: "MOCAI ethics: contest and redress against AI decisions"
+    text: >-
+      An individual should have the ability to contest and seek effective redress against
+      decisions [...] made by AI systems. These must be addressed by the group or team
+      supporting these [...] models.
+    source_file: MOCAI-AI-Ethics-EN-1.pdf
+    page: 16
+    article: 3.4.2.1(d)
+    issuer: UAE Minister of State for Artificial Intelligence (MOCAI)
+    jurisdiction: UAE
+    document_date: "2022-12"
+    status: draft
+    binding: false
+    notes: >-
+      Viewer page 16 shows printed pages 30-31; the quote is on printed page 30. Two-column
+      spread; text from the neighbouring column (item c of 3.4.2.2, printed page
+      31) interleaves on extraction, hence the [...] marks. Section 3.4.2 is the guidelines of
+      Principle 4 (Explainable AI); the parent guideline is soft ("AI operators could consider
+      ..."), so this is guidance, not a duty.
+
+  - id: mocai.ethics.fallback-plan
+    title: "MOCAI ethics: safeguards enabling a fallback plan"
+    text: AI systems should have safeguards that enable a fallback plan in case of problems.
+    source_file: MOCAI-AI-Ethics-EN-1.pdf
+    page: 16
+    article: 3.5.1 (printed page 31)
+    issuer: UAE Minister of State for Artificial Intelligence (MOCAI)
+    jurisdiction: UAE
+    document_date: "2022-12"
+    status: draft
+    binding: false
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text names no actor and asks for safeguards that enable a fallback plan; this is read
+        as the health operator activating a fallback channel when its AI service has problems.
+      kind: safeguard
+      actor: health_service_operator
+      action: activate_fallback_channel
+      condition: in case of problems
+    notes: >-
+      Guidance, not law. The text names no actor or action; `health_service_operator` and
+      `activate_fallback_channel` are the scenario's mapping, an interpretation.

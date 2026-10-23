@@ -95,11 +95,12 @@ and `AGENTS.md`): first discard any repair that permits a prohibited action or v
 safeguard; then most critical blockers removed; then fewest repair edits; then tie-breaks
 (no authorization needed first, fewest roles and clauses touched, `repair_id`).
 
-## Phases — stop and report after each one
+## Phases — review, report, and continue or stop
 
-Each report: what was built, how to run it, test results, open questions, and what the next
-phase will do. Deliver it as the PR description (see the git workflow in `AGENTS.md`).
-Wait for approval before continuing.
+Each report: what was built, how to run it, test results, reviewer verdicts, open questions, and
+what the next phase will do. Deliver it as the PR description. Run the review loop in `AGENTS.md`
+before every PR. Continue to the next phase only when the auto-merge conditions in `AGENTS.md` are
+met; otherwise wait for the human.
 
 **Phase 0 — Tooling.** `uv` project on Python 3.12, Ruff, Pyright, pytest, `.gitignore`
 (including the two published books and their extracted text), `.env.example` with the
@@ -126,8 +127,9 @@ assuming Federal Decree-Law No. 45 of 2021 applies (see `CascadeGuard.md` §7).
 
 1e. *Clause drafts.* Draft YAML clauses in `policies/reviewed/` only for the provisions the
 scenario needs, quoting text verbatim from the extracted pages, with `source_file`, `page`,
-and `article`, and `status: draft`. Then STOP and give me a review list
-(clause id → PDF → page) so I can verify each one and mark it `reviewed`.
+and `article`, and `status: draft`. Run `evidence-auditor`, fix what it finds, then STOP and give me a review
+list (clause id → PDF → viewer page) ordered by its triage, NEEDS-HUMAN-JUDGMENT first, so I can
+verify each one and give you the IDs to mark `reviewed`.
 Any rule the scenario needs that no PDF supports must be labelled `illustrative`,
 and listed separately in your report.
 
