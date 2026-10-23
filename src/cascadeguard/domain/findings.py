@@ -24,6 +24,7 @@ class LogEntry(DomainModel):
     role: str | None = None
     action: str | None = None
     target: str | None = None
+    data_category: str | None = None  # the category a share or request touches
     detail: str = ""
     reasons: tuple[str, ...] = ()  # rejection reason codes
     clause_ids: tuple[str, ...] = ()
