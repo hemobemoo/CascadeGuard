@@ -30,6 +30,7 @@ cascadeguard/
 ├── docs/                             no separate agent-rules or MCP-rules files here
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
+│   ├── policy-inventory.md           [P1] table of the 19 PDFs (pages, text, issuer, date)
 │   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor
 │   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
 │
@@ -44,6 +45,7 @@ cascadeguard/
 │   ├── cli.py                        [P0] stub; [P2] `cascadeguard run <scenario> [--repair <id>]`
 │   │
 │   ├── domain/                       [P1] Pydantic v2 models only — no logic, no I/O
+│   │   ├── base.py                   DomainModel base (frozen, strict)
 │   │   ├── scenario.py               Scenario, TimelineEvent, Role, InformationBoundary
 │   │   ├── policies.py               PolicyClause, Obligation, Prohibition, Safeguard, Provenance
 │   │   ├── decisions.py              AgentDecision, ProposedAction, Citation
@@ -55,6 +57,7 @@ cascadeguard/
 │   │   └── retrieval.py              [P5] clause lookup for LLM agents (keyword first; embeddings only if needed)
 │   │
 │   ├── simulation/                   [P2]
+│   │   ├── loader.py                 [P1] load + validate scenario, roles, clause references
 │   │   ├── state.py                  canonical state + append-only event log
 │   │   ├── boundaries.py             what each role is allowed to see at time t
 │   │   ├── orchestrator.py           deterministic code (not an agent): advances the timeline;
@@ -74,7 +77,8 @@ cascadeguard/
 │   │   └── cache.py                  [P5] record/replay cache keyed by hash(role, view, prompt version, model id)
 │   │
 │   ├── storage/
-│   │   └── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
+│   │   ├── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
+│   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
 │   │
 │   ├── ui/                           [P4] NiceGUI (no separate frontend)
 │   │   ├── app.py
@@ -88,6 +92,7 @@ cascadeguard/
 ├── policies/
 │   ├── sources/                      [P0] the 19 original PDFs — never modified; engine never reads them
 │   │   └── web/                      [later] Firecrawl/web material — unverified, with URL + retrieval date
+│   ├── approvals.yaml                [P3] digests of human-approved reviewed clauses (gate 1)
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
@@ -101,6 +106,8 @@ cascadeguard/
 │       ├── roles.yaml                the six institutional roles + information boundaries
 │       ├── scripted_decisions.yaml   [P2] decisions used by ScriptedAgent
 │       ├── expected_baseline.yaml    golden: the failure that MUST reproduce
+│       ├── expected_repairs.yaml     [P3] golden: ranked search + one successful and one
+│       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
 │       └── README.md                 plain-language narrative of the incident
 │
 ├── data/                             gitignored — DuckDB file, LLM cache, exports
@@ -109,8 +116,10 @@ cascadeguard/
     ├── fixtures/                     [P2+] synthetic clauses (status illustrative) for building while review is pending
     ├── unit/                         [P0+] (P0: one empty test so the checks run)
     ├── integration/                  [P2+] full loop with ScriptedAgent
-    ├── golden/                       [P3] baseline + replay outputs must match snapshots
+    ├── golden/                       [not used] the P3 goldens live under scenarios/
     └── e2e/                          [later] Playwright smoke test of the demo flow
+
+CI: .github/workflows/checks.yml [P3] runs `uv sync` and the full check command.
 
 Deferred until the core loop works: api/ (NiceGUI already runs on FastAPI),
 docker/, web ingestion scripts, docs/threat-model.md, Playwright e2e,
