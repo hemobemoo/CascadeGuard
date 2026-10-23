@@ -27,6 +27,7 @@ from cascadeguard.domain.decisions import Citation
 from cascadeguard.domain.findings import FailureCategory, LogEntry
 from cascadeguard.domain.policies import ClauseStatus, RuleKind
 from cascadeguard.domain.repairs import (
+    DETERMINATION_ACTION,
     FALLBACK_ACTION,
     RepairEdit,
     RepairOperationType,
@@ -368,13 +369,18 @@ def _needs_authorization(edit: RepairEdit, rules: RuleBook, roles: RoleSet) -> b
     op = edit.operation
     if op is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
         return not _share_basis(edit, rules, roles)
-    if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
-        return False  # a duty to ask for a determination grants no permission
-    assert edit.action is not None
-    spec = roles.action(edit.action)
+    # A requester's rule is an obligation to request_determination; like any obligation it
+    # gives authority, so it needs authorization if that action requires authority.
+    action = (
+        DETERMINATION_ACTION
+        if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER
+        else edit.action
+    )
+    assert action is not None
+    spec = roles.action(action)
     if not spec.requires_authority:
         return False
-    authority, supporting = rules.authority(edit.role, edit.action, spec.uncertain_authority_from)
+    authority, supporting = rules.authority(edit.role, action, spec.uncertain_authority_from)
     reviewed = any(
         rules.clauses[c].status is ClauseStatus.REVIEWED and rules.clauses[c].binding is True
         for c in supporting

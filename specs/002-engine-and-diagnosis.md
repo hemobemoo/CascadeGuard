@@ -111,7 +111,10 @@ only JSON. Whether untrusted agents must run in a separate process is a question
   regulations", ...) rejects the decision as `uncited_gap_claim`, whatever else it says, so a
   negated or paraphrased qualifier cannot pass; a claim statement that asserts certainty
   ("confirmed", "definitively", ...) is `overstated_gap_claim`. The broad pattern may reject
-  harmless wording; that is the intended trade-off (Phase 3 review rounds 1-2).
+  harmless wording; that is the intended trade-off (Phase 3 review rounds 1-2). No word list
+  catches every paraphrase, so agent free text is also never trusted: the log and the audit
+  store keep a rationale only under the label "agent statement (unverified; not a finding or a
+  legal conclusion)", and only GapClaims become (candidate) findings (round 3).
 - **Citable clauses.** A citation must be a loaded clause that is also in the corpus
   (`policies/reviewed/`); hypothetical repair rules loaded in a replay are `unknown_citation`.
 - **Known limits.** 7q: agents share the Python process; frozen views are the slice's boundary

@@ -4,10 +4,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 3 — Repair and replay: branch `phase-3-repair`, review loop running.** Phase 2 merged
-(PR #3, tag `phase-2`) on 2026-10-23. The Phase 3 review loop's first round also covers the
-Phase 2 commits no reviewer re-checked: 9bdd45a (round-3 fixes) and 392f162 (decisions 7n, 7r,
-7t, 7v, h2).
+**Phase 3 — Repair and replay: PR open against `main`, waiting for the human.** The review loop
+ran three rounds (first round also covered Phase 2 commits 9bdd45a and 392f162). Final verdicts:
+evidence-auditor PASS (round 1), phase-auditor PASS (round 2), test-breaker FAIL (round 3). The
+round-3 findings were fixed after the last allowed round and are covered by mutation-checked
+tests but not re-reviewed; they are human gates (item 5 under "Waiting on human").
 
 ## Done
 
@@ -261,6 +262,15 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   GapClaim), and a reviewed share clause naming only one sender no longer exempts a share.
   `RepairProposal.requires_authorization` is computed by the engine (`proposal()`); replay
   does not use it.
+- **Phase 3 review round 3 (2026-10-23, last round).** test-breaker FAIL: BLOCKER, an agent
+  could still state a legal gap in free text with wording the gap pattern misses ("UAE law
+  lacks any provision ...", "the legislation is entirely mute ...") and it was stored unlabelled
+  in the log and audit store; MINOR, a decision-requester repair was never marked
+  requires_authorization even if requesting needed authority. Fixed after the round, not
+  re-reviewed: agent rationales are stored only under the fixed label "agent statement
+  (unverified; not a finding or a legal conclusion)"; only GapClaims become candidate findings;
+  the requester goes through the same authority check. Mutation-checked. Remaining
+  QUESTION-FOR-HUMAN items: 4a, 4b, and new 4e (new conflicts do not lower the rank).
 - **`RepairProposal` shape (Phase 3 decision).** `operation`/`applies_to`/`parameters` became
   `edits: tuple[RepairEdit, ...]`, because the ranking counts repair edits and a repair can need
   two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
@@ -348,6 +358,13 @@ needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Stil
       `uae.ai-charter.safety` maps "encourages" to a permission; `uae.telecom-law.art14-5`
       mapping note says "read as a permission" while 7m says it is not one in this incident;
       `dha.pp11.4-18-5` actor comes from 4.18.4 (3p); `dha.pp11.applicability` binding (3d/3e).
+   e. Repairs that introduce a new conflict rank above clean partial repairs when they remove
+      more blockers (e.g. fallback + requester above owner + trigger). AGENTS.md's ranking does
+      not mention new conflicts; CascadeGuard.md section 6 calls such a repair "failed". Should a
+      new conflict lower the rank (or discard the repair)?
+5. **Phase 3 gate (review loop exhausted, round 3):** the free-text gap-claim BLOCKER is fixed by
+   labelling agent text as unverified and allowing gaps only as structured GapClaims, rather than
+   by detecting every wording. Accept this approach, or ask for another review round.
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -367,9 +384,7 @@ needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Stil
 
 ## Next step
 
-1. Finish the Phase 3 review loop (phase-auditor, test-breaker, evidence-auditor), with the
-   Phase 2 commits 9bdd45a and 392f162 in the first round; fix BLOCKER/MAJOR findings; open the
-   Phase 3 PR with the verdicts.
-2. Human, at the end of Phase 3: answer 3a-3f, 3i-3k, 3p together; review the remaining 20
-   drafts when convenient (no Phase 3 repair needs one).
-3. Then Phase 4 (NiceGUI demo UI).
+1. Human: review the Phase 3 PR; answer "Waiting on human" items 3a-3f, 3i-3k, 3p, 4a-4e and 5
+   together; confirm the AGENTS.md gate-1 change (4c); decide whether the PR merges. Auto-merge
+   does not apply (test-breaker FAIL in round 3; human gates open).
+2. After merge: tag `phase-3`; start Phase 4 (NiceGUI demo UI) on `phase-4-ui`.
