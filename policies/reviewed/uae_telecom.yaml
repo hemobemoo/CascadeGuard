@@ -48,18 +48,24 @@ clauses:
       kind: permission
       actor: telecom_regulator
       action: request_information
+      condition: >-
+        only as provided in TDRA regulations, instructions or decisions issued under Art 14, which
+        are not in the reviewed corpus
     notes: >-
       OCR — check against image. Quoted from the OCR'd copy, viewer page 14 (printed page 12),
-      corrected against the page image of the original PDF; the OCR text runs words together
-      and turns the item marker "5" into "5Requesting". Item 5 of the list governed by the Art
-      14 chapeau: "TDRA shall have the competence to issue Licenses in accordance with the
-      provisions of the Law, as well as issue regulations, instructions, decisions and rules
-      regulating the following:". It is a power to regulate requests, not a stated duty on
-      licensees to answer. Art 14 carries footnotes 1 and 2 (the article was replaced by
-      Decree-Law 5/2008; items 15-23 were added by Amendment No. (23) of 2020, and item 5 is not
-      among them). Binding scope: federal law; the PDF is an English
-      consolidated version and the Arabic text was not checked. Candidate source for
-      illus.telecom.regulator-information-request.
+      corrected against the page image of the original PDF; the OCR text runs words together and
+      turns the item marker "5" into "5Requesting". Item 5 of the list governed by the Art 14
+      chapeau: "TDRA shall have the competence to issue Licenses in accordance with the provisions
+      of the Law, as well as issue regulations, instructions, decisions and rules regulating the
+      following:". It is a power to regulate requests, not a stated duty on licensees to answer.
+      Art 14 carries footnotes 1 and 2 (the article was replaced by Decree-Law 5/2008; items 15-23
+      were added by Amendment No. (23) of 2020, and item 5 is not among them). Binding scope:
+      federal law; confers rule-making competence on TDRA (Art 14 chapeau) and imposes no stated
+      duty on licensees; the PDF is an English consolidated version and the Arabic text was not
+      checked. Candidate source for illus.telecom.regulator-information-request. Human decision 7m
+      (2026-10-23): a power to issue rules on requesting information is not a permission to
+      request it in this incident; the reading stays interpreted, with the result "authority
+      uncertain". illus.telecom.regulator-information-request stays loaded.
 
   - id: illus.telecom.incident-report
     title: "ILLUSTRATIVE: operator reports a significant network incident to the regulator"

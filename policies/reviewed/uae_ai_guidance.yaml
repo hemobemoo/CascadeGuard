@@ -42,7 +42,7 @@ clauses:
     issuer: UAE Artificial Intelligence, Digital Economy and Remote Work Applications Office
     jurisdiction: UAE
     document_date: "2024-07"
-    status: draft
+    status: reviewed
     binding: false
     normalized:
       basis: interpreted

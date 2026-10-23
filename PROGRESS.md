@@ -153,6 +153,36 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   waits for the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+- **Human decisions, 2026-10-23 (answers to "Waiting on human"):**
+  - Core set **reviewed** (`status: reviewed`, commit "Reviewed by human: ..."):
+    `uae.fl2-2019.art2`, `uae.pdpl.art2-2`, `uae.fl2-2019.art4`, `uae.fl2-2019.art16`,
+    `uae.fl2-2019.art6`, `dha.pp11.4-18-2`, `dha.pp11.4-18-4`, `dha.pp11.4-18-1`,
+    `uae.ai-charter.human-oversight`. The two telecom rules stay illustrative. The human's
+    changes below were applied to these clauses before they were marked reviewed.
+  - Commit 194103a confirmed: the rule changes, including auto-merge, are the approved ones.
+  - 7o: the fixture-based golden is accepted for Phase 2, labelled synthetic; the real-corpus
+    golden is added after the core-set review.
+  - 7n: a citation must concern the citing role or its action; a mismatch rejects the decision
+    and is a finding.
+  - 7q: no separate process; frozen read-only views suffice for this slice (known limit).
+  - 7r: reject legal-gap claims made without citations.
+  - 7s: mandate-overlap detection waits for reviewed DHA and PDPL clauses; never inferred from
+    fixtures.
+  - 7t/7v: Art 4 and Art 16 are conditional prohibitions, not a flat ban. Where a permission or
+    exception depends on conditions the engine cannot evaluate, the result is "authority
+    uncertain - requires determination"; the engine never decides a condition is met.
+  - 7u: `binding: unknown` on illustrative clauses is for fixtures only; a test keeps real
+    clauses from it unless a human sets it.
+  - 7m: a power to issue rules on requesting information is not a permission to request it in
+    this incident; `uae.telecom-law.art14-5` stays interpreted with "authority uncertain"; the
+    illustrative rule stays loaded.
+  - h2: `dha.pp11.4-18-1` supports "a fallback plan must exist" (`maintain_fallback_plan`), not
+    authority to activate it; activation authority is uncertain. `dha.pp11.4-18-5` models DHA
+    only; the UAE Information Office is out of scope for this slice.
+  - 7l: the human contacts GitHub Support about `refs/pull/1/head`; done for now.
+  - Phase 2 round-3 fixes: no fourth review round; they are covered by tests but not
+    re-reviewed, and the Phase 3 review loop covers them.
+  - README: one line on source ownership with a link to each official source (added).
 
 ## Approved gate-5 exceptions
 
@@ -183,99 +213,45 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 | `uae.fl2-2019.art6` | Basis for the health-data oversight role's determinations |
 | `dha.pp11.4-18-2` | Alert is investigated as a suspected incident, not a proven breach |
 | `dha.pp11.4-18-4` | Breach-reporting period (unknown: candidate finding) |
-| `dha.pp11.4-18-1` | Continuity plan: basis for a fallback channel |
+| `dha.pp11.4-18-1` | A continuity plan must exist (h2); activation authority uncertain |
 | `uae.ai-charter.human-oversight` | Human oversight principle with no owner (orphan-duty evidence) |
 | `illus.telecom.incident-report` | Already illustrative: telecom reporting duty |
 | `illus.telecom.regulator-information-request` | Already illustrative: regulator's telecom remit |
 
 ## Waiting on human
 
-1. ~~Commit the rule-file changes.~~ Done in 194103a ("Add reviewer subagents and human gates"),
-   with the human's explicit approval. phase-auditor asks the human to confirm in PR #2 that the
-   exact diffs to `AGENTS.md`, `START_PROMPT.md` and `.claude/agents/` in 194103a are approved.
-2. ~~Reviewer subagents do not load.~~ They load now. The Phase 1 review loop ran three rounds
-   (2026-10-22/23): phase-auditor **PASS**; evidence-auditor **FAIL with no BLOCKER/MAJOR**, only
-   question 7h (since decided as 5h) and MINORs. Verdicts in `docs/review/phase-1-clause-triage.md` and PR #2.
-3. **Clause review** of the 29 drafts (28 + `uae.telecom-law.art14-5`, flagged "OCR — check
-   against image"), in the order of `docs/review/phase-1-clause-triage.md` (minimal core set
-   first). The human is reviewing in parallel with Phase 2 and will give the clause IDs to set to
-   `status: reviewed`. **Merge PR #2 once the core set is reviewed** (human instruction,
-   2026-10-23); not before.
-4. ~~Issuer of "UAE Policy Foundation.pdf".~~ Decided; see Decisions.
-5. ~~Book history purge.~~ Done; see "Approved gate-5 exceptions". Residual: question 7l.
-6. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
+Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human decisions,
+2026-10-23"). Still open:
+
+1. **Clause review** of the remaining 20 drafts (all clauses outside the core set, including
+   `uae.telecom-law.art14-5`, flagged "OCR - check against image"), in the order of
+   `docs/review/phase-1-clause-triage.md`.
+2. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
    Directive on Automated Decision-Making; Singapore's Model AI Governance Framework (incl. agentic
    AI); WHO guidance on AI for health; NCEMA 7000; Executive Regulation of FL 2/2019.
-7. **Evidence questions (QUESTION-FOR-HUMAN / NEEDS-HUMAN-JUDGMENT)**, detail in the triage file:
+3. **Evidence questions** not yet answered (detail in the triage file):
    a. FL 2/2019: are lock records with mobile numbers "health data and information" (Art 4)?
    b. FL 2/2019: the translation defines "Health Authority" twice; could the portal operator be
-      one? Check the Arabic (affects art6 mapping and Art 16 exception 5).
+      one? Check the Arabic.
    c. PDPL Art 2(2)(e): is FL 2/2019 the health data's own legislation? Is the portal operator
       governmental (exclusion b)?
-   d. Confirm or keep as "treated as applicable": FL 2/2019 and the DHA policy apply to the
-      scenario (README "Applicable health-data regime", Decisions above).
-   e. DHA policy: binding on DHA-licensed private entities? (`binding: unknown` on all DHA clauses.)
-   f. DHA 4.18.4: the policy defines "UAE Data Protection Law" as Decree-Law 45/2021 (§4.2,
-      pp.9-10) but says "the regulation that is more specialized/detailed in health will
-      supersede". Does that precedence rule displace the PDPL-based reporting period for health
-      data, or does the period still come from the PDPL Executive Regulations?
-   g. DHA 4.18.5: who is the "UAE Information Office", and may the mapping keep only DHA?
-   h. ~~`normalized` mapping~~ Decided 2026-10-23: keep the links, add `basis`/`mapping_note`
-      (see Decisions).
-   h2. (from the six-clause re-audit after 5h) `dha.pp11.4-18-1`: may a duty to *establish*
-      continuity/recovery plans be mapped (`interpreted`) to an obligation to *activate* a
-      fallback channel, when plan items aa-hh do not mention one and §4.18 is about reporting
-      data-protection breaches? If not: record "establish plans" and make the fallback
-      illustrative. `dha.pp11.4-18-5`: the text requires notice to "both the UAE Information Office
-      and DHA" but only DHA is modelled; accept, or have the engine mark the duty as only partly
-      discharged?
-   i. DHA PDF footers read "n/52" but the PDF has 50 pages (ends in references 5.23). Is the copy
-      complete? No clause depends on the missing pages.
-   j. `policies/extracted/_inventory.json` (committed) lists the two books' filenames, page counts
-      and PDF Title/Author metadata (no text). Acceptable, or drop the books from the committed
-      inventory?
-   k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py` (P1),
-      `domain/base.py` or `docs/policy-inventory.md`. It is a human-owned file: add them, or keep
-      the note in Decisions?
-   m. `uae.telecom-law.art14-5` (OCR copy): Art 14 gives TDRA power to issue rules on
-      "Requesting any information required for the activities of TDRA"; the clause reads it
-      (`interpreted`) as a permission for the regulator to ask an operator for incident status,
-      inferring counterpart and data category too. Acceptable (5h covers actor/action, and the
-      no-power-to-obligation rule covers obligations only), or record it without the permission
-      reading? Also confirm that citing the derived OCR copy (not the original) is acceptable.
-   n. (Phase 2 test-breaker) Citation scope: should a cited clause have to concern the citing
-      role or action? Today the engine only checks that the clause is loaded (AGENTS.md).
-   o. (Phase 2 phase-auditor) Phase 2 "Done when" names `scenarios/uae_health_access/
-      expected_baseline.yaml`. While gate 1 is open the golden is fixture-based
-      (`tests/fixtures/uae_health_access/expected_baseline.yaml`); the real-corpus golden follows
-      the core-set review. Accept that for the Phase 2 PR?
-   p. (evidence-auditor) Boundary of decision 5h: an `interpreted` reading may infer the actor or
-      action, but not a counterpart, recipient or data category from outside the quote (applied:
-      art14-5 lost its counterpart/data category). `dha.pp11.4-18-4`/`4-18-5` each borrow one
-      element from the other paragraph; the auditor suggests one clause quoting 4.18.4 and 4.18.5
-      together. Confirm the boundary, and whether to merge the two DHA clauses.
-   q. (Phase 2 test-breaker) Threat model: an in-process agent could walk the call stack to reach
-      the state (`specs/002`, "Threat model"). Accept for scripted and JSON-only LLM agents, or
-      require untrusted agents to run in a separate process?
-   r. (Phase 2 test-breaker) Should the engine reject agent text that declares a legal gap without
-      citations and a qualification (AGENTS.md forbids it; the "enforcement in code" list does not
-      cover it)?
-   s. (Phase 2 phase-auditor) Mandate overlap is not detected in Phase 2; defer it until the
-      DHA/PDPL clauses are reviewed?
-   t. (Phase 2 evidence-auditor) The engine reads `uae.fl2-2019.art16` and `art4` as a flat ban on
-      sharing `patient_account_records`; the free-text condition (health purposes, Art 16 item 3)
-      is not evaluated. Is a flat ban the intended reading for this scenario?
-   u. (Phase 2 evidence-auditor) The DHA fixtures are illustrative with `binding: unknown`, which
-      the methodology does not allow in `policies/reviewed` (a test enforces `binding: false`
-      there). Accept this fixture-only exception so fixtures mirror "authority uncertain"?
-   v. (Phase 2 test-breaker, round 3) Authority ignores a permission's `condition`, `counterpart`
-      and `data_category` (e.g. `uae.fl2-2019.art6` lets health-data oversight issue any
-      determination). Should a conditional permission give only "authority uncertain" until
-      conditions are modelled?
-   l. GitHub residual from the book purge: the read-only ref `refs/pull/1/head` still points at
-      the pre-purge commit `9f67523`, whose history contains both books (they stay downloadable
-      through PR #1). Only GitHub Support can remove it. The human decides whether to contact
-      them.
+   d. FL 2/2019 and the DHA policy stay "treated as applicable" (working reading) unless the human
+      confirms them as applicable.
+   e. DHA policy: binding on DHA-licensed private entities? (`binding: unknown` kept.)
+   f. DHA 4.18.4: does the policy's own precedence rule ("the regulation that is more
+      specialized/detailed in health will supersede", section 4.2) displace the PDPL-based
+      reporting period for health data?
+   i. DHA PDF footers read "n/52" but the PDF has 50 pages. Is the copy complete?
+   j. `policies/extracted/_inventory.json` lists the two books' filenames, page counts and
+      Title/Author metadata (no text). Acceptable?
+   k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py`, `domain/base.py`
+      or `docs/policy-inventory.md`. Add them?
+   p. Should `dha.pp11.4-18-4` and `4-18-5` become one clause quoting both paragraphs?
+   w. EUR-Lex lists the EU AI Act as amended by Regulation (EU) 2026/1744 (July 2026). The
+      `eu.ai-act.*` clauses quote the 2024 text in `policies/sources/`. Add the consolidated
+      version and re-check Art 14(4)(d), 73(1), 73(3), or keep the 2024 text as the precedent?
+   x. `AIGuide_EN_v1-online.pdf`: no official source was found for the README sources table.
+      Where does it come from?
 
 ## Deferred MINOR findings (Phase 1 review)
 
