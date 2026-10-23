@@ -15,7 +15,7 @@ class Citation(DomainModel):
 
 class ProposedAction(DomainModel):
     action_type: str  # from the role's allowed action set
-    target: str | None = None  # role, system, or data object acted on
+    target: str | None = None  # a role id; the engine rejects any other target
     # Frozen model, but a dict stays mutable: the engine copies a decision on receipt.
     parameters: dict[str, str] = Field(default_factory=dict[str, str])
 

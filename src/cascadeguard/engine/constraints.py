@@ -37,6 +37,17 @@ OVERSTATED = re.compile(
     re.IGNORECASE,
 )
 AGENT_STATEMENT = "agent statement (unverified; not a finding or a legal conclusion): "
+# Shown instead of an agent string that is not a scenario id (action, role, target, category):
+# agent free text reaches the log, findings and exports only under AGENT_STATEMENT.
+CANDIDATE_GAP_CLAIM = "candidate_gap_claim"
+WITHHELD = "<not a scenario id; agent text withheld>"
+
+
+def agent_statement(text: str) -> str:
+    """Agent free text under the fixed label, on one line (no forged log or CLI lines)."""
+    return AGENT_STATEMENT + " ".join(text.split())
+
+
 REQUIRES_DETERMINATION = (
     "authority uncertain - requires determination (the clause depends on a condition the engine "
     "cannot evaluate; it never decides the condition is met)"
@@ -305,7 +316,7 @@ class ConstraintEngine:
         state = self.state
         try:
             if type(decision) is not AgentDecision:
-                raise TypeError(f"expected AgentDecision, got {type(decision).__name__}")
+                raise TypeError("expected AgentDecision, got another type")
             decision = AgentDecision.model_validate(decision.model_dump(mode="python"))
         except (TypeError, ValueError) as exc:  # ValueError covers ValidationError
             state.record("rejected", role=expected_role, reasons=(Reason.MALFORMED_DECISION,))
@@ -333,11 +344,16 @@ class ConstraintEngine:
         state.record(
             "decision",
             role=expected_role,
-            detail=f"{AGENT_STATEMENT}{decision.rationale}",
+            detail=agent_statement(decision.rationale),
             clause_ids=cited,
         )
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
-            claimed = f"claims role {decision.role_id} at {decision.at.isoformat()}"
+            claimed_role = (
+                decision.role_id
+                if decision.role_id in {r.id for r in state.roles.roles}
+                else WITHHELD
+            )
+            claimed = f"claims role {claimed_role} at {decision.at.isoformat()}"
             state.record(
                 "rejected", role=expected_role, reasons=(Reason.WRONG_ROLE_OR_TIME,), detail=claimed
             )
@@ -425,23 +441,26 @@ class ConstraintEngine:
             for g in decision.gap_claims:  # kept visible, always with the fixed qualification
                 state.add_finding(
                     Finding(
-                        kind="candidate_gap_claim",
+                        kind=CANDIDATE_GAP_CLAIM,
                         minute=state.minute,
                         role=expected_role,
                         clause_ids=tuple(c.clause_id for c in g.citations),
-                        detail=f"{g.statement} ({g.qualification})",
+                        detail=f"{agent_statement(g.statement)} ({g.qualification})",
                     )
                 )
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             return
         role = state.roles.role(decision.role_id)
+        known_actions = {a.id for a in state.roles.actions}
+        role_ids = {r.id for r in state.roles.roles}
         for action in decision.proposed_actions:
             verdict = self.check(role, action)
+            target = action.target
             state.record(
                 "accepted" if verdict.accepted else "rejected",
                 role=role.id,
-                action=action.action_type,
-                target=action.target,
+                action=action.action_type if action.action_type in known_actions else WITHHELD,
+                target=target if target is None or target in role_ids else WITHHELD,
                 data_category=verdict.data_category,
                 detail=verdict.detail,
                 reasons=tuple(r.value for r in verdict.reasons),
@@ -469,15 +488,19 @@ class ConstraintEngine:
         state = self.state
         kind = action.action_type
         if kind not in role.allowed_actions:
-            return Verdict(False, (Reason.NOT_ALLOWED_ACTION,), (), f"{kind} is not allowed")
+            shown = kind if kind in {a.id for a in state.roles.actions} else WITHHELD
+            return Verdict(False, (Reason.NOT_ALLOWED_ACTION,), (), f"{shown} is not allowed")
         spec = state.roles.action(kind)
         reasons: list[Reason] = []
         clause_ids: list[str] = []
         details: list[str] = []
         role_ids = {r.id for r in state.roles.roles}
 
-        if kind in (SHARE, REQUEST) and action.target not in role_ids:
-            return Verdict(False, (Reason.UNKNOWN_TARGET,), (), f"unknown target {action.target}")
+        # Every action: a target, if given, must be a role id (agent free text is never a target).
+        if (
+            kind in (SHARE, REQUEST) or action.target is not None
+        ) and action.target not in role_ids:
+            return Verdict(False, (Reason.UNKNOWN_TARGET,), (), "target is not a role id")
         if kind in (SHARE, REQUEST) and action.target == role.id:
             return Verdict(False, (Reason.SELF_TARGET,), (), "a role cannot target itself")
         fact_id: str | None = None
@@ -499,7 +522,10 @@ class ConstraintEngine:
                 return Verdict(False, (Reason.MISSING_PARAMETER,), (), "data_category is required")
             if category not in state.roles.known_categories():
                 return Verdict(
-                    False, (Reason.UNKNOWN_DATA_CATEGORY,), (), f"unknown category {category!r}"
+                    False,
+                    (Reason.UNKNOWN_DATA_CATEGORY,),
+                    (),
+                    "data_category is not a scenario category",
                 )
             details.append(f"{category} from {action.target}")
             self._restrict(kind, category, role.id, reasons, clause_ids, details)

@@ -10,7 +10,9 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, cast
 
+from cascadeguard.domain.decisions import GAP_QUALIFICATION
 from cascadeguard.domain.findings import CoordinationFailure
+from cascadeguard.engine.constraints import CANDIDATE_GAP_CLAIM
 from cascadeguard.engine.repair_search import (
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
@@ -66,6 +68,16 @@ def run_export(result: RunResult) -> dict[str, Any]:
     labels = dict(result.loaded_clauses)
     data = _label_clause_fields(result.summary(), labels)
     data["failures"] = [_failure(f, labels) for f in result.failures]
+    # Findings with their full text: agent statements keep their label, and every candidate gap
+    # claim keeps its citations and the fixed qualification.
+    data["findings"] = [
+        {
+            **row,
+            "detail": f.detail,
+            **({"qualification": GAP_QUALIFICATION} if f.kind == CANDIDATE_GAP_CLAIM else {}),
+        }
+        for row, f in zip(data["findings"], result.findings, strict=True)
+    ]
     data["loaded_clauses"] = _labelled(labels, labels)
     return data
 
