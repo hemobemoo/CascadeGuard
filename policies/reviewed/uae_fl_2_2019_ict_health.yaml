@@ -99,7 +99,10 @@ clauses:
       as a duty (kind obligation). `issue_determination` is the scenario action id that stands for
       setting such standards; it is not in the text. Human decision 7v (2026-10-23): the
       permission depends on a scope the engine cannot evaluate, so it gives "authority uncertain -
-      requires determination", never firm authority.
+      requires determination", never firm authority. Art 1 of the translation (PDF page 2) defines
+      "Health Authority" twice: "Any federal or local governmental Health Authority in the State"
+      and "Every authority in the State providing health services, ..."; under the second, the
+      portal operator could itself be a Health Authority (open, PROGRESS 3b).
 
   - id: uae.fl2-2019.art16
     title: Confidentiality of patient information and its exceptions
