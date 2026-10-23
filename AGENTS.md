@@ -163,7 +163,10 @@ Work without asking unless one of these applies. When one does, record it under
 the PR or your report.
 
 1. Setting any clause to `status: reviewed`. Only on the human's explicit list of clause IDs,
-   committed as `Reviewed by human: <ids>`.
+   committed as `Reviewed by human: <ids>`. Any edit to a clause with `status: reviewed`
+   (any field) sets it back to `status: draft` in the same commit and lists it under
+   `reapproval_needed` in `policies/approvals.yaml` and in `PROGRESS.md` for the human's
+   re-approval. `tests/unit/test_approvals.py` enforces this.
 2. Any reviewer finding marked QUESTION-FOR-HUMAN or NEEDS-HUMAN-JUDGMENT.
 3. Any dependency not listed in this file.
 4. Anything that costs money (Phase 5 smoke test, model choice, paid services).
