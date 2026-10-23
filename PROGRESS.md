@@ -4,11 +4,12 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 3 — Repair and replay: PR open against `main`, waiting for the human.** The review loop
-ran three rounds (first round also covered Phase 2 commits 9bdd45a and 392f162). Final verdicts:
-evidence-auditor PASS (round 1), phase-auditor PASS (round 2), test-breaker FAIL (round 3). The
-round-3 findings were fixed after the last allowed round and are covered by mutation-checked
-tests but not re-reviewed; they are human gates (item 5 under "Waiting on human").
+**Phase 3 — Repair and replay: PR #4 open, not merged, waiting for the human.** The human's
+2026-10-24 answers (items 3-5) are applied. The final test-breaker pass they asked for (scope:
+a4b5c82 and every place agent free text is stored, exported or printed) returned **FAIL with a
+BLOCKER** (a free-text `target` on any action was stored and printed unlabelled). Per the
+human's instruction it was fixed with tests and the PR was **not merged**; no further review
+round was run. CI (GitHub Actions) passed on 99a5b72; the fix commit is checked locally.
 
 ## Done
 
@@ -271,6 +272,66 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   (unverified; not a finding or a legal conclusion)"; only GapClaims become candidate findings;
   the requester goes through the same authority check. Mutation-checked. Remaining
   QUESTION-FOR-HUMAN items: 4a, 4b, and new 4e (new conflicts do not lower the rank).
+- **Human decisions, 2026-10-24 (answers to "Waiting on human" items 3-5):**
+  - **5 (round-3 gate): approach accepted.** Gaps are stated only as structured GapClaims; all
+    agent free text is labelled "agent statement (unverified; not a finding or a legal
+    conclusion)". No attempt to catch every wording. One final test-breaker pass, limited to
+    a4b5c82 and every place agent free text is stored, exported or printed; no further rounds.
+    The Phase 4 spec (`specs/004-demo-ui.md`) requires the UI to show the same label.
+  - **4c:** the gate-1 rule in AGENTS.md (8333dfa) is approved.
+  - **Ranking (4a, 4b, 4e)**, `CascadeGuard.md` section 6 authoritative; ADR
+    `docs/decisions/0001-repair-ranking.md`, AGENTS.md and `specs/003-repair-and-replay.md`:
+    hard filters; clean repairs above repairs with new conflicts; within each group most
+    critical blockers removed, fewest edits, fewest roles touched, fewest clauses cited; among
+    repairs with new conflicts, fewest new conflicts. Agent choice: "not requiring
+    authorization" and `repair_id` stay as the last tie-breaks (the human's order does not
+    place the authorization tie-break). 4a: a blocker counts as removed only when its cause is
+    gone; one hidden by its goal being met another way is "masked (goal met another way)".
+    4e: repairs with new conflicts are ranked lower, never discarded; a conflict that is only a
+    repair duty no scripted agent attempts is tagged `scripted_agent_limit` (revisit in
+    Phase 5). `expected_repairs.yaml` regenerated.
+  - **4d (draft mappings, clauses stay draft):** `mocai.ethics.fallback-plan` maps to
+    `maintain_fallback_plan` (consistent with h2); `itu.y3172.req-ml-mng-003` has no action
+    mapping (design requirement; standards and gap-analysis context); `uae.ai-charter.safety`
+    has no permission mapping (non-binding principle); `uae.telecom-law.art14-5` mapping note
+    rewritten to match 7m. `dha.pp11.4-18-5`: see 3p. `dha.pp11.applicability` keeps
+    `binding: unknown` (3e).
+  - **Evidence questions (working readings only, never legal conclusions):**
+    3a protective reading: lock records linked to a health service account are treated as
+    health data under FL 2/2019 Art 4 (basis interpreted), which keeps the Art 4/16 discard. The
+    reviewed Art 4 clause already maps that share as interpreted; its note still says the
+    question is for the human. It was **not edited**, because any edit sends a reviewed clause
+    back to draft (gate 1) and the engine would drop it; update the note at its next
+    re-approval. 3b: the portal operator is not assumed to be a "Health Authority"; the human
+    checks the Arabic. 3c: FL 2/2019 is treated as the health data's own legislation; scenario
+    assumption added to `scenarios/uae_health_access/README.md` (synthetic, non-governmental,
+    DHA-licensed operator; exclusion (b) out of scope). 3d: "treated as applicable (working
+    reading)" stays. 3e: `binding: unknown` stays. 3f: precedence "requires determination"; the
+    unknown reporting period stays a candidate finding. 3j: the inventory may list filenames,
+    page counts and title/author metadata only, never text. 3k: structure file updated.
+  - **3i (DHA footers):** the extracted footers read "1/52" to "50/52" on viewer pages 1-50,
+    one-to-one, with no missing or repeated number inside the copy. Footers 51/52 and 52/52 are
+    missing: the copy ends on page 50 in section 5 (references, item 5.23). The drafted DHA
+    clauses are on pages 1, 30, 31 and 32; none is next to the gap. The human looks for a
+    complete copy.
+  - **CI:** `.github/workflows/checks.yml` runs `uv sync --locked` and the full check command
+    (actions/checkout, astral-sh/setup-uv; not a project dependency).
+- **Final test-breaker pass (2026-10-24, FAIL), fixed after the pass, not re-reviewed:**
+  BLOCKER: `ProposedAction.target` was free text for every action except share/request, and
+  was stored and printed unlabelled (a gap could be stated there with no citation). MAJORs:
+  unknown `action_type`, unknown share/request target, impostor `role_id` and the class name of
+  a non-decision object were echoed unlabelled into the log, findings, DuckDB, JSON and CLI;
+  `GapClaim.statement` became a finding without the label, and a newline in it forged a CLI
+  line; the JSON export dropped a candidate gap claim's qualification. MINOR: unknown
+  `data_category` echoed. Fixes: a target must be a role id for every action
+  (`unknown_target` otherwise); agent strings that are not scenario ids are logged as
+  `<not a scenario id; agent text withheld>`; malformed-type, unknown-target and
+  unknown-category details are fixed text; rationale and gap statements are stored as
+  `agent_statement(...)` (label, one line); the run JSON export adds `detail` to every finding
+  and `qualification` to every candidate gap claim. `tests/unit/test_phase3_final_pass.py`
+  (10 tests) fails on the old code and passes now. Not fixed (not in the human's scope, see
+  "Waiting on human" 6): the OVERSTATED wording list, and `copy.deepcopy` running on agent
+  output before the type check.
 - **`RepairProposal` shape (Phase 3 decision).** `operation`/`applies_to`/`parameters` became
   `edits: tuple[RepairEdit, ...]`, because the ranking counts repair edits and a repair can need
   two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
@@ -312,59 +373,29 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v, 3w, 3x (see Decisions). The human
-answers the questions below together at the end of Phase 3; none blocks Phase 3. Re-approval
+Answered on 2026-10-24: items 3 (except 3b, 3i), 4a-4e and 5 (see Decisions). Re-approval
 needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open:
 
-1. **Clause review** of the remaining 20 drafts (all clauses outside the core set, including
-   `uae.telecom-law.art14-5`, flagged "OCR - check against image"), in the order of
-   `docs/review/phase-1-clause-triage.md`.
-2. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
-   Directive on Automated Decision-Making; Singapore's Model AI Governance Framework (incl. agentic
-   AI); WHO guidance on AI for health; NCEMA 7000; Executive Regulation of FL 2/2019.
-3. **Evidence questions** not yet answered (detail in the triage file):
-   a. FL 2/2019: are lock records with mobile numbers "health data and information" (Art 4)?
-   b. FL 2/2019: the translation defines "Health Authority" twice; could the portal operator be
-      one? Check the Arabic.
-   c. PDPL Art 2(2)(e): is FL 2/2019 the health data's own legislation? Is the portal operator
-      governmental (exclusion b)?
-   d. FL 2/2019 and the DHA policy stay "treated as applicable" (working reading) unless the human
-      confirms them as applicable.
-   e. DHA policy: binding on DHA-licensed private entities? (`binding: unknown` kept.)
-   f. DHA 4.18.4: does the policy's own precedence rule ("the regulation that is more
-      specialized/detailed in health will supersede", section 4.2) displace the PDPL-based
-      reporting period for health data?
-   i. DHA PDF footers read "n/52" but the PDF has 50 pages. Is the copy complete?
-   j. `policies/extracted/_inventory.json` lists the two books' filenames, page counts and
-      Title/Author metadata (no text). Acceptable?
-   k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py`, `domain/base.py`
-      or `docs/policy-inventory.md`. Add them?
-   p. Should `dha.pp11.4-18-4` and `4-18-5` become one clause quoting both paragraphs?
-   (w and x answered 2026-10-23.)
-   k. (extended) The structure file also does not list `storage/export.py`, `policies/approvals.yaml`
-      or `scenarios/uae_health_access/expected_repairs.yaml` (it puts P3 goldens in `tests/golden/`).
-4. **Phase 3 review questions (round 1), for the end of Phase 3:**
-   a. "Critical blockers removed" counts a failure as removed when the replay no longer diagnoses
-      it, even if it is only masked because its goal was met another way (e.g. the fallback orphan
-      duty under "owner + share"). Keep this, or count only blockers whose cause the repair
-      removes? It changes the ranking.
-   b. Tie-breaks: roles touched first, then clauses cited (not a combined count, and not clauses
-      the repair changes). Intended?
-   c. Gate-1 rule change in AGENTS.md (8333dfa): the phase-auditor asks you to confirm it in the
-      PR (recorded here as approved in chat on 2026-10-23).
-   d. Draft-clause mappings to settle at review (evidence-auditor): `mocai.ethics.fallback-plan`
-      maps to `activate_fallback_channel` (h2 suggests `maintain_fallback_plan`);
-      `itu.y3172.req-ml-mng-003` maps a design requirement to `investigate_network_fault`;
-      `uae.ai-charter.safety` maps "encourages" to a permission; `uae.telecom-law.art14-5`
-      mapping note says "read as a permission" while 7m says it is not one in this incident;
-      `dha.pp11.4-18-5` actor comes from 4.18.4 (3p); `dha.pp11.applicability` binding (3d/3e).
-   e. Repairs that introduce a new conflict rank above clean partial repairs when they remove
-      more blockers (e.g. fallback + requester above owner + trigger). AGENTS.md's ranking does
-      not mention new conflicts; CascadeGuard.md section 6 calls such a repair "failed". Should a
-      new conflict lower the rank (or discard the repair)?
-5. **Phase 3 gate (review loop exhausted, round 3):** the free-text gap-claim BLOCKER is fixed by
-   labelling agent text as unverified and allowing gaps only as structured GapClaims, rather than
-   by detecting every wording. Accept this approach, or ask for another review round.
+1. **Clause review** of the remaining drafts (the human's side; no action needed).
+2. **Sources missing from `policies/sources/`** (the human's side; no action needed).
+3. **3b:** the human checks the Arabic text of FL 2/2019 ("Health Authority").
+   **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing; see
+   Decisions).
+4. **3p not applied (conflict, gate 8).** Merging `dha.pp11.4-18-4` and `4-18-5` edits the
+   reviewed clause 4-18-4, which the gate-1 rule sends back to draft. The engine then no longer
+   loads it: the T+45 health-operator decision cites it, so that whole decision is rejected
+   (`draft_citation`), `review_automated_lockouts` and the notification are never proposed, and
+   the baseline, the diagnosis and the repair search all change until the human re-approves.
+   Merge now and accept that, or merge and re-approve in the same step?
+5. **Ranking consequence (ADR 0001).** With blockers counted by cause, six two-edit repairs
+   tie at 2 removed; roles touched then puts owner + trigger (partial, one role) first and the
+   resolved owner + share fourth. Keep, or add a key (e.g. unmet critical goals) before roles
+   touched? Also: "not requiring authorization" was placed after the human's keys.
+6. **From the final test-breaker pass, outside the agreed scope:** widen the OVERSTATED list
+   ("conclusively", "definitely", "absolutely" pass today), and `copy.deepcopy` runs on agent
+   output before the type check (a custom `__deepcopy__` would run first). Fix, or leave?
+7. **Merge PR #4?** Not merged because the final pass found a BLOCKER (the human's rule). The
+   fix commit has not been reviewed.
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -384,7 +415,6 @@ needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Stil
 
 ## Next step
 
-1. Human: review the Phase 3 PR; answer "Waiting on human" items 3a-3f, 3i-3k, 3p, 4a-4e and 5
-   together; confirm the AGENTS.md gate-1 change (4c); decide whether the PR merges. Auto-merge
-   does not apply (test-breaker FAIL in round 3; human gates open).
-2. After merge: tag `phase-3`; start Phase 4 (NiceGUI demo UI) on `phase-4-ui`.
+1. Human: read the PR #4 report; answer "Waiting on human" 4-7; decide whether PR #4 merges.
+2. After merge: tag `phase-3`, update this file, stop and report before Phase 4
+   (`specs/004-demo-ui.md` holds the requirements fixed so far).
