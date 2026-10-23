@@ -21,6 +21,8 @@ cascadeguard/
 ├── README.md                         [P0] short; how to run the demo
 ├── AGENTS.md                         [P0] single source of truth for agent rules
 ├── CLAUDE.md                         [P0] one line: @AGENTS.md
+├── .claude/agents/                   reviewer subagents (dev tooling, not product): phase-auditor.md,
+│                                     evidence-auditor.md, test-breaker.md — human-owned, agents don't edit
 ├── CascadeGuard.md                   [P0] project concept (authoritative)
 ├── PROGRESS.md                       [P0] session hand-off: phase status, decisions, next step
 ├── REFERENCE_LINKS.md                [P0] which tools and MCP servers to use for what
@@ -28,6 +30,7 @@ cascadeguard/
 ├── docs/                             no separate agent-rules or MCP-rules files here
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
+│   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor
 │   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
 │
 ├── specs/                            one short spec per phase (max ~1 page each)
@@ -103,6 +106,7 @@ cascadeguard/
 ├── data/                             gitignored — DuckDB file, LLM cache, exports
 │
 └── tests/
+    ├── fixtures/                     [P2+] synthetic clauses (status illustrative) for building while review is pending
     ├── unit/                         [P0+] (P0: one empty test so the checks run)
     ├── integration/                  [P2+] full loop with ScriptedAgent
     ├── golden/                       [P3] baseline + replay outputs must match snapshots

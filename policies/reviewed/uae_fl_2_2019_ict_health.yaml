@@ -1,0 +1,142 @@
+# Federal Law No. 2 of 2019 concerning the Use of ICT in Health Fields (English translation in
+# the source PDF). Drafted by the agent; the human checks each clause against the PDF.
+clauses:
+  - id: uae.fl2-2019.art2
+    title: Scope of the law
+    text: >-
+      This Law shall apply to all methods and uses of the information and communication
+      technology in the areas of health in State, including the free zones.
+    source_file: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    page: 2
+    article: Article (2)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2019"
+    status: reviewed
+    binding: true
+    notes: >-
+      Used to determine the applicable health-data regime. The synthetic patient portal is an ICT
+      use in the area of health, so this law is treated as applicable for this scenario, pending
+      human review (a working reading, not a legal conclusion). Binding scope: federal law,
+      applying to ICT uses in the area of health in the State, including the free zones (Art 2).
+      The PDF is an English translation; the Arabic text was not checked.
+
+  - id: uae.fl2-2019.art4
+    title: Confidentiality, integrity and availability of health data
+    text: >-
+      Upon using the information and communication technology in the areas of health, it shall
+      be committed to the following: 1. To keep the confidentiality of health data and
+      information by not allowing to circulate them in cases other than the permitted. 2. To
+      ensure the validity and credibility of the health data and information by keeping their
+      safety from the non-authorised damage, amendment, alteration, deletion or addition. 3. To
+      ensure the availability of health data and information to the authorised thereof
+      and facilitate the access thereto, if needed.
+    source_file: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    page: 3
+    article: Article (4)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2019"
+    status: reviewed
+    binding: true
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text commits whoever uses ICT in health not to circulate health data outside permitted
+        cases; sharing incident status with lock records is read as such circulation, and the user
+        is mapped to health_service_operator.
+      kind: prohibition
+      actor: health_service_operator
+      action: share_incident_status
+      data_category: patient_account_records
+      condition: >-
+        circulation is not one of the permitted cases (including, but not limited to,
+        uae.fl2-2019.art16)
+    notes: >-
+      Binding scope: federal law, applying to ICT uses in the area of health in the State,
+      including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
+      checked. Para (1) is the safeguard the engine enforces: identifiable patient records may not
+      be shared outside permitted cases. `share_incident_status` is the scenario action id mapped
+      to circulation of the data, an interpretation. Whether lock records with mobile numbers are
+      "health data and information" is for the human. Para (3) (availability to the authorised) is
+      relevant to keeping patients able to reach their own records during the lockout. Human
+      decision 7t (2026-10-23): a conditional prohibition, not a flat ban. The engine never
+      decides that the condition or an exception is met; a share it covers is held as "authority
+      uncertain - requires determination".
+
+  - id: uae.fl2-2019.art6
+    title: Health Authority sets standards for exchange, protection and risk management
+    text: >-
+      The Health Authority shall set the bases, standards and controls required to the
+      electronic systems of its health data and information, such as its operation methods and
+      how to exchange the data and information, protect, access, copy and change and check
+      them, as well as the proper and safe uses to them, and to manage the risk of the health
+      information and data.
+    source_file: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    page: 3
+    article: Article (6)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2019"
+    status: reviewed
+    binding: true
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The Health Authority's power to set standards for exchanging and protecting health data is
+        read as a permission for health_data_oversight to issue a determination; it is not read as
+        a duty to act.
+      kind: permission
+      actor: health_data_oversight
+      action: issue_determination
+      condition: on how health data and information may be exchanged and protected
+    notes: >-
+      Binding scope: federal law, applying to ICT uses in the area of health in the State,
+      including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
+      checked. Basis for the health-data oversight role's authority to determine how health data
+      may be exchanged. Mapping the scenario role to "the Health Authority" is an interpretation.
+      "shall set" is read as a power (kind permission) that the role may use; it can also be read
+      as a duty (kind obligation). `issue_determination` is the scenario action id that stands for
+      setting such standards; it is not in the text. Human decision 7v (2026-10-23): the
+      permission depends on a scope the engine cannot evaluate, so it gives "authority uncertain -
+      requires determination", never firm authority. Art 1 of the translation (PDF page 2) defines
+      "Health Authority" twice: "Any federal or local governmental Health Authority in the State"
+      and "Every authority in the State providing health services, ..."; under the second, the
+      portal operator could itself be a Health Authority (open, PROGRESS 3b).
+
+  - id: uae.fl2-2019.art16
+    title: Confidentiality of patient information and its exceptions
+    text: >-
+      Without violation to any applicable legislations, whoever circulates information related
+      to the patients must keep its confidentiality and not to use them except in the health
+      purposes without written approval from the patient, except in any of the following cases:
+    source_file: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    page: 4
+    article: Article (16)
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2019"
+    status: reviewed
+    binding: true
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text binds whoever circulates patient information (actor any); sharing incident status
+        with lock records is read as using that information. Modelled as a conditional prohibition
+        (human decision 7t).
+      kind: prohibition
+      actor: any
+      action: share_incident_status
+      data_category: patient_account_records
+      condition: >-
+        for health purposes; any other use needs the patient's written approval, except in the
+        cases listed in Art 16 items 1-5 (PDF page 5, not quoted in this clause)
+    notes: >-
+      Binding scope: federal law, applying to ICT uses in the area of health in the State,
+      including the free zones (Art 2). The PDF is an English translation; the Arabic text was not
+      checked. The exceptions on PDF page 5 are outside this quote and would need their own
+      clause(s) before the engine relies on them. None of them names incident coordination with a
+      telecom operator; whether exception 3 or 5 could apply is a question for a human expert.
+      Human decision 7t (2026-10-23): a conditional prohibition, not a flat ban. The engine never
+      decides that the condition or an exception is met; a share it covers is held as "authority
+      uncertain - requires determination".

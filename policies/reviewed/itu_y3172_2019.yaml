@@ -1,0 +1,49 @@
+# ITU-T Y.3172 (06/2019), Architectural framework for machine learning in future networks
+# including IMT-2020. Used to map the simulated telecom AI pipeline (CascadeGuard.md s.7).
+clauses:
+  - id: itu.y3172.mlfo
+    title: Machine learning function orchestrator (MLFO)
+    text: >-
+      3.2.2 machine learning function orchestrator (MLFO): A logical node with functionalities
+      that manage and orchestrate the nodes in a machine learning pipeline.
+    source_file: T-REC-Y.3172-201906-I!!PDF-E.pdf
+    page: 8
+    article: "3.2.2"
+    issuer: ITU-T
+    jurisdiction: International (ITU-T Recommendation)
+    document_date: "2019-06"
+    status: draft
+    binding: false
+    notes: >-
+      Viewer page 8 (printed page 2). Definition only. The simulated traffic-management model is
+      mapped to an ML pipeline managed by an MLFO inside the telecom operator.
+
+  - id: itu.y3172.req-ml-mng-003
+    title: Monitor the effect of ML on network operations and correct it
+    text: >-
+      The ML architecture is required to support capabilities to monitor the network [...]
+      operations based on the effect of ML and to update the ML models and/or policies without
+      impacting the network.
+    source_file: T-REC-Y.3172-201906-I!!PDF-E.pdf
+    page: 18
+    article: 7.5, REQ-ML-MNG-003 (Table 7-5; printed page 12)
+    issuer: ITU-T
+    jurisdiction: International (ITU-T Recommendation)
+    document_date: "2019-06"
+    status: draft
+    binding: false
+    normalized:
+      basis: interpreted
+      mapping_note: >-
+        The text is a capability requirement on the ML architecture; the telecom operator running
+        that architecture is read as the actor, and monitoring the effect of ML as investigating a
+        network fault.
+      kind: obligation
+      actor: telecom_operator
+      action: investigate_network_fault
+      condition: ongoing monitoring of network operations based on the effect of ML
+    notes: >-
+      The [...] skips the requirement ID printed in the table margin. The requirement covers the
+      operator's own network. Candidate finding: no requirement to pass ML-caused effects on to
+      dependent services in other organisations was found in the reviewed corpus (cf.
+      itu.y3172.req-ml-mng-003, itu.y3172.mlfo).
