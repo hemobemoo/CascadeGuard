@@ -764,3 +764,89 @@ def test_extracted_context_changes_the_prompt_version_and_label(
     argv = ["run", SCENARIO, "--agents", "llm", "--offline", "--extracted-context"]
     assert main([*argv, "--cache", str(tmp_path)]) == 0
     assert "extracted-PDF context snippets (context only; not citable)" in capsys.readouterr().out
+
+
+# --- Prompt v3: citations grouped by action (human decision 2026-10-25) -----------------------
+
+
+def test_clause_groups_agree_with_the_engine_scope_rule(scripted: World) -> None:
+    """A clause is listed under an action exactly when the engine accepts citing it with that
+    action proposed (both directions)."""
+    from cascadeguard.engine.constraints import ANALYSIS, RuleBook
+    from cascadeguard.knowledge.retrieval import ANY_ACTION
+
+    book = RuleBook(scripted.clauses)
+    for v in scripted.baseline().views:
+        for c in v.role_clauses:
+            assert c.citable and c.cite_with
+            if c.cite_with == (ANY_ACTION,):
+                assert book.concerns(c.id, v.role_id, ())
+                continue
+            assert not book.concerns(c.id, v.role_id, ())
+            for action in v.allowed_actions:
+                assert book.concerns(c.id, v.role_id, (action,)) == (action in c.cite_with)
+            if ANALYSIS in v.allowed_actions:
+                assert ANALYSIS in c.cite_with
+
+
+def test_prompt_states_the_citation_rules_and_groups(scripted: World) -> None:
+    from cascadeguard.knowledge.retrieval import clauses_by_action
+
+    adviser = next(v for v in scripted.baseline().views if v.role_id == "policy_legal_adviser")
+    system, user = (m["content"] for m in build_messages(adviser, ()))
+    assert "Every citation must support an action you propose in this same decision" in system
+    assert "require proposing\n  provide_policy_analysis in this same decision" in system
+    data = json.loads(user)
+    assert data["citable_clauses_by_action"] == clauses_by_action(adviser.role_clauses)
+    assert "role_clauses" not in data
+    assert PROMPT_VERSION == "phase5-v3"
+
+
+# --- Request error detail in the no_decision finding (human decision 2026-10-25) --------------
+
+
+class FakeStatusError(Exception):
+    status_code = 429
+
+
+def test_request_failure_finding_records_class_status_and_short_message(
+    scripted: World, tmp_path: Path
+) -> None:
+    secret = "sk-or-v1-THISISNOTAREALKEY123456"
+    message = f"Rate limit for {MODEL}\nAuthorization: Bearer {secret} retry later"
+    base = scripted_replies(scripted)
+
+    def reply(request: dict[str, Any]) -> str | Exception:
+        v = view_of(request)
+        if (v["role_id"], v["minute"]) == ("telecom_operator", 0):
+            return FakeStatusError(message)
+        return base(request)
+
+    role_ids = tuple(r.id for r in scripted.roles.roles)
+    cache = DecisionCache(tmp_path)
+    client = FakeClient(reply)
+    agents = {r: LLMAgent(r, MODEL, client, cache, role_ids, redact=(secret,)) for r in role_ids}
+    result = replace(scripted, agents=dict(agents), cache=cache).baseline()
+    (finding,) = [f for f in result.findings if f.kind == Reason.NO_DECISION.value]
+    assert finding.detail.startswith(
+        "telecom_operator made no decision at this step (request_failed: request error "
+        "FakeStatusError (HTTP 429): Rate limit for <redacted>"
+    )
+    assert secret not in finding.detail and MODEL not in finding.detail
+    assert "\n" not in finding.detail and "Bearer" not in finding.detail
+    assert len(finding.detail) < 300
+
+
+def test_error_detail_only_on_request_failures(scripted: World) -> None:
+    view = scripted.baseline().views[0]
+    with pytest.raises(ValueError, match="error detail"):
+        AgentDecision(
+            role_id=view.role_id,
+            at=view.at,
+            proposed_actions=(),
+            rationale="",
+            citations=(),
+            uncertainty=(),
+            no_decision="invalid_output",
+            no_decision_detail="X (HTTP 1): y",
+        )

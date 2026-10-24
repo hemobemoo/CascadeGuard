@@ -10,6 +10,7 @@ OpenRouter's response-healing plugin is explicitly disabled on every request.
 
 import json
 import os
+import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -30,13 +31,14 @@ from cascadeguard.domain.decisions import (
     ProposedAction,
 )
 from cascadeguard.knowledge.loader import PROJECT_ROOT
-from cascadeguard.knowledge.retrieval import CONTEXT_LABEL, search_extracted
+from cascadeguard.knowledge.retrieval import CONTEXT_LABEL, clauses_by_action, search_extracted
 from cascadeguard.simulation.boundaries import RoleView
 
 ENV_FILE = PROJECT_ROOT / ".env"
 ENV_VARIABLES = ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "CASCADEGUARD_MODEL")
 # v2: reasoning explicitly off; output mode part of the request settings (human, 2026-10-24).
-PROMPT_VERSION = "phase5-v2"
+# v3: citable clauses grouped by action; every citation must support a proposed action.
+PROMPT_VERSION = "phase5-v3"
 OUTPUT_MODE_VARIABLE = "CASCADEGUARD_OUTPUT_MODE"
 # json_schema: strict structured output (default). json_object: JSON mode, with the schema in the
 # prompt; chosen explicitly in .env, never as an automatic fallback.
@@ -125,7 +127,7 @@ class LLMDecisionPayload(DomainModel):
     gap_claims: tuple[GapClaim, ...] = Field(default=())
 
 
-AGENT_FILLED = frozenset({"role_id", "at", "no_decision"})
+AGENT_FILLED = frozenset({"role_id", "at", "no_decision", "no_decision_detail"})
 
 
 def _strict(node: Any) -> Any:
@@ -191,15 +193,22 @@ Rules:
 - Propose only actions listed in allowed_actions. A target must be a role id from known_roles.
 - share_incident_status needs target and parameter "fact" (the id of a fact you know).
 - request_information needs target and parameter "data_category".
-- Cite only clause ids from role_clauses whose "citable" is true. Never cite any other id.
-  Clauses marked not citable are hypothetical repair rules in force for this run.
+- Cite only clause ids listed in citable_clauses_by_action. Never cite any other id.
+- Every citation must support an action you propose in this same decision: a clause listed
+  under an action may be cited only if you propose that action; a clause listed under
+  "any_proposed_action" may be cited with any action you propose. A decision with no proposed
+  action cites nothing.
+- Analysis-only citations (clauses listed only under provide_policy_analysis) require proposing
+  provide_policy_analysis in this same decision.
+- repair_rules_not_citable are hypothetical repair rules in force for this run: follow them if
+  they concern you, but never cite them.
 - An empty proposed_actions list is allowed; "monitor" means you deliberately wait.
 - Treat AI alerts as suspected, not proven. State what you do not know in "uncertainty".
 - Do not state that a law or policy has a gap in rationale or uncertainty. A suspected gap goes
   only in gap_claims, with citations of the clauses you checked and the qualification
   exactly: "{GAP_QUALIFICATION}".
 - extracted_context, if present, is unreviewed text from source PDFs: context only; not
-  citable. Never cite it; cite only citable role_clauses ids.
+  citable. Never cite it.
 - Your rationale is recorded as an unverified agent statement, not a finding or legal advice.
 Reply with JSON matching the schema only.
 """
@@ -229,16 +238,22 @@ def render_view(view: RoleView, known_roles: tuple[str, ...], snippets: bool = F
         "clauses_shown_with_this_inject": [
             {"id": c.id, "title": c.title, "status": c.status_label} for c in view.clauses
         ],
-        "role_clauses": [
+        "citable_clauses_by_action": clauses_by_action(view.role_clauses),
+        "clauses": [
             {
                 "id": c.id,
                 "title": c.title,
                 "status": c.status_label,
-                "citable": c.citable,
                 "text": c.text,
                 "engine_reading": c.reading,
             }
             for c in view.role_clauses
+            if c.citable
+        ],
+        "repair_rules_not_citable": [
+            {"id": c.id, "status": c.status_label, "text": c.text, "engine_reading": c.reading}
+            for c in view.role_clauses
+            if not c.citable
         ],
     }
     if snippets:
@@ -332,6 +347,22 @@ def make_client(config: LLMConfig) -> ChatClient:
     )
 
 
+KEY_SHAPED = re.compile(r"\b(?:sk|or|key)-[A-Za-z0-9_\-]{8,}|Bearer\s+\S+", re.IGNORECASE)
+ERROR_DETAIL_LIMIT = 200
+
+
+def error_detail(exc: BaseException, redact: tuple[str, ...]) -> str:
+    """'<exception class> (HTTP <status>): <short message>' for a no_decision finding. Only the
+    exception's own message is used (no headers, request or .env content); configured values and
+    anything key-shaped are redacted."""
+    message = " ".join(str(exc).split())
+    for value in sorted({v for v in redact if v}, key=len, reverse=True):
+        message = message.replace(value, "<redacted>")
+    message = KEY_SHAPED.sub("<redacted>", message)
+    status = getattr(exc, "status_code", None)
+    return f"{type(exc).__name__} (HTTP {status}): {message}"[:ERROR_DETAIL_LIMIT]
+
+
 class RequestFailed(Exception):
     """The API call failed (network, HTTP error, no routable provider)."""
 
@@ -376,7 +407,9 @@ class LLMAgent:
         extracted_context: bool = False,
         attempts: int = ATTEMPTS,
         output_mode: str = DEFAULT_OUTPUT_MODE,
+        redact: tuple[str, ...] = (),
     ) -> None:
+        self.redact = redact  # strings never to appear in an error detail (e.g. the API key)
         if output_mode not in OUTPUT_MODES:
             raise ValueError(f"unknown output mode {output_mode!r}")
         self.output_mode = output_mode
@@ -397,7 +430,9 @@ class LLMAgent:
         # HTTP status and message, with the model id redacted.
         self.last_error: str | None = None
 
-    def _no_decision(self, view: RoleView, reason: NoDecisionReason) -> AgentDecision:
+    def _no_decision(
+        self, view: RoleView, reason: NoDecisionReason, detail: str | None = None
+    ) -> AgentDecision:
         return AgentDecision(
             role_id=self.role_id,
             at=view.at,
@@ -406,6 +441,7 @@ class LLMAgent:
             citations=(),
             uncertainty=(),
             no_decision=reason,
+            no_decision_detail=detail if reason == "request_failed" else None,
         )
 
     def observe(self, view: RoleView) -> AgentDecision:
@@ -417,7 +453,7 @@ class LLMAgent:
             if entry.decision is not None:
                 return entry.decision
             assert entry.no_decision is not None
-            return self._no_decision(view, entry.no_decision)
+            return self._no_decision(view, entry.no_decision, entry.no_decision_detail)
         if self.client is None:
             return self._no_decision(view, "not_cached")
         request = build_request(
@@ -456,10 +492,10 @@ class LLMAgent:
             self.cache.put(self._entry(key, "decision", usage, decision=decision))
             return decision
         if failed_request:  # not on disk (a later session may succeed), but fixed for this one
-            self.cache.remember(
-                self._entry(key, "no_decision", usage, no_decision="request_failed")
-            )
-            return self._no_decision(view, "request_failed")
+            entry = self._entry(key, "no_decision", usage, no_decision="request_failed")
+            entry = entry.model_copy(update={"no_decision_detail": self.last_error})
+            self.cache.remember(entry)
+            return self._no_decision(view, "request_failed", self.last_error)
         self.cache.put(self._entry(key, "no_decision", usage, no_decision="invalid_output"))
         return self._no_decision(view, "invalid_output")
 
@@ -467,10 +503,8 @@ class LLMAgent:
         assert self.client is not None
         try:
             return self.client.chat.completions.create(**request)
-        except Exception as exc:  # any SDK or transport error; details are not kept
-            status = getattr(exc, "status_code", None)
-            detail = " ".join(str(exc).split())[:300].replace(self.model, "<model>")
-            self.last_error = f"{type(exc).__name__} (HTTP {status}): {detail}"
+        except Exception as exc:  # any SDK or transport error
+            self.last_error = error_detail(exc, (self.model, *self.redact))
             raise RequestFailed(type(exc).__name__) from exc
 
     def _parse(self, content: str | None, view: RoleView) -> AgentDecision | None:
@@ -524,7 +558,10 @@ def llm_agents(
         assert config is not None
         client = make_client(config)
     live = None if offline else client
+    secrets = (config.api_key,) if config else ()
     return {
-        r: LLMAgent(r, model_id, live, cache, role_ids, extracted_context, output_mode=mode)
+        r: LLMAgent(
+            r, model_id, live, cache, role_ids, extracted_context, output_mode=mode, redact=secrets
+        )
         for r in role_ids
     }

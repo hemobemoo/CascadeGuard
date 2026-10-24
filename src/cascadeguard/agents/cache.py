@@ -41,6 +41,7 @@ class CacheEntry(DomainModel):
     outcome: Literal["decision", "no_decision"]
     decision: AgentDecision | None = None
     no_decision: NoDecisionReason | None = None
+    no_decision_detail: str | None = None  # request failures only (kept in memory, not on disk)
     usage: Usage = Usage()
 
     @model_validator(mode="after")

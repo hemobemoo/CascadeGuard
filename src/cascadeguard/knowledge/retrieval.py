@@ -19,6 +19,7 @@ from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.knowledge.loader import BOOK_MARKERS, EXTRACTED_DIR
 
 NOT_CITABLE_LABEL = "hypothetical repair rule (not a source clause; not citable)"
+ANY_ACTION = "any_proposed_action"
 # Human decision P5-3 (2026-10-24): this exact label on every snippet sent to an agent.
 CONTEXT_LABEL = "context only; not citable"
 
@@ -31,6 +32,9 @@ class RoleClause:
     text: str
     reading: str  # the engine's normalized reading in one line, or "" if none
     citable: bool
+    # The engine's 7n rule, per clause: the actions whose proposal (in the same decision) makes
+    # it citable. ANY_ACTION: citable with any proposed action (it names this role).
+    cite_with: tuple[str, ...] = ()
 
 
 def _reading(clause: PolicyClause) -> str:
@@ -55,8 +59,15 @@ def clauses_for_role(
     role_id: str,
     allowed_actions: tuple[str, ...],
 ) -> tuple[RoleClause, ...]:
-    """Loaded clauses that concern this role or one of its allowed actions, sorted by id."""
+    """Loaded clauses that concern this role or one of its allowed actions, sorted by id, each
+    with the proposed actions it may be cited with (`cite_with`, from `RuleBook.concerns`)."""
     book = RuleBook(dict(clauses))
+
+    def cite_with(cid: str) -> tuple[str, ...]:
+        if book.concerns(cid, role_id, ()):
+            return (ANY_ACTION,)
+        return tuple(a for a in allowed_actions if book.concerns(cid, role_id, (a,)))
+
     return tuple(
         RoleClause(
             id=c.id,
@@ -65,10 +76,20 @@ def clauses_for_role(
             text=" ".join(c.text.split()),
             reading=_reading(c),
             citable=c.id in corpus_ids,
+            cite_with=cite_with(c.id) if c.id in corpus_ids else (),
         )
         for c in sorted(clauses.values(), key=lambda c: c.id)
         if book.concerns(c.id, role_id, allowed_actions)
     )
+
+
+def clauses_by_action(role_clauses: tuple[RoleClause, ...]) -> dict[str, list[str]]:
+    """Citable clause ids grouped by the proposed action that makes them citable."""
+    groups: dict[str, list[str]] = {}
+    for c in role_clauses:
+        for action in c.cite_with:
+            groups.setdefault(action, []).append(c.id)
+    return groups
 
 
 @dataclass(frozen=True, slots=True)
