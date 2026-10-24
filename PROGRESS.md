@@ -9,7 +9,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 for the page; exports as browser downloads only) and the CascadeGuard.md section 6 wording
 (fbc51e1). The full flow works in the browser with scripted agents (Playwright MCP run,
 screenshots in `docs/review/phase-4-screens/`). Review round 2: evidence-auditor PASS,
-test-breaker FAIL (no BLOCKER; one MAJOR, see "Waiting on human"), phase-auditor pending.
+test-breaker FAIL (no BLOCKER; one MAJOR, see "Waiting on human"), phase-auditor PASS.
 Do not merge before the human has seen the screenshots.
 
 ## Done
@@ -402,6 +402,14 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   the ranking: disagreement, AGENTS.md lines 46-60 already hold the human-approved order
   (f6ea214). Stale PROGRESS.md: fixed here.
 
+- **Phase 4 review round 2, phase-auditor: PASS.** All four "Done when" items proven (it ran
+  the flow itself in headless Edge on a clean export of 1e7fc22). MINORs fixed: the structure
+  file lists `ui/view_model.py` (replacing the planned timeline/graph_view/replay_view modules)
+  and `.claude/launch.json`; the masked, removed and requires-authorization labels are
+  constants in `engine/repair_search.py` used by the CLI and the UI; the UI binds to
+  127.0.0.1 only; the baseline runs off the event loop. QUESTION-FOR-HUMAN items: confirm the
+  CascadeGuard.md section 6 approval in the PR, and approve or drop `.claude/launch.json`.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -450,6 +458,9 @@ CascadeGuard.md section 6 question (see Decisions). Re-approval needed
    Also from round 2 (evidence-auditor, QUESTION-FOR-HUMAN): `uae.telecom-law.art14-5` keeps
    `kind: permission` although its mapping note says it is not a permission in this incident
    (7m); keep, or drop the `normalized` block as for the ITU and Charter clauses?
+   From the phase-auditor (QUESTION-FOR-HUMAN): confirm in the PR that you approved the
+   CascadeGuard.md section 6 wording (fbc51e1); approve or drop `.claude/launch.json` (a UI
+   preview config, not under `.claude/agents/`).
 1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
    from 4.18.4, outside its quote (the two clauses stay separate).
 2. **Sources missing from `policies/sources/`** (optional).
