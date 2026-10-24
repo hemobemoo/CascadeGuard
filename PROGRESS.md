@@ -86,7 +86,11 @@ pushed, no PR, not merged, not tagged until the human approves). Report:
   decided, 0 no_decision (v2: 5), 1 rejected citation (v2: 12; telecom_operator citing FL Art 4,
   correctly rejected), 1 free-text gap rejection, the same 4 diagnosed failures, oversight
   notified at T+15, cost 0.000000, 85.4k / 14.1k tokens. Export `data/llm_baseline_v3/`.
-  **Golden repair, single replay:** dry run 25 uncached replay steps, above 20: not run.
+  **Golden repair, single replay:** dry run 25 uncached replay steps, above 20: not run; then
+  approved (cap 50) and run once with `scripts/llm_replay.py`: 47 requests, 4 of 25 live steps
+  decided, 21 `request_failed` (HTTP 502, then 429 free-tier rate limit); inconclusive (details
+  in `docs/review/phase-5-report.md`). Error details now drop the response headers OpenRouter
+  puts in its error body. 4.18.1 recorded in the report as the engine catching an LLM error.
 - P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
   each labelled "context only; not citable". Off by default, because it changes every prompt
   (the cached baseline would not be reused).
@@ -607,6 +611,18 @@ none blocking until the LLM baseline report.
 
 </details>
 
+**2026-10-25 additions:**
+- **Clause review (gate 1):** new draft `uae.fl2-2019.art16-exceptions` — Art 16 items 1-5,
+  verbatim, from `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf`, viewer
+  page 5. It completes `uae.fl2-2019.art16` (reviewed, unchanged; its quote stops at "except in
+  any of the following cases:" on page 4). No normalized reading (whether item 3 or 5 could
+  cover a share is for a human expert).
+- **Open question for after Phase 5:** role views do not list open obligations (nor action
+  descriptions). Adding them would change every prompt and invalidate the cache, so it is
+  deferred (human decision 2026-10-25). In the v2 baseline the notify obligation stayed open.
+- **Golden-repair live replay:** inconclusive (21 of 25 live steps failed: HTTP 502, then 429
+  free-tier rate limit). Rerun with pacing, or not?
+
 Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
 the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, none blocking:
@@ -616,6 +632,15 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 2. **Sources missing from `policies/sources/`** (optional).
 3. **3b:** the human checks the Arabic text of FL 2/2019 ("Health Authority").
    **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing).
+
+## Known limitations
+
+- **Gap-wording false positive (2026-10-25):** the free-text gap pattern matches "no authority"
+  when an agent describes its own inaction ("no authority has been triggered ..."), so the
+  decision is rejected as `uncited_gap_claim` (v2 LLM baseline, health_data_oversight T+00).
+  Not changed (human decision; the pattern stays conservative).
+  `test_known_limitation_gap_pattern_flags_own_inaction` pins the behaviour so a fix is
+  deliberate.
 
 ## Deferred MINOR findings (Phase 1 review)
 

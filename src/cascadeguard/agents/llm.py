@@ -351,11 +351,22 @@ KEY_SHAPED = re.compile(r"\b(?:sk|or|key)-[A-Za-z0-9_\-]{8,}|Bearer\s+\S+", re.I
 ERROR_DETAIL_LIMIT = 200
 
 
+HEADERS_ONWARD = re.compile(r"""['"]?headers['"]?\s*[:=].*""", re.IGNORECASE)
+
+
 def error_detail(exc: BaseException, redact: tuple[str, ...]) -> str:
-    """'<exception class> (HTTP <status>): <short message>' for a no_decision finding. Only the
-    exception's own message is used (no headers, request or .env content); configured values and
-    anything key-shaped are redacted."""
-    message = " ".join(str(exc).split())
+    """'<exception class> (HTTP <status>): <short message>' for a no_decision finding. For an
+    HTTP error only the error body's own `message` is used (OpenRouter's body also carries
+    response headers in `metadata`, which are never recorded); otherwise the exception text,
+    cut before any `headers` key. Configured values and anything key-shaped are redacted."""
+    body: Any = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error: Any = cast(dict[str, Any], body).get("error", body)
+        raw = cast(dict[str, Any], error).get("message", "") if isinstance(error, dict) else ""
+        message = " ".join(str(raw).split())
+    else:
+        message = " ".join(str(exc).split())
+    message = HEADERS_ONWARD.sub("", message).strip()
     for value in sorted({v for v in redact if v}, key=len, reverse=True):
         message = message.replace(value, "<redacted>")
     message = KEY_SHAPED.sub("<redacted>", message)

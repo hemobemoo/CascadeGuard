@@ -57,9 +57,34 @@ Tests: 329 passed (including the e2e browser test). No test can reach a live LLM
 The v2 baseline replays exactly from the cache offline. Smoke call (v2): valid, citations passed,
 6.06 s, 2,643 / 619 tokens.
 
-**Single-repair replay (golden successful repair, owner + share):** the dry run reports 25
-uncached replay steps (at least 25 requests), which is above the human's limit of 20, so it was
-**not run**.
+**Engine catching an LLM reasoning error (example).** `dha.pp11.4-18-1` obliges the operator
+to *maintain* a fallback plan; human decision h2 says it gives no authority to *activate* one.
+In the v2 baseline (T+60) the health operator cited 4.18.1 as supporting the activation of a
+fallback channel and proposed `activate_fallback_channel`; in v3 it again proposed it with 4.18.1
+among the citations (T+15, T+60, T+75). The engine rejected each
+proposal as `authority_uncertain`, and the orphan-duty failure for activate_fallback_channel
+stayed diagnosed. The agent misread the clause; the deterministic rule held.
+
+**Single-repair live replay (golden repair, owner + share; approved, cap 50; v3 cache):**
+inconclusive because of provider failures.
+- Dry run before any call: baseline fully cached; 25 of 36 replay steps change; the first
+  changed step is #0 (T+00 health_service_operator). Repair rules are shown from T+00 to the
+  roles they concern (P5-5), so no replay step precedes the change. The baseline came 36/36 from
+  the cache, and the 11 unchanged replay steps were cache hits.
+- 25 live steps, 47 requests (22 retries), cost 0.000000, 10.7k / 0.8k tokens. Only 4 live
+  steps produced a decision; 21 ended `request_failed`: first HTTP 502 ("Provider returned
+  error"), then HTTP 429 ("Rate limit exceeded: free-models-per-min", the free tier's 20
+  requests a minute).
+- Against the scripted replay of the same repair: both remove the information deadlock and the
+  reverse_automated_lockouts orphan duty. The scripted replay resolves (patient_access_restored
+  at T+60; the other two failures masked). The LLM replay leaves activate_fallback_channel and
+  review_automated_lockouts remaining, misses patient_access_restored, and shows a new conflict
+  (telecom report missed). That conflict comes from the telecom operator's failed steps, not
+  from the repair, so the comparison does not measure the repair. A meaningful replay needs
+  pacing under the rate limit (or a paid endpoint) and a new approval.
+- Found by this run and fixed: OpenRouter's error body carries response headers in `metadata`,
+  and they reached the finding text (in memory and the console only; nothing in the repository).
+  Error details now keep only the body's `message`, cut before any `headers` key (test added).
 
 ## Reviews
 
@@ -73,11 +98,13 @@ uncached replay steps (at least 25 requests), which is above the human's limit o
 
 ## Open for the human
 
-1. The live replay of the golden repair needs 25+ requests: approve a higher limit, or not.
+1. Golden-repair replay: rerun with pacing under the free tier's 20 requests a minute (or on a
+   paid endpoint)? The 4 successful live steps are cached and would be reused.
 2. P5-4: a live repair search (declined for now).
-3. The gap pattern's false positive on "no authority has been triggered" (by design
-   conservative; logged, not changed).
-4. Possible prompt improvement (not made): list open obligations and action descriptions in the
-   view.
+3. Known limitation: the gap pattern's false positive on "no authority has been triggered"
+   (pinned by a test; not changed).
+4. After Phase 5: list open obligations (and action descriptions) in the role views. Not done
+   now: it changes every prompt and invalidates the cache.
+5. Clause review: `uae.fl2-2019.art16-exceptions` (draft; FL 2/2019 PDF, page 5).
 
 Next: the review round on the real-model run, then the PR (do not merge) when approved.
