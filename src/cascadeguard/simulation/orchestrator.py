@@ -18,7 +18,7 @@ from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import ConstraintEngine
 from cascadeguard.engine.diagnosis import diagnose
 from cascadeguard.engine.graph import DependencyGraph, build_graph
-from cascadeguard.simulation.boundaries import view_for
+from cascadeguard.simulation.boundaries import RoleView, view_for
 from cascadeguard.simulation.state import ObligationStatus, SimulationState
 
 
@@ -36,6 +36,10 @@ class RunResult:
     causes: tuple[CoordinationFailure, ...]
     graph: DependencyGraph
     scripted: bool  # every role was a ScriptedAgent (they do not adapt to a repair)
+    # For display only: the exact view each role received at each inject, and each role's
+    # information boundary (data categories) in this run.
+    views: tuple[RoleView, ...]
+    boundaries: tuple[tuple[str, tuple[str, ...]], ...]
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
@@ -132,9 +136,12 @@ def run(
     loaded = dict(sorted(clauses.items()))
     state = SimulationState(scenario, roles)
     engine = ConstraintEngine(state, loaded, corpus_clause_ids)
+    shown: list[RoleView] = []
     for event in scenario.events:
         engine.release(event)
         views = {r.id: view_for(state, r.id, event, loaded) for r in roles.roles}
+        # A separately built copy is kept for display, never the object an agent was given.
+        shown += [view_for(state, r.id, event, loaded) for r in roles.roles]
         # Each decision is copied as soon as it is returned, so a later agent in the same
         # step cannot alter an earlier one before the engine processes it.
         decisions = [(r.id, _copy(agents[r.id].observe(views[r.id]))) for r in roles.roles]
@@ -156,4 +163,6 @@ def run(
         causes=causes,
         graph=graph,
         scripted=all(isinstance(a, ScriptedAgent) for a in agents.values()),
+        views=tuple(shown),
+        boundaries=tuple((r.id, tuple(sorted(state.boundary(r.id)))) for r in roles.roles),
     )

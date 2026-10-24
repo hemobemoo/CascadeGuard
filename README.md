@@ -49,6 +49,8 @@ uv run cascadeguard run uae_health_access --repair <repair-id>   # replay (from 
 uv run python -m cascadeguard.ui.app                             # demo UI (from Phase 4)
 ```
 
+The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use another port.
+
 ## Checks
 
 ```bash
