@@ -28,6 +28,9 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 18 | `UAE Policy Foundation.pdf` | Unofficial compilation of UAE policy pages (contents below) | not printed (unofficial compilation); Charter part: UAE AI, Digital Economy and Remote Work Applications Office (human decision) | unknown; Charter part: 2024-07 (human decision) | 16 | — | Yes |
 | 19 | `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf` | UAE National Strategy for AI 2031 | UAE Government (not printed on extracted pages) | not printed | 25 | 1, 25 (covers) | Yes |
 
+**#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
+and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.
+
 ## Derived OCR source
 
 | File | Derived from | Pages | No-text pages | Output |

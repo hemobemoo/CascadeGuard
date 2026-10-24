@@ -1,11 +1,27 @@
-"""Command-line entry point: `cascadeguard run <scenario> [--clauses DIR] [--repair ID]`."""
+"""Command-line entry point.
+
+cascadeguard run <scenario> [--clauses DIR] [--repair ID] [--export DIR] [--audit [DB]]
+cascadeguard repairs <scenario> [--clauses DIR] [--export DIR]
+"""
 
 import argparse
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from cascadeguard import __version__
-from cascadeguard.agents.scripted import load_scripted_agents
+from cascadeguard.agents.scripted import ScriptedAgent, load_scripted_agents
+from cascadeguard.domain.policies import PolicyClause
+from cascadeguard.domain.scenario import RoleSet, Scenario
+from cascadeguard.engine.constraints import RuleBook
+from cascadeguard.engine.repair_search import (
+    RANKING,
+    SCRIPTED_LIMIT_NOTE,
+    ReplayComparison,
+    SearchResult,
+    search,
+)
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
 from cascadeguard.simulation.loader import (
     PROJECT_ROOT,
@@ -14,8 +30,25 @@ from cascadeguard.simulation.loader import (
     load_scenario,
 )
 from cascadeguard.simulation.orchestrator import RunResult, run
+from cascadeguard.simulation.replay import replay
+from cascadeguard.storage.audit import DEFAULT_DB, AuditStore
+from cascadeguard.storage.export import (
+    comparison_export,
+    comparison_markdown,
+    run_export,
+    search_export,
+    write_exports,
+)
 
 REAL_CLAUSE_SET = "policies/reviewed: reviewed + illustrative clauses"
+
+
+def _display(path: Path) -> str:
+    """Project-relative path when possible, so labels do not depend on the checkout location."""
+    try:
+        return path.resolve().relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,14 +63,46 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="load clauses from this directory instead of policies/reviewed (e.g. test fixtures)",
     )
-    run_cmd.add_argument("--repair", default=None, help="replay with a repair (Phase 3)")
+    run_cmd.add_argument(
+        "--repair", default=None, help="replay the identical incident with this repair id"
+    )
+    run_cmd.add_argument("--export", type=Path, default=None, help="write JSON and Markdown here")
+    run_cmd.add_argument(
+        "--audit",
+        type=Path,
+        nargs="?",
+        const=DEFAULT_DB,
+        default=None,
+        help=f"record the run in a DuckDB audit file (default {_display(DEFAULT_DB)})",
+    )
+    repairs_cmd = subcommands.add_parser("repairs", help="search and rank candidate repairs")
+    repairs_cmd.add_argument("scenario")
+    repairs_cmd.add_argument("--clauses", type=Path, default=None)
+    repairs_cmd.add_argument("--export", type=Path, default=None)
+    repairs_cmd.add_argument("--audit", type=Path, nargs="?", const=DEFAULT_DB, default=None)
     return parser
 
 
-def run_scenario(
+@dataclass(frozen=True, slots=True)
+class World:
+    """Everything a run needs. A replay changes only what its repair changes."""
+
+    scenario: Scenario
+    roles: RoleSet
+    clauses: dict[str, PolicyClause]
+    corpus_ids: frozenset[str]
+    agents: dict[str, ScriptedAgent]
+    label: str
+
+    def baseline(self) -> RunResult:
+        return run(
+            self.scenario, self.roles, self.clauses, self.corpus_ids, self.agents, self.label
+        )
+
+
+def load_world(
     scenario_id: str, clauses_dir: Path | None = None, scenarios_dir: Path = SCENARIOS_DIR
-) -> RunResult:
-    """Run the baseline with ScriptedAgents. Fixture clause sets are labelled as such."""
+) -> World:
     corpus = load_clauses(REVIEWED_DIR)
     if clauses_dir is None:
         clauses = load_engine_clauses(REVIEWED_DIR)
@@ -51,15 +116,37 @@ def run_scenario(
     agents = load_scripted_agents(
         scenarios_dir / scenario_id / "scripted_decisions.yaml", scenario, roles
     )
-    return run(scenario, roles, clauses, corpus_ids, agents, label)
+    return World(scenario, roles, clauses, corpus_ids, agents, label)
 
 
-def _display(path: Path) -> str:
-    """Project-relative path when possible, so labels do not depend on the checkout location."""
-    try:
-        return path.resolve().relative_to(PROJECT_ROOT).as_posix()
-    except ValueError:
-        return path.as_posix()
+def run_scenario(
+    scenario_id: str, clauses_dir: Path | None = None, scenarios_dir: Path = SCENARIOS_DIR
+) -> RunResult:
+    """Run the baseline with ScriptedAgents. Fixture clause sets are labelled as such."""
+    return load_world(scenario_id, clauses_dir, scenarios_dir).baseline()
+
+
+def search_repairs(
+    scenario_id: str, clauses_dir: Path | None = None, scenarios_dir: Path = SCENARIOS_DIR
+) -> SearchResult:
+    """Replay every candidate repair on the identical incident and rank them."""
+    w = load_world(scenario_id, clauses_dir, scenarios_dir)
+    return search(
+        w.baseline(),
+        w.scenario,
+        w.roles,
+        RuleBook(w.clauses),
+        lambda p: replay(w.scenario, w.roles, w.clauses, w.corpus_ids, w.agents, w.label, p),
+    )
+
+
+def replay_repair(
+    scenario_id: str,
+    repair_id: str,
+    clauses_dir: Path | None = None,
+    scenarios_dir: Path = SCENARIOS_DIR,
+) -> ReplayComparison:
+    return search_repairs(scenario_id, clauses_dir, scenarios_dir).comparison(repair_id)
 
 
 def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
@@ -133,19 +220,116 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
     return "\n".join(lines)
 
 
+def format_search(result: SearchResult) -> str:
+    labels = dict(result.loaded_clauses)
+    lines = ["Candidate repairs, ranked (lexicographic; see AGENTS.md and ADR 0001)"]
+    lines.append(f"Order: {RANKING}")
+    lines.append(f"Clause set: {result.clause_set}")
+    lines.append("Every repair rule is hypothetical. 'requires authorization': no reviewed,")
+    lines.append("binding clause supports the permission it creates; it needs human and")
+    lines.append("institutional approval.")
+    if not result.ranked:
+        lines.append("  no candidate repair passed the hard filter")
+    for i, c in enumerate(result.ranked, 1):
+        p = c.proposal
+        auth = ", requires authorization" if p.requires_authorization else ""
+        lines.append(f"{i:3}. {p.repair_id}")
+        lines.append(
+            f"     {c.outcome}; critical blockers removed {c.critical_blockers_removed}; "
+            f"{len(p.edits)} edit(s){auth}"
+        )
+        if c.masked:
+            lines.append(f"     masked (goal met another way): {', '.join(c.masked)}")
+        tags = c.conflict_tags()
+        for fid in c.new_conflicts:
+            tag = f"  [{tags[fid]}: {SCRIPTED_LIMIT_NOTE}]" if fid in tags else ""
+            lines.append(f"     new conflict: {fid}{tag}")
+    lines.append("")
+    lines.append("Discarded by the hard filter")
+    if not result.discarded:
+        lines.append("  none")
+    for d in result.discarded:
+        cites = ", ".join(f"{c} [{labels.get(c, 'not loaded')}]" for c in d.clause_ids)
+        lines.append(f"  {d.repair_id}: {d.reason}: {cites}")
+    return "\n".join(lines)
+
+
+def _export(directory: Path, name: str, data: dict[str, Any], markdown: str) -> None:
+    for path in write_exports(directory, name, data, markdown):
+        print(f"exported {_display(path)}")
+
+
+def _text_markdown(title: str, text: str) -> str:
+    return f"# {title}\n\n```text\n{text}\n```\n"
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.command == "run":
-        if args.repair is not None:
-            print("cascadeguard run --repair: not implemented yet (Phase 3).")
+    if args.command == "run" and args.repair is not None:
+        try:
+            comparison = replay_repair(args.scenario, args.repair, args.clauses)
+        except KeyError as exc:
+            print(f"cascadeguard: {exc.args[0]}. List repairs with `cascadeguard repairs`.")
             return 2
+        markdown = comparison_markdown(comparison)
+        print(markdown)
+        if args.export is not None:
+            _export(
+                args.export,
+                f"{args.scenario}-replay-{args.repair}",
+                comparison_export(comparison),
+                markdown,
+            )
+        if args.audit is not None:
+            store = AuditStore(args.audit)
+            try:
+                base, rep = store.record_comparison(comparison)
+            finally:
+                store.close()
+            print(f"audit: baseline run {base}, replay run {rep} in {_display(args.audit)}")
+        return 0
+    if args.command == "run":
         result = run_scenario(args.scenario, args.clauses)
         excluded = None
         if args.clauses is None:
             loaded = {cid for cid, _ in result.loaded_clauses}
             excluded = sum(1 for c in load_clauses(REVIEWED_DIR) if c.id not in loaded)
-        print(format_result(result, excluded))
+        text = format_result(result, excluded)
+        print(text)
+        if args.export is not None:
+            _export(
+                args.export,
+                f"{args.scenario}-baseline",
+                run_export(result),
+                _text_markdown(f"Baseline: {args.scenario}", text),
+            )
+        if args.audit is not None:
+            store = AuditStore(args.audit)
+            try:
+                run_id = store.record_run(result, "baseline")
+            finally:
+                store.close()
+            print(f"audit: baseline run {run_id} in {_display(args.audit)}")
+        return 0
+    if args.command == "repairs":
+        found = search_repairs(args.scenario, args.clauses)
+        text = format_search(found)
+        print(text)
+        if args.export is not None:
+            _export(
+                args.export,
+                f"{args.scenario}-repairs",
+                search_export(found),
+                _text_markdown(f"Repairs: {args.scenario}", text),
+            )
+        if args.audit is not None:
+            store = AuditStore(args.audit)
+            try:
+                base = store.record_search(run_scenario(args.scenario, args.clauses), found)
+            finally:
+                store.close()
+            print(f"audit: baseline run {base} and its candidates in {_display(args.audit)}")
         return 0
     parser.print_help()
     return 0

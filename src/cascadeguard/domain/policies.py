@@ -1,5 +1,6 @@
 """Policy clauses extracted from the PDFs in policies/sources/ (see AGENTS.md)."""
 
+from datetime import date
 from enum import StrEnum
 from typing import Literal, Self
 
@@ -82,6 +83,12 @@ class PolicyClause(DomainModel):
 
     @model_validator(mode="after")
     def _check_provenance(self) -> Self:
+        if self.document_date != "unknown":
+            year, *rest = (int(p) for p in self.document_date.split("-"))
+            try:  # a real calendar date, not just the right shape ("2020-13-45" is refused)
+                date(year, *[*rest, 1, 1][:2])
+            except ValueError as exc:
+                raise ValueError(f"document_date {self.document_date!r}: {exc}") from exc
         if self.status is ClauseStatus.ILLUSTRATIVE:
             if self.binding is True:
                 raise ValueError("an illustrative clause cannot be binding")

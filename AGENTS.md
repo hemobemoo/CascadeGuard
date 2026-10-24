@@ -43,14 +43,29 @@ The closed repair grammar is the five edit types in `CascadeGuard.md` §6:
 assign owner, add escalation trigger, define minimum data-share, add fallback-channel rule,
 designate decision-requester.
 
-Ranking is lexicographic and deterministic:
+Ranking is lexicographic and deterministic (`CascadeGuard.md` §6; ADR
+`docs/decisions/0001-repair-ranking.md`):
 
 1. Hard filter: discard any repair under which a prohibited action becomes permitted or a
    safeguard is violated. Record each discarded repair with its reason.
-2. Most critical blockers removed.
-3. Fewest repair edits.
-4. Tie-breaks: repairs not requiring authorization first, then fewest roles and clauses
-   touched, then `repair_id`.
+2. Clean repairs (no new conflict) rank above any repair that introduces a new conflict.
+3. Resolved repairs (every critical goal met in the replay) above partial ones, then most
+   critical goals met.
+4. Most critical blockers removed at their cause.
+5. Fewest critical blockers that are only masked.
+6. Fewest repair edits.
+7. Fewest roles touched.
+8. Fewest clauses cited.
+9. Repairs not requiring authorization first.
+10. `repair_id`.
+
+Among repairs with new conflicts, fewest new conflicts breaks the ties left after step 8.
+
+A blocker counts as removed only when the repair removes its cause. A blocker that no longer
+blocks only because its goal was met another way is reported as "masked (goal met another
+way)", not removed. Repairs with a new conflict are ranked lower, never discarded: they stay in
+the output as failed repairs with the new conflict named. A new conflict that is only an
+unfulfilled duty caused by the scripted-agent limit is tagged `scripted_agent_limit`.
 
 A repair that creates a permission not supported by a `reviewed` clause is marked
 `requires_authorization: true` and shown as needing human and institutional approval.
@@ -163,7 +178,10 @@ Work without asking unless one of these applies. When one does, record it under
 the PR or your report.
 
 1. Setting any clause to `status: reviewed`. Only on the human's explicit list of clause IDs,
-   committed as `Reviewed by human: <ids>`.
+   committed as `Reviewed by human: <ids>`. Any edit to a clause with `status: reviewed`
+   (any field) sets it back to `status: draft` in the same commit and lists it under
+   `reapproval_needed` in `policies/approvals.yaml` and in `PROGRESS.md` for the human's
+   re-approval. `tests/unit/test_approvals.py` enforces this.
 2. Any reviewer finding marked QUESTION-FOR-HUMAN or NEEDS-HUMAN-JUDGMENT.
 3. Any dependency not listed in this file.
 4. Anything that costs money (Phase 5 smoke test, model choice, paid services).
