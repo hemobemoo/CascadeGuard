@@ -4,12 +4,36 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 4 — Demo UI: merged** (PR #5, merge commit d96126b, tag `phase-4`, 2026-10-24, on the
-human's instruction after the e2e test passed locally and in CI: 284 passed). **Phase 5 has not
-started** and waits for the human (see "Next step"). The Phase 5 review must first cover the
-Phase 4 round-3 fixes (a0b6342) and the commits after it (art14-5 mapping, e2e test).
+**Phase 5 — LLM agents: built, blocked on the human** (branch `phase-5-llm`, not merged; the
+human said not to merge). The scripted path is unchanged and default. The one approved live call
+was refused by OpenRouter (HTTP 404, no endpoint supports the requested parameters): the
+configured model does not support structured outputs. Waiting on a model choice and approval of
+one more call (see "Waiting on human"). Phase 4 is merged (PR #5, tag `phase-4`).
 
 ## Done
+
+### Phase 5 — LLM agents (branch `phase-5-llm`, in progress)
+- Review round 1 on the Phase 4 tail (a0b6342, 2f0ddc8, 9f27e4d): phase-auditor PASS,
+  test-breaker PASS, evidence-auditor FAIL (2 MINOR stale notes). All MINORs fixed in dc6c7d3
+  (notes, e2e scoping, graph check, view-model placeholder). Triage:
+  `docs/review/phase-5-clause-triage.md`.
+- `agents/llm.py` (OpenRouter via `openai`, temperature 0, strict json_schema from
+  `AgentDecision`, `provider.require_parameters`, response healing explicitly disabled, one retry,
+  then `AgentDecision.no_decision`), `agents/cache.py` (key: role, view, prompt version, model,
+  schema; model stored only as a hash), `knowledge/retrieval.py` (role clauses by the engine's
+  7n rule; `search_extracted`, books excluded, off in prompts), `RoleView.role_clauses`.
+- Engine: `no_decision` finding. CLI `--agents scripted|llm`, `--offline`, `--cache`. UI toggle:
+  Scripted / LLM (cached only) / LLM (live, paid calls). `scripts/llm_smoke_test.py` (one call).
+- Tests: `tests/unit/test_llm_agents.py`, `tests/unit/test_retrieval.py` (fake client, no
+  network), e2e toggle check; `tests/conftest.py` refuses any live client in tests.
+  Spec: `specs/005-llm-agents.md`.
+
+Verify:
+
+```bash
+uv run cascadeguard run uae_health_access --agents llm --offline   # cache only, no call
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 4 — Demo UI (merged, PR #5, tag `phase-4`)
 - `ui/app.py` (NiceGUI, port 8765 or `CASCADEGUARD_UI_PORT`): scenario picker, timeline, role
@@ -470,6 +494,21 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Phase 5 (2026-10-24):**
+
+- **P5-1 Model.** The configured model does not support `response_format`/`structured_outputs`
+  (OpenRouter public model list), so with `require_parameters: true` no endpoint accepts the
+  request. Choose a model that supports structured outputs and approve one more smoke call.
+- **P5-2 Disclosure.** Before the smoke call, a test bug (default `env_file` bound at import, so
+  a monkeypatch missed it) made one CLI test build a live client from the real `.env`: 36 steps x
+  2 attempts = 72 requests of the same shape, all failed (most likely the same 404 routing
+  refusal; the error type was not kept). Fixed: `env_file` is read at call time and
+  `tests/conftest.py` makes building a live client in any test an error.
+- **P5-3** May keyword-search snippets of `policies/extracted/` (non-book PDFs) be sent to
+  OpenRouter as context? Default: no (`search_extracted` exists but is off in prompts).
+- **P5-4** Repair search with LLM agents: about 21 replays and about 312 uncached steps (scripted
+  proxy). Run live only on explicit approval.
+
 Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
 the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, none blocking:
@@ -497,6 +536,12 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+Phase 5: after P5-1, run `uv run python scripts/llm_smoke_test.py` once, report, estimate a full
+run, and wait for approval before any full LLM run. Then the Phase 5 review round on the Phase 5
+code and the PR (do not merge).
+
+Earlier (done):
 
 1. Human, before Phase 5 (LLM agents) can start:
    - put the three variables in `.env` (never committed; names only in `.env.example`):

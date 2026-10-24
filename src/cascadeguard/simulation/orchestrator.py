@@ -168,9 +168,9 @@ def run(
     shown: list[RoleView] = []
     for event in scenario.events:
         engine.release(event)
-        views = {r.id: view_for(state, r.id, event, loaded) for r in roles.roles}
+        views = {r.id: view_for(state, r.id, event, loaded, corpus_clause_ids) for r in roles.roles}
         # A separately built copy is kept for display, never the object an agent was given.
-        shown += [view_for(state, r.id, event, loaded) for r in roles.roles]
+        shown += [view_for(state, r.id, event, loaded, corpus_clause_ids) for r in roles.roles]
         # Each decision is copied as soon as it is returned, so a later agent in the same
         # step cannot alter an earlier one before the engine processes it.
         decisions = [(r.id, _copy(agents[r.id].observe(views[r.id]))) for r in roles.roles]

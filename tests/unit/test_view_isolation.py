@@ -85,7 +85,7 @@ def test_view_facts_are_copies_not_state_or_scenario_objects() -> None:
     engine = ConstraintEngine(state, clauses, corpus)
     engine.release(scenario.events[0])
     engine.release(scenario.events[1])
-    view = view_for(state, "health_service_operator", scenario.events[1], clauses)
+    view = view_for(state, "health_service_operator", scenario.events[1], clauses, corpus)
     assert view.facts
     state_ids = {id(f) for f in state.known_facts("health_service_operator")}
     scenario_ids = {id(f) for e in scenario.events for f in e.facts}

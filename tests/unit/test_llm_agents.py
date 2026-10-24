@@ -1,0 +1,391 @@
+"""LLM agents without the network: a fake client returns recorded replies (specs/005).
+
+The fake records every request, so the tests check what would be sent (settings, no response
+healing) and how many calls a run or a replay makes.
+"""
+
+import json
+from collections.abc import Callable
+from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
+
+import pytest
+
+from cascadeguard.agents.cache import DecisionCache, cache_key, model_digest
+from cascadeguard.agents.llm import (
+    AGENT_FILLED,
+    PROMPT_VERSION,
+    LLMAgent,
+    LLMConfig,
+    LLMConfigError,
+    LLMDecisionPayload,
+    build_messages,
+    response_schema,
+)
+from cascadeguard.agents.scripted import ScriptedAgent
+from cascadeguard.cli import World, load_world, main, search_repairs
+from cascadeguard.domain.decisions import AgentDecision
+from cascadeguard.engine.constraints import WITHHELD, Reason
+from cascadeguard.simulation.boundaries import RoleView
+from cascadeguard.simulation.orchestrator import run
+from cascadeguard.simulation.replay import replay
+
+SCENARIO = "uae_health_access"
+MODEL = "test/fake-model"  # never a real model id; tests make no calls
+SUCCESS = (
+    "owner.reverse_automated_lockouts.health_service_operator"
+    "+share.network_incident_status.telecom_operator.health_service_operator"
+)
+
+Reply = Callable[[dict[str, Any]], str | Exception]
+TextReply = Callable[[dict[str, Any]], str]
+
+
+class FakeClient:
+    """Stands in for openai.OpenAI: `chat.completions.create(**request)`."""
+
+    def __init__(self, reply: Reply) -> None:
+        self.reply = reply
+        self.requests: list[dict[str, Any]] = []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
+
+    def _create(self, **request: Any) -> Any:
+        self.requests.append(request)
+        out = self.reply(request)
+        if isinstance(out, Exception):
+            raise out
+        usage = SimpleNamespace(
+            prompt_tokens=100, completion_tokens=20, model_extra={"cost": 0.001}
+        )
+        message = SimpleNamespace(content=out)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=usage)
+
+
+def payload_of(decision: AgentDecision) -> str:
+    """A recorded reply: the decision as the model would send it (schema shape)."""
+    return json.dumps(
+        {
+            "proposed_actions": [
+                {
+                    "action_type": a.action_type,
+                    "target": a.target,
+                    "parameters": [{"name": k, "value": v} for k, v in a.parameters.items()],
+                }
+                for a in decision.proposed_actions
+            ],
+            "rationale": decision.rationale,
+            "citations": [c.model_dump() for c in decision.citations],
+            "uncertainty": list(decision.uncertainty),
+            "gap_claims": [g.model_dump() for g in decision.gap_claims],
+        }
+    )
+
+
+def view_of(request: dict[str, Any]) -> dict[str, Any]:
+    return json.loads(request["messages"][1]["content"])
+
+
+@pytest.fixture(scope="module")
+def scripted() -> World:
+    return load_world(SCENARIO)
+
+
+def scripted_replies(world: World) -> TextReply:
+    """Replays the scripted decisions as model replies, keyed by role and minute."""
+    agents = world.agents
+
+    def reply(request: dict[str, Any]) -> str:
+        v = view_of(request)
+        agent = agents[v["role_id"]]
+        assert isinstance(agent, ScriptedAgent)
+        decision = agent.observe(_stub_view(world, v["role_id"], v["minute"]))
+        return payload_of(decision)
+
+    return reply
+
+
+def _stub_view(world: World, role: str, minute: int) -> RoleView:
+    # ScriptedAgent reads only role, minute and time from the view.
+    base = world.baseline().views
+    return next(v for v in base if v.role_id == role and v.minute == minute)
+
+
+def llm_world(world: World, client: FakeClient | None, cache: DecisionCache) -> World:
+    role_ids = tuple(r.id for r in world.roles.roles)
+    agents = {r: LLMAgent(r, MODEL, client, cache, role_ids) for r in role_ids}
+    return replace(world, agents=dict(agents), cache=cache)
+
+
+# --- Request and schema ---------------------------------------------------------------------
+
+
+def test_request_carries_the_required_openrouter_settings(scripted: World, tmp_path: Path) -> None:
+    client = FakeClient(scripted_replies(scripted))
+    view = scripted.baseline().views[0]
+    LLMAgent(view.role_id, MODEL, client, DecisionCache(tmp_path), ()).observe(view)
+    (req,) = client.requests
+    assert req["model"] == MODEL
+    assert req["temperature"] == 0
+    fmt = req["response_format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["json_schema"]["strict"] is True
+    assert fmt["json_schema"]["schema"] == response_schema()
+    assert req["extra_body"]["provider"] == {"require_parameters": True}
+    # Response healing is explicitly off; no plugin is switched on.
+    assert req["extra_body"]["plugins"] == [{"id": "response-healing", "enabled": False}]
+    assert all(p.get("enabled") is False for p in req["extra_body"]["plugins"])
+
+
+def test_payload_is_agent_decision_without_the_agent_filled_fields() -> None:
+    assert set(LLMDecisionPayload.model_fields) == set(AgentDecision.model_fields) - AGENT_FILLED
+    for name in ("rationale", "citations", "uncertainty", "gap_claims"):
+        assert (
+            LLMDecisionPayload.model_fields[name].annotation
+            == AgentDecision.model_fields[name].annotation
+        )
+
+
+def test_schema_is_strict_everywhere() -> None:
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            node = cast(dict[str, Any], node)
+            assert "default" not in node and "const" not in node
+            if node.get("type") == "object" and "properties" in node:
+                assert node["additionalProperties"] is False
+                assert sorted(node["required"]) == sorted(node["properties"])
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in cast(list[Any], node):
+                walk(v)
+
+    walk(response_schema())
+
+
+def test_prompt_holds_only_the_view(scripted: World) -> None:
+    """The prompt is built from the role's own view: no other role's facts reach it."""
+    b = scripted.baseline()
+    for v in b.views:
+        text = build_messages(v, ())[1]["content"]
+        others = {f.id for o in b.views if o.role_id != v.role_id for f in o.facts} - {
+            f.id for f in v.facts
+        }
+        for fact_id in others:
+            assert f'"{fact_id}"' not in text, (v.role_id, v.minute, fact_id)
+
+
+# --- Runs ---------------------------------------------------------------------------------
+
+
+def test_llm_run_completes_and_matches_scripted_when_replies_match(
+    scripted: World, tmp_path: Path
+) -> None:
+    client = FakeClient(scripted_replies(scripted))
+    w = llm_world(scripted, client, DecisionCache(tmp_path))
+    result = w.baseline()
+    assert len(client.requests) == len(result.views) == 36
+    assert not result.scripted
+    assert result.summary() == scripted.baseline().summary()
+
+
+def test_unknown_citation_is_rejected_as_a_finding(scripted: World, tmp_path: Path) -> None:
+    base = scripted_replies(scripted)
+
+    def reply(request: dict[str, Any]) -> str:
+        v = view_of(request)
+        out = json.loads(base(request))
+        if v["role_id"] == "health_service_operator" and v["minute"] == 15:
+            out["citations"].append({"clause_id": "uae.invented.art99", "relevance": "x"})
+        return json.dumps(out)
+
+    result = llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path)).baseline()
+    found = [f for f in result.findings if f.kind == Reason.UNKNOWN_CITATION.value]
+    assert [(f.minute, f.role, f.clause_ids) for f in found] == [
+        (15, "health_service_operator", (WITHHELD,))
+    ]
+    assert not any(
+        e.kind == "accepted" and e.role == "health_service_operator" and e.minute == 15
+        for e in result.log
+    )
+
+
+def test_invalid_output_is_retried_once(scripted: World, tmp_path: Path) -> None:
+    base = scripted_replies(scripted)
+    seen: set[tuple[str, int]] = set()
+
+    def reply(request: dict[str, Any]) -> str:
+        v = view_of(request)
+        if (v["role_id"], v["minute"]) not in seen:
+            seen.add((v["role_id"], v["minute"]))
+            return "{not json"
+        return base(request)
+
+    client = FakeClient(reply)
+    result = llm_world(scripted, client, DecisionCache(tmp_path)).baseline()
+    assert len(client.requests) == 72  # every step: one bad reply, one retry
+    assert result.summary() == scripted.baseline().summary()
+
+
+def test_invalid_twice_is_a_no_decision_finding_and_cached(scripted: World, tmp_path: Path) -> None:
+    base = scripted_replies(scripted)
+
+    def reply(request: dict[str, Any]) -> str:
+        v = view_of(request)
+        if v["role_id"] == "telecom_operator" and v["minute"] == 0:
+            return json.dumps({"proposed_actions": "nope"})  # schema mismatch
+        return base(request)
+
+    cache = DecisionCache(tmp_path)
+    client = FakeClient(reply)
+    result = llm_world(scripted, client, cache).baseline()
+    found = [f for f in result.findings if f.kind == Reason.NO_DECISION.value]
+    assert [(f.minute, f.role) for f in found] == [(0, "telecom_operator")]
+    assert "invalid_output" in found[0].detail and "nope" not in found[0].detail
+    assert len(client.requests) == 37
+    # A second run is the identical incident from the cache: no calls, same findings.
+    again = FakeClient(reply)
+    rerun = llm_world(scripted, again, DecisionCache(tmp_path)).baseline()
+    assert not again.requests
+    assert rerun.summary() == result.summary()
+
+
+def test_request_errors_are_retried_then_not_cached(scripted: World, tmp_path: Path) -> None:
+    client = FakeClient(lambda _: ConnectionError("down"))
+    view = scripted.baseline().views[0]
+    cache = DecisionCache(tmp_path)
+    decision = LLMAgent(view.role_id, MODEL, client, cache, ()).observe(view)
+    assert decision.no_decision == "request_failed"
+    assert len(client.requests) == 2
+    assert not list(tmp_path.glob("*.json"))
+
+
+def test_offline_miss_is_not_cached_no_decision(scripted: World, tmp_path: Path) -> None:
+    result = llm_world(scripted, None, DecisionCache(tmp_path)).baseline()
+    kinds = {f.kind for f in result.findings}
+    assert Reason.NO_DECISION.value in kinds
+    assert all(
+        "not_cached" in f.detail for f in result.findings if f.kind == Reason.NO_DECISION.value
+    )
+
+
+def test_replay_reuses_cached_decisions_for_unchanged_steps(
+    scripted: World, tmp_path: Path
+) -> None:
+    client = FakeClient(scripted_replies(scripted))
+    cache = DecisionCache(tmp_path)
+    w = llm_world(scripted, client, cache)
+    base = run(w.scenario, w.roles, w.clauses, w.corpus_ids, w.agents, w.label)
+    assert len(client.requests) == 36 and cache.stats.hits == 0
+    proposal = search_repairs(SCENARIO).comparison(SUCCESS).proposal
+    before_calls, before_hits = len(client.requests), cache.stats.hits
+    rep = replay(w.scenario, w.roles, w.clauses, w.corpus_ids, w.agents, w.label, proposal)
+    calls = len(client.requests) - before_calls
+    hits = cache.stats.hits - before_hits
+    schema = response_schema()
+
+    def key(v: RoleView) -> str:
+        return cache_key(v.role_id, v, PROMPT_VERSION, MODEL, schema)
+
+    base_keys = {key(v) for v in base.views}
+    unchanged = [v for v in rep.views if key(v) in base_keys]
+    changed = [v for v in rep.views if key(v) not in base_keys]
+    assert unchanged and changed  # the repair changes some views, not all
+    assert hits == len(unchanged)  # every unchanged step came from the cache
+    assert calls == len(changed)  # and only changed steps made a call
+    asked = {(view_of(r)["role_id"], view_of(r)["minute"]) for r in client.requests[36:]}
+    assert asked == {(v.role_id, v.minute) for v in changed}
+
+
+def test_cache_key_depends_on_model_prompt_and_view(scripted: World) -> None:
+    v0, v1 = scripted.baseline().views[:2]
+    schema = response_schema()
+    k = cache_key(v0.role_id, v0, PROMPT_VERSION, MODEL, schema)
+    assert k == cache_key(v0.role_id, v0, PROMPT_VERSION, MODEL, schema)
+    assert k != cache_key(v0.role_id, v0, PROMPT_VERSION, MODEL + "-other", schema)
+    assert k != cache_key(v0.role_id, v0, PROMPT_VERSION + "x", MODEL, schema)
+    assert k != cache_key(v1.role_id, v1, PROMPT_VERSION, MODEL, schema)
+
+
+def test_cache_files_hold_no_model_id(scripted: World, tmp_path: Path) -> None:
+    client = FakeClient(scripted_replies(scripted))
+    view = scripted.baseline().views[0]
+    LLMAgent(view.role_id, MODEL, client, DecisionCache(tmp_path), ()).observe(view)
+    (path,) = tmp_path.glob("*.json")
+    text = path.read_text(encoding="utf-8")
+    assert MODEL not in text and model_digest(MODEL) in text
+
+
+def test_no_decision_cannot_carry_actions(scripted: World) -> None:
+    view = scripted.baseline().views[0]
+    with pytest.raises(ValueError, match="no-decision"):
+        AgentDecision.model_validate(
+            {
+                "role_id": view.role_id,
+                "at": view.at,
+                "proposed_actions": [{"action_type": "monitor"}],
+                "rationale": "",
+                "citations": [],
+                "uncertainty": [],
+                "no_decision": "invalid_output",
+            }
+        )
+
+
+# --- Configuration and CLI ------------------------------------------------------------------
+
+
+def test_missing_configuration_names_variables_not_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "CASCADEGUARD_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    env = tmp_path / ".env"
+    env.write_text("OPENROUTER_API_KEY=sk-secret-value-123\n", encoding="utf-8")
+    with pytest.raises(LLMConfigError) as err:
+        LLMConfig.from_env(env)
+    message = str(err.value)
+    assert "OPENROUTER_BASE_URL" in message and "CASCADEGUARD_MODEL" in message
+    assert "sk-secret" not in message and "OPENROUTER_API_KEY" not in message
+    with pytest.raises(LLMConfigError):
+        LLMConfig.model_from_env(env)
+    env.write_text(env.read_text() + "OPENROUTER_BASE_URL=u\nCASCADEGUARD_MODEL=m\n")
+    config = LLMConfig.from_env(env)
+    assert "sk-secret" not in repr(config)
+
+
+def test_cli_offline_llm_run_needs_no_key_and_prints_no_model(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Fill a cache through the fake client, then run the CLI offline from it.
+    llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)).baseline()
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+    monkeypatch.setattr("cascadeguard.agents.llm.ENV_FILE", tmp_path / "absent.env")
+    code = main(["run", SCENARIO, "--agents", "llm", "--offline", "--cache", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "Agents: LLM agents (model from CASCADEGUARD_MODEL; offline" in out
+    assert "LLM decision cache: 36 steps reused, 0 not cached" in out
+    assert MODEL not in out
+    assert "no_decision" not in out
+
+
+def test_cli_llm_without_configuration_fails_clearly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for name in ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "CASCADEGUARD_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr("cascadeguard.agents.llm.ENV_FILE", tmp_path / "absent.env")
+    assert main(["run", SCENARIO, "--agents", "llm", "--cache", str(tmp_path)]) == 2
+    assert "no default model is used" in capsys.readouterr().out
+
+
+def test_scripted_is_still_the_default(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["run", SCENARIO]) == 0
+    out = capsys.readouterr().out
+    assert "Agents:" not in out and "LLM decision cache" not in out
