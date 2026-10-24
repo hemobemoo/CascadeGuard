@@ -163,7 +163,7 @@ The engine searches for a minimum-edit repair subject to hard constraints:
 - Critical recovery blockers are reduced or removed.
 - Any unresolved issue requiring expert judgment remains explicit.
 
-The optimization is lexicographic: preserve safeguards first, remove critical blockers second, and minimize the number of repair edits third.
+The optimization is lexicographic: preserve safeguards first; prefer repairs that introduce no new conflict; then prefer repairs that make a feasible recovery path available (all critical goals met); then remove critical blockers at their cause rather than masking them; and minimize the number of repair edits after that. The full ranking and its tie-breaks are in `docs/decisions/0001-repair-ranking.md`.
 
 If one repair removes a blocker but creates another conflict, the engine records the failed repair and identifies the new conflict.
 
