@@ -247,10 +247,11 @@ def index() -> None:
     async def run_baseline() -> None:
         status.set_text("Running the baseline ...")
         world = await run.io_bound(load_world, str(picker.value))
-        if world is None:
-            return
+        assert world is not None  # load_world raises on failure
+        baseline = await run.io_bound(world.baseline)
+        assert baseline is not None
         s.world, s.search, s.selected, s.failure = world, None, None, None
-        s.baseline = world.baseline()
+        s.baseline = baseline
         s.role, s.minute = world.roles.roles[0].id, world.scenario.events[0].at_minute
         status.set_text(
             f"Baseline: {len(s.baseline.failures)} diagnosed failures. "
@@ -288,7 +289,7 @@ def index() -> None:
 
 def main() -> None:
     ui.run(  # pyright: ignore[reportUnknownMemberType]
-        title="CascadeGuard", port=port(), reload=False, show=False
+        title="CascadeGuard", host="127.0.0.1", port=port(), reload=False, show=False
     )
 
 

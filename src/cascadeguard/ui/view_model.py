@@ -14,6 +14,9 @@ from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.repair_search import (
+    MASKED_LABEL,
+    REMOVED_LABEL,
+    REQUIRES_AUTHORIZATION_LABEL,
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
@@ -32,8 +35,8 @@ from cascadeguard.storage.export import (
     search_export,
 )
 
-MASKED = "masked (goal met another way)"
-REQUIRES_AUTHORIZATION = "requires authorization (needs human and institutional approval)"
+MASKED = MASKED_LABEL
+REQUIRES_AUTHORIZATION = REQUIRES_AUTHORIZATION_LABEL
 
 
 def cite(ids: Iterable[str], labels: dict[str, str]) -> str:
@@ -316,7 +319,7 @@ def comparison(c: ReplayComparison) -> Comparison:
         goals=tuple((g, v["baseline"], v["replay"]) for g, v in s["goals"].items()),
         baseline_failures=tuple(f.id for f in c.baseline.failures),
         replay_failures=tuple(replay_rows),
-        removed=tuple(f"{f}: removed (cause gone)" for f in c.removed),
+        removed=tuple(f"{f}: {REMOVED_LABEL}" for f in c.removed),
         changed_actions=tuple(
             f"T+{a['minute']:02d} {a['role']}: {a['action']}"
             + (f" -> {a['target']}" if "target" in a else "")
