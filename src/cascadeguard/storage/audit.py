@@ -79,7 +79,7 @@ class AuditStore:
                 result.scenario_id,
                 result.clause_set,
                 repair_id,
-                _json(result.summary()),
+                _json({**result.summary(), "agents": result.agents}),
             ],
         )
         self.con.executemany(

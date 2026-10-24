@@ -24,6 +24,9 @@ from cascadeguard.engine.graph import DependencyGraph, build_graph
 from cascadeguard.simulation.boundaries import RoleView, view_for
 from cascadeguard.simulation.state import ObligationStatus, SimulationState
 
+SCRIPTED_AGENTS = "scripted agents (scripted_decisions.yaml)"
+OTHER_AGENTS = "non-scripted agents (e.g. LLM)"
+
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
@@ -43,6 +46,9 @@ class RunResult:
     # information boundary (data categories) in this run.
     views: tuple[RoleView, ...]
     boundaries: tuple[tuple[str, tuple[str, ...]], ...]
+    # Which agents produced this run, shown in every output and export (the CLI and UI set the
+    # exact label, e.g. which LLM mode). Not part of summary(), so goldens stay unchanged.
+    agents: str = SCRIPTED_AGENTS
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
@@ -180,6 +186,7 @@ def run(
     graph = build_graph(state, loaded)
     failures = diagnose(state, graph, engine.rules, clause_set)
     causes = diagnose(state, graph, engine.rules, clause_set, include_met=True)
+    scripted = all(isinstance(a, ScriptedAgent) for a in agents.values())
     return RunResult(
         scenario_id=scenario.id,
         clause_set=clause_set,
@@ -191,7 +198,8 @@ def run(
         failures=failures,
         causes=causes,
         graph=graph,
-        scripted=all(isinstance(a, ScriptedAgent) for a in agents.values()),
+        scripted=scripted,
         views=tuple(shown),
         boundaries=tuple((r.id, tuple(sorted(state.boundary(r.id)))) for r in roles.roles),
+        agents=SCRIPTED_AGENTS if scripted else OTHER_AGENTS,
     )

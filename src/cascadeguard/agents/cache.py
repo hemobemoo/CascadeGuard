@@ -88,30 +88,54 @@ class CacheStats:
     misses: int = 0
     keys_hit: list[str] = field(default_factory=list[str])
     keys_missed: list[str] = field(default_factory=list[str])
+    untrusted: int = 0  # unreadable or mismatched cache files, treated as misses
 
 
 class DecisionCache:
     def __init__(self, directory: Path = DEFAULT_CACHE_DIR) -> None:
         self.directory = directory
         self.stats = CacheStats()
+        # Every outcome seen through this cache object, including request failures (which are
+        # never written to disk): a baseline and its replays share one cache, so a step with an
+        # unchanged view gets the same outcome in every run of the family, never a fresh call.
+        self._memo: dict[str, CacheEntry] = {}
 
     def _path(self, key: str) -> Path:
         return self.directory / f"{key}.json"
 
     def get(self, key: str) -> CacheEntry | None:
-        path = self._path(key)
-        if not path.is_file():
+        entry = self._memo.get(key) or self._read(key)
+        if entry is None:
             self.stats.misses += 1
             self.stats.keys_missed.append(key)
             return None
-        entry = CacheEntry.model_validate_json(path.read_text(encoding="utf-8"))
-        if entry.key != key:  # a renamed or copied file is not trusted
-            raise ValueError(f"cache file {path.name} holds key {entry.key}")
+        self._memo[key] = entry
         self.stats.hits += 1
         self.stats.keys_hit.append(key)
         return entry
 
+    def _read(self, key: str) -> CacheEntry | None:
+        """The stored entry, or None. An unreadable file, or one holding another key (renamed or
+        copied), is not trusted: it counts as a miss and is overwritten by the next result."""
+        path = self._path(key)
+        if not path.is_file():
+            return None
+        try:
+            entry = CacheEntry.model_validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.stats.untrusted += 1
+            return None
+        if entry.key != key:
+            self.stats.untrusted += 1
+            return None
+        return entry
+
+    def remember(self, entry: CacheEntry) -> None:
+        """Keep an outcome for this cache object only (request failures: not on disk)."""
+        self._memo[entry.key] = entry
+
     def put(self, entry: CacheEntry) -> None:
+        self._memo[entry.key] = entry
         self.directory.mkdir(parents=True, exist_ok=True)
         path = self._path(entry.key)
         tmp = path.with_suffix(".tmp")

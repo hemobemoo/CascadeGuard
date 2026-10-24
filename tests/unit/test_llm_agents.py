@@ -388,4 +388,114 @@ def test_cli_llm_without_configuration_fails_clearly(
 def test_scripted_is_still_the_default(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["run", SCENARIO]) == 0
     out = capsys.readouterr().out
-    assert "Agents:" not in out and "LLM decision cache" not in out
+    assert "Agents: scripted agents (scripted_decisions.yaml)" in out  # every output names them
+    assert "LLM" not in out and "LLM decision cache" not in out
+
+
+# --- Review round 2 (test-breaker on 7eaf00b) -------------------------------------------------
+
+
+def test_request_failure_is_the_same_outcome_in_every_run_of_a_family(
+    scripted: World, tmp_path: Path
+) -> None:
+    """A step that failed in the baseline fails the same way in a replay with the same view: it
+    is never re-asked and credited to the repair (BLOCKER, round 2)."""
+    base = scripted_replies(scripted)
+    failures = {"left": 2}
+
+    def reply(request: dict[str, Any]) -> str | Exception:
+        v = view_of(request)
+        if (v["role_id"], v["minute"]) == ("health_data_oversight", 60) and failures["left"]:
+            failures["left"] -= 1
+            return ConnectionError("transient")
+        return base(request)
+
+    cache = DecisionCache(tmp_path)
+    w = llm_world(scripted, FakeClient(reply), cache)
+    shown = w.baseline()
+    found = search_repairs(SCENARIO, world=w)
+    c = found.comparison(SUCCESS)
+    schema = response_schema()
+
+    def key(v: RoleView) -> str:
+        return cache_key(v.role_id, v, PROMPT_VERSION, MODEL, schema)
+
+    def entries(result: Any, role: str, minute: int) -> list[tuple[Any, ...]]:
+        return [
+            (e.kind, e.action, e.reasons)
+            for e in result.log
+            if e.role == role and e.minute == minute and e.kind in ("accepted", "rejected")
+        ]
+
+    base_keys = {(v.role_id, v.minute): key(v) for v in c.baseline.views}
+    step = ("health_data_oversight", 60)
+    assert entries(shown, *step) == [("rejected", None, ("no_decision",))]
+    assert shown.summary() == c.baseline.summary()  # the baseline shown is the one compared
+    unchanged = [v for v in c.replay.views if base_keys[(v.role_id, v.minute)] == key(v)]
+    assert step in {(v.role_id, v.minute) for v in unchanged}
+    for v in unchanged:
+        assert entries(c.baseline, v.role_id, v.minute) == entries(c.replay, v.role_id, v.minute)
+    assert not list(tmp_path.glob(f"{base_keys[step]}.json"))  # still never written to disk
+
+
+def test_exports_name_the_agents(scripted: World, tmp_path: Path) -> None:
+    from cascadeguard.cli import baseline_markdown
+    from cascadeguard.storage.export import comparison_export, comparison_markdown, run_export
+
+    label = "LLM agents (model from CASCADEGUARD_MODEL; test)"
+    w = replace(
+        llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)),
+        agent_label=label,
+    )
+    result = w.baseline()
+    assert run_export(result)["agents"] == label
+    assert f"Agents: {label}" in baseline_markdown(SCENARIO, result, None)
+    found = search_repairs(SCENARIO, world=w)
+    assert found.agents == label
+    c = found.comparison(SUCCESS)
+    assert comparison_export(c)["agents"] == label
+    assert f"- Agents: {label}" in comparison_markdown(c)
+    assert run_export(scripted.baseline())["agents"].startswith("scripted agents")
+
+
+def test_duplicate_parameter_names_are_rejected_not_collapsed(
+    scripted: World, tmp_path: Path
+) -> None:
+    def reply(request: dict[str, Any]) -> str:
+        return json.dumps(
+            {
+                "proposed_actions": [
+                    {
+                        "action_type": "share_incident_status",
+                        "target": "telecom_regulator",
+                        "parameters": [
+                            {"name": "fact", "value": "first"},
+                            {"name": "fact", "value": "second"},
+                        ],
+                    }
+                ],
+                "rationale": "",
+                "citations": [],
+                "uncertainty": [],
+                "gap_claims": [],
+            }
+        )
+
+    client = FakeClient(reply)
+    view = scripted.baseline().views[0]
+    decision = LLMAgent(view.role_id, MODEL, client, DecisionCache(tmp_path), ()).observe(view)
+    assert decision.no_decision == "invalid_output"
+    assert len(client.requests) == 2  # retried once, then rejected
+
+
+def test_untrusted_cache_file_is_a_miss_not_a_crash(scripted: World, tmp_path: Path) -> None:
+    llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)).baseline()
+    first, second, third = sorted(tmp_path.glob("*.json"))[:3]
+    second.write_text(first.read_text(encoding="utf-8"), encoding="utf-8")  # copied entry
+    third.write_text("{not json", encoding="utf-8")
+    cache = DecisionCache(tmp_path)
+    result = llm_world(scripted, None, cache).baseline()  # offline: no call possible
+    # The two untrusted steps miss; their no-decision then changes later views, which miss too.
+    assert cache.stats.untrusted == 2 and cache.stats.misses >= 2
+    missed = [f for f in result.findings if f.kind == Reason.NO_DECISION.value]
+    assert len(missed) == cache.stats.misses and all("not_cached" in f.detail for f in missed)

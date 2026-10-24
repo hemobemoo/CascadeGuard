@@ -26,6 +26,11 @@ AGENT_MODES = {
     "llm-live": "LLM (live, paid calls)",
 }
 
+LIVE_SEARCH_REFUSED = (
+    "Repair search with live LLM calls is not enabled (hundreds of paid calls; needs explicit "
+    "approval). Use 'LLM (cached only)' to search from cached decisions."
+)
+
 
 def agent_choice(mode: str) -> AgentChoice:
     if mode == "scripted":
@@ -297,6 +302,11 @@ def index() -> None:
     async def find_repairs() -> None:
         if s.world is None:
             ui.notify("Run the baseline first.")
+            return
+        if s.world.cache is not None and s.mode == "llm-live":
+            # A live repair search is hundreds of paid calls: not approved (PROGRESS P5-4).
+            ui.notify(LIVE_SEARCH_REFUSED, type="warning")
+            status.set_text(LIVE_SEARCH_REFUSED)
             return
         status.set_text("Replaying every candidate repair on the identical incident ...")
         world = s.world
