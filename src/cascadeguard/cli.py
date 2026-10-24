@@ -7,7 +7,7 @@ Both take --agents scripted|llm (default scripted), --offline and --cache DIR (L
 
 import argparse
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,7 @@ from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
 from cascadeguard.agents.llm import LLMConfig, LLMConfigError, llm_agents
 from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
+from cascadeguard.domain.repairs import RepairProposal
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.engine.repair_search import (
@@ -34,7 +35,7 @@ from cascadeguard.simulation.loader import (
     check_clause_references,
     load_scenario,
 )
-from cascadeguard.simulation.orchestrator import RunResult, run
+from cascadeguard.simulation.orchestrator import SCRIPTED_AGENTS, RunResult, run
 from cascadeguard.simulation.replay import replay
 from cascadeguard.storage.audit import DEFAULT_DB, AuditStore
 from cascadeguard.storage.export import (
@@ -49,7 +50,6 @@ from cascadeguard.storage.export import (
 REAL_CLAUSE_SET = "policies/reviewed: reviewed + illustrative clauses"
 SCRIPTED = "scripted"
 LLM = "llm"
-SCRIPTED_AGENTS = "scripted agents (scripted_decisions.yaml)"
 
 
 def _display(path: Path) -> str:
@@ -124,9 +124,22 @@ class World:
     cache: DecisionCache | None = None  # LLM agents only
 
     def baseline(self) -> RunResult:
-        return run(
+        result = run(
             self.scenario, self.roles, self.clauses, self.corpus_ids, self.agents, self.label
         )
+        return replace(result, agents=self.agent_label)
+
+    def replay(self, proposal: RepairProposal) -> RunResult:
+        result = replay(
+            self.scenario,
+            self.roles,
+            self.clauses,
+            self.corpus_ids,
+            self.agents,
+            self.label,
+            proposal,
+        )
+        return replace(result, agents=self.agent_label)
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,7 +212,7 @@ def search_repairs(
         w.scenario,
         w.roles,
         RuleBook(w.clauses),
-        lambda p: replay(w.scenario, w.roles, w.clauses, w.corpus_ids, w.agents, w.label, p),
+        w.replay,
     )
 
 
@@ -232,6 +245,7 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
 
     lines = [f"Scenario: {result.scenario_id} (synthetic, hypothetical)"]
     lines.append(f"Clause set: {result.clause_set}")
+    lines.append(f"Agents: {result.agents}")
     lines.append(f"  {len(result.loaded_clauses)} clauses loaded")
     if excluded_drafts:
         lines.append(f"  {excluded_drafts} draft clauses not loaded (awaiting human review)")
@@ -299,6 +313,7 @@ def format_search(result: SearchResult) -> str:
     lines = ["Candidate repairs, ranked (lexicographic; see AGENTS.md and ADR 0001)"]
     lines.append(f"Order: {RANKING}")
     lines.append(f"Clause set: {result.clause_set}")
+    lines.append(f"Agents: {result.agents}")
     lines.append("Every repair rule is hypothetical. 'requires authorization': no reviewed,")
     lines.append("binding clause supports the permission it creates; it needs human and")
     lines.append("institutional approval.")
@@ -365,8 +380,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     except LLMConfigError as exc:
         print(f"cascadeguard: {exc}")
         return 2
-    if choice.kind != SCRIPTED:  # scripted output stays exactly as before
-        print(f"Agents: {world.agent_label}")
     status = _main(args, world)
     if (line := cache_line(world)) is not None:
         print(line)

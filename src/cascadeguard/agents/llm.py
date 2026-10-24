@@ -136,7 +136,12 @@ def response_schema() -> dict[str, Any]:
 
 
 def to_decision(payload: LLMDecisionPayload, view: RoleView) -> AgentDecision:
-    """The full AgentDecision, validated again from plain data."""
+    """The full AgentDecision, validated again from plain data. Duplicate parameter names are
+    malformed output (never collapsed): ValueError, so the reply is retried or rejected."""
+    for a in payload.proposed_actions:
+        names = [p.name for p in a.parameters]
+        if len(names) != len(set(names)):
+            raise ValueError("duplicate parameter names")
     return AgentDecision.model_validate(
         {
             "role_id": view.role_id,
@@ -395,7 +400,10 @@ class LLMAgent:
         if decision is not None:
             self.cache.put(self._entry(key, "decision", usage, decision=decision))
             return decision
-        if failed_request:  # not cached: a later run may succeed
+        if failed_request:  # not on disk (a later session may succeed), but fixed for this one
+            self.cache.remember(
+                self._entry(key, "no_decision", usage, no_decision="request_failed")
+            )
             return self._no_decision(view, "request_failed")
         self.cache.put(self._entry(key, "no_decision", usage, no_decision="invalid_output"))
         return self._no_decision(view, "invalid_output")

@@ -205,6 +205,7 @@ class SearchResult:
     loaded_clauses: tuple[tuple[str, str], ...]  # the baseline's (clause id, status label)
     ranked: tuple[ReplayComparison, ...]
     discarded: tuple[Discarded, ...]
+    agents: str = "scripted agents (scripted_decisions.yaml)"  # the baseline's agents label
 
     def comparison(self, repair_id: str) -> ReplayComparison:
         for c in self.ranked:
@@ -579,4 +580,5 @@ def search(
         baseline.loaded_clauses,
         tuple(sorted(compared, key=rank_key)),
         tuple(discarded),
+        baseline.agents,
     )

@@ -83,13 +83,14 @@ def run_export(result: RunResult) -> dict[str, Any]:
         for row, f in zip(data["findings"], result.findings, strict=True)
     ]
     data["loaded_clauses"] = _labelled(labels, labels)
+    data["agents"] = result.agents
     return data
 
 
 def search_export(result: SearchResult) -> dict[str, Any]:
     labels = dict(result.loaded_clauses)
     data = _label_clause_fields(result.summary(), labels)
-    return {"clause_set": result.clause_set, "note": REPAIR_NOTE, **data}
+    return {"clause_set": result.clause_set, "agents": result.agents, "note": REPAIR_NOTE, **data}
 
 
 def comparison_export(c: ReplayComparison) -> dict[str, Any]:
@@ -100,6 +101,7 @@ def comparison_export(c: ReplayComparison) -> dict[str, Any]:
         data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
     data["targets_clauses"] = _labelled((x.clause_id for x in c.proposal.citations), labels)
     data["note"] = f"{REPAIR_NOTE} {SCRIPTED_NOTE}"
+    data["agents"] = c.replay.agents
     return data
 
 
@@ -118,6 +120,7 @@ def comparison_markdown(c: ReplayComparison) -> str:
         "",
         f"- Scenario: `{s['scenario']}` (synthetic, hypothetical)",
         f"- Clause set: {s['clause_set']}",
+        f"- Agents: {c.replay.agents}",
         f"- Outcome: **{c.outcome}**",
         "- Requires authorization: "
         + (

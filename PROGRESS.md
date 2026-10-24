@@ -25,8 +25,20 @@ one more call (see "Waiting on human"). Phase 4 is merged (PR #5, tag `phase-4`)
 - Engine: `no_decision` finding. CLI `--agents scripted|llm`, `--offline`, `--cache`. UI toggle:
   Scripted / LLM (cached only) / LLM (live, paid calls). `scripts/llm_smoke_test.py` (one call).
 - Tests: `tests/unit/test_llm_agents.py`, `tests/unit/test_retrieval.py` (fake client, no
-  network), e2e toggle check; `tests/conftest.py` refuses any live client in tests.
+  network), e2e toggle check; `tests/conftest.py` refuses any live client in unit and
+  integration tests. The e2e UI runs as a subprocess outside conftest: in "LLM (cached
+  only)" mode it reads `.env` for the model id only (overridden by a fake id) and makes no call.
   Spec: `specs/005-llm-agents.md`.
+- **Review round 2 (7eaf00b).** phase-auditor FAIL: BLOCKER, no live LLM run has completed
+  (human gate P5-1); MINORs fixed (live repair search refused in the UI; spec wording; the e2e
+  subprocess note). test-breaker FAIL, all fixed with tests: BLOCKER, a step whose request failed
+  was not cached, so a replay with the same view could call again and credit the change to the
+  repair; now every outcome is fixed for the life of the cache object (one run family; request
+  failures still never written to disk), mutation-checked. MAJOR, exports did not say which
+  agents produced them; `RunResult.agents` / `SearchResult.agents` now in every CLI output, JSON
+  and Markdown export and the audit summary (the CLI's scripted output gains one "Agents:" line,
+  a deliberate change). MINORs: duplicate parameter names are invalid output (retry, then
+  no_decision), never collapsed; an unreadable or mismatched cache file is a miss, not a crash.
 
 Verify:
 
@@ -506,8 +518,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   `tests/conftest.py` makes building a live client in any test an error.
 - **P5-3** May keyword-search snippets of `policies/extracted/` (non-book PDFs) be sent to
   OpenRouter as context? Default: no (`search_extracted` exists but is off in prompts).
+- **P5-5 Repair rules in LLM views** (phase-auditor question). `RoleView.role_clauses` shows a
+  replay's hypothetical repair rules from T+00, so LLM agents can adapt to the repair, but those
+  views get new cache keys: for the top repair 24 of 36 steps are re-asked (17 differ only by the
+  rule). Alternative: hide repair rules (more reuse, agents unaware of the repair). Your choice.
 - **P5-4** Repair search with LLM agents: about 21 replays and about 312 uncached steps (scripted
-  proxy). Run live only on explicit approval.
+  proxy). Run live only on explicit approval; the UI refuses a live repair search until then.
 
 Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
 the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none

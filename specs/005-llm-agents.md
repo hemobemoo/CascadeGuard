@@ -14,7 +14,7 @@ uv run python scripts/llm_smoke_test.py                            # exactly one
 
 - `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `CASCADEGUARD_MODEL` from `.env`
   (python-dotenv). Any missing → `LLMConfigError` naming the variable, never a value. No default
-  model. Values are never printed or logged; the model id is shown as run metadata.
+  model. Values are never printed or logged, the model id included (cache files hold its hash).
 - `openai` SDK, `base_url` from the env. Request: `temperature=0`; `response_format`
   `{"type": "json_schema", "json_schema": {"name", "strict": true, "schema"}}`;
   `provider: {"require_parameters": true}`; `plugins: [{"id": "response-healing",
@@ -37,8 +37,8 @@ and the engine records a `no_decision` finding. The engine never repairs output.
   clause ids, gaps only as `gap_claims` with the fixed qualification, state uncertainty.
 - User: the role's `RoleView` as JSON (instructions, inject if recipient, own decision points,
   boundary-filtered facts, own history) plus `RoleView.role_clauses`: loaded clauses that
-  concern the role (the engine's 7n rule over its allowed actions) and the inject's clauses,
-  with text, status label and normalized reading. Repair rules in a replay appear labelled
+  concern the role (the engine's 7n rule over its allowed actions), with text, status label
+  and normalized reading. The inject's clauses are listed separately by id and label. Repair rules in a replay appear labelled
   "hypothetical repair rule (not a source clause; not citable)", so an LLM agent can adapt.
 - `search_extracted(query)`: keyword search over `policies/extracted/` (books always excluded),
   "context only, unreviewed, not citable". **Off in prompts by default** (question 1).
@@ -54,7 +54,8 @@ uses the cache only; a miss is a `no_decision` (`not_cached`). Hits and misses a
 ## CLI and UI
 
 `--agents scripted|llm` (default scripted) and `--offline` on `run` and `repairs`. The UI has a
-Scripted / LLM toggle (LLM offline by default in the UI, live only when switched on); every result
+Scripted / LLM (cached only) / LLM (live) toggle; scripted is the default and a live repair
+  search is refused in the UI until approved; every result
 shows which agents produced it. LLM text stays under the agent-statement label.
 
 ## Tests (no live calls)
