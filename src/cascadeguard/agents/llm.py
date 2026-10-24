@@ -538,6 +538,60 @@ class LLMAgent:
         )
 
 
+class CapReached(Exception):
+    """The approved request budget is spent; no request was sent."""
+
+
+@dataclass
+class CappedClient:
+    """Wraps the SDK client for an approved live run: counts every request (retries
+    included), refuses past the cap before anything is sent, and sums usage."""
+
+    inner: Any
+    cap: int
+    requests: int = 0
+    refused: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost: float = 0.0
+    cost_missing: int = 0
+    seconds: float = 0.0
+    errors: list[str] = field(default_factory=list[str])
+
+    @property
+    def chat(self) -> Any:
+        return self
+
+    @property
+    def completions(self) -> Any:
+        return self
+
+    def create(self, **request: Any) -> Any:
+        if self.requests >= self.cap:
+            self.refused += 1
+            raise CapReached(f"cap of {self.cap} requests reached")
+        self.requests += 1
+        started = time.perf_counter()
+        try:
+            response = self.inner.chat.completions.create(**request)
+        except Exception as exc:
+            self.errors.append(f"{type(exc).__name__} (HTTP {getattr(exc, 'status_code', None)})")
+            raise
+        finally:
+            self.seconds += time.perf_counter() - started
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            self.prompt_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
+            self.completion_tokens += int(getattr(usage, "completion_tokens", 0) or 0)
+            extra: dict[str, Any] = getattr(usage, "model_extra", None) or {}
+            cost = extra.get("cost")
+            if isinstance(cost, int | float):
+                self.cost += float(cost)
+            else:
+                self.cost_missing += 1
+        return response
+
+
 def llm_agents(
     role_ids: tuple[str, ...],
     cache: DecisionCache,

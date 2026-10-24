@@ -147,6 +147,10 @@ class DecisionCache:
             return None
         return entry
 
+    def has(self, key: str) -> bool:
+        """Is there a trusted outcome for this key? Does not count as a hit or a miss."""
+        return key in self._memo or self._read(key) is not None
+
     def remember(self, entry: CacheEntry) -> None:
         """Keep an outcome for this cache object only (request failures: not on disk)."""
         self._memo[entry.key] = entry
