@@ -33,6 +33,7 @@ from cascadeguard.simulation.orchestrator import RunResult, run
 from cascadeguard.simulation.replay import replay
 from cascadeguard.storage.audit import DEFAULT_DB, AuditStore
 from cascadeguard.storage.export import (
+    DISCLAIMER,
     comparison_export,
     comparison_markdown,
     run_export,
@@ -260,7 +261,23 @@ def _export(directory: Path, name: str, data: dict[str, Any], markdown: str) -> 
 
 
 def _text_markdown(title: str, text: str) -> str:
-    return f"# {title}\n\n```text\n{text}\n```\n"
+    return f"# {title}\n\n_{DISCLAIMER}_\n\n```text\n{text}\n```\n"
+
+
+def excluded_drafts(result: RunResult) -> int:
+    """Corpus clauses the real clause set left out (drafts awaiting human review)."""
+    loaded = {cid for cid, _ in result.loaded_clauses}
+    return sum(1 for c in load_clauses(REVIEWED_DIR) if c.id not in loaded)
+
+
+def baseline_markdown(scenario_id: str, result: RunResult, excluded: int | None) -> str:
+    """The baseline Markdown export, shared by the CLI and the UI."""
+    return _text_markdown(f"Baseline: {scenario_id}", format_result(result, excluded))
+
+
+def search_markdown(scenario_id: str, result: SearchResult) -> str:
+    """The repair-search Markdown export, shared by the CLI and the UI."""
+    return _text_markdown(f"Repairs: {scenario_id}", format_search(result))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -291,18 +308,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "run":
         result = run_scenario(args.scenario, args.clauses)
-        excluded = None
-        if args.clauses is None:
-            loaded = {cid for cid, _ in result.loaded_clauses}
-            excluded = sum(1 for c in load_clauses(REVIEWED_DIR) if c.id not in loaded)
-        text = format_result(result, excluded)
-        print(text)
+        excluded = excluded_drafts(result) if args.clauses is None else None
+        print(format_result(result, excluded))
         if args.export is not None:
             _export(
                 args.export,
                 f"{args.scenario}-baseline",
                 run_export(result),
-                _text_markdown(f"Baseline: {args.scenario}", text),
+                baseline_markdown(args.scenario, result, excluded),
             )
         if args.audit is not None:
             store = AuditStore(args.audit)
@@ -314,14 +327,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "repairs":
         found = search_repairs(args.scenario, args.clauses)
-        text = format_search(found)
-        print(text)
+        print(format_search(found))
         if args.export is not None:
             _export(
                 args.export,
                 f"{args.scenario}-repairs",
                 search_export(found),
-                _text_markdown(f"Repairs: {args.scenario}", text),
+                search_markdown(args.scenario, found),
             )
         if args.audit is not None:
             store = AuditStore(args.audit)

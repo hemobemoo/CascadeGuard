@@ -4,13 +4,33 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 4 — Demo UI (branch `phase-4-ui`): spec written, skeleton only, waiting for the human
-to approve `specs/004-demo-ui.md`** before building further. Review round 1 (test-breaker, on
-5747e23, f6ea214, 4f56dbe) returned FAIL; its BLOCKER and three MINORs are fixed with tests
-(not re-reviewed yet; round 2 will check them). Phase 3 is merged (PR #4, 5cf4b1a, tag
-`phase-3`).
+**Phase 4 — Demo UI (branch `phase-4-ui`): built, review loop running.** The human approved
+`specs/004-demo-ui.md` on 2026-10-24 (no pytest-asyncio: view-model tests plus a Playwright run
+for the page; exports as browser downloads only) and the CascadeGuard.md section 6 wording
+(fbc51e1). The full flow works in the browser with scripted agents (Playwright MCP run,
+screenshots in `docs/review/phase-4-screens/`). Review round 2: evidence-auditor PASS,
+test-breaker FAIL (no BLOCKER; one MAJOR, see "Waiting on human"), phase-auditor pending.
+Do not merge before the human has seen the screenshots.
 
 ## Done
+
+### Phase 4 — Demo UI (branch `phase-4-ui`, not merged)
+- `ui/app.py` (NiceGUI, port 8765 or `CASCADEGUARD_UI_PORT`): scenario picker, timeline, role
+  views, dependency graph (`ui.echart`) with failures highlighted (click a failure or pick it),
+  ranked and discarded repairs, baseline vs replay, JSON/Markdown downloads.
+- `ui/view_model.py`: formatting only; labels come from the engine and `storage/export.py`.
+- `RunResult.views` and `RunResult.boundaries` (display copies). UI and CLI share one Markdown
+  export builder (`cli.baseline_markdown`, `cli.search_markdown`); all Markdown exports carry
+  the disclaimer.
+- Tests: `tests/unit/test_view_model.py` (labels, role views, graph highlight, byte-identical
+  exports, port).
+
+Verify:
+
+```bash
+uv run python -m cascadeguard.ui.app      # then open http://localhost:8765
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 3 — Repair and replay (branch `phase-3-repair`)
 - `domain/repairs.py`: `RepairEdit` (five operation types, typed parameters only) and an
@@ -365,6 +385,23 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   decision: no further words): OVERSTATED is a word list and is bypassed by homoglyphs or
   synonyms; the label and fixed qualification remain the safeguard.
 
+- **Phase 4 human decisions (2026-10-24):** spec 004 approved as written; no pytest-asyncio;
+  exports as browser downloads only (the CLI `--export` writes to disk); CascadeGuard.md
+  section 6 sentence replaced with the human's wording (fbc51e1, own commit); README gives the
+  port and `CASCADEGUARD_UI_PORT`; the next test-breaker round covers 0e76c21 first (done in
+  round 2: the WITHHELD and control-character fixes hold).
+- **Phase 4 review round 2 (2026-10-24).** evidence-auditor PASS (triage in
+  `docs/review/phase-4-clause-triage.md`). test-breaker FAIL: MAJOR, no repeatable test proves
+  the browser flow (human gate, below); MINORs fixed with tests: `_copy` now checks every nested
+  value for an exact plain type before serialising (a `model_serializer`, generator, custom
+  `__getattribute__`, custom tzinfo or `str` subclass runs no code and is rejected as
+  malformed); UI and CLI Markdown exports are byte-identical (shared builder; test compares the
+  CLI's files); the graph highlights only the selected failure, and only edges touching its
+  subject (test checks a second failure's nodes are not highlighted); failures in the list are
+  clickable; the banner shows the clause set. Reviewer QUESTION about AGENTS.md not matching
+  the ranking: disagreement, AGENTS.md lines 46-60 already hold the human-approved order
+  (f6ea214). Stale PROGRESS.md: fixed here.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -401,16 +438,18 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-24: items 3-7 of the previous list (see Decisions). Re-approval needed
-(gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, all on the
-human's side, none blocking:
+Answered on 2026-10-24: items 3-7 of the Phase 3 list, the spec 004 questions and the
+CascadeGuard.md section 6 question (see Decisions). Re-approval needed
+(gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open:
 
-0. **Phase 4 (blocking further UI work):** approve `specs/004-demo-ui.md` and answer its two
-   questions (pytest-asyncio for UI tests; downloads only or also `data/exports/`).
-   QUESTION-FOR-HUMAN from review round 1 (gate 6): CascadeGuard.md section 6 still says
-   "remove critical blockers second", while the approved ranking puts "resolved / critical
-   goals met" before blockers removed. Amend section 6, or add a note there pointing to
-   ADR 0001?
+0. **Phase 4 MAJOR (test-breaker round 2), human gate:** no automated test drives the page in a
+   browser; the flow is proven by the Playwright MCP run and its screenshots, as the human
+   decided. A repeatable test would need the Python `playwright` package (listed in AGENTS.md as
+   "Playwright (later)") as a dev dependency plus a browser download in CI. Add it now, or
+   accept the MCP run for Phase 4?
+   Also from round 2 (evidence-auditor, QUESTION-FOR-HUMAN): `uae.telecom-law.art14-5` keeps
+   `kind: permission` although its mapping note says it is not a permission in this incident
+   (7m); keep, or drop the `normalized` block as for the ITU and Charter clauses?
 1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
    from 4.18.4, outside its quote (the two clauses stay separate).
 2. **Sources missing from `policies/sources/`** (optional).
@@ -435,8 +474,5 @@ human's side, none blocking:
 
 ## Next step
 
-1. Human: approve `specs/004-demo-ui.md` and answer its two questions (pytest-asyncio for UI
-   tests; export as downloads only or also to `data/exports/`).
-2. Fix the first test-breaker round's findings (5747e23, f6ea214, 4f56dbe) before UI work.
-3. Build the UI per the spec; run the flow with Playwright; review loop; report with
-   screenshots; no merge before the human has seen them.
+1. Finish the Phase 4 review loop (round 3 for the reviewers that failed), push, open the PR.
+2. Human: look at the screenshots in the PR, answer "Waiting on human" item 0, decide on merge.
