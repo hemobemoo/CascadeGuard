@@ -4,11 +4,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 3 — Repair and replay: complete pending the merge of PR #4** (the human approved the
-merge on 2026-10-24 once local checks and CI pass; no further review round). **Not
-re-reviewed:** commit 5747e23 (fixes from the final test-breaker pass) and the follow-up fixes
-in this PR (ranking keys, certainty words, type check before copying agent output). **The
-Phase 4 test-breaker round must cover them first.**
+**Phase 3 — Repair and replay: merged** (PR #4, merge commit 5cf4b1a, tag `phase-3`,
+2026-10-24, on the human's instruction after local checks and CI passed). **Not re-reviewed:**
+commit 5747e23 (fixes from the final test-breaker pass) and the follow-up commits f6ea214 and
+4f56dbe (ranking keys, certainty words, type check before copying agent output). **The Phase 4
+test-breaker round must cover them first.** Phase 4 has not started; the human is told first.
 
 ## Done
 
@@ -417,7 +417,6 @@ human's side, none blocking:
 
 ## Next step
 
-1. Merge PR #4, tag `phase-3`, record it here.
-2. Stop and report to the human before Phase 4. Phase 4's first test-breaker round covers
-   5747e23 and the follow-up fixes (not re-reviewed). Requirements so far:
-   `specs/004-demo-ui.md`.
+1. Human: confirm the start of Phase 4 (NiceGUI demo UI) on `phase-4-ui`.
+2. Phase 4's first test-breaker round covers 5747e23, f6ea214 and 4f56dbe (not re-reviewed).
+   Requirements so far: `specs/004-demo-ui.md`.
