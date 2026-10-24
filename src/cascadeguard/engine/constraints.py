@@ -53,6 +53,12 @@ def agent_statement(text: str) -> str:
     return AGENT_STATEMENT + " ".join(visible.split())
 
 
+def _one_line(text: str, limit: int) -> str:
+    """Untrusted text on one line: control and format characters become spaces; capped."""
+    visible = "".join(" " if unicodedata.category(ch).startswith("C") else ch for ch in text)
+    return " ".join(visible.split())[:limit]
+
+
 REQUIRES_DETERMINATION = (
     "authority uncertain - requires determination (the clause depends on a condition the engine "
     "cannot evaluate; it never decides the condition is met)"
@@ -336,11 +342,14 @@ class ConstraintEngine:
             )
             return
         if decision.no_decision is not None:  # the validator guarantees nothing is proposed
+            reason = decision.no_decision
+            if decision.no_decision_detail:  # API error text: untrusted, one line, capped
+                reason += f": request error {_one_line(decision.no_decision_detail, 200)}"
             self._reject_decision(
                 expected_role,
                 Reason.NO_DECISION,
                 (),
-                f"{expected_role} made no decision at this step ({decision.no_decision})",
+                f"{expected_role} made no decision at this step ({reason})",
             )
             return
         cited = tuple(

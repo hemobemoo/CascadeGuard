@@ -52,6 +52,9 @@ class AgentDecision(DomainModel):
     gap_claims: tuple[GapClaim, ...] = ()
     # Set only by an LLM agent that could not decide; the engine records a no_decision finding.
     no_decision: NoDecisionReason | None = None
+    # request_failed only: "<exception class> (HTTP <status>): <short message>", built by the
+    # agent's code from the API error (never headers, keys or .env values; model id redacted).
+    no_decision_detail: str | None = Field(default=None, max_length=300)
 
     @model_validator(mode="after")
     def _check_no_decision(self) -> Self:
@@ -59,4 +62,6 @@ class AgentDecision(DomainModel):
             self.proposed_actions or self.citations or self.gap_claims
         ):
             raise ValueError("a no-decision step proposes nothing and cites nothing")
+        if self.no_decision_detail is not None and self.no_decision != "request_failed":
+            raise ValueError("only a failed request carries an error detail")
         return self
