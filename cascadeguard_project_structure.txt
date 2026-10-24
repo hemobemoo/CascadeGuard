@@ -117,7 +117,8 @@ cascadeguard/
     ├── unit/                         [P0+] (P0: one empty test so the checks run)
     ├── integration/                  [P2+] full loop with ScriptedAgent
     ├── golden/                       [not used] the P3 goldens live under scenarios/
-    └── e2e/                          [later] Playwright smoke test of the demo flow
+    └── e2e/                          [P4] Playwright smoke test of the demo flow (marker e2e,
+                                      Chromium; CI always runs it)
 
 CI: .github/workflows/checks.yml [P3] runs `uv sync` and the full check command.
 .claude/launch.json [P4] preview config for the demo UI (dev tooling).

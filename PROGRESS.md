@@ -420,6 +420,22 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   `assert`; "outside its boundary" uses every scenario category; the role view also shows
   instructions, allowed actions and simulation time (the whole `RoleView`).
 
+- **Phase 4 human decisions (2026-10-24, second set):**
+  - Browser proof: the Python `playwright` package is a dev dependency (approved; in the
+    AGENTS.md stack). `tests/e2e/test_ui_flow.py` (marker `e2e`, Chromium) drives the core
+    flow: scenario and baseline, disclaimer and a clause status label, a role view, the
+    top-ranked repair with "requires authorization" and the hypothetical-rule label, baseline
+    vs replay, and both replay exports compared with `cli --export`. CI installs Chromium and
+    always runs it; `uv run pytest -m "not e2e"` skips it locally. The test starts the UI
+    without pytest's environment variables (NiceGUI switches to its own test mode otherwise).
+  - Round-3 fixes accepted without another round. **The Phase 5 review covers them first**
+    (a0b6342, and the Phase 4 commits after it).
+  - `uae.telecom-law.art14-5`: permission mapping dropped (as in 4d); the 7m reading is in the
+    notes; stays draft; `illus.telecom.regulator-information-request` stays loaded. The unit
+    test now expects no authority from it.
+  - CascadeGuard.md section 6 wording confirmed by the human (approved in chat 2026-10-24).
+  - `.claude/launch.json` kept: no secrets, no machine-specific paths.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -456,24 +472,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-24: items 3-7 of the Phase 3 list, the spec 004 questions and the
-CascadeGuard.md section 6 question (see Decisions). Re-approval needed
-(gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open:
+Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
+the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
+(`policies/approvals.yaml`, `reapproval_needed: []`). Still open, none blocking:
 
-0a. **Phase 4 round-3 fixes not re-reviewed (review loop exhausted):** the new display-path
-   tests and the role-view changes after test-breaker round 3 are mutation-checked (9 of 9
-   mutants killed) but no reviewer has seen them. Accept, or ask for another round.
-0. **Phase 4 MAJOR (test-breaker rounds 2 and 3), human gate:** no automated test drives the page in a
-   browser; the flow is proven by the Playwright MCP run and its screenshots, as the human
-   decided. A repeatable test would need the Python `playwright` package (listed in AGENTS.md as
-   "Playwright (later)") as a dev dependency plus a browser download in CI. Add it now, or
-   accept the MCP run for Phase 4?
-   Also from round 2 (evidence-auditor, QUESTION-FOR-HUMAN): `uae.telecom-law.art14-5` keeps
-   `kind: permission` although its mapping note says it is not a permission in this incident
-   (7m); keep, or drop the `normalized` block as for the ITU and Charter clauses?
-   From the phase-auditor (QUESTION-FOR-HUMAN): confirm in the PR that you approved the
-   CascadeGuard.md section 6 wording (fbc51e1); approve or drop `.claude/launch.json` (a UI
-   preview config, not under `.claude/agents/`).
 1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
    from 4.18.4, outside its quote (the two clauses stay separate).
 2. **Sources missing from `policies/sources/`** (optional).
