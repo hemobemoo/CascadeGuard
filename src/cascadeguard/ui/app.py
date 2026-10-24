@@ -55,8 +55,9 @@ def lines(items: tuple[str, ...] | list[str], empty: str = "none") -> None:
 @ui.page("/")
 def index() -> None:
     s = Session()
-    with ui.header().classes("bg-amber-100 text-amber-900 py-2"):
+    with ui.header().classes("bg-amber-100 text-amber-900 py-2"), ui.column().classes("gap-0"):
         ui.label(vm.DISCLAIMER).classes("font-medium").mark("disclaimer")
+        clause_set = ui.label("Clause set: not run yet").classes("text-sm")
 
     ui.label("CascadeGuard").classes("text-2xl font-bold")
     with ui.row().classes("items-end gap-4"):
@@ -153,7 +154,12 @@ def index() -> None:
             ui.echart(vm.graph_option(b, s.failure)).classes("w-full h-[36rem]")
             for f in vm.failures(b):
                 with ui.column().classes("gap-0 mt-2"):
-                    ui.label(f"[{f.category}] {f.id}").classes("font-semibold")
+                    ui.button(
+                        f"[{f.category}] {f.id}",
+                        on_click=lambda _, fid=f.id: pick_failure(fid),
+                    ).props("flat dense no-caps align=left").classes(
+                        "font-semibold [overflow-wrap:anywhere]"
+                    ).tooltip("Highlight only this failure in the graph")
                     ui.label(f.description)
                     ui.label(f"clauses: {f.clauses}").classes("font-mono text-sm")
                     ui.label(f"blocks: {f.blocks}").classes("text-sm")
@@ -250,6 +256,7 @@ def index() -> None:
             f"Baseline: {len(s.baseline.failures)} diagnosed failures. "
             f"Clause set: {s.baseline.clause_set}"
         )
+        clause_set.set_text(f"Clause set: {s.baseline.clause_set}")
         baseline_view.refresh()
         repairs_view.refresh()
         export_view.refresh()

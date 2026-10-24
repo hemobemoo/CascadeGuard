@@ -102,6 +102,15 @@ def test_graph_highlights_the_selected_failure(world: World) -> None:
     assert "action:reverse_automated_lockouts" in hot
     assert {f"role:{r}" for r in failure.roles} <= hot
     assert hot <= set(nodes)
+    # Only the selected failure: the deadlock's category is not highlighted for this one.
+    assert "category:network_incident_status" not in hot
+    other = vm.graph_option(b, next(f.id for f in b.failures if "deadlock" in f.id))
+    other_hot = {n["id"] for n in other["series"][0]["data"] if n["symbolSize"] > 12}
+    assert "action:reverse_automated_lockouts" not in other_hot
+    red = [x for x in option["series"][0]["links"] if x["lineStyle"].get("width") == 3]
+    assert red and all(
+        "action:reverse_automated_lockouts" in (x["source"], x["target"]) for x in red
+    )
     for n in nodes.values():  # clause nodes carry their status label
         if n["id"].startswith("clause:"):
             assert n["name"].endswith("]") and " [" in n["name"]
@@ -126,6 +135,21 @@ def test_comparison_labels_repair_rules_and_masked_blockers(found: SearchResult)
     assert len(masked) == 2
     assert not any("masked" in r for r in v.removed)
     assert ("patient_access_restored", "unmet", "met at T+60") in v.goals
+
+
+def test_ui_exports_are_byte_identical_to_the_cli_exports(
+    tmp_path: Any, world: World, found: SearchResult
+) -> None:
+    from cascadeguard.cli import main
+
+    for argv in (["run"], ["repairs"], ["run", "--repair", SUCCESS]):
+        assert main([argv[0], "uae_health_access", *argv[1:], "--export", str(tmp_path)]) == 0
+    exported = vm.export_files(
+        "uae_health_access", world.baseline(), found, found.comparison(SUCCESS)
+    )
+    assert len(exported) == 6
+    for f in exported:
+        assert (tmp_path / f.filename).read_text(encoding="utf-8") == f.content, f.filename
 
 
 def test_exports_are_the_cli_exports_with_labels(world: World, found: SearchResult) -> None:

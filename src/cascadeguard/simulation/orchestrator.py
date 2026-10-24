@@ -5,13 +5,16 @@ At each inject every role decides on the same snapshot (views are built before a
 applied), then the engine processes the decisions in roles.yaml order. Same inputs, same run.
 """
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, cast
+
+from pydantic_core import TzInfo
 
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.scripted import ScriptedAgent
-from cascadeguard.domain.decisions import AgentDecision
+from cascadeguard.domain.decisions import AgentDecision, Citation, GapClaim, ProposedAction
 from cascadeguard.domain.findings import CoordinationFailure, Finding, LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
@@ -113,11 +116,37 @@ class _Unreadable:
     a malformed decision."""
 
 
+_MODELS = (AgentDecision, ProposedAction, Citation, GapClaim)
+_LEAVES = (str, int, float, bool, type(None))
+
+
+def _plain(value: object) -> bool:
+    """True if the value holds only the exact types an AgentDecision is made of. Exact type
+    checks and plain attribute reads run no code defined by the agent."""
+    kind = type(value)
+    if kind in _LEAVES:
+        return True
+    if kind is datetime:
+        tz = cast(datetime, value).tzinfo
+        return tz is None or type(tz) in (timezone, TzInfo)  # TzInfo: pydantic's own class
+    if kind is tuple or kind is list:
+        return all(_plain(v) for v in cast(Iterable[object], value))
+    if kind is dict:
+        items = cast(dict[object, object], value).items()
+        return all(type(k) is str and _plain(v) for k, v in items)
+    if kind in _MODELS:
+        fields: object = object.__getattribute__(value, "__dict__")
+        if type(fields) is not dict:
+            return False
+        return all(_plain(v) for v in cast(dict[str, object], fields).values())
+    return False
+
+
 def _copy(returned: object) -> object:
-    """Copy an agent's decision by rebuilding it from JSON: the type is checked first, and a
-    field holding a foreign object fails serialisation instead of running that object's code
-    (no __deepcopy__); anything else reaches the engine as _Unreadable."""
-    if type(returned) is not AgentDecision:
+    """Copy an agent's decision by rebuilding it from JSON. Every nested value is first checked
+    to be of an exact plain type (`_plain`), so no object of another type is serialised and no
+    agent-defined code runs here; anything else reaches the engine as _Unreadable."""
+    if type(returned) is not AgentDecision or not _plain(returned):
         return _Unreadable()
     try:
         return AgentDecision.model_validate_json(returned.model_dump_json())

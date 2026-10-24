@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
-from cascadeguard.cli import format_result, format_search
+from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.repair_search import (
@@ -21,7 +21,9 @@ from cascadeguard.engine.repair_search import (
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.simulation.replay import REPAIR_LABEL
 from cascadeguard.storage.export import (
-    DISCLAIMER,
+    DISCLAIMER as DISCLAIMER,
+)
+from cascadeguard.storage.export import (
     REPAIR_NOTE,
     SCRIPTED_NOTE,
     comparison_export,
@@ -163,30 +165,36 @@ def findings(result: RunResult) -> list[str]:
     ]
 
 
-def _failure_nodes(result: RunResult, failure_id: str) -> set[str]:
+def _failure_nodes(result: RunResult, failure_id: str) -> tuple[set[str], set[str]]:
+    """(every node the failure names, its subject nodes: the action, or the category and role
+    of an information deadlock)."""
     f = next(x for x in result.failures if x.id == failure_id)
-    nodes = {f"role:{r}" for r in f.roles} | {f"clause:{c}" for c in f.clause_ids}
-    nodes |= {f"goal:{g}" for g in f.goals}
     if "->" in f.subject:  # information deadlock: "<category>-><role>"
         category, role = f.subject.split("->")
-        nodes |= {f"category:{category}", f"role:{role}"}
+        subject = {f"category:{category}", f"role:{role}"}
     else:
-        nodes.add(f"action:{f.subject}")
-    return nodes
+        subject = {f"action:{f.subject}"}
+    nodes = {f"role:{r}" for r in f.roles} | {f"clause:{c}" for c in f.clause_ids}
+    nodes |= {f"goal:{g}" for g in f.goals} | subject
+    return nodes, subject
 
 
 KINDS = ("role", "action", "category", "clause", "goal")
 
 
 def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, Any]:
-    """ECharts option for the dependency graph. Nodes and edges named by the selected diagnosed
-    failure (or by every failure when none is selected) are highlighted."""
+    """ECharts option for the dependency graph. Nodes named by the selected diagnosed failure (or
+    by every failure when none is selected) are highlighted, and so are the edges between them
+    that touch the failure's subject."""
     edges = result.graph.edges()
     names = sorted({n for s, _, t in edges for n in (s, t)})
     ids = [failure_id] if failure_id else [f.id for f in result.failures]
     hot: set[str] = set()
+    hot_edges: set[tuple[str, str]] = set()
     for i in ids:
-        hot |= _failure_nodes(result, i)
+        nodes, subject = _failure_nodes(result, i)
+        hot |= nodes
+        hot_edges |= {(s, t) for s, _, t in edges if s in nodes and t in nodes and {s, t} & subject}
     labels = dict(result.loaded_clauses)
 
     def label(n: str) -> str:
@@ -210,7 +218,7 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
             "target": t,
             "value": rel,
             "lineStyle": {"color": "#c62828", "width": 3, "opacity": 0.9}
-            if s in hot and t in hot
+            if (s, t) in hot_edges
             else {"opacity": 0.25},
         }
         for s, rel, t in edges
@@ -322,10 +330,6 @@ def _json(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-def _text_md(title: str, text: str) -> str:
-    return f"# {title}\n\n{DISCLAIMER}\n\n```text\n{text}\n```\n"
-
-
 @dataclass(frozen=True, slots=True)
 class ExportFile:
     label: str  # button text
@@ -345,7 +349,7 @@ def export_files(
         ExportFile(
             "Baseline Markdown",
             f"{scenario_id}-baseline.md",
-            _text_md(f"Baseline: {scenario_id}", format_result(baseline)),
+            baseline_markdown(scenario_id, baseline, excluded_drafts(baseline)),
         ),
     ]
     if search_result is not None:
@@ -356,7 +360,7 @@ def export_files(
             ExportFile(
                 "Repairs Markdown",
                 f"{scenario_id}-repairs.md",
-                _text_md(f"Repairs: {scenario_id}", format_search(search_result)),
+                search_markdown(scenario_id, search_result),
             ),
         ]
     if selected is not None:

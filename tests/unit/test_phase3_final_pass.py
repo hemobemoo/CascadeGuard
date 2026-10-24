@@ -231,3 +231,54 @@ def test_control_characters_in_agent_text_never_reach_the_cli(field: str) -> Non
     assert stored
     for out in (*stored, format_result(result)):
         assert not any(ch in out for ch in "\x1b\u200b\u202e")
+
+
+def _nested_objects(ran: list[str]) -> list[object]:
+    """Objects an agent could hide inside a model_construct decision (Phase 4 round 2)."""
+    from dataclasses import dataclass
+    from datetime import datetime, timedelta, tzinfo
+
+    from pydantic import BaseModel, model_serializer
+
+    class Serialised(BaseModel):
+        @model_serializer
+        def out(self) -> str:
+            ran.append("model_serializer")
+            return "fine text"
+
+    def gen() -> Any:
+        ran.append("generator body")
+        yield "x"
+
+    @dataclass
+    class Sneaky:
+        x: int = 0
+
+        def __getattribute__(self, name: str) -> Any:
+            ran.append("getattribute")
+            return object.__getattribute__(self, name)
+
+    class Zone(tzinfo):
+        def utcoffset(self, dt: Any) -> timedelta:
+            ran.append("utcoffset")
+            return timedelta(hours=4)
+
+    class Text(str):
+        pass
+
+    return [Serialised(), gen(), Sneaky(), datetime(2026, 1, 1, tzinfo=Zone()), Text("t")]
+
+
+@pytest.mark.parametrize("index", range(5))
+def test_no_nested_foreign_object_runs_code_or_passes(index: int) -> None:
+    ran: list[str] = []
+    obj = _nested_objects(ran)[index]
+    field = "at" if index == 3 else "rationale"
+
+    def nested(d: AgentDecision) -> AgentDecision:
+        fields: dict[str, Any] = {**dict(d), field: obj}
+        return AgentDecision.model_construct(**fields)
+
+    result = _run("telecom_operator", 0, nested)
+    assert not ran
+    assert [f for f in result.findings if f.kind == "malformed_decision" and f.minute == 0]
