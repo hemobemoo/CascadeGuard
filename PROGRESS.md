@@ -4,12 +4,10 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 4 — Demo UI (branch `phase-4-ui`): built, review loop finished (3 rounds), PR open,
-not merged; waiting for the human** to look at the screenshots and decide. The full flow works
-in the browser with scripted agents (Playwright MCP run; the phase-auditor also ran it in
-headless Edge). Final verdicts: evidence-auditor PASS (round 2), phase-auditor PASS (round 2),
-test-breaker FAIL (round 3: no broken guarantee; two MAJORs about missing proof). The round-3
-fixes are mutation-checked but not re-reviewed (round limit); see "Waiting on human".
+**Phase 4 — Demo UI: merged** (PR #5, merge commit d96126b, tag `phase-4`, 2026-10-24, on the
+human's instruction after the e2e test passed locally and in CI: 284 passed). **Phase 5 has not
+started** and waits for the human (see "Next step"). The Phase 5 review must first cover the
+Phase 4 round-3 fixes (a0b6342) and the commits after it (art14-5 mapping, e2e test).
 
 ## Done
 
@@ -500,6 +498,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-1. Human: look at the screenshots in the Phase 4 PR; answer "Waiting on human" 0, 0a and the
-   other Phase 4 questions; decide whether the PR merges. Auto-merge does not apply.
-2. After merge: tag `phase-4`, update this file, stop and report before Phase 5.
+1. Human, before Phase 5 (LLM agents) can start:
+   - put the three variables in `.env` (never committed; names only in `.env.example`):
+     `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `CASCADEGUARD_MODEL`;
+   - choose the model (`CASCADEGUARD_MODEL`); it is never picked, guessed or defaulted;
+   - approve the paid Phase 5 smoke test (gate 4: anything that costs money).
+2. Then start Phase 5 on `phase-5-llm`; its first test-breaker round covers a0b6342 and the
+   Phase 4 commits after it.
