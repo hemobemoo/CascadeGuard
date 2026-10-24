@@ -24,6 +24,10 @@ SCRIPTED_NOTE = (
     "Scripted agents replay the same decisions; they do not adapt to the repair. A new "
     "obligation that no scripted decision fulfils shows up as a missed obligation."
 )
+DISCLAIMER = (
+    "Hypothetical scenario with synthetic data only. CascadeGuard is decision support, not legal "
+    "interpretation: no output is a legal conclusion or a confirmed legal gap."
+)
 REPAIR_NOTE = (
     "Repair rules are hypothetical coordination rules for the simulation, not proposals of law. "
     "'requires_authorization': no reviewed, binding clause supports the permission it creates; "
@@ -109,6 +113,8 @@ def comparison_markdown(c: ReplayComparison) -> str:
     p = c.proposal
     lines = [
         f"# Replay: {p.repair_id}",
+        "",
+        f"_{DISCLAIMER}_",
         "",
         f"- Scenario: `{s['scenario']}` (synthetic, hypothetical)",
         f"- Clause set: {s['clause_set']}",

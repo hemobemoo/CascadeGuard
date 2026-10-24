@@ -1,54 +1,288 @@
-"""CascadeGuard demo UI (Phase 4 skeleton; see specs/004-demo-ui.md).
+"""CascadeGuard demo UI (Phase 4; see specs/004-demo-ui.md).
 
-The UI only displays engine results: every run, search and replay comes from the same helpers
-the CLI uses, with scripted agents.
+The UI only displays engine results: runs, searches and replays come from the same helpers
+the CLI uses, with scripted agents, and `ui/view_model.py` formats them. No logic lives here.
 """
 
-from nicegui import ui
+import os
+from dataclasses import dataclass
 
-from cascadeguard.cli import run_scenario
+from nicegui import run, ui
+
+from cascadeguard.cli import World, load_world, search_repairs
+from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
 from cascadeguard.simulation.loader import SCENARIOS_DIR
+from cascadeguard.simulation.orchestrator import RunResult
+from cascadeguard.ui import view_model as vm
 
-PORT = 8765  # 8080 is often taken by other local servers
-BANNER = "Hypothetical scenario, synthetic data only. Decision support, not legal interpretation."
-SECTIONS = (
-    "Timeline",
-    "Role views",
-    "Dependency graph",
-    "Repairs",
-    "Baseline vs replay",
-    "Export",
-)
+DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
+PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
+
+
+def port() -> int:
+    return int(os.environ.get(PORT_VARIABLE, DEFAULT_PORT))
 
 
 def scenarios() -> list[str]:
     return sorted(p.name for p in SCENARIOS_DIR.iterdir() if (p / "scenario.yaml").is_file())
 
 
+@dataclass
+class Session:
+    """What one browser tab has computed so far (engine results only)."""
+
+    world: World | None = None
+    baseline: RunResult | None = None
+    search: SearchResult | None = None
+    selected: ReplayComparison | None = None
+    failure: str | None = None  # highlighted in the graph; None: every failure
+    role: str | None = None
+    minute: int = 0
+
+
+def heading(text: str) -> None:
+    ui.label(text).classes("text-lg font-semibold [overflow-wrap:anywhere]")
+
+
+def lines(items: tuple[str, ...] | list[str], empty: str = "none") -> None:
+    with ui.column().classes("gap-0"):
+        if not items and empty:
+            ui.label(empty).classes("text-gray-500 text-sm")
+        for item in items:
+            ui.label(item).classes("font-mono text-sm whitespace-pre-wrap [overflow-wrap:anywhere]")
+
+
 @ui.page("/")
 def index() -> None:
-    ui.label(BANNER).classes("w-full bg-amber-100 text-amber-900 p-2 font-medium")
+    s = Session()
+    with ui.header().classes("bg-amber-100 text-amber-900 py-2"):
+        ui.label(vm.DISCLAIMER).classes("font-medium").mark("disclaimer")
+
     ui.label("CascadeGuard").classes("text-2xl font-bold")
-    names = scenarios()
-    picker = ui.select(names, value=names[0], label="Scenario").classes("w-72")
-    status = ui.label("")
+    with ui.row().classes("items-end gap-4"):
+        names = scenarios()
+        picker = ui.select(names, value=names[0], label="Scenario").classes("w-72")
+        run_button = ui.button("Run baseline")
+    status = ui.label("Pick a scenario and run the baseline (scripted agents).")
 
-    def run() -> None:
-        result = run_scenario(str(picker.value))
-        status.set_text(
-            f"Baseline run: {len(result.log)} log entries, {len(result.failures)} diagnosed "
-            f"failures. Clause set: {result.clause_set}"
-        )
-
-    ui.button("Run baseline", on_click=run)
-    for title in SECTIONS:
+    @ui.refreshable
+    def baseline_view() -> None:
+        b, w = s.baseline, s.world
+        if b is None or w is None:
+            return
         with ui.card().classes("w-full"):
-            ui.label(title).classes("text-lg font-semibold")
-            ui.label("Not built yet (skeleton).").classes("text-gray-500")
+            heading("Clause set")
+            ui.label(b.clause_set)
+            lines(vm.clause_set(b, w.corpus_ids))
+        with ui.card().classes("w-full"):
+            heading("Timeline")
+            for row in vm.timeline(b, w.scenario):
+                with ui.expansion(
+                    f"T+{row.minute:02d}  {row.title}  (to: {', '.join(row.recipients)})",
+                    value=row.minute == 0,
+                ).classes("w-full"):
+                    lines(row.lines)
+        role_card()
+        graph_card()
+
+    @ui.refreshable
+    def role_card() -> None:
+        b, w = s.baseline, s.world
+        if b is None or w is None:
+            return
+        with ui.card().classes("w-full"):
+            heading("Role views: only what this role could see")
+            roles = [r.id for r in w.roles.roles]
+            minutes = {e.at_minute: f"T+{e.at_minute:02d}" for e in w.scenario.events}
+            with ui.row():
+                ui.select(
+                    roles,
+                    value=s.role or roles[0],
+                    label="Role",
+                    on_change=lambda e: pick_role(str(e.value)),
+                ).classes("w-72")
+                ui.select(
+                    minutes,
+                    value=s.minute,
+                    label="Inject",
+                    on_change=lambda e: pick_minute(int(e.value)),
+                ).classes("w-40")
+            v = vm.role_view(b, s.role or roles[0], s.minute)
+            ui.label(
+                v.title if v.recipient else f"{v.title} (not a recipient of this inject)"
+            ).classes("font-medium")
+            if v.description:
+                ui.label(v.description)
+            for title, items in (
+                ("Decision points", v.decision_points),
+                ("Facts known (inside its boundary)", v.facts),
+                ("Clauses shown with this inject", v.clauses),
+                ("Own accepted actions so far", v.own_history),
+                ("Data categories inside its boundary", v.inside),
+                ("Data categories outside its boundary (never shown to it)", v.outside),
+            ):
+                ui.label(title).classes("font-semibold mt-2")
+                lines(items)
+            ui.label("What its agent said (unverified agent statement)").classes(
+                "font-semibold mt-2"
+            )
+            lines(v.agent_statements, "no decision recorded at this inject")
+
+    def pick_role(role: str) -> None:
+        s.role = role
+        role_card.refresh()
+
+    def pick_minute(minute: int) -> None:
+        s.minute = minute
+        role_card.refresh()
+
+    @ui.refreshable
+    def graph_card() -> None:
+        b = s.baseline
+        if b is None:
+            return
+        with ui.card().classes("w-full"):
+            heading("Dependency graph and diagnosed failures")
+            choices = {"": "all diagnosed failures"} | {f.id: f.id for f in b.failures}
+            ui.select(
+                choices,
+                value=s.failure or "",
+                label="Highlight",
+                on_change=lambda e: pick_failure(str(e.value) or None),
+            ).classes("w-[32rem]")
+            ui.echart(vm.graph_option(b, s.failure)).classes("w-full h-[36rem]")
+            for f in vm.failures(b):
+                with ui.column().classes("gap-0 mt-2"):
+                    ui.label(f"[{f.category}] {f.id}").classes("font-semibold")
+                    ui.label(f.description)
+                    ui.label(f"clauses: {f.clauses}").classes("font-mono text-sm")
+                    ui.label(f"blocks: {f.blocks}").classes("text-sm")
+                    ui.label(f.qualification).classes("italic text-sm text-gray-600")
+            ui.label("Findings").classes("font-semibold mt-2")
+            lines(vm.findings(b))
+
+    def pick_failure(failure: str | None) -> None:
+        s.failure = failure
+        graph_card.refresh()
+
+    @ui.refreshable
+    def repairs_view() -> None:
+        r = s.search
+        if r is None:
+            return
+        with ui.card().classes("w-full"):
+            heading("Ranked repairs (every repair rule is hypothetical)")
+            ui.label(r.summary()["ranking"]).classes("text-sm text-gray-600")
+            for row in vm.repairs(r):
+                with ui.row().classes("items-start w-full gap-3 border-b py-1 no-wrap"):
+                    ui.button("Compare", on_click=lambda _, rid=row.repair_id: compare(rid)).props(
+                        "dense flat"
+                    )
+                    with ui.column().classes("gap-0 min-w-0 flex-1"):
+                        ui.label(f"{row.rank}. {row.repair_id}").classes(
+                            "font-mono text-sm [overflow-wrap:anywhere]"
+                        )
+                        ui.label(
+                            f"{row.outcome}; critical blockers removed {row.removed}; "
+                            f"{row.edits} edit(s)"
+                            + (f"; {row.authorization}" if row.authorization else "")
+                        ).classes("text-sm")
+                        lines(row.masked, "")
+                        for conflict in row.new_conflicts:
+                            ui.label(f"new conflict: {conflict}").classes(
+                                "text-sm text-red-700 [overflow-wrap:anywhere]"
+                            )
+        with ui.card().classes("w-full"):
+            heading("Discarded by the hard filter")
+            lines(vm.discarded(r))
+        comparison_view()
+
+    @ui.refreshable
+    def comparison_view() -> None:
+        c = s.selected
+        if c is None:
+            return
+        v = vm.comparison(c)
+        with ui.card().classes("w-full").mark("comparison"):
+            heading(f"Baseline vs replay: {v.repair_id}")
+            ui.label(f"Outcome: {v.outcome}" + (f"; {v.authorization}" if v.authorization else ""))
+            lines(v.edits)
+            ui.label(f"Clauses the repair targets: {v.targets}").classes("text-sm")
+            with ui.row().classes("w-full no-wrap gap-6"):
+                with ui.column().classes("w-1/2"):
+                    heading("Baseline")
+                    lines([f"{g}: {base}" for g, base, _ in v.goals])
+                    ui.label("Diagnosed failures").classes("font-semibold")
+                    lines(v.baseline_failures)
+                with ui.column().classes("w-1/2"):
+                    heading("Replay")
+                    lines([f"{g}: {rep}" for g, _, rep in v.goals])
+                    ui.label("Diagnosed failures").classes("font-semibold")
+                    lines((*v.removed, *v.replay_failures))
+            ui.label("Actions whose verdict changed").classes("font-semibold")
+            lines(v.changed_actions)
+            for note in v.notes:
+                ui.label(note).classes("italic text-sm text-gray-600")
+
+    @ui.refreshable
+    def export_view() -> None:
+        b, w = s.baseline, s.world
+        if b is None or w is None:
+            return
+        with ui.card().classes("w-full"):
+            heading("Export (JSON and Markdown, same content as the CLI --export)")
+            with ui.row():
+                for f in vm.export_files(w.scenario.id, b, s.search, s.selected):
+                    ui.button(
+                        f.label,
+                        on_click=lambda _, f=f: ui.download.content(f.content, f.filename),
+                    ).props("outline dense no-caps").tooltip(f.filename)
+
+    async def run_baseline() -> None:
+        status.set_text("Running the baseline ...")
+        world = await run.io_bound(load_world, str(picker.value))
+        if world is None:
+            return
+        s.world, s.search, s.selected, s.failure = world, None, None, None
+        s.baseline = world.baseline()
+        s.role, s.minute = world.roles.roles[0].id, world.scenario.events[0].at_minute
+        status.set_text(
+            f"Baseline: {len(s.baseline.failures)} diagnosed failures. "
+            f"Clause set: {s.baseline.clause_set}"
+        )
+        baseline_view.refresh()
+        repairs_view.refresh()
+        export_view.refresh()
+
+    async def find_repairs() -> None:
+        if s.world is None:
+            ui.notify("Run the baseline first.")
+            return
+        status.set_text("Replaying every candidate repair on the identical incident ...")
+        found = await run.io_bound(search_repairs, s.world.scenario.id)
+        s.search, s.selected = found, None
+        status.set_text(f"{len(found.ranked) if found else 0} repairs ranked.")
+        repairs_view.refresh()
+        export_view.refresh()
+
+    def compare(repair_id: str) -> None:
+        if s.search is None:
+            return
+        s.selected = s.search.comparison(repair_id)
+        comparison_view.refresh()
+        export_view.refresh()
+
+    run_button.on_click(run_baseline)
+    baseline_view()
+    ui.button("Find repairs", on_click=find_repairs).classes("mt-2")
+    repairs_view()
+    export_view()
 
 
 def main() -> None:
-    ui.run(title="CascadeGuard", port=PORT, reload=False, show=False)  # pyright: ignore[reportUnknownMemberType]
+    ui.run(  # pyright: ignore[reportUnknownMemberType]
+        title="CascadeGuard", port=port(), reload=False, show=False
+    )
 
 
 if __name__ in {"__main__", "__mp_main__"}:
