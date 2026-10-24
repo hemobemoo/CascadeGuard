@@ -38,3 +38,6 @@ policies/extracted/The Oxford Handbook of AI Governance (Oxford Handbooks) -- Ju
 # Tool caches
 .ruff_cache/
 .pytest_cache/
+
+# Playwright MCP output (snapshots, downloads)
+.playwright-mcp/

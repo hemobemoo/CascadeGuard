@@ -5,21 +5,23 @@ At each inject every role decides on the same snapshot (views are built before a
 applied), then the engine processes the decisions in roles.yaml order. Same inputs, same run.
 """
 
-import copy
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, cast
+
+from pydantic_core import TzInfo
 
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.scripted import ScriptedAgent
-from cascadeguard.domain.decisions import AgentDecision
+from cascadeguard.domain.decisions import AgentDecision, Citation, GapClaim, ProposedAction
 from cascadeguard.domain.findings import CoordinationFailure, Finding, LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import ConstraintEngine
 from cascadeguard.engine.diagnosis import diagnose
 from cascadeguard.engine.graph import DependencyGraph, build_graph
-from cascadeguard.simulation.boundaries import view_for
+from cascadeguard.simulation.boundaries import RoleView, view_for
 from cascadeguard.simulation.state import ObligationStatus, SimulationState
 
 
@@ -37,6 +39,10 @@ class RunResult:
     causes: tuple[CoordinationFailure, ...]
     graph: DependencyGraph
     scripted: bool  # every role was a ScriptedAgent (they do not adapt to a repair)
+    # For display only: the exact view each role received at each inject, and each role's
+    # information boundary (data categories) in this run.
+    views: tuple[RoleView, ...]
+    boundaries: tuple[tuple[str, tuple[str, ...]], ...]
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
@@ -105,13 +111,47 @@ class RunResult:
         }
 
 
+class _Unreadable:
+    """Stands in for agent output that cannot be rebuilt as plain data; the engine rejects it as
+    a malformed decision."""
+
+
+_MODELS = (AgentDecision, ProposedAction, Citation, GapClaim)
+_LEAVES = (str, int, float, bool, type(None))
+
+
+def _plain(value: object) -> bool:
+    """True if the value holds only the exact types an AgentDecision is made of. Exact type
+    checks and plain attribute reads run no code defined by the agent."""
+    kind = type(value)
+    if kind in _LEAVES:
+        return True
+    if kind is datetime:
+        tz = cast(datetime, value).tzinfo
+        return tz is None or type(tz) in (timezone, TzInfo)  # TzInfo: pydantic's own class
+    if kind is tuple or kind is list:
+        return all(_plain(v) for v in cast(Iterable[object], value))
+    if kind is dict:
+        items = cast(dict[object, object], value).items()
+        return all(type(k) is str and _plain(v) for k, v in items)
+    if kind in _MODELS:
+        fields: object = object.__getattribute__(value, "__dict__")
+        if type(fields) is not dict:
+            return False
+        return all(_plain(v) for v in cast(dict[str, object], fields).values())
+    return False
+
+
 def _copy(returned: object) -> object:
-    """Copy an agent's decision. The type is checked first, so no code of another type (e.g. a
-    custom __deepcopy__) runs; anything else goes to the engine uncopied and is rejected there
-    as a malformed decision."""
-    if type(returned) is not AgentDecision:
-        return returned
-    return copy.deepcopy(returned)
+    """Copy an agent's decision by rebuilding it from JSON. Every nested value is first checked
+    to be of an exact plain type (`_plain`), so no object of another type is serialised and no
+    agent-defined code runs here; anything else reaches the engine as _Unreadable."""
+    if type(returned) is not AgentDecision or not _plain(returned):
+        return _Unreadable()
+    try:
+        return AgentDecision.model_validate_json(returned.model_dump_json())
+    except Exception:  # any failure means the output is not a plain AgentDecision
+        return _Unreadable()
 
 
 def run(
@@ -125,9 +165,12 @@ def run(
     loaded = dict(sorted(clauses.items()))
     state = SimulationState(scenario, roles)
     engine = ConstraintEngine(state, loaded, corpus_clause_ids)
+    shown: list[RoleView] = []
     for event in scenario.events:
         engine.release(event)
         views = {r.id: view_for(state, r.id, event, loaded) for r in roles.roles}
+        # A separately built copy is kept for display, never the object an agent was given.
+        shown += [view_for(state, r.id, event, loaded) for r in roles.roles]
         # Each decision is copied as soon as it is returned, so a later agent in the same
         # step cannot alter an earlier one before the engine processes it.
         decisions = [(r.id, _copy(agents[r.id].observe(views[r.id]))) for r in roles.roles]
@@ -149,4 +192,6 @@ def run(
         causes=causes,
         graph=graph,
         scripted=all(isinstance(a, ScriptedAgent) for a in agents.values()),
+        views=tuple(shown),
+        boundaries=tuple((r.id, tuple(sorted(state.boundary(r.id)))) for r in roles.roles),
     )

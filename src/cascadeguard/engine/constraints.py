@@ -5,6 +5,7 @@ clause's `normalized` reading; `stated` and `interpreted` readings are treated t
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -45,8 +46,11 @@ WITHHELD = "<not a scenario id; agent text withheld>"
 
 
 def agent_statement(text: str) -> str:
-    """Agent free text under the fixed label, on one line (no forged log or CLI lines)."""
-    return AGENT_STATEMENT + " ".join(text.split())
+    """Agent free text under the fixed label, on one line, with control and format characters
+    (newlines, terminal escape sequences, zero-width marks) replaced by spaces, so it cannot
+    forge a log or CLI line."""
+    visible = "".join(" " if unicodedata.category(ch).startswith("C") else ch for ch in text)
+    return AGENT_STATEMENT + " ".join(visible.split())
 
 
 REQUIRES_DETERMINATION = (
@@ -334,6 +338,8 @@ class ConstraintEngine:
             c.clause_id
             for c in (*decision.citations, *(c for g in decision.gap_claims for c in g.citations))
         )
+        # A cited id that is not a corpus clause id is agent text: never stored or printed.
+        shown = {cid: (cid if cid in self.corpus_clause_ids else WITHHELD) for cid in cited}
         impostor = decision.role_id != expected_role or decision.at != state.scenario.time_at(
             state.minute
         )
@@ -346,7 +352,7 @@ class ConstraintEngine:
             "decision",
             role=expected_role,
             detail=agent_statement(decision.rationale),
-            clause_ids=cited,
+            clause_ids=tuple(shown[cid] for cid in cited),
         )
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             claimed_role = (
@@ -384,7 +390,7 @@ class ConstraintEngine:
                 "rejected",
                 role=expected_role,
                 reasons=(reason,),
-                clause_ids=(clause_id,),
+                clause_ids=(shown[clause_id],),
                 detail="whole decision rejected: cited clause is not a loaded corpus clause",
             )
             state.add_finding(
@@ -392,8 +398,8 @@ class ConstraintEngine:
                     kind=reason.value,
                     minute=state.minute,
                     role=expected_role,
-                    clause_ids=(clause_id,),
-                    detail=f"{expected_role} cited {clause_id}, not a loaded corpus clause",
+                    clause_ids=(shown[clause_id],),
+                    detail=f"{expected_role} cited {shown[clause_id]}, not a loaded corpus clause",
                 )
             )
         if bad_citations:

@@ -4,13 +4,32 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 3 — Repair and replay: complete pending the merge of PR #4** (the human approved the
-merge on 2026-10-24 once local checks and CI pass; no further review round). **Not
-re-reviewed:** commit 5747e23 (fixes from the final test-breaker pass) and the follow-up fixes
-in this PR (ranking keys, certainty words, type check before copying agent output). **The
-Phase 4 test-breaker round must cover them first.**
+**Phase 4 — Demo UI (branch `phase-4-ui`): built, review loop finished (3 rounds), PR open,
+not merged; waiting for the human** to look at the screenshots and decide. The full flow works
+in the browser with scripted agents (Playwright MCP run; the phase-auditor also ran it in
+headless Edge). Final verdicts: evidence-auditor PASS (round 2), phase-auditor PASS (round 2),
+test-breaker FAIL (round 3: no broken guarantee; two MAJORs about missing proof). The round-3
+fixes are mutation-checked but not re-reviewed (round limit); see "Waiting on human".
 
 ## Done
+
+### Phase 4 — Demo UI (branch `phase-4-ui`, not merged)
+- `ui/app.py` (NiceGUI, port 8765 or `CASCADEGUARD_UI_PORT`): scenario picker, timeline, role
+  views, dependency graph (`ui.echart`) with failures highlighted (click a failure or pick it),
+  ranked and discarded repairs, baseline vs replay, JSON/Markdown downloads.
+- `ui/view_model.py`: formatting only; labels come from the engine and `storage/export.py`.
+- `RunResult.views` and `RunResult.boundaries` (display copies). UI and CLI share one Markdown
+  export builder (`cli.baseline_markdown`, `cli.search_markdown`); all Markdown exports carry
+  the disclaimer.
+- Tests: `tests/unit/test_view_model.py` (labels, role views, graph highlight, byte-identical
+  exports, port).
+
+Verify:
+
+```bash
+uv run python -m cascadeguard.ui.app      # then open http://localhost:8765
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 3 — Repair and replay (branch `phase-3-repair`)
 - `domain/repairs.py`: `RepairEdit` (five operation types, typed parameters only) and an
@@ -353,6 +372,70 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
   typed parameters.
 
+- **Phase 4 review round 1 (2026-10-24), test-breaker on 5747e23, f6ea214, 4f56dbe: FAIL.**
+  BLOCKER: a cited clause id outside the corpus (decision or GapClaim citation) was stored and
+  printed verbatim, so invented text and a forged CLI line reached every output. Fixed: such
+  ids are shown as `<not a scenario id; agent text withheld>` everywhere (the existing test for
+  unknown citations now expects that placeholder instead of the invented id, a deliberate rule
+  change). MINORs fixed: `agent_statement` replaces control and format characters (terminal
+  escapes, zero-width and bidi marks); the orchestrator rebuilds each decision from JSON
+  instead of deep-copying, so a foreign object inside a `model_construct` decision runs no
+  code; a test pins "not requiring authorization" after clauses cited. MINOR not fixed (human
+  decision: no further words): OVERSTATED is a word list and is bypassed by homoglyphs or
+  synonyms; the label and fixed qualification remain the safeguard.
+
+- **Phase 4 human decisions (2026-10-24):** spec 004 approved as written; no pytest-asyncio;
+  exports as browser downloads only (the CLI `--export` writes to disk); CascadeGuard.md
+  section 6 sentence replaced with the human's wording (fbc51e1, own commit); README gives the
+  port and `CASCADEGUARD_UI_PORT`; the next test-breaker round covers 0e76c21 first (done in
+  round 2: the WITHHELD and control-character fixes hold).
+- **Phase 4 review round 2 (2026-10-24).** evidence-auditor PASS (triage in
+  `docs/review/phase-4-clause-triage.md`). test-breaker FAIL: MAJOR, no repeatable test proves
+  the browser flow (human gate, below); MINORs fixed with tests: `_copy` now checks every nested
+  value for an exact plain type before serialising (a `model_serializer`, generator, custom
+  `__getattribute__`, custom tzinfo or `str` subclass runs no code and is rejected as
+  malformed); UI and CLI Markdown exports are byte-identical (shared builder; test compares the
+  CLI's files); the graph highlights only the selected failure, and only edges touching its
+  subject (test checks a second failure's nodes are not highlighted); failures in the list are
+  clickable; the banner shows the clause set. Reviewer QUESTION about AGENTS.md not matching
+  the ranking: disagreement, AGENTS.md lines 46-60 already hold the human-approved order
+  (f6ea214). Stale PROGRESS.md: fixed here.
+
+- **Phase 4 review round 2, phase-auditor: PASS.** All four "Done when" items proven (it ran
+  the flow itself in headless Edge on a clean export of 1e7fc22). MINORs fixed: the structure
+  file lists `ui/view_model.py` (replacing the planned timeline/graph_view/replay_view modules)
+  and `.claude/launch.json`; the masked, removed and requires-authorization labels are
+  constants in `engine/repair_search.py` used by the CLI and the UI; the UI binds to
+  127.0.0.1 only; the baseline runs off the event loop. QUESTION-FOR-HUMAN items: confirm the
+  CascadeGuard.md section 6 approval in the PR, and approve or drop `.claude/launch.json`.
+
+- **Phase 4 review round 3 (2026-10-24, last round), test-breaker: FAIL.** No probe broke a
+  guarantee (hostile text, view mutation, `_copy`, determinism across hash seeds, replay
+  identity all held). MAJOR 1: the view-model tests missed 9 of 12 label mutations. Fixed after
+  the round, not re-reviewed: one test per display path (status labels on timeline, failure
+  rows, role-view clauses and comparison targets; engine qualifications; removed label;
+  `scripted_agent_limit` tag and explanation; replay notes; a role view shows only its own
+  role's statements); all 9 mutants now fail the tests. MAJOR 2: no repeatable browser test
+  (still human gate 0). MINORs fixed: role view filters unlabelled agent text instead of a bare
+  `assert`; "outside its boundary" uses every scenario category; the role view also shows
+  instructions, allowed actions and simulation time (the whole `RoleView`).
+
+- **Phase 4 human decisions (2026-10-24, second set):**
+  - Browser proof: the Python `playwright` package is a dev dependency (approved; in the
+    AGENTS.md stack). `tests/e2e/test_ui_flow.py` (marker `e2e`, Chromium) drives the core
+    flow: scenario and baseline, disclaimer and a clause status label, a role view, the
+    top-ranked repair with "requires authorization" and the hypothetical-rule label, baseline
+    vs replay, and both replay exports compared with `cli --export`. CI installs Chromium and
+    always runs it; `uv run pytest -m "not e2e"` skips it locally. The test starts the UI
+    without pytest's environment variables (NiceGUI switches to its own test mode otherwise).
+  - Round-3 fixes accepted without another round. **The Phase 5 review covers them first**
+    (a0b6342, and the Phase 4 commits after it).
+  - `uae.telecom-law.art14-5`: permission mapping dropped (as in 4d); the 7m reading is in the
+    notes; stays draft; `illus.telecom.regulator-information-request` stays loaded. The unit
+    test now expects no authority from it.
+  - CascadeGuard.md section 6 wording confirmed by the human (approved in chat 2026-10-24).
+  - `.claude/launch.json` kept: no secrets, no machine-specific paths.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -389,9 +472,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-24: items 3-7 of the previous list (see Decisions). Re-approval needed
-(gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, all on the
-human's side, none blocking:
+Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
+the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
+(`policies/approvals.yaml`, `reapproval_needed: []`). Still open, none blocking:
 
 1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
    from 4.18.4, outside its quote (the two clauses stay separate).
@@ -417,7 +500,6 @@ human's side, none blocking:
 
 ## Next step
 
-1. Merge PR #4, tag `phase-3`, record it here.
-2. Stop and report to the human before Phase 4. Phase 4's first test-breaker round covers
-   5747e23 and the follow-up fixes (not re-reviewed). Requirements so far:
-   `specs/004-demo-ui.md`.
+1. Human: look at the screenshots in the Phase 4 PR; answer "Waiting on human" 0, 0a and the
+   other Phase 4 questions; decide whether the PR merges. Auto-merge does not apply.
+2. After merge: tag `phase-4`, update this file, stop and report before Phase 5.

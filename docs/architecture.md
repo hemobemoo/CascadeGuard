@@ -24,7 +24,7 @@ simulation/orchestrator  (deterministic code, not an agent)
   or randomness. The same inputs give the same log, failures and graph.
 - **Graph** (`engine/graph.py`, NetworkX). Nodes are roles, data categories, actions, clauses and
   goals. Edges are sees, holds, may, authorises, obliges, restricts, binds, needs_info,
-  needs_prior and achieves. Diagnosis reads it, and the Phase 4 UI will draw it.
+  needs_prior and achieves. Diagnosis reads it, and the UI draws it.
 - **Repairs (Phase 3).** `engine/repair_search.py` builds candidate edits from the diagnosed
   failures (closed grammar, `domain/repairs.py`), discards any that would lift a restriction,
   and ranks the rest by replay. `simulation/replay.py` applies a repair as hypothetical rules
@@ -37,5 +37,16 @@ baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ─�
   └─> for each repair: replay.apply_repair ──> run(...) ──> ReplayComparison ──> rank
 ```
 
+- **Demo UI (Phase 4).** `ui/app.py` (NiceGUI, port 8765 or `CASCADEGUARD_UI_PORT`) only
+  renders; `ui/view_model.py` formats engine results into labelled rows, with no decisions. The
+  orchestrator keeps a separately built copy of each role's view (`RunResult.views`) and each
+  role's boundary (`RunResult.boundaries`) for the role-view panel. Exports reuse
+  `storage/export.py`.
+
+```
+ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResult, ReplayComparison
+          ──> ui/view_model.py (labels: status, hypothetical rule, masked, tags, agent statement)
+```
+
 Specs: `specs/001-domain-and-scenario.md`, `specs/002-engine-and-diagnosis.md`,
-`specs/003-repair-and-replay.md`.
+`specs/003-repair-and-replay.md`, `specs/004-demo-ui.md`.
