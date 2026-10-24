@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import pytest
 
@@ -26,7 +26,7 @@ from cascadeguard.agents.llm import (
 )
 from cascadeguard.agents.scripted import ScriptedAgent
 from cascadeguard.cli import World, load_world, main, search_repairs
-from cascadeguard.domain.decisions import AgentDecision
+from cascadeguard.domain.decisions import AgentDecision, ProposedAction
 from cascadeguard.engine.constraints import WITHHELD, Reason
 from cascadeguard.simulation.boundaries import RoleView
 from cascadeguard.simulation.orchestrator import run
@@ -850,3 +850,54 @@ def test_error_detail_only_on_request_failures(scripted: World) -> None:
             no_decision="invalid_output",
             no_decision_detail="X (HTTP 1): y",
         )
+
+
+def test_error_detail_never_records_headers() -> None:
+    """OpenRouter puts response headers into the error body's metadata (seen live, 2026-10-25):
+    only the body's message is kept."""
+    from cascadeguard.agents.llm import error_detail
+
+    class StatusError(Exception):
+        status_code = 429
+        body: ClassVar[dict[str, Any]] = {
+            "message": "Rate limit exceeded: free-models-per-min.",
+            "code": 429,
+            "metadata": {"headers": {"X-RateLimit-Limit": "20", "X-RateLimit-Reset": "1"}},
+        }
+
+    detail = error_detail(StatusError("Error code: 429 - {... 'headers': {...}}"), ())
+    assert detail == "StatusError (HTTP 429): Rate limit exceeded: free-models-per-min."
+    plain = error_detail(ConnectionError("reset by peer; headers: {'X-Secret': 'v'}"), ())
+    assert plain == "ConnectionError (HTTP None): reset by peer;"
+    assert "X-" not in detail + plain
+
+
+def test_known_limitation_gap_pattern_flags_own_inaction(scripted: World) -> None:
+    """KNOWN LIMITATION (PROGRESS.md, human decision 2026-10-25): the free-text gap pattern
+    matches "no authority" even when an agent describes its own inaction (seen in the v2 LLM
+    baseline, health_data_oversight T+00). The decision is rejected as uncited_gap_claim. This
+    test pins the current behaviour; a later fix must change it on purpose."""
+    from cascadeguard.engine.constraints import GAP_CLAIM, ConstraintEngine
+    from cascadeguard.simulation.state import SimulationState
+
+    text = (
+        "No facts are currently known to me, and no authority has been triggered that would "
+        "justify issuing a determination at this time."
+    )
+    assert [m.group(0) for m in GAP_CLAIM.finditer(text)] == ["no authority"]
+    state = SimulationState(scripted.scenario, scripted.roles)
+    engine = ConstraintEngine(state, scripted.clauses, scripted.corpus_ids)
+    engine.release(scripted.scenario.events[0])
+    role = "health_data_oversight"
+    engine.process(
+        AgentDecision(
+            role_id=role,
+            at=scripted.scenario.time_at(0),
+            proposed_actions=(ProposedAction(action_type="monitor"),),
+            rationale=text,
+            citations=(),
+            uncertainty=(),
+        ),
+        expected_role=role,
+    )
+    assert [f.kind for f in state.findings if f.role == role] == [Reason.UNCITED_GAP_CLAIM.value]
