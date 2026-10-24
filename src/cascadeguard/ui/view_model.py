@@ -92,8 +92,11 @@ class RoleViewRows:
     role: str
     minute: int
     recipient: bool
+    at: str
     title: str
     description: str
+    instructions: str
+    allowed_actions: tuple[str, ...]
     decision_points: tuple[str, ...]
     facts: tuple[str, ...]
     clauses: tuple[str, ...]
@@ -103,23 +106,30 @@ class RoleViewRows:
     agent_statements: tuple[str, ...]  # always under the AGENT_STATEMENT label
 
 
-def role_view(result: RunResult, role: str, minute: int) -> RoleViewRows:
-    """Exactly the view the role's agent received at this inject, plus its boundary."""
+def role_view(result: RunResult, role: str, minute: int, categories: Iterable[str]) -> RoleViewRows:
+    """Exactly the view the role's agent received at this inject, plus its boundary within
+    every scenario data category (`categories`) and its own labelled agent statements."""
     view = next(v for v in result.views if v.role_id == role and v.minute == minute)
     inside = dict(result.boundaries)[role]
-    every = sorted({c for _, cats in result.boundaries for c in cats})
+    # Only this role's own decision entries, and only labelled ones (the engine always labels
+    # agent text; anything else is not shown).
     statements = tuple(
         e.detail
         for e in result.log
-        if e.kind == "decision" and e.role == role and e.minute == minute
+        if e.kind == "decision"
+        and e.role == role
+        and e.minute == minute
+        and e.detail.startswith(AGENT_STATEMENT)
     )
-    assert all(s.startswith(AGENT_STATEMENT) for s in statements)
     return RoleViewRows(
         role=role,
         minute=minute,
         recipient=view.event_id is not None,
+        at=view.at.isoformat(),
         title=view.event_title,
         description=view.event_description,
+        instructions=view.instructions,
+        allowed_actions=view.allowed_actions,
         decision_points=view.decision_points,
         facts=tuple(
             f"{f.id} ({f.data_category}, {f.certainty.value}): {f.statement}" for f in view.facts
@@ -127,7 +137,7 @@ def role_view(result: RunResult, role: str, minute: int) -> RoleViewRows:
         clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.clauses),
         own_history=view.own_history,
         inside=inside,
-        outside=tuple(c for c in every if c not in inside),
+        outside=tuple(c for c in sorted(set(categories)) if c not in inside),
         agent_statements=statements,
     )
 
