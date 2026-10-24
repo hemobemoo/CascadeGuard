@@ -133,6 +133,7 @@ def test_request_carries_the_required_openrouter_settings(scripted: World, tmp_p
     assert fmt["json_schema"]["strict"] is True
     assert fmt["json_schema"]["schema"] == response_schema()
     assert req["extra_body"]["provider"] == {"require_parameters": True}
+    assert req["extra_body"]["reasoning"] == {"enabled": False}
     # Response healing is explicitly off; no plugin is switched on.
     assert req["extra_body"]["plugins"] == [{"id": "response-healing", "enabled": False}]
     assert all(p.get("enabled") is False for p in req["extra_body"]["plugins"])
@@ -369,7 +370,9 @@ def test_cli_offline_llm_run_needs_no_key_and_prints_no_model(
     code = main(["run", SCENARIO, "--agents", "llm", "--offline", "--cache", str(tmp_path)])
     out = capsys.readouterr().out
     assert code == 0
-    assert "Agents: LLM agents (model from CASCADEGUARD_MODEL; offline" in out
+    assert (
+        "Agents: LLM agents (model from CASCADEGUARD_MODEL; output mode json_schema; offline" in out
+    )
     assert "LLM decision cache (baseline and replays): 36 steps reused, 0 not cached" in out
     assert MODEL not in out
     assert "no_decision" not in out
@@ -523,9 +526,9 @@ def test_live_search_is_refused_by_the_world_in_use(
         return live
 
     monkeypatch.setattr(cli, "load_world", fake_load)
-    for argv in (["repairs", SCENARIO], ["run", SCENARIO, "--repair", SUCCESS]):
-        assert main([*argv, "--agents", "llm"]) == 2
-        assert "repair search with live LLM calls is not enabled" in capsys.readouterr().out
+    # A live search is refused; a live single replay has its own guard (P5-6 tests below).
+    assert main(["repairs", SCENARIO, "--agents", "llm"]) == 2
+    assert "repair search with live LLM calls is not enabled" in capsys.readouterr().out
     assert not client.requests  # refused before any call
 
 
@@ -586,3 +589,140 @@ def test_search_export_and_audit_name_the_agents(scripted: World, tmp_path: Path
     finally:
         con.close()
     assert row is not None and json.loads(row[0])["agents"] == label
+
+
+# --- Output mode (human decision 2026-10-24: explicit JSON-mode fallback) ---------------------
+
+
+def test_json_object_mode_sends_json_mode_with_the_schema_in_the_prompt(
+    scripted: World, tmp_path: Path
+) -> None:
+    from cascadeguard.agents.llm import SYSTEM_PROMPT
+
+    client = FakeClient(scripted_replies(scripted))
+    view = scripted.baseline().views[0]
+    agent = LLMAgent(
+        view.role_id, MODEL, client, DecisionCache(tmp_path), (), output_mode="json_object"
+    )
+    decision = agent.observe(view)
+    (req,) = client.requests
+    assert req["response_format"] == {"type": "json_object"}
+    assert req["temperature"] == 0
+    assert req["extra_body"]["provider"] == {"require_parameters": True}
+    assert req["extra_body"]["reasoning"] == {"enabled": False}
+    assert req["extra_body"]["plugins"] == [{"id": "response-healing", "enabled": False}]
+    system = req["messages"][0]["content"]
+    assert system.startswith(SYSTEM_PROMPT)
+    assert json.dumps(response_schema(), ensure_ascii=False, sort_keys=True) in system
+    assert not {"role_id", "at"} & set(response_schema()["properties"])  # filled in by code
+    assert decision.no_decision is None and decision.role_id == view.role_id
+
+
+def test_json_object_mode_validates_the_same_way(scripted: World, tmp_path: Path) -> None:
+    """No repair in JSON mode either: prose around the JSON, or a schema mismatch, is invalid."""
+    replies = iter(["Here you go: {}", json.dumps({"proposed_actions": []})])
+    client = FakeClient(lambda _: next(replies))
+    view = scripted.baseline().views[0]
+    agent = LLMAgent(
+        view.role_id, MODEL, client, DecisionCache(tmp_path), (), output_mode="json_object"
+    )
+    assert agent.observe(view).no_decision == "invalid_output"
+    assert len(client.requests) == 2
+
+
+def test_output_mode_enters_the_cache_key(scripted: World, tmp_path: Path) -> None:
+    view = scripted.baseline().views[0]
+    cache = DecisionCache(tmp_path)
+    schema_agent = LLMAgent(view.role_id, MODEL, FakeClient(scripted_replies(scripted)), cache, ())
+    json_agent = LLMAgent(
+        view.role_id,
+        MODEL,
+        FakeClient(scripted_replies(scripted)),
+        cache,
+        (),
+        output_mode="json_object",
+    )
+    assert schema_agent.prompt_version != json_agent.prompt_version
+    schema_agent.observe(view)
+    json_agent.observe(view)
+    assert len(list(tmp_path.glob("*.json"))) == 2  # one entry per mode, never shared
+
+
+def test_output_mode_setting_is_checked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    env = tmp_path / ".env"
+    env.write_text("CASCADEGUARD_OUTPUT_MODE=json_object" + chr(10), encoding="utf-8")
+    assert LLMConfig.output_mode_from_env(env) == "json_object"
+    assert LLMConfig.output_mode_from_env(tmp_path / "absent.env") == "json_schema"
+    monkeypatch.setenv("CASCADEGUARD_OUTPUT_MODE", "auto-fallback")
+    with pytest.raises(LLMConfigError) as err:
+        LLMConfig.output_mode_from_env(env)
+    assert "auto-fallback" not in str(err.value)
+    with pytest.raises(ValueError):
+        LLMAgent("r", MODEL, None, DecisionCache(tmp_path), (), output_mode="text")
+
+
+# --- P5-6: single-repair replay with LLM agents -----------------------------------------------
+
+
+def _patch_world(monkeypatch: pytest.MonkeyPatch, world: World) -> None:
+    from cascadeguard import cli
+
+    def fake_load(*_: Any, **__: Any) -> World:
+        return world
+
+    monkeypatch.setattr(cli, "load_world", fake_load)
+
+
+def test_single_repair_live_replay_needs_the_flag_and_prints_the_estimate(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client = FakeClient(scripted_replies(scripted))
+    live = llm_world(scripted, client, DecisionCache(tmp_path))
+    live.baseline()  # the approved baseline, now cached
+    assert len(client.requests) == 36
+    _patch_world(monkeypatch, live)
+    argv = ["run", SCENARIO, "--repair", SUCCESS, "--agents", "llm"]
+    assert main(argv) == 2
+    out = capsys.readouterr().out
+    assert "needs --live" in out
+    estimate = int(out.split("Uncached steps (dry run from the cache): ")[1].split()[0])
+    assert estimate > 0
+    assert len(client.requests) == 36  # the estimate made no call
+    # With --live: exactly the one repair is replayed, never the whole search.
+    fresh = llm_world(scripted, client, DecisionCache(tmp_path))
+    _patch_world(monkeypatch, fresh)
+    assert main([*argv, "--live"]) == 0
+    out = capsys.readouterr().out
+    assert f"# Replay: {SUCCESS}" in out
+    assert len(client.requests) - 36 == estimate  # deterministic replies: estimate is exact
+
+
+def test_single_repair_live_replay_refused_without_a_cached_baseline(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client = FakeClient(scripted_replies(scripted))
+    _patch_world(monkeypatch, llm_world(scripted, client, DecisionCache(tmp_path)))
+    argv = ["run", SCENARIO, "--repair", SUCCESS, "--agents", "llm", "--live"]
+    assert main(argv) == 2
+    assert "baseline is not fully cached (36 steps)" in capsys.readouterr().out
+    assert not client.requests
+
+
+def test_single_repair_offline_replays_only_that_repair(
+    scripted: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from cascadeguard import cli
+
+    filler = FakeClient(scripted_replies(scripted))
+    llm_world(scripted, filler, DecisionCache(tmp_path)).baseline()
+    offline = llm_world(scripted, None, DecisionCache(tmp_path))
+    found = cli.single_repair(offline, SUCCESS)
+    assert [c.proposal.repair_id for c in found.ranked] == [SUCCESS]
+    with pytest.raises(KeyError, match="unknown repair"):
+        cli.single_repair(offline, "assign.nothing")

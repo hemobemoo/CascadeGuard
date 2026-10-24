@@ -26,6 +26,8 @@ from cascadeguard.engine.repair_search import (
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
+    find_proposal,
+    replay_one,
     search,
 )
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
@@ -76,6 +78,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--repair", default=None, help="replay the identical incident with this repair id"
     )
     run_cmd.add_argument("--export", type=Path, default=None, help="write JSON and Markdown here")
+    run_cmd.add_argument(
+        "--live",
+        action="store_true",
+        help="with --repair and --agents llm: allow live (paid) calls for this one replay",
+    )
     run_cmd.add_argument(
         "--audit",
         type=Path,
@@ -183,8 +190,9 @@ def load_world(
     else:
         llm = llm_agents(role_ids, cache)
         how = "live calls through the decision cache"
+    mode = next(iter(llm.values())).output_mode
     # The model id is a .env value: it keys the cache but is never printed or exported.
-    agent_label = f"LLM agents (model from CASCADEGUARD_MODEL; {how})"
+    agent_label = f"LLM agents (model from CASCADEGUARD_MODEL; output mode {mode}; {how})"
     return World(scenario, roles, clauses, corpus_ids, dict(llm), label, agent_label, cache)
 
 
@@ -246,6 +254,50 @@ LIVE_SEARCH_REFUSED = (
     "repair search with live LLM calls is not enabled (every candidate is replayed: hundreds of "
     "paid calls; needs explicit approval). Use --offline to search from cached decisions."
 )
+LIVE_REPLAY_NEEDS_FLAG = (
+    "a single-repair replay with live LLM calls needs --live (paid calls; needs approval)."
+)
+
+
+def single_repair(world: World, repair_id: str) -> SearchResult:
+    """Replay one repair on this world (LLM agents): the baseline and that replay only."""
+    return replay_one(
+        world.baseline(),
+        world.scenario,
+        world.roles,
+        RuleBook(world.clauses),
+        world.replay,
+        repair_id,
+    )
+
+
+def uncached_estimate(world: World, repair_id: str) -> tuple[int, int | None]:
+    """Dry run from the cache only, no call: (baseline steps not cached, replay steps not
+    cached). The replay count is None when the baseline is not fully cached (the repair can only
+    be found from the real baseline). A lower bound: a live decision can change later views."""
+    dry_cache = DecisionCache(world.cache.directory if world.cache else DEFAULT_CACHE_DIR)
+    dry_agents: dict[str, Agent] = {
+        rid: LLMAgent(
+            a.role_id,
+            a.model,
+            None,
+            dry_cache,
+            a.known_roles,
+            a.extracted_context,
+            a.attempts,
+            a.output_mode,
+        )
+        for rid, a in world.agents.items()
+        if isinstance(a, LLMAgent)
+    }
+    dry = replace(world, agents=dry_agents, cache=dry_cache)
+    base = dry.baseline()
+    baseline_missing = dry_cache.stats.misses
+    if baseline_missing:
+        return baseline_missing, None
+    p = find_proposal(base, dry.scenario, dry.roles, RuleBook(dry.clauses), repair_id)
+    dry.replay(p)
+    return 0, dry_cache.stats.misses - baseline_missing
 
 
 def live_llm(world: World) -> bool:
@@ -404,13 +456,31 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _main(args: argparse.Namespace, world: World) -> int:
-    searching = args.command == "repairs" or args.repair is not None
-    if searching and live_llm(world):
+    if args.command == "repairs" and live_llm(world):
         print(f"cascadeguard: {LIVE_SEARCH_REFUSED}")
         return 2
     if args.command == "run" and args.repair is not None:
         try:
-            comparison = replay_repair(args.scenario, args.repair, world=world)
+            if world.cache is None:  # scripted: the full search, as before
+                comparison = replay_repair(args.scenario, args.repair, world=world)
+            else:  # LLM agents: this one repair only (P5-6)
+                if live_llm(world):
+                    base_missing, replay_missing = uncached_estimate(world, args.repair)
+                    if replay_missing is None:
+                        print(
+                            f"cascadeguard: the LLM baseline is not fully cached ({base_missing} "
+                            "steps); run and approve the baseline first."
+                        )
+                        return 2
+                    print(
+                        f"Uncached steps (dry run from the cache): {replay_missing} replay steps, "
+                        "each up to 2 calls; a lower bound, since a live decision can change "
+                        "later views."
+                    )
+                    if not args.live:
+                        print(f"cascadeguard: {LIVE_REPLAY_NEEDS_FLAG}")
+                        return 2
+                comparison = single_repair(world, args.repair).comparison(args.repair)
         except KeyError as exc:
             print(f"cascadeguard: {exc.args[0]}. List repairs with `cascadeguard repairs`.")
             return 2

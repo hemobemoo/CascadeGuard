@@ -21,6 +21,13 @@ uv run python scripts/llm_smoke_test.py                            # exactly one
   "enabled": false}]` (off even if an account default turns it on, unless the account sets
   "Prevent overrides"). Usage (tokens, `cost`) is read from the response.
 
+**Output mode (human decision 2026-10-24).** `CASCADEGUARD_OUTPUT_MODE` = `json_schema`
+(default) | `json_object`, chosen explicitly in `.env`, never switched automatically. In
+`json_object` mode the request sends `response_format: {"type": "json_object"}` and the schema
+goes into the system prompt; `require_parameters` stays on (JSON-mode endpoints only). Both modes
+send `reasoning: {"enabled": false}` and temperature 0. The mode is part of the prompt version
+and the cache key, and every run label and export names it.
+
 ## Schema
 
 Built from `AgentDecision`: the same fields without `role_id` and `at`, which the agent fills
@@ -80,7 +87,8 @@ endpoint. No tokens, no cost, no decision.
 
 1. May keyword-search snippets from `policies/extracted/` (non-book PDFs) be sent to OpenRouter
    as context? Default: no; only clause YAML text is sent.
-2. Repair search with LLM agents replays ~20 candidates; uncached steps cost money. Run it live
-   only on explicit approval (estimate in the report).
+2. Repair search with LLM agents replays ~20 candidates; uncached steps cost money. Declined
+   for now (P5-4). A single repair may be replayed live (P5-6): `run --repair <id> --agents llm`
+   prints the uncached steps from a dry run of the cache and needs `--live`.
 3. Choose a model that supports structured outputs (`response_format` json_schema) and
    approve one more smoke call. The settings above stay as specified.
