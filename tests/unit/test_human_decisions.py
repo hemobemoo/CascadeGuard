@@ -145,15 +145,19 @@ def test_a_conditional_permission_gives_only_uncertain_authority(binding: bool) 
     assert rules.authority(OVERSIGHT, "issue_determination")[0] is Authority.UNCERTAIN
 
 
-def test_real_art6_and_art14_5_give_uncertain_authority() -> None:
+def test_real_art6_gives_uncertain_authority_and_art14_5_none() -> None:
     corpus = {c.id: c for c in load_clauses()}
     rules = RuleBook(corpus)
     assert rules.authority(OVERSIGHT, "issue_determination") == (
         Authority.UNCERTAIN,
         ("uae.fl2-2019.art6",),
     )
-    art14 = RuleBook({"uae.telecom-law.art14-5": corpus["uae.telecom-law.art14-5"]})
-    assert art14.authority("telecom_regulator", "request_information")[0] is Authority.UNCERTAIN
+    # Human decision 2026-10-24: art14-5 has no action mapping (a power to issue rules, 7m),
+    # so it gives the regulator no authority to request information on its own.
+    art14 = corpus["uae.telecom-law.art14-5"]
+    assert art14.normalized is None
+    rules = RuleBook({art14.id: art14})
+    assert rules.authority("telecom_regulator", "request_information")[0] is Authority.NONE
 
 
 # ---- h2: a duty to keep a fallback plan implies only uncertain activation authority ----
