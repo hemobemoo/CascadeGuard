@@ -37,6 +37,7 @@ from cascadeguard.storage.export import (
 
 MASKED = MASKED_LABEL
 REQUIRES_AUTHORIZATION = REQUIRES_AUTHORIZATION_LABEL
+UNLABELLED = "<unlabelled agent text withheld>"
 
 
 def cite(ids: Iterable[str], labels: dict[str, str]) -> str:
@@ -111,15 +112,12 @@ def role_view(result: RunResult, role: str, minute: int, categories: Iterable[st
     every scenario data category (`categories`) and its own labelled agent statements."""
     view = next(v for v in result.views if v.role_id == role and v.minute == minute)
     inside = dict(result.boundaries)[role]
-    # Only this role's own decision entries, and only labelled ones (the engine always labels
-    # agent text; anything else is not shown).
+    # Only this role's own decision entries. The engine always labels agent text; an unlabelled
+    # entry (a regression) is shown as a placeholder, never as text and never dropped silently.
     statements = tuple(
-        e.detail
+        e.detail if e.detail.startswith(AGENT_STATEMENT) else UNLABELLED
         for e in result.log
-        if e.kind == "decision"
-        and e.role == role
-        and e.minute == minute
-        and e.detail.startswith(AGENT_STATEMENT)
+        if e.kind == "decision" and e.role == role and e.minute == minute
     )
     return RoleViewRows(
         role=role,

@@ -11,7 +11,7 @@ Phase 4 round-3 fixes (a0b6342) and the commits after it (art14-5 mapping, e2e t
 
 ## Done
 
-### Phase 4 — Demo UI (branch `phase-4-ui`, not merged)
+### Phase 4 — Demo UI (merged, PR #5, tag `phase-4`)
 - `ui/app.py` (NiceGUI, port 8765 or `CASCADEGUARD_UI_PORT`): scenario picker, timeline, role
   views, dependency graph (`ui.echart`) with failures highlighted (click a failure or pick it),
   ranked and discarded repairs, baseline vs replay, JSON/Markdown downloads.
