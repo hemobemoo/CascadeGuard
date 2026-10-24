@@ -7,7 +7,7 @@ import pytest
 from cascadeguard.domain.decisions import AgentDecision, Citation, ProposedAction
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
-from cascadeguard.engine.constraints import ConstraintEngine, Reason
+from cascadeguard.engine.constraints import WITHHELD, ConstraintEngine, Reason
 from cascadeguard.knowledge.loader import load_clauses
 from cascadeguard.simulation.loader import load_scenario
 from cascadeguard.simulation.state import SimulationState
@@ -106,7 +106,8 @@ def test_every_unloaded_citation_in_a_decision_is_a_finding(
     )
     engine.process(decision, expected_role=HEALTH)
     kinds = [(f.kind, f.clause_ids) for f in engine.state.findings if f.role == HEALTH]
-    assert kinds == [("draft_citation", ("draft.only",)), ("unknown_citation", ("made.up",))]
+    # An id outside the corpus is agent text, so the finding shows WITHHELD (Phase 4 round 1).
+    assert kinds == [("draft_citation", ("draft.only",)), ("unknown_citation", (WITHHELD,))]
     assert not engine.state.has_done(HEALTH, "raise_security_incident")
 
 

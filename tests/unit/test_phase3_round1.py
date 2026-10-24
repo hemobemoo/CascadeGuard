@@ -245,6 +245,11 @@ def test_ranking_tie_breaks_in_order() -> None:
     pair = _comparison(w, (TRIGGER, OWNER))  # more edits
     ordered = sorted([pair, share, owner_cited, owner, trigger], key=rank_key)
     assert ordered == [trigger, owner, owner_cited, share, pair]
+    # "Not requiring authorization" comes after edits, roles and clauses cited (ADR 0001 step 9):
+    # a repair needing no authorization still ranks below one with fewer clauses cited.
+    trigger_cited = _comparison(w, (TRIGGER,), cites=2)
+    assert not trigger.proposal.requires_authorization and owner.proposal.requires_authorization
+    assert sorted([trigger_cited, owner], key=rank_key) == [owner, trigger_cited]
 
 
 def test_a_clean_repair_outranks_one_with_a_new_conflict_that_removes_more() -> None:
