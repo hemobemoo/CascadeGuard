@@ -13,9 +13,9 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from cascadeguard.domain.base import DomainModel
 from cascadeguard.domain.decisions import AgentDecision, NoDecisionReason
@@ -42,6 +42,16 @@ class CacheEntry(DomainModel):
     decision: AgentDecision | None = None
     no_decision: NoDecisionReason | None = None
     usage: Usage = Usage()
+
+    @model_validator(mode="after")
+    def _check_outcome(self) -> Self:
+        if self.outcome == "decision" and (self.decision is None or self.no_decision is not None):
+            raise ValueError("a decision entry holds a decision and no reason")
+        if self.outcome == "no_decision" and (
+            self.decision is not None or self.no_decision is None
+        ):
+            raise ValueError("a no-decision entry holds a reason and no decision")
+        return self
 
 
 def _plain(value: Any) -> Any:
@@ -89,6 +99,7 @@ class CacheStats:
     keys_hit: list[str] = field(default_factory=list[str])
     keys_missed: list[str] = field(default_factory=list[str])
     untrusted: int = 0  # unreadable or mismatched cache files, treated as misses
+    failures_repeated: int = 0  # steps given an earlier request failure of this run family
 
 
 class DecisionCache:
@@ -110,6 +121,9 @@ class DecisionCache:
             self.stats.keys_missed.append(key)
             return None
         self._memo[key] = entry
+        if entry.no_decision == "request_failed":  # repeated, not reused
+            self.stats.failures_repeated += 1
+            return entry
         self.stats.hits += 1
         self.stats.keys_hit.append(key)
         return entry
@@ -125,7 +139,9 @@ class DecisionCache:
         except (OSError, ValueError):
             self.stats.untrusted += 1
             return None
-        if entry.key != key:
+        # Only decisions and invalid output are ever written; a stored request failure (or an
+        # entry for another key) is not trusted.
+        if entry.key != key or entry.no_decision not in (None, "invalid_output"):
             self.stats.untrusted += 1
             return None
         return entry

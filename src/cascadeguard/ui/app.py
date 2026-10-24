@@ -12,7 +12,15 @@ from dataclasses import dataclass
 from nicegui import run, ui
 
 from cascadeguard.agents.llm import LLMConfigError
-from cascadeguard.cli import LLM, SCRIPTED, AgentChoice, World, load_world, search_repairs
+from cascadeguard.cli import (
+    LLM,
+    SCRIPTED,
+    AgentChoice,
+    World,
+    live_llm,
+    load_world,
+    search_repairs,
+)
 from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
@@ -28,7 +36,7 @@ AGENT_MODES = {
 
 LIVE_SEARCH_REFUSED = (
     "Repair search with live LLM calls is not enabled (hundreds of paid calls; needs explicit "
-    "approval). Use 'LLM (cached only)' to search from cached decisions."
+    "approval). Run the baseline with 'LLM (cached only)' to search from cached decisions."
 )
 
 
@@ -303,7 +311,7 @@ def index() -> None:
         if s.world is None:
             ui.notify("Run the baseline first.")
             return
-        if s.world.cache is not None and s.mode == "llm-live":
+        if live_llm(s.world):  # the world in use, not the toggle (it may have changed since)
             # A live repair search is hundreds of paid calls: not approved (PROGRESS P5-4).
             ui.notify(LIVE_SEARCH_REFUSED, type="warning")
             status.set_text(LIVE_SEARCH_REFUSED)

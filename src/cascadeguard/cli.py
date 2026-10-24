@@ -14,7 +14,7 @@ from typing import Any
 from cascadeguard import __version__
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
-from cascadeguard.agents.llm import LLMConfig, LLMConfigError, llm_agents
+from cascadeguard.agents.llm import LLMAgent, LLMConfig, LLMConfigError, llm_agents
 from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.repairs import RepairProposal
@@ -229,11 +229,28 @@ def replay_repair(
 
 
 def cache_line(world: World) -> str | None:
-    """LLM runs only: how many steps came from the cache and how many needed a call."""
+    """LLM runs only: steps that came from the cache, needed a call, or repeated a request
+    failure, counted over everything this command ran (the baseline and any replays)."""
     if world.cache is None:
         return None
     st = world.cache.stats
-    return f"LLM decision cache: {st.hits} steps reused, {st.misses} not cached"
+    line = (
+        f"LLM decision cache (baseline and replays): {st.hits} steps reused, {st.misses} not cached"
+    )
+    if st.failures_repeated:
+        line += f", {st.failures_repeated} repeated an earlier request failure"
+    return line
+
+
+LIVE_SEARCH_REFUSED = (
+    "repair search with live LLM calls is not enabled (every candidate is replayed: hundreds of "
+    "paid calls; needs explicit approval). Use --offline to search from cached decisions."
+)
+
+
+def live_llm(world: World) -> bool:
+    """Would running this world make live API calls? (Any LLM agent with a client.)"""
+    return any(isinstance(a, LLMAgent) and a.client is not None for a in world.agents.values())
 
 
 def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
@@ -387,6 +404,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _main(args: argparse.Namespace, world: World) -> int:
+    searching = args.command == "repairs" or args.repair is not None
+    if searching and live_llm(world):
+        print(f"cascadeguard: {LIVE_SEARCH_REFUSED}")
+        return 2
     if args.command == "run" and args.repair is not None:
         try:
             comparison = replay_repair(args.scenario, args.repair, world=world)

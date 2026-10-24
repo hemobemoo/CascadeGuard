@@ -370,7 +370,7 @@ def test_cli_offline_llm_run_needs_no_key_and_prints_no_model(
     out = capsys.readouterr().out
     assert code == 0
     assert "Agents: LLM agents (model from CASCADEGUARD_MODEL; offline" in out
-    assert "LLM decision cache: 36 steps reused, 0 not cached" in out
+    assert "LLM decision cache (baseline and replays): 36 steps reused, 0 not cached" in out
     assert MODEL not in out
     assert "no_decision" not in out
 
@@ -499,3 +499,90 @@ def test_untrusted_cache_file_is_a_miss_not_a_crash(scripted: World, tmp_path: P
     assert cache.stats.untrusted == 2 and cache.stats.misses >= 2
     missed = [f for f in result.findings if f.kind == Reason.NO_DECISION.value]
     assert len(missed) == cache.stats.misses and all("not_cached" in f.detail for f in missed)
+
+
+# --- Review round 3 (test-breaker on 5192248) -------------------------------------------------
+
+
+def test_live_search_is_refused_by_the_world_in_use(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The guard looks at the agents a world holds, never at a toggle (MAJOR, round 3)."""
+    from cascadeguard import cli
+
+    client = FakeClient(scripted_replies(scripted))
+    live = llm_world(scripted, client, DecisionCache(tmp_path))
+    assert cli.live_llm(live)
+    assert not cli.live_llm(llm_world(scripted, None, DecisionCache(tmp_path)))
+    assert not cli.live_llm(scripted)
+
+    def fake_load(*_: Any, **__: Any) -> World:
+        return live
+
+    monkeypatch.setattr(cli, "load_world", fake_load)
+    for argv in (["repairs", SCENARIO], ["run", SCENARIO, "--repair", SUCCESS]):
+        assert main([*argv, "--agents", "llm"]) == 2
+        assert "repair search with live LLM calls is not enabled" in capsys.readouterr().out
+    assert not client.requests  # refused before any call
+
+
+def test_inconsistent_or_stored_failure_cache_entries_are_not_trusted(
+    scripted: World, tmp_path: Path
+) -> None:
+    llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)).baseline()
+    files = sorted(tmp_path.glob("*.json"))[:3]
+    edits = (
+        {"outcome": "decision", "decision": None, "no_decision": None},
+        {"outcome": "no_decision", "no_decision": "invalid_output"},  # decision still present
+        {"outcome": "no_decision", "decision": None, "no_decision": "request_failed"},
+    )
+    for path, edit in zip(files, edits, strict=True):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        path.write_text(json.dumps({**data, **edit}), encoding="utf-8")
+    cache = DecisionCache(tmp_path)
+    llm_world(scripted, None, cache).baseline()  # completes: no crash
+    assert cache.stats.untrusted == 3
+
+
+def test_repeated_request_failures_are_not_counted_as_reused(
+    scripted: World, tmp_path: Path
+) -> None:
+    from cascadeguard.cli import cache_line
+
+    cache = DecisionCache(tmp_path)
+    w = llm_world(scripted, FakeClient(lambda _: ConnectionError("down")), cache)
+    w.baseline()
+    w.baseline()
+    assert cache.stats.hits == 0 and cache.stats.failures_repeated > 0
+    line = cache_line(w)
+    assert line is not None and "0 steps reused" in line and "repeated an earlier request" in line
+
+
+def test_search_export_and_audit_name_the_agents(scripted: World, tmp_path: Path) -> None:
+    import duckdb
+
+    from cascadeguard.storage.audit import AuditStore
+    from cascadeguard.storage.export import search_export
+
+    label = "LLM agents (model from CASCADEGUARD_MODEL; test)"
+    w = replace(
+        llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)),
+        agent_label=label,
+    )
+    found = search_repairs(SCENARIO, world=w)
+    assert search_export(found)["agents"] == label
+    db = tmp_path / "audit.duckdb"
+    store = AuditStore(db)
+    try:
+        run_id = store.record_run(w.baseline(), "baseline")
+    finally:
+        store.close()
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        row = con.execute("SELECT summary FROM runs WHERE run_id = ?", [run_id]).fetchone()
+    finally:
+        con.close()
+    assert row is not None and json.loads(row[0])["agents"] == label
