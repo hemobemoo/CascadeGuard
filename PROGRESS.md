@@ -478,6 +478,29 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   - CascadeGuard.md section 6 wording confirmed by the human (approved in chat 2026-10-24).
   - `.claude/launch.json` kept: no secrets, no machine-specific paths.
 
+- **Human decisions, 2026-10-24 (Phase 5, answers to P5-1 to P5-6):**
+  - **P5-1:** model chosen by the human; it has JSON mode. New setting
+    `CASCADEGUARD_OUTPUT_MODE` = `json_schema` (default) | `json_object`, chosen explicitly,
+    never automatic; `json_object` sends `response_format: {"type": "json_object"}` with the
+    schema in the prompt; `require_parameters` stays; reasoning off; temperature 0; validation
+    unchanged; the mode is in the prompt version and cache key and shown in runs and exports.
+    Before the call the public model list must show `response_format` support. Then ONE smoke
+    call; if it succeeds, ONE capped baseline (uae_health_access, no repairs, at most 72
+    requests including retries); if it fails, stop.
+  - **P5-2 acknowledged:** before the first smoke call, a test bug (`env_file` default bound at
+    import) made one CLI test send 72 unapproved requests to OpenRouter (36 steps x 2 attempts),
+    all failed. Fixed: `env_file` read at call time; `tests/conftest.py` clears the LLM
+    variables, points `.env` at a missing file and makes building a live client an error.
+  - **P5-3:** yes, after the baseline works: keyword snippets only from non-book extracted PDFs,
+    labelled "context only; not citable"; citations stay reviewed/illustrative clause ids only.
+  - **P5-4:** live repair search declined for now; decided after the LLM baseline.
+  - **P5-5:** LLM roles see repair rules (uncitable, labelled hypothetical); lower cache reuse
+    accepted.
+  - **P5-6:** `run --repair <id> --agents llm` replays a single repair; before any live call it
+    prints the uncached steps and needs `--live`. None run until approved.
+  - Phase 5 round-3 fixes accepted without another round; the review of the real-model run
+    covers them first. Do not merge; stop after the baseline report.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -514,7 +537,11 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 5 (2026-10-24):**
+**Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
+none blocking until the LLM baseline report.
+
+<details><summary>Earlier wording of P5-1 to P5-6</summary>
+
 
 - **P5-1 Model.** The configured model does not support `response_format`/`structured_outputs`
   (OpenRouter public model list), so with `require_parameters: true` no endpoint accepts the
@@ -534,6 +561,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   repair instead of the whole search? For now the CLI refuses any live repair search, like the UI.
 - **P5-4** Repair search with LLM agents: about 21 replays and about 312 uncached steps (scripted
   proxy). Run live only on explicit approval; the UI refuses a live repair search until then.
+
+</details>
 
 Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
 the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none

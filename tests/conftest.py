@@ -13,7 +13,7 @@ import cascadeguard.agents.llm as llm
 def no_live_llm(
     tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[None]:
-    for name in llm.ENV_VARIABLES:
+    for name in (*llm.ENV_VARIABLES, llm.OUTPUT_MODE_VARIABLE):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(llm, "ENV_FILE", Path(tmp_path_factory.mktemp("env")) / "absent.env")
 

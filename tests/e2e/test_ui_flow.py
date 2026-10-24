@@ -44,6 +44,7 @@ def server() -> Iterator[str]:
     env["CASCADEGUARD_UI_PORT"] = str(port)
     # LLM mode is only exercised from the cache, under a model id that has no cache entries.
     env["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
+    env["CASCADEGUARD_OUTPUT_MODE"] = "json_schema"
     process = subprocess.Popen(
         [sys.executable, "-m", "cascadeguard.ui.app"],
         env=env,
@@ -151,7 +152,9 @@ def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
     # a no-decision finding, and the result says which agents produced it.
     page.get_by_text("LLM (cached only)", exact=True).click()
     page.get_by_role("button", name="Run baseline").click()
-    agents = page.get_by_text("Agents: LLM agents (model from CASCADEGUARD_MODEL; offline")
+    agents = page.get_by_text(
+        "Agents: LLM agents (model from CASCADEGUARD_MODEL; output mode json_schema; offline"
+    )
     expect(agents).to_be_visible()
     expect(agents).to_contain_text("0 steps reused, 36 not cached")
     expect(page.get_by_text("made no decision at this step (not_cached)").first).to_be_visible()

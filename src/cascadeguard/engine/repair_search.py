@@ -539,13 +539,11 @@ def rank_key(
     )
 
 
-def search(
-    baseline: RunResult,
-    scenario: Scenario,
-    roles: RoleSet,
-    rules: RuleBook,
-    replay: Callable[[RepairProposal], RunResult],
-) -> SearchResult:
+def screen(
+    baseline: RunResult, scenario: Scenario, roles: RoleSet, rules: RuleBook
+) -> tuple[tuple[RepairProposal, ...], tuple[Discarded, ...]]:
+    """Every candidate repair (up to MAX_EDITS edits) that passes the static hard filter, in
+    search order, and the edits it discarded. No replay is run."""
     edits = candidate_edits(baseline, scenario, roles, rules)
     discarded: list[Discarded] = []
     safe: list[RepairEdit] = []
@@ -562,23 +560,76 @@ def search(
             )
         else:
             safe.append(edit)
+    proposals = tuple(
+        proposal(combo, edits, rules, roles)
+        for size in range(1, MAX_EDITS + 1)
+        for combo in combinations(safe, size)
+    )
+    return proposals, tuple(discarded)
+
+
+def _judge(
+    proposals: tuple[RepairProposal, ...],
+    discarded: tuple[Discarded, ...],
+    baseline: RunResult,
+    scenario: Scenario,
+    rules: RuleBook,
+    replay: Callable[[RepairProposal], RunResult],
+) -> SearchResult:
     critical = tuple(g.id for g in scenario.recovery_goals if g.critical)
+    dropped = list(discarded)
     compared: list[ReplayComparison] = []
-    for size in range(1, MAX_EDITS + 1):
-        for combo in combinations(safe, size):
-            p = proposal(combo, edits, rules, roles)
-            comparison = ReplayComparison(p, baseline, replay(p), critical)
-            lifted = _lifted_restrictions(comparison, rules, scenario)
-            if lifted:
-                discarded.append(
-                    Discarded(p.repair_id, "the replay got around a restriction", lifted)
-                )
-            else:
-                compared.append(comparison)
+    for p in proposals:
+        comparison = ReplayComparison(p, baseline, replay(p), critical)
+        lifted = _lifted_restrictions(comparison, rules, scenario)
+        if lifted:
+            dropped.append(Discarded(p.repair_id, "the replay got around a restriction", lifted))
+        else:
+            compared.append(comparison)
     return SearchResult(
         baseline.clause_set,
         baseline.loaded_clauses,
         tuple(sorted(compared, key=rank_key)),
-        tuple(discarded),
+        tuple(dropped),
         baseline.agents,
     )
+
+
+def search(
+    baseline: RunResult,
+    scenario: Scenario,
+    roles: RoleSet,
+    rules: RuleBook,
+    replay: Callable[[RepairProposal], RunResult],
+) -> SearchResult:
+    proposals, discarded = screen(baseline, scenario, roles, rules)
+    return _judge(proposals, discarded, baseline, scenario, rules, replay)
+
+
+def find_proposal(
+    baseline: RunResult, scenario: Scenario, roles: RoleSet, rules: RuleBook, repair_id: str
+) -> RepairProposal:
+    """The candidate with this id from the baseline's own diagnosis, without any replay.
+    KeyError (with the reason) if it is unknown or statically discarded."""
+    proposals, discarded = screen(baseline, scenario, roles, rules)
+    for p in proposals:
+        if p.repair_id == repair_id:
+            return p
+    for d in discarded:
+        if d.repair_id == repair_id:
+            raise KeyError(f"{repair_id} was discarded: {d.reason}")
+    raise KeyError(f"unknown repair {repair_id} for this baseline")
+
+
+def replay_one(
+    baseline: RunResult,
+    scenario: Scenario,
+    roles: RoleSet,
+    rules: RuleBook,
+    replay: Callable[[RepairProposal], RunResult],
+    repair_id: str,
+) -> SearchResult:
+    """Replay and judge a single repair (same hard filter and comparison as the search). The
+    result holds one ranked comparison, or one discard if the replay got around a restriction."""
+    p = find_proposal(baseline, scenario, roles, rules, repair_id)
+    return _judge((p,), (), baseline, scenario, rules, replay)

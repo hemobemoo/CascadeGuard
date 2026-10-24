@@ -67,13 +67,22 @@ def main() -> int:
         return 2
     role_ids = tuple(r.id for r in world.roles.roles)
     cache = DecisionCache(DEFAULT_CACHE_DIR)
-    llm = LLMAgent(args.role, config.model, make_client(config), cache, role_ids, attempts=1)
+    llm = LLMAgent(
+        args.role,
+        config.model,
+        make_client(config),
+        cache,
+        role_ids,
+        attempts=1,
+        output_mode=config.output_mode,
+    )
     step = OneStep(world.agents[args.role], llm, args.minute)
     agents = {**world.agents, args.role: step}
     result = run(world.scenario, world.roles, world.clauses, world.corpus_ids, agents, world.label)
 
     decision, usage = step.decision, llm.last_usage
     print(f"Smoke test: {args.role} at T+{args.minute:02d} (model from CASCADEGUARD_MODEL)")
+    print(f"Output mode: {config.output_mode}")
     if usage is None:
         print("Served from the decision cache: no call was made.")
     else:
@@ -112,7 +121,13 @@ def main() -> int:
 
     if usage is not None and usage.prompt_tokens:
         estimate(
-            world, args.role, args.minute, usage.prompt_tokens, usage.completion_tokens, usage.cost
+            world,
+            args.role,
+            args.minute,
+            usage.prompt_tokens,
+            usage.completion_tokens,
+            usage.cost,
+            config.output_mode,
         )
     return 0
 
@@ -124,6 +139,7 @@ def estimate(
     prompt_tokens: int,
     completion_tokens: int,
     cost: float | None,
+    mode: str,
 ) -> None:
     """Scale the one call to a full run by prompt size (characters), with the same output size.
     The repair search estimate counts the distinct views over all scripted replays: an upper
@@ -131,7 +147,9 @@ def estimate(
     base = world.baseline()
     roles = tuple(r.id for r in world.roles.roles)
     chars = {
-        (v.role_id, v.minute): sum(len(m["content"]) for m in build_messages(v, roles))
+        (v.role_id, v.minute): sum(
+            len(m["content"]) for m in build_messages(v, roles, output_mode=mode)
+        )
         for v in base.views
     }
     per_char = prompt_tokens / chars[(role, minute)]

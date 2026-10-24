@@ -35,7 +35,13 @@ from cascadeguard.simulation.boundaries import RoleView
 
 ENV_FILE = PROJECT_ROOT / ".env"
 ENV_VARIABLES = ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "CASCADEGUARD_MODEL")
-PROMPT_VERSION = "phase5-v1"
+# v2: reasoning explicitly off; output mode part of the request settings (human, 2026-10-24).
+PROMPT_VERSION = "phase5-v2"
+OUTPUT_MODE_VARIABLE = "CASCADEGUARD_OUTPUT_MODE"
+# json_schema: strict structured output (default). json_object: JSON mode, with the schema in the
+# prompt; chosen explicitly in .env, never as an automatic fallback.
+OUTPUT_MODES = ("json_schema", "json_object")
+DEFAULT_OUTPUT_MODE = "json_schema"
 SCHEMA_NAME = "agent_decision"
 REQUEST_TIMEOUT_SECONDS = 120.0
 ATTEMPTS = 2  # the first call and one retry (AGENTS.md)
@@ -50,6 +56,7 @@ class LLMConfig:
     api_key: str = field(repr=False)
     base_url: str
     model: str
+    output_mode: str = DEFAULT_OUTPUT_MODE
 
     @staticmethod
     def _values(env_file: Path | None, needed: tuple[str, ...]) -> dict[str, str]:
@@ -67,6 +74,16 @@ class LLMConfig:
             )
         return values
 
+    @staticmethod
+    def output_mode_from_env(env_file: Path | None = None) -> str:
+        """CASCADEGUARD_OUTPUT_MODE, json_schema when unset; any other value is an error."""
+        path = ENV_FILE if env_file is None else env_file
+        raw = os.environ.get(OUTPUT_MODE_VARIABLE) or dotenv_values(path).get(OUTPUT_MODE_VARIABLE)
+        mode = (raw or DEFAULT_OUTPUT_MODE).strip()
+        if mode not in OUTPUT_MODES:
+            raise LLMConfigError(f"{OUTPUT_MODE_VARIABLE} must be one of {', '.join(OUTPUT_MODES)}")
+        return mode
+
     @classmethod
     def model_from_env(cls, env_file: Path | None = None) -> str:
         """Only the model id: enough for offline runs from the cache (no key needed)."""
@@ -79,6 +96,7 @@ class LLMConfig:
             values["OPENROUTER_API_KEY"].strip(),
             values["OPENROUTER_BASE_URL"].strip(),
             values["CASCADEGUARD_MODEL"].strip(),
+            cls.output_mode_from_env(env_file),
         )
 
 
@@ -233,31 +251,58 @@ def render_view(view: RoleView, known_roles: tuple[str, ...], snippets: bool = F
     return json.dumps(data, ensure_ascii=False, indent=1)
 
 
+def system_prompt(output_mode: str = DEFAULT_OUTPUT_MODE) -> str:
+    """In JSON mode the endpoint enforces only "some JSON object", so the schema goes in the
+    prompt; validation against AgentDecision is the same in both modes."""
+    if output_mode == "json_schema":
+        return SYSTEM_PROMPT
+    schema = json.dumps(response_schema(), ensure_ascii=False, sort_keys=True)
+    return (
+        f"{SYSTEM_PROMPT}The reply must be one JSON object, with no other text, that validates "
+        f"against this JSON schema (role and time are filled in by the simulation):\n{schema}\n"
+    )
+
+
 def build_messages(
-    view: RoleView, known_roles: tuple[str, ...], snippets: bool = False
+    view: RoleView,
+    known_roles: tuple[str, ...],
+    snippets: bool = False,
+    output_mode: str = DEFAULT_OUTPUT_MODE,
 ) -> list[dict[str, str]]:
     return [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt(output_mode)},
         {"role": "user", "content": render_view(view, known_roles, snippets)},
     ]
 
 
 def build_request(
-    model: str, messages: list[dict[str, str]], schema: dict[str, Any]
+    model: str,
+    messages: list[dict[str, str]],
+    schema: dict[str, Any],
+    output_mode: str = DEFAULT_OUTPUT_MODE,
 ) -> dict[str, Any]:
     """Keyword arguments for `chat.completions.create`. OpenRouter-only fields go in
-    extra_body: provider routing restricted to endpoints that support every parameter sent,
-    and response healing switched off (malformed output is never repaired)."""
+    extra_body: provider routing restricted to endpoints that support every parameter sent
+    (so JSON mode, or structured outputs, and reasoning control), reasoning switched off, and
+    response healing switched off (malformed output is never repaired)."""
+    if output_mode not in OUTPUT_MODES:
+        raise ValueError(f"unknown output mode {output_mode!r}")
+    response_format: dict[str, Any] = (
+        {
+            "type": "json_schema",
+            "json_schema": {"name": SCHEMA_NAME, "strict": True, "schema": schema},
+        }
+        if output_mode == "json_schema"
+        else {"type": "json_object"}
+    )
     return {
         "model": model,
         "messages": messages,
         "temperature": 0,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {"name": SCHEMA_NAME, "strict": True, "schema": schema},
-        },
+        "response_format": response_format,
         "extra_body": {
             "provider": {"require_parameters": True},
+            "reasoning": {"enabled": False},
             "plugins": [{"id": "response-healing", "enabled": False}],
         },
     }
@@ -328,7 +373,11 @@ class LLMAgent:
         known_roles: tuple[str, ...],
         extracted_context: bool = False,
         attempts: int = ATTEMPTS,
+        output_mode: str = DEFAULT_OUTPUT_MODE,
     ) -> None:
+        if output_mode not in OUTPUT_MODES:
+            raise ValueError(f"unknown output mode {output_mode!r}")
+        self.output_mode = output_mode
         self.role_id = role_id
         self.attempts = attempts  # 1 only for the approved one-call smoke test
         self.model = model
@@ -336,7 +385,10 @@ class LLMAgent:
         self.cache = cache
         self.known_roles = known_roles
         self.extracted_context = extracted_context
-        self.prompt_version = PROMPT_VERSION + ("+extracted" if extracted_context else "")
+        # The output mode and the context option change the request, so both enter the key.
+        self.prompt_version = f"{PROMPT_VERSION}+{output_mode}" + (
+            "+extracted" if extracted_context else ""
+        )
         self.schema = response_schema()
         self.last_usage: Usage | None = None  # usage of the last live step (None: cached)
         # Last request error, for diagnosis only (never reaches the engine): exception type,
@@ -368,8 +420,9 @@ class LLMAgent:
             return self._no_decision(view, "not_cached")
         request = build_request(
             self.model,
-            build_messages(view, self.known_roles, self.extracted_context),
+            build_messages(view, self.known_roles, self.extracted_context, self.output_mode),
             self.schema,
+            self.output_mode,
         )
         usage = Usage()
         failed_request = False
@@ -456,15 +509,16 @@ def llm_agents(
     config: LLMConfig | None = None,
     client: ChatClient | None = None,
     model: str | None = None,
+    output_mode: str | None = None,
 ) -> dict[str, LLMAgent]:
-    """One LLMAgent per role, all with the same model. Offline needs only the model id (to find
-    cache entries); live needs the full configuration."""
+    """One LLMAgent per role, all with the same model and output mode. Offline needs only the
+    model id and output mode (to find cache entries); live needs the full configuration."""
     if config is None and (not offline or model is None):
         config = LLMConfig.from_env()
     model_id = model or (config.model if config else "")
+    mode = output_mode or (config.output_mode if config else LLMConfig.output_mode_from_env())
     if not offline and client is None:
         assert config is not None
         client = make_client(config)
-    return {
-        r: LLMAgent(r, model_id, None if offline else client, cache, role_ids) for r in role_ids
-    }
+    live = None if offline else client
+    return {r: LLMAgent(r, model_id, live, cache, role_ids, output_mode=mode) for r in role_ids}
