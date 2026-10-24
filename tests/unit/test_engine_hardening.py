@@ -42,7 +42,7 @@ def engine_at(
 ) -> ConstraintEngine:
     scenario, roles = world
     engine = ConstraintEngine(
-        SimulationState(scenario, roles), {c.id: c for c in rules}, frozenset()
+        SimulationState(scenario, roles), {c.id: c for c in rules}, frozenset(c.id for c in rules)
     )
     for event in scenario.events:
         if event.at_minute <= minute:

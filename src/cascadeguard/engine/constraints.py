@@ -17,12 +17,38 @@ from cascadeguard.simulation.state import SimulationState
 SHARE = "share_incident_status"
 REQUEST = "request_information"
 ANALYSIS = "provide_policy_analysis"  # may cite any loaded clause: analysing provisions is its job
-# Text declaring a legal or standards gap; such a claim needs citations (AGENTS.md, 7r).
+# Gap wording. A suspected gap may be stated only in a structured `GapClaim` (citations plus the
+# fixed GAP_QUALIFICATION), never in free text: rationale or uncertainty matching this pattern
+# is rejected whatever else it says (decision 7r; AGENTS.md "cited evidence and an explicit
+# qualification"). The pattern is deliberately broad: a false alarm costs a rejected decision,
+# a miss lets an unqualified gap claim through.
 GAP_CLAIM = re.compile(
-    r"\b(?:legal|regulatory|policy|standards?) gap\b|\bno (?:legal )?provision\b"
-    r"|\bgap in the law\b|\bnot regulated\b|\bno law\b",
+    r"\bgaps?\b|\blacuna\b|\bloophole\b|\bhole in\b|\bsilent\b|\bunregulated\b"
+    r"|\bnot regulated\b|\bnot (?:covered|addressed|provided for)\b"
+    r"|\b(?:does|do|did) not (?:cover|address|regulate|provide for)\b"
+    r"|\bno (?:legal |applicable |specific |explicit )?(?:provisions?|clauses?|rules?|laws?"
+    r"|regulations?|legal basis|authority)\b"
+    r"|\bnothing in the (?:laws?|legislation|regulations?|rules?|corpus|clauses?|polic(?:y|ies))\b",
     re.IGNORECASE,
 )
+# A GapClaim statement must not overstate: the qualification says "not a confirmed gap".
+OVERSTATED = re.compile(
+    r"\b(?:confirmed|definitive(?:ly)?|certain(?:ly)?|clearly|undoubtedly|proven|established"
+    r"|conclusively|definitely|absolutely)\b",
+    re.IGNORECASE,
+)
+AGENT_STATEMENT = "agent statement (unverified; not a finding or a legal conclusion): "
+# Shown instead of an agent string that is not a scenario id (action, role, target, category):
+# agent free text reaches the log, findings and exports only under AGENT_STATEMENT.
+CANDIDATE_GAP_CLAIM = "candidate_gap_claim"
+WITHHELD = "<not a scenario id; agent text withheld>"
+
+
+def agent_statement(text: str) -> str:
+    """Agent free text under the fixed label, on one line (no forged log or CLI lines)."""
+    return AGENT_STATEMENT + " ".join(text.split())
+
+
 REQUIRES_DETERMINATION = (
     "authority uncertain - requires determination (the clause depends on a condition the engine "
     "cannot evaluate; it never decides the condition is met)"
@@ -36,7 +62,10 @@ class Reason(StrEnum):
     UNKNOWN_CITATION = "unknown_citation"  # clause id not in the corpus at all
     DRAFT_CITATION = "draft_citation"  # clause exists but is not loaded (draft, not reviewed)
     CITATION_OUT_OF_SCOPE = "citation_out_of_scope"  # cited clause concerns neither role nor action
-    UNCITED_GAP_CLAIM = "uncited_gap_claim"  # declares a legal gap without any citation
+    # gap wording in free text instead of a GapClaim (which requires citations and the fixed
+    # qualification)
+    UNCITED_GAP_CLAIM = "uncited_gap_claim"
+    OVERSTATED_GAP_CLAIM = "overstated_gap_claim"  # a GapClaim statement that claims certainty
     WRONG_ROLE_OR_TIME = "wrong_role_or_time"
     NOT_ALLOWED_ACTION = "not_allowed_action"
     UNKNOWN_TARGET = "unknown_target"
@@ -65,6 +94,7 @@ class Verdict:
     clause_ids: tuple[str, ...]  # clauses that decided it (authority or restriction)
     detail: str
     fact_id: str | None = None  # the fact a share delivers: read once, checked, then applied
+    data_category: str | None = None  # the category a share or request touches
 
 
 class RuleBook:
@@ -261,7 +291,9 @@ class ConstraintEngine:
             role=n.actor,
             action=n.action,
             clause_ids=(clause_id,),
-            detail="" if firm else "uncertain: binding unknown",
+            detail=""
+            if firm
+            else f"uncertain: binding {'unknown' if clause.binding == 'unknown' else 'false'}",
         )
         if n.deadline_minutes is None:
             state.add_finding(
@@ -285,7 +317,7 @@ class ConstraintEngine:
         state = self.state
         try:
             if type(decision) is not AgentDecision:
-                raise TypeError(f"expected AgentDecision, got {type(decision).__name__}")
+                raise TypeError("expected AgentDecision, got another type")
             decision = AgentDecision.model_validate(decision.model_dump(mode="python"))
         except (TypeError, ValueError) as exc:  # ValueError covers ValidationError
             state.record("rejected", role=expected_role, reasons=(Reason.MALFORMED_DECISION,))
@@ -298,16 +330,31 @@ class ConstraintEngine:
                 )
             )
             return
-        cited = tuple(c.clause_id for c in decision.citations)
+        cited = tuple(
+            c.clause_id
+            for c in (*decision.citations, *(c for g in decision.gap_claims for c in g.citations))
+        )
         impostor = decision.role_id != expected_role or decision.at != state.scenario.time_at(
             state.minute
         )
         if not decision.proposed_actions and not cited and not impostor:
             return
         # Logged under the role the orchestrator asked, never the role the decision claims.
-        state.record("decision", role=expected_role, detail=decision.rationale, clause_ids=cited)
+        # Agent free text is untrusted: stored only under a fixed label, never as a finding or a
+        # legal conclusion. Suspected gaps count only as structured GapClaims.
+        state.record(
+            "decision",
+            role=expected_role,
+            detail=agent_statement(decision.rationale),
+            clause_ids=cited,
+        )
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
-            claimed = f"claims role {decision.role_id} at {decision.at.isoformat()}"
+            claimed_role = (
+                decision.role_id
+                if decision.role_id in {r.id for r in state.roles.roles}
+                else WITHHELD
+            )
+            claimed = f"claims role {claimed_role} at {decision.at.isoformat()}"
             state.record(
                 "rejected", role=expected_role, reasons=(Reason.WRONG_ROLE_OR_TIME,), detail=claimed
             )
@@ -320,7 +367,13 @@ class ConstraintEngine:
                 )
             )
             # Citations are still checked and recorded below; no action is taken either way.
-        bad_citations = [cid for cid in dict.fromkeys(cited) if cid not in self.rules.clauses]
+        # A citation must be a loaded clause from policies/reviewed: hypothetical repair rules
+        # loaded in a replay are not citable (they are not in the corpus).
+        bad_citations = [
+            cid
+            for cid in dict.fromkeys(cited)
+            if cid not in self.rules.clauses or cid not in self.corpus_clause_ids
+        ]
         for clause_id in bad_citations:  # every bad citation is its own finding
             reason = (
                 Reason.DRAFT_CITATION
@@ -332,7 +385,7 @@ class ConstraintEngine:
                 role=expected_role,
                 reasons=(reason,),
                 clause_ids=(clause_id,),
-                detail="whole decision rejected: cited clause is not loaded by the engine",
+                detail="whole decision rejected: cited clause is not a loaded corpus clause",
             )
             state.add_finding(
                 Finding(
@@ -340,12 +393,17 @@ class ConstraintEngine:
                     minute=state.minute,
                     role=expected_role,
                     clause_ids=(clause_id,),
-                    detail=f"{expected_role} cited {clause_id}, not loaded by the engine",
+                    detail=f"{expected_role} cited {clause_id}, not a loaded corpus clause",
                 )
             )
         if bad_citations:
             return
-        actions = tuple(a.action_type for a in decision.proposed_actions)
+        # Scope is judged only over actions the role may take: adding a disallowed action (or
+        # provide_policy_analysis without being allowed it) must not widen what it may cite.
+        allowed = state.roles.role(expected_role).allowed_actions
+        actions = tuple(
+            a.action_type for a in decision.proposed_actions if a.action_type in allowed
+        )
         out_of_scope = [
             c for c in dict.fromkeys(cited) if not self.rules.concerns(c, expected_role, actions)
         ]
@@ -358,25 +416,53 @@ class ConstraintEngine:
             )
         if out_of_scope:
             return
-        claim_text = " ".join((decision.rationale, *decision.uncertainty))
-        if not cited and GAP_CLAIM.search(claim_text):  # decision 7r
+        # Decision 7r; AGENTS.md: a gap is stated only in a GapClaim, which the schema makes
+        # cite clauses and carry the fixed qualification. Gap wording elsewhere is rejected.
+        if GAP_CLAIM.search(" ".join((decision.rationale, *decision.uncertainty))):
             self._reject_decision(
                 expected_role,
                 Reason.UNCITED_GAP_CLAIM,
                 (),
-                f"{expected_role} declared a legal gap without citing any clause",
+                f"{expected_role} stated a legal gap in free text instead of a cited, qualified "
+                "gap claim",
             )
             return
+        overstated = [g for g in decision.gap_claims if OVERSTATED.search(g.statement)]
+        if overstated:
+            self._reject_decision(
+                expected_role,
+                Reason.OVERSTATED_GAP_CLAIM,
+                tuple(c.clause_id for g in overstated for c in g.citations),
+                f"{expected_role} stated a gap as certain; a gap claim is only a candidate finding",
+            )
+            return
+        if decision.role_id == expected_role and decision.at == state.scenario.time_at(
+            state.minute
+        ):
+            for g in decision.gap_claims:  # kept visible, always with the fixed qualification
+                state.add_finding(
+                    Finding(
+                        kind=CANDIDATE_GAP_CLAIM,
+                        minute=state.minute,
+                        role=expected_role,
+                        clause_ids=tuple(c.clause_id for c in g.citations),
+                        detail=f"{agent_statement(g.statement)} ({g.qualification})",
+                    )
+                )
         if decision.role_id != expected_role or decision.at != state.scenario.time_at(state.minute):
             return
         role = state.roles.role(decision.role_id)
+        known_actions = {a.id for a in state.roles.actions}
+        role_ids = {r.id for r in state.roles.roles}
         for action in decision.proposed_actions:
             verdict = self.check(role, action)
+            target = action.target
             state.record(
                 "accepted" if verdict.accepted else "rejected",
                 role=role.id,
-                action=action.action_type,
-                target=action.target,
+                action=action.action_type if action.action_type in known_actions else WITHHELD,
+                target=target if target is None or target in role_ids else WITHHELD,
+                data_category=verdict.data_category,
                 detail=verdict.detail,
                 reasons=tuple(r.value for r in verdict.reasons),
                 clause_ids=verdict.clause_ids,
@@ -403,24 +489,30 @@ class ConstraintEngine:
         state = self.state
         kind = action.action_type
         if kind not in role.allowed_actions:
-            return Verdict(False, (Reason.NOT_ALLOWED_ACTION,), (), f"{kind} is not allowed")
+            shown = kind if kind in {a.id for a in state.roles.actions} else WITHHELD
+            return Verdict(False, (Reason.NOT_ALLOWED_ACTION,), (), f"{shown} is not allowed")
         spec = state.roles.action(kind)
         reasons: list[Reason] = []
         clause_ids: list[str] = []
         details: list[str] = []
         role_ids = {r.id for r in state.roles.roles}
 
-        if kind in (SHARE, REQUEST) and action.target not in role_ids:
-            return Verdict(False, (Reason.UNKNOWN_TARGET,), (), f"unknown target {action.target}")
+        # Every action: a target, if given, must be a role id (agent free text is never a target).
+        if (
+            kind in (SHARE, REQUEST) or action.target is not None
+        ) and action.target not in role_ids:
+            return Verdict(False, (Reason.UNKNOWN_TARGET,), (), "target is not a role id")
         if kind in (SHARE, REQUEST) and action.target == role.id:
             return Verdict(False, (Reason.SELF_TARGET,), (), "a role cannot target itself")
         fact_id: str | None = None
+        category: str | None = None
         if kind == SHARE:
             fact_id = action.parameters.get("fact", "")
             fact = state.fact(fact_id)
             if fact is None or fact not in state.known_facts(role.id):
                 return Verdict(False, (Reason.FACT_NOT_KNOWN,), (), "sender does not know it")
             assert action.target is not None
+            category = fact.data_category
             details.append(f"{fact.id} ({fact.data_category}) to {action.target}")
             if fact.data_category not in state.boundary(action.target):
                 reasons.append(Reason.OUTSIDE_RECIPIENT_BOUNDARY)
@@ -431,7 +523,10 @@ class ConstraintEngine:
                 return Verdict(False, (Reason.MISSING_PARAMETER,), (), "data_category is required")
             if category not in state.roles.known_categories():
                 return Verdict(
-                    False, (Reason.UNKNOWN_DATA_CATEGORY,), (), f"unknown category {category!r}"
+                    False,
+                    (Reason.UNKNOWN_DATA_CATEGORY,),
+                    (),
+                    "data_category is not a scenario category",
                 )
             details.append(f"{category} from {action.target}")
             self._restrict(kind, category, role.id, reasons, clause_ids, details)
@@ -460,7 +555,9 @@ class ConstraintEngine:
                     reasons.append(Reason.AUTHORITY_UNCERTAIN)
                 details.append(REQUIRES_DETERMINATION)
             clause_ids.extend(supporting)
-        return Verdict(not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details), fact_id)
+        return Verdict(
+            not reasons, tuple(reasons), tuple(clause_ids), "; ".join(details), fact_id, category
+        )
 
     def _restrict(
         self,

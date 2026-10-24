@@ -46,7 +46,22 @@ area of health, so Federal Law No. 2 of 2019 is treated as applicable for this s
 legislation (`uae.pdpl.art2-2`, reviewed), so it is not assumed to govern the scenario. The
 scenario places the portal operator in Dubai, so the DHA Health Data Protection and
 Confidentiality Policy is treated as applicable too (`dha.pp11.applicability`, draft, `binding:
-unknown`). Open questions 3c-3e in `PROGRESS.md` remain.
+unknown`).
+
+Working readings agreed with the human (2026-10-24); none is a legal conclusion:
+
+- **Scenario assumption (3c):** the portal operator is a synthetic, non-governmental,
+  DHA-licensed operator. PDPL exclusion (b), for government data, is therefore out of scope, and
+  Federal Law No. 2 of 2019 is treated as the health data's own legislation.
+- **Lock records (3a):** lock records linked to a health service account are treated as health
+  data under FL 2/2019 Art 4 (protective reading, basis "interpreted"). This keeps the Art 4 and
+  Art 16 restriction on sharing them.
+- **"Health Authority" (3b):** the portal operator is not assumed to be a "Health Authority"
+  until the human has checked the Arabic text.
+- **Applicability (3d, 3e):** FL 2/2019 and the DHA policy stay "treated as applicable (working
+  reading)"; the DHA policy keeps `binding: unknown`.
+- **Precedence (3f):** whether DHA section 4.2 displaces the PDPL-based reporting period
+  "requires determination"; the unknown reporting period stays a candidate finding.
 
 ## Files
 

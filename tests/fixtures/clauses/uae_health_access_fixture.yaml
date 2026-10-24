@@ -128,10 +128,11 @@ clauses:
   normalized:
     basis: interpreted
     mapping_note: The text names no actor and asks for safeguards that enable a fallback plan; this
-      is read as the health operator activating a fallback channel when its AI service has problems.
+      is read as the health operator keeping a fallback plan in place (maintain_fallback_plan), not
+      as authority to activate a fallback channel, consistent with h2 (human decision 4d, 2026-10-24).
     kind: safeguard
     actor: health_service_operator
-    action: activate_fallback_channel
+    action: maintain_fallback_plan
     condition: in case of problems
 - id: nist.ai-rmf.manage-4-3
   title: SYNTHETIC FIXTURE mirroring nist.ai-rmf.manage-4-3

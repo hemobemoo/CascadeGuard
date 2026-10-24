@@ -4,20 +4,42 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 2 — Engine with scripted agents: PR #3 open against `main`, waiting for the human.**
-Phase 1 merged (PR #2, tag `phase-1`) after the human reviewed the core set. Phase 2 now runs on
-the real clause set with a real-corpus golden, plus the synthetic fixture golden. The round-3
-review fixes are covered by tests but were not re-reviewed by an agent (human decision: no fourth
-round; the Phase 3 review loop covers them). The changes for the human decisions of 2026-10-23
-(7n, 7r, 7t/7v, h2, 7m) are also not yet agent-reviewed; Phase 3's review loop covers them.
+**Phase 3 — Repair and replay: complete pending the merge of PR #4** (the human approved the
+merge on 2026-10-24 once local checks and CI pass; no further review round). **Not
+re-reviewed:** commit 5747e23 (fixes from the final test-breaker pass) and the follow-up fixes
+in this PR (ranking keys, certainty words, type check before copying agent output). **The
+Phase 4 test-breaker round must cover them first.**
 
 ## Done
+
+### Phase 3 — Repair and replay (branch `phase-3-repair`)
+- `domain/repairs.py`: `RepairEdit` (five operation types, typed parameters only) and an
+  immutable `RepairProposal` (tuples; canonical `repair_id`).
+- `simulation/replay.py`: applies a repair as hypothetical rules (`repair.<edit id>`), trigger
+  events and one boundary widening, reruns the identical incident, and compares
+  (`ReplayComparison`: goals, failures no longer blocking / remaining / new, changed verdicts).
+- `engine/repair_search.py`: candidates from diagnosed failures and restricted shares, hard
+  filter (static and after replay), replay of every combination up to 2 edits, lexicographic
+  ranking, `requires_authorization`.
+- `storage/audit.py` (DuckDB, `--audit`), `storage/export.py` (JSON + Markdown, `--export`).
+- CLI: `cascadeguard repairs <scenario>`; `cascadeguard run <scenario> --repair <id>`.
+- Golden: `scenarios/uae_health_access/expected_repairs.yaml` (search + one successful and one
+  unsuccessful replay, real clause set). Spec: `specs/003-repair-and-replay.md`.
+
+Verify:
+
+```bash
+uv run cascadeguard repairs uae_health_access
+uv run cascadeguard run uae_health_access --repair owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+uv run cascadeguard run uae_health_access --repair share.network_incident_status.telecom_operator.health_service_operator
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 0 — Tooling (merged, tag `phase-0`)
 uv project on Python 3.12, Ruff, Pyright (strict), pytest, CLI stub, `.env.example`, `.gitignore`
 (including the two books by filename), `README.md`.
 
-### Phase 2 — Engine with scripted agents (branch `phase-2-engine`)
+### Phase 2 — Engine with scripted agents (merged, PR #3, tag `phase-2`)
 - `simulation/state.py`, `boundaries.py`, `orchestrator.py`; `engine/constraints.py`,
   `graph.py` (NetworkX), `diagnosis.py`; `agents/base.py`, `scripted.py`; `domain/findings.py`.
 - Scenario data: `roles.yaml` action preconditions, `scenario.yaml` recovery goals and
@@ -151,7 +173,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   authority/trigger outcome (binding true -> illustrative scenario rule; binding unknown kept;
   non-binding guidance carries no `normalized`). `tests/unit/test_fixtures.py` fails on drift. They are labelled "SYNTHETIC FIXTURES ... not the real corpus" in
   every output. The real-corpus golden `scenarios/uae_health_access/expected_baseline.yaml`
-  waits for the core-set review.
+  was added in 392f162 after the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
 - **Human decisions, 2026-10-23 (answers to "Waiting on human"):**
@@ -184,6 +206,152 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   - Phase 2 round-3 fixes: no fourth review round; they are covered by tests but not
     re-reviewed, and the Phase 3 review loop covers them.
   - README: one line on source ownership with a link to each official source (added).
+
+- **Human decisions, 2026-10-23 (second set):**
+  - PR #3 merged; `main` tagged `phase-2`; Phase 3 started.
+  - The post-review edit to `dha.pp11.4-18-1` stays; the edits in 9b7b7fa are accepted.
+  - New gate-1 rule (rule-file change approved by the human): any edit to a `status: reviewed`
+    clause sets it back to `draft` in the same commit and lists it for re-approval.
+    `policies/approvals.yaml` holds the approved digest of each reviewed clause (baseline: the
+    core set with the 9b7b7fa edits); `tests/unit/test_approvals.py` enforces the rule.
+  - 3w: keep quoting the 2024 text. Checked on EUR-Lex (2026-10-23): Regulation (EU)
+    2026/1744 (Digital Omnibus on AI, 8 July 2026, applies from 27 July 2026) amends
+    Regulations 2024/1689, 2018/1139 and 2023/1230. It does not amend AI Act Art 14 or Art 73
+    (it inserts Art 75(1a), a derogation from Art 73 for providers under the AI Office's
+    competence), and it does not amend the GDPR, for which EUR-Lex lists only corrigenda (two
+    amendment proposals, 52025PC0501 and 52025PC0837, are pending). All five `eu.*` clauses
+    carry a dated "unchanged by the 2026 amendment" note; none was changed in substance.
+  - 3x: the README note stays; no clause quotes `AIGuide_EN_v1-online.pdf` (inventory note).
+  - Remaining open questions are collected for the end of Phase 3; none blocks it.
+  - The 20 drafts stay draft; the human is told only if a Phase 3 repair needs one (none does).
+- **Phase 3 engine decisions (2026-10-23):** a minimum data share widens the recipient's boundary
+  (the Phase 1 information model), so it works the same whoever sends; candidates name the
+  category's original holder. Search combines up to 2 edits. Repair rules are illustrative
+  clauses labelled "hypothetical repair rule (not a source clause)". A failure "no longer
+  blocking" may be gone only because its goal is met another way. `LogEntry.data_category`
+  records the category a share or request touched (not in the golden summaries).
+
+- **Phase 3 review round 1 (2026-10-23).** evidence-auditor PASS (MINORs fixed: EUR-Lex URL in
+  the five EU notes, OECD truncation note, CLI wording, scripted uncertainty). phase-auditor FAIL
+  (MAJOR: replay judgement outside `engine/`; JSON exports without labels/qualifications).
+  test-breaker FAIL (BLOCKERs in Phase 2 code: 7n scope widened by disallowed actions; 7r narrow
+  regex and no qualification check; MAJORs: share filter only for the named sender, share
+  authorization ignored roles/conditions, repair rules citable in replays, search output lost
+  labels when nothing ranked). All fixed with tests, each mutation-checked:
+  `ReplayComparison` moved to `engine/repair_search.py`; scope uses allowed actions only; gap
+  claims need a citation and a qualification (`unqualified_gap_claim`); citations must be corpus
+  clauses; share edits checked for every sender and new restricted-category deliveries discard a
+  repair; `SearchResult` carries the clause set and labels; JSON exports label every clause and
+  keep qualifications; repair ids include trigger and deadline; proposals re-validated in replay;
+  ScriptedAgent returns copies; `document_date` must be a real date; audit `repairs` table.
+  The scripted telecom T+30 uncertainty "No clause found that authorises this share." was removed
+  (an uncited gap-style line; it never appeared in a golden). Expected-repairs golden regenerated:
+  only repair ids (trigger/deadline suffix) and the sorted order of one discard's clauses changed.
+- **Phase 3 review round 2 (2026-10-23).** phase-auditor PASS (QUESTION-FOR-HUMAN items only:
+  4a-4c; MINORs fixed: rule text, stale PROGRESS line). test-breaker FAIL: BLOCKERs (share
+  authorization checked only the named sender although the widened boundary lets any role
+  send; gap claims could pass with a negated qualifier or a paraphrase), MAJOR (decision
+  requester `action`/`counterpart` unchecked), MINORs (non-strict deadline, decisions mutable
+  between collection and processing, weak identity and patient-record tests). All fixed with
+  tests, each mutation-checked: a share needs a reviewed basis for every possible sender; gap
+  claims only in the structured `AgentDecision.gap_claims` (citations + fixed qualification;
+  free-text gap wording rejected; `overstated_gap_claim`); requester parameters checked;
+  `deadline_minutes` strict; the orchestrator copies each decision on return; identity test
+  compares fact releases both ways and every agent view, for both golden repairs. Two tests
+  changed on purpose with the rule: cited free-text gap analysis is now rejected (use a
+  GapClaim), and a reviewed share clause naming only one sender no longer exempts a share.
+  `RepairProposal.requires_authorization` is computed by the engine (`proposal()`); replay
+  does not use it.
+- **Phase 3 review round 3 (2026-10-23, last round).** test-breaker FAIL: BLOCKER, an agent
+  could still state a legal gap in free text with wording the gap pattern misses ("UAE law
+  lacks any provision ...", "the legislation is entirely mute ...") and it was stored unlabelled
+  in the log and audit store; MINOR, a decision-requester repair was never marked
+  requires_authorization even if requesting needed authority. Fixed after the round, not
+  re-reviewed: agent rationales are stored only under the fixed label "agent statement
+  (unverified; not a finding or a legal conclusion)"; only GapClaims become candidate findings;
+  the requester goes through the same authority check. Mutation-checked. Remaining
+  QUESTION-FOR-HUMAN items: 4a, 4b, and new 4e (new conflicts do not lower the rank).
+- **Human decisions, 2026-10-24 (answers to "Waiting on human" items 3-5):**
+  - **5 (round-3 gate): approach accepted.** Gaps are stated only as structured GapClaims; all
+    agent free text is labelled "agent statement (unverified; not a finding or a legal
+    conclusion)". No attempt to catch every wording. One final test-breaker pass, limited to
+    a4b5c82 and every place agent free text is stored, exported or printed; no further rounds.
+    The Phase 4 spec (`specs/004-demo-ui.md`) requires the UI to show the same label.
+  - **4c:** the gate-1 rule in AGENTS.md (8333dfa) is approved.
+  - **Ranking (4a, 4b, 4e)**, `CascadeGuard.md` section 6 authoritative; ADR
+    `docs/decisions/0001-repair-ranking.md`, AGENTS.md and `specs/003-repair-and-replay.md`:
+    hard filters; clean repairs above repairs with new conflicts; within each group most
+    critical blockers removed, fewest edits, fewest roles touched, fewest clauses cited; among
+    repairs with new conflicts, fewest new conflicts. Agent choice: "not requiring
+    authorization" and `repair_id` stay as the last tie-breaks (the human's order does not
+    place the authorization tie-break). 4a: a blocker counts as removed only when its cause is
+    gone; one hidden by its goal being met another way is "masked (goal met another way)".
+    4e: repairs with new conflicts are ranked lower, never discarded; a conflict that is only a
+    repair duty no scripted agent attempts is tagged `scripted_agent_limit` (revisit in
+    Phase 5). `expected_repairs.yaml` regenerated.
+  - **4d (draft mappings, clauses stay draft):** `mocai.ethics.fallback-plan` maps to
+    `maintain_fallback_plan` (consistent with h2); `itu.y3172.req-ml-mng-003` has no action
+    mapping (design requirement; standards and gap-analysis context); `uae.ai-charter.safety`
+    has no permission mapping (non-binding principle); `uae.telecom-law.art14-5` mapping note
+    rewritten to match 7m. `dha.pp11.4-18-5`: see 3p. `dha.pp11.applicability` keeps
+    `binding: unknown` (3e).
+  - **Evidence questions (working readings only, never legal conclusions):**
+    3a protective reading: lock records linked to a health service account are treated as
+    health data under FL 2/2019 Art 4 (basis interpreted), which keeps the Art 4/16 discard. The
+    reviewed Art 4 clause already maps that share as interpreted; its note still says the
+    question is for the human. It was **not edited**, because any edit sends a reviewed clause
+    back to draft (gate 1) and the engine would drop it; update the note at its next
+    re-approval. 3b: the portal operator is not assumed to be a "Health Authority"; the human
+    checks the Arabic. 3c: FL 2/2019 is treated as the health data's own legislation; scenario
+    assumption added to `scenarios/uae_health_access/README.md` (synthetic, non-governmental,
+    DHA-licensed operator; exclusion (b) out of scope). 3d: "treated as applicable (working
+    reading)" stays. 3e: `binding: unknown` stays. 3f: precedence "requires determination"; the
+    unknown reporting period stays a candidate finding. 3j: the inventory may list filenames,
+    page counts and title/author metadata only, never text. 3k: structure file updated.
+  - **3i (DHA footers):** the extracted footers read "1/52" to "50/52" on viewer pages 1-50,
+    one-to-one, with no missing or repeated number inside the copy. Footers 51/52 and 52/52 are
+    missing: the copy ends on page 50 in section 5 (references, item 5.23). The drafted DHA
+    clauses are on pages 1, 30, 31 and 32; none is next to the gap. The human looks for a
+    complete copy.
+  - **CI:** `.github/workflows/checks.yml` runs `uv sync --locked` and the full check command
+    (actions/checkout, astral-sh/setup-uv; not a project dependency).
+- **Final test-breaker pass (2026-10-24, FAIL), fixed after the pass, not re-reviewed:**
+  BLOCKER: `ProposedAction.target` was free text for every action except share/request, and
+  was stored and printed unlabelled (a gap could be stated there with no citation). MAJORs:
+  unknown `action_type`, unknown share/request target, impostor `role_id` and the class name of
+  a non-decision object were echoed unlabelled into the log, findings, DuckDB, JSON and CLI;
+  `GapClaim.statement` became a finding without the label, and a newline in it forged a CLI
+  line; the JSON export dropped a candidate gap claim's qualification. MINOR: unknown
+  `data_category` echoed. Fixes: a target must be a role id for every action
+  (`unknown_target` otherwise); agent strings that are not scenario ids are logged as
+  `<not a scenario id; agent text withheld>`; malformed-type, unknown-target and
+  unknown-category details are fixed text; rationale and gap statements are stored as
+  `agent_statement(...)` (label, one line); the run JSON export adds `detail` to every finding
+  and `qualification` to every candidate gap claim. `tests/unit/test_phase3_final_pass.py`
+  (10 tests) fails on the old code and passes now. Not fixed (not in the human's scope, see
+  "Waiting on human" 6): the OVERSTATED wording list, and `copy.deepcopy` running on agent
+  output before the type check.
+- **Human decisions, 2026-10-24 (follow-up to the final pass):**
+  - **Ranking, two keys added** (ADR 0001, AGENTS.md, spec 003): hard filters; clean before
+    new conflict; resolved (every critical goal met in the replay) before partial, then most
+    critical goals met; most critical blockers removed at their cause; fewest critical
+    blockers only masked; fewest edits; fewest roles; fewest clauses cited; not requiring
+    authorization; `repair_id`. Among repairs with a new conflict, fewest new conflicts still
+    breaks the ties left after clauses cited. Why resolved outranks blockers removed: the aim
+    is a feasible recovery path, and masked blockers stay visible as findings.
+    `expected_repairs.yaml` regenerated; owner + share is rank 1 again.
+  - **3p: not applied.** The two clauses stay separate; the draft `dha.pp11.4-18-5` notes that
+    its actor comes from 4.18.4. 3p is now part of the human's clause review.
+  - **3a:** the reviewed Art 4 clause is not edited.
+  - **Outside the pass scope, fixed with a test each:** OVERSTATED now also catches
+    "conclusively", "definitely", "absolutely" (no further words: the label and the fixed
+    qualification are the real safeguard); the orchestrator checks the type of agent output
+    before deep-copying it (anything else goes to the engine uncopied and is rejected as
+    malformed).
+- **`RepairProposal` shape (Phase 3 decision).** `operation`/`applies_to`/`parameters` became
+  `edits: tuple[RepairEdit, ...]`, because the ranking counts repair edits and a repair can need
+  two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
+  typed parameters.
 
 ## Approved gate-5 exceptions
 
@@ -221,38 +389,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human decisions,
-2026-10-23"). Still open:
+Answered on 2026-10-24: items 3-7 of the previous list (see Decisions). Re-approval needed
+(gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, all on the
+human's side, none blocking:
 
-1. **Clause review** of the remaining 20 drafts (all clauses outside the core set, including
-   `uae.telecom-law.art14-5`, flagged "OCR - check against image"), in the order of
-   `docs/review/phase-1-clause-triage.md`.
-2. **Sources missing from `policies/sources/`** (optional): NIS2 Directive (EU) 2022/2555; Canada's
-   Directive on Automated Decision-Making; Singapore's Model AI Governance Framework (incl. agentic
-   AI); WHO guidance on AI for health; NCEMA 7000; Executive Regulation of FL 2/2019.
-3. **Evidence questions** not yet answered (detail in the triage file):
-   a. FL 2/2019: are lock records with mobile numbers "health data and information" (Art 4)?
-   b. FL 2/2019: the translation defines "Health Authority" twice; could the portal operator be
-      one? Check the Arabic.
-   c. PDPL Art 2(2)(e): is FL 2/2019 the health data's own legislation? Is the portal operator
-      governmental (exclusion b)?
-   d. FL 2/2019 and the DHA policy stay "treated as applicable" (working reading) unless the human
-      confirms them as applicable.
-   e. DHA policy: binding on DHA-licensed private entities? (`binding: unknown` kept.)
-   f. DHA 4.18.4: does the policy's own precedence rule ("the regulation that is more
-      specialized/detailed in health will supersede", section 4.2) displace the PDPL-based
-      reporting period for health data?
-   i. DHA PDF footers read "n/52" but the PDF has 50 pages. Is the copy complete?
-   j. `policies/extracted/_inventory.json` lists the two books' filenames, page counts and
-      Title/Author metadata (no text). Acceptable?
-   k. `cascadeguard_project_structure.txt` does not list `simulation/loader.py`, `domain/base.py`
-      or `docs/policy-inventory.md`. Add them?
-   p. Should `dha.pp11.4-18-4` and `4-18-5` become one clause quoting both paragraphs?
-   w. EUR-Lex lists the EU AI Act as amended by Regulation (EU) 2026/1744 (July 2026). The
-      `eu.ai-act.*` clauses quote the 2024 text in `policies/sources/`. Add the consolidated
-      version and re-check Art 14(4)(d), 73(1), 73(3), or keep the 2024 text as the precedent?
-   x. `AIGuide_EN_v1-online.pdf`: no official source was found for the README sources table.
-      Where does it come from?
+1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
+   from 4.18.4, outside its quote (the two clauses stay separate).
+2. **Sources missing from `policies/sources/`** (optional).
+3. **3b:** the human checks the Arabic text of FL 2/2019 ("Health Authority").
+   **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing).
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -262,8 +407,8 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
 - ~~Book filenames as `source_file`; `normalized` names vs `roles.yaml`~~ Done in Phase 2
   (loader rejects book sources, duplicate YAML keys and stray `.yml` files;
   `check_clause_references` runs on every engine run, with tests).
-- Phase 3: `RepairProposal.applies_to`, `parameters` and `citations` are still list/dict
-  (mutable inside a frozen model); use tuples / a frozen mapping before repairs are ranked.
+- ~~`RepairProposal` list/dict fields~~ Done in Phase 3: edits and citations are tuples of
+  frozen models with typed parameters.
 - ~~Deep-freeze and AwareDatetime~~ Done in Phase 2: domain lists are tuples, and `at` and
   `start_time` are `AwareDatetime`. `ProposedAction.parameters` stays a dict; the engine copies
   each decision on receipt and logs only strings.
@@ -272,8 +417,7 @@ Answered on 2026-10-23: items 1, 7h, h2, 7l, 7m-7o, 7q-7v (see Decisions, "Human
 
 ## Next step
 
-1. Human: decide whether PR #3 (Phase 2) merges now. The auto-merge rule does not apply: the
-   Phase 2 reviewers did not all PASS (round 3), and the human chose no fourth round.
-2. After PR #3 merges: tag `phase-2`, start Phase 3 (repair and replay) on `phase-3-repair`,
-   and make its review loop cover the unreviewed Phase 2 changes listed under "Current phase".
-3. Open human items are under "Waiting on human" (remaining 20 draft clauses, questions 3a-3x).
+1. Merge PR #4, tag `phase-3`, record it here.
+2. Stop and report to the human before Phase 4. Phase 4's first test-breaker round covers
+   5747e23 and the follow-up fixes (not re-reviewed). Requirements so far:
+   `specs/004-demo-ui.md`.

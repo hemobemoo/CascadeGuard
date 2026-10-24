@@ -22,8 +22,7 @@ def test_free_text_repair_operation_is_rejected() -> None:
         RepairProposal.model_validate(
             {
                 "repair_id": "r1",
-                "operation": "rewrite_the_law",
-                "applies_to": [],
+                "edits": [{"operation": "rewrite_the_law", "role": "telecom_operator"}],
                 "rationale": "x",
                 "citations": [],
             }

@@ -5,6 +5,7 @@ description = "Cross-agency policy crash-testing for AI-dependent public service
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "duckdb>=2.0.0",
     "networkx>=3.7",
     "pdfplumber>=0.11.10",
     "pydantic>=2.14.1",
