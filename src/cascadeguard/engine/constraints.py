@@ -63,6 +63,7 @@ class Reason(StrEnum):
     """Why the engine rejected an action or a decision."""
 
     MALFORMED_DECISION = "malformed_decision"  # not a valid AgentDecision
+    NO_DECISION = "no_decision"  # an LLM agent could not decide (closed reason, no model text)
     UNKNOWN_CITATION = "unknown_citation"  # clause id not in the corpus at all
     DRAFT_CITATION = "draft_citation"  # clause exists but is not loaded (draft, not reviewed)
     CITATION_OUT_OF_SCOPE = "citation_out_of_scope"  # cited clause concerns neither role nor action
@@ -332,6 +333,14 @@ class ConstraintEngine:
                     role=expected_role,
                     detail=str(exc).splitlines()[0],
                 )
+            )
+            return
+        if decision.no_decision is not None:  # the validator guarantees nothing is proposed
+            self._reject_decision(
+                expected_role,
+                Reason.NO_DECISION,
+                (),
+                f"{expected_role} made no decision at this step ({decision.no_decision})",
             )
             return
         cited = tuple(

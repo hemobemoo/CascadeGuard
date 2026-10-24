@@ -10,7 +10,7 @@ simulation/orchestrator  (deterministic code, not an agent)
   for each inject:
     engine.release(event)                    facts, obligations, missed deadlines
     view = boundaries.view_for(state, role)  frozen, boundary-filtered
-    decision = agent.observe(view)           agents/scripted (Phase 5: agents/llm)
+    decision = agent.observe(view)           agents/scripted or agents/llm (via agents/cache)
     engine.process(decision)                 engine/constraints: accept/reject, apply
   engine.close(); graph = engine/graph.build_graph(); failures = engine/diagnosis.diagnose()
 ```
@@ -48,5 +48,19 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
           ──> ui/view_model.py (labels: status, hypothetical rule, masked, tags, agent statement)
 ```
 
+- **LLM agents (Phase 5).** `agents/llm.py` plays a role with the model in `.env` (OpenRouter,
+  `openai` SDK, temperature 0, strict `json_schema` built from `AgentDecision`,
+  `require_parameters`, response healing off). The prompt is the role's `RoleView`, which now
+  carries `role_clauses` (`knowledge/retrieval.py`: the loaded clauses the role may cite under
+  the engine's 7n rule; repair rules shown as not citable). `agents/cache.py` keys each decision
+  by role, view, prompt version, model and schema; a replay reuses every unchanged step. A reply
+  that fails validation twice becomes `AgentDecision.no_decision`, which the engine records as a
+  `no_decision` finding. `--offline` (or the UI's "LLM (cached only)") never calls the API.
+
+```
+view ──> cache_key ──hit──> cached AgentDecision
+              └─miss──> build_messages(view) ──> OpenRouter ──> validate ──(1 retry)──> cache
+```
+
 Specs: `specs/001-domain-and-scenario.md`, `specs/002-engine-and-diagnosis.md`,
-`specs/003-repair-and-replay.md`, `specs/004-demo-ui.md`.
+`specs/003-repair-and-replay.md`, `specs/004-demo-ui.md`, `specs/005-llm-agents.md`.

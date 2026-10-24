@@ -2,6 +2,7 @@
 
 cascadeguard run <scenario> [--clauses DIR] [--repair ID] [--export DIR] [--audit [DB]]
 cascadeguard repairs <scenario> [--clauses DIR] [--export DIR]
+Both take --agents scripted|llm (default scripted), --offline and --cache DIR (LLM only).
 """
 
 import argparse
@@ -11,7 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from cascadeguard import __version__
-from cascadeguard.agents.scripted import ScriptedAgent, load_scripted_agents
+from cascadeguard.agents.base import Agent
+from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
+from cascadeguard.agents.llm import LLMConfig, LLMConfigError, llm_agents
+from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import RuleBook
@@ -43,6 +47,9 @@ from cascadeguard.storage.export import (
 )
 
 REAL_CLAUSE_SET = "policies/reviewed: reviewed + illustrative clauses"
+SCRIPTED = "scripted"
+LLM = "llm"
+SCRIPTED_AGENTS = "scripted agents (scripted_decisions.yaml)"
 
 
 def _display(path: Path) -> str:
@@ -57,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cascadeguard")
     parser.add_argument("--version", action="version", version=f"cascadeguard {__version__}")
     subcommands = parser.add_subparsers(dest="command")
-    run_cmd = subcommands.add_parser("run", help="run a scenario with scripted agents")
+    run_cmd = subcommands.add_parser("run", help="run a scenario (scripted agents by default)")
     run_cmd.add_argument("scenario")
     run_cmd.add_argument(
         "--clauses",
@@ -82,6 +89,24 @@ def build_parser() -> argparse.ArgumentParser:
     repairs_cmd.add_argument("--clauses", type=Path, default=None)
     repairs_cmd.add_argument("--export", type=Path, default=None)
     repairs_cmd.add_argument("--audit", type=Path, nargs="?", const=DEFAULT_DB, default=None)
+    for cmd in (run_cmd, repairs_cmd):
+        cmd.add_argument(
+            "--agents",
+            choices=(SCRIPTED, LLM),
+            default=SCRIPTED,
+            help="who plays the roles: scripted decisions (default, no key) or the LLM in .env",
+        )
+        cmd.add_argument(
+            "--offline",
+            action="store_true",
+            help="LLM agents from the decision cache only: no API call, no key needed",
+        )
+        cmd.add_argument(
+            "--cache",
+            type=Path,
+            default=DEFAULT_CACHE_DIR,
+            help=f"LLM decision cache directory (default {_display(DEFAULT_CACHE_DIR)})",
+        )
     return parser
 
 
@@ -93,8 +118,10 @@ class World:
     roles: RoleSet
     clauses: dict[str, PolicyClause]
     corpus_ids: frozenset[str]
-    agents: dict[str, ScriptedAgent]
+    agents: dict[str, Agent]
     label: str
+    agent_label: str = SCRIPTED_AGENTS
+    cache: DecisionCache | None = None  # LLM agents only
 
     def baseline(self) -> RunResult:
         return run(
@@ -102,8 +129,23 @@ class World:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class AgentChoice:
+    """Which agents play the roles. Scripted is the default and needs no key."""
+
+    kind: str = SCRIPTED
+    offline: bool = False
+    cache_dir: Path = DEFAULT_CACHE_DIR
+
+
+SCRIPTED_CHOICE = AgentChoice()
+
+
 def load_world(
-    scenario_id: str, clauses_dir: Path | None = None, scenarios_dir: Path = SCENARIOS_DIR
+    scenario_id: str,
+    clauses_dir: Path | None = None,
+    scenarios_dir: Path = SCENARIOS_DIR,
+    choice: AgentChoice = SCRIPTED_CHOICE,
 ) -> World:
     corpus = load_clauses(REVIEWED_DIR)
     if clauses_dir is None:
@@ -115,24 +157,43 @@ def load_world(
     corpus_ids = frozenset(c.id for c in corpus)
     scenario, roles = load_scenario(scenario_id, set(corpus_ids), scenarios_dir)
     check_clause_references(clauses.values(), roles)
-    agents = load_scripted_agents(
-        scenarios_dir / scenario_id / "scripted_decisions.yaml", scenario, roles
-    )
-    return World(scenario, roles, clauses, corpus_ids, agents, label)
+    if choice.kind == SCRIPTED:
+        scripted = load_scripted_agents(
+            scenarios_dir / scenario_id / "scripted_decisions.yaml", scenario, roles
+        )
+        return World(scenario, roles, clauses, corpus_ids, dict(scripted), label)
+    cache = DecisionCache(choice.cache_dir)
+    role_ids = tuple(r.id for r in roles.roles)
+    if choice.offline:  # the model id is still needed to find its cache entries
+        llm = llm_agents(role_ids, cache, offline=True, model=LLMConfig.model_from_env())
+        how = "offline: decision cache only"
+    else:
+        llm = llm_agents(role_ids, cache)
+        how = "live calls through the decision cache"
+    # The model id is a .env value: it keys the cache but is never printed or exported.
+    agent_label = f"LLM agents (model from CASCADEGUARD_MODEL; {how})"
+    return World(scenario, roles, clauses, corpus_ids, dict(llm), label, agent_label, cache)
 
 
 def run_scenario(
-    scenario_id: str, clauses_dir: Path | None = None, scenarios_dir: Path = SCENARIOS_DIR
+    scenario_id: str,
+    clauses_dir: Path | None = None,
+    scenarios_dir: Path = SCENARIOS_DIR,
+    choice: AgentChoice = SCRIPTED_CHOICE,
 ) -> RunResult:
-    """Run the baseline with ScriptedAgents. Fixture clause sets are labelled as such."""
-    return load_world(scenario_id, clauses_dir, scenarios_dir).baseline()
+    """Run the baseline (ScriptedAgents by default). Fixture clause sets are labelled as such."""
+    return load_world(scenario_id, clauses_dir, scenarios_dir, choice).baseline()
 
 
 def search_repairs(
-    scenario_id: str, clauses_dir: Path | None = None, scenarios_dir: Path = SCENARIOS_DIR
+    scenario_id: str,
+    clauses_dir: Path | None = None,
+    scenarios_dir: Path = SCENARIOS_DIR,
+    choice: AgentChoice = SCRIPTED_CHOICE,
+    world: World | None = None,
 ) -> SearchResult:
     """Replay every candidate repair on the identical incident and rank them."""
-    w = load_world(scenario_id, clauses_dir, scenarios_dir)
+    w = world or load_world(scenario_id, clauses_dir, scenarios_dir, choice)
     return search(
         w.baseline(),
         w.scenario,
@@ -147,8 +208,19 @@ def replay_repair(
     repair_id: str,
     clauses_dir: Path | None = None,
     scenarios_dir: Path = SCENARIOS_DIR,
+    choice: AgentChoice = SCRIPTED_CHOICE,
+    world: World | None = None,
 ) -> ReplayComparison:
-    return search_repairs(scenario_id, clauses_dir, scenarios_dir).comparison(repair_id)
+    found = search_repairs(scenario_id, clauses_dir, scenarios_dir, choice, world)
+    return found.comparison(repair_id)
+
+
+def cache_line(world: World) -> str | None:
+    """LLM runs only: how many steps came from the cache and how many needed a call."""
+    if world.cache is None:
+        return None
+    st = world.cache.stats
+    return f"LLM decision cache: {st.hits} steps reused, {st.misses} not cached"
 
 
 def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
@@ -284,9 +356,27 @@ def search_markdown(scenario_id: str, result: SearchResult) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command not in ("run", "repairs"):
+        parser.print_help()
+        return 0
+    choice = AgentChoice(args.agents, args.offline, args.cache)
+    try:
+        world = load_world(args.scenario, args.clauses, choice=choice)
+    except LLMConfigError as exc:
+        print(f"cascadeguard: {exc}")
+        return 2
+    if choice.kind != SCRIPTED:  # scripted output stays exactly as before
+        print(f"Agents: {world.agent_label}")
+    status = _main(args, world)
+    if (line := cache_line(world)) is not None:
+        print(line)
+    return status
+
+
+def _main(args: argparse.Namespace, world: World) -> int:
     if args.command == "run" and args.repair is not None:
         try:
-            comparison = replay_repair(args.scenario, args.repair, args.clauses)
+            comparison = replay_repair(args.scenario, args.repair, world=world)
         except KeyError as exc:
             print(f"cascadeguard: {exc.args[0]}. List repairs with `cascadeguard repairs`.")
             return 2
@@ -308,7 +398,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"audit: baseline run {base}, replay run {rep} in {_display(args.audit)}")
         return 0
     if args.command == "run":
-        result = run_scenario(args.scenario, args.clauses)
+        result = world.baseline()
         excluded = excluded_drafts(result) if args.clauses is None else None
         print(format_result(result, excluded))
         if args.export is not None:
@@ -327,7 +417,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"audit: baseline run {run_id} in {_display(args.audit)}")
         return 0
     if args.command == "repairs":
-        found = search_repairs(args.scenario, args.clauses)
+        found = search_repairs(args.scenario, world=world)
         print(format_search(found))
         if args.export is not None:
             _export(
@@ -339,12 +429,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.audit is not None:
             store = AuditStore(args.audit)
             try:
-                base = store.record_search(run_scenario(args.scenario, args.clauses), found)
+                base = store.record_search(world.baseline(), found)
             finally:
                 store.close()
             print(f"audit: baseline run {base} and its candidates in {_display(args.audit)}")
         return 0
-    parser.print_help()
     return 0
 
 

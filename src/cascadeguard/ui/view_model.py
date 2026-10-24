@@ -101,6 +101,7 @@ class RoleViewRows:
     decision_points: tuple[str, ...]
     facts: tuple[str, ...]
     clauses: tuple[str, ...]
+    role_clauses: tuple[str, ...]  # with labels; repair rules marked not citable
     own_history: tuple[str, ...]
     inside: tuple[str, ...]  # data categories inside the role's boundary
     outside: tuple[str, ...]
@@ -133,6 +134,7 @@ def role_view(result: RunResult, role: str, minute: int, categories: Iterable[st
             f"{f.id} ({f.data_category}, {f.certainty.value}): {f.statement}" for f in view.facts
         ),
         clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.clauses),
+        role_clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.role_clauses),
         own_history=view.own_history,
         inside=inside,
         outside=tuple(c for c in sorted(set(categories)) if c not in inside),

@@ -47,7 +47,15 @@ uv sync
 uv run cascadeguard run uae_health_access                        # baseline (from Phase 2)
 uv run cascadeguard run uae_health_access --repair <repair-id>   # replay (from Phase 3)
 uv run python -m cascadeguard.ui.app                             # demo UI (from Phase 4)
+uv run cascadeguard run uae_health_access --agents llm --offline # LLM agents, cache only (Phase 5)
 ```
+
+Scripted agents are the default and need no key. LLM agents (`--agents llm`, or the agents
+toggle in the UI) read `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` and `CASCADEGUARD_MODEL`
+from `.env` (see `.env.example`); there is no default model, and the model must support
+structured outputs (`response_format` with `json_schema`). Live calls cost money; decisions are
+cached in `data/llm_cache/` and replays reuse them. `scripts/llm_smoke_test.py` makes exactly
+one call.
 
 The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use another port.
 

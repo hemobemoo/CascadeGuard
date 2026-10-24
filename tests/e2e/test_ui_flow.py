@@ -42,6 +42,8 @@ def server() -> Iterator[str]:
     # Without pytest's variables: NiceGUI switches to its own test mode when it sees them.
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
     env["CASCADEGUARD_UI_PORT"] = str(port)
+    # LLM mode is only exercised from the cache, under a model id that has no cache entries.
+    env["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
     process = subprocess.Popen(
         [sys.executable, "-m", "cascadeguard.ui.app"],
         env=env,
@@ -144,3 +146,15 @@ def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
     for button, suffix in (("Replay JSON", "json"), ("Replay Markdown", "md")):
         got = _download(page, button, tmp_path / f"ui.{suffix}")
         assert got == (cli / f"{name}.{suffix}").read_text(encoding="utf-8"), button
+
+    # The agents toggle: LLM agents from the cache only (no call is possible). Every step is
+    # a no-decision finding, and the result says which agents produced it.
+    page.get_by_text("LLM (cached only)", exact=True).click()
+    page.get_by_role("button", name="Run baseline").click()
+    agents = page.get_by_text("Agents: LLM agents (model from CASCADEGUARD_MODEL; offline")
+    expect(agents).to_be_visible()
+    expect(agents).to_contain_text("0 steps reused, 36 not cached")
+    expect(page.get_by_text("made no decision at this step (not_cached)").first).to_be_visible()
+    page.get_by_text("Scripted", exact=True).click()
+    page.get_by_role("button", name="Run baseline").click()
+    expect(page.get_by_text("Agents: scripted agents")).to_be_visible()

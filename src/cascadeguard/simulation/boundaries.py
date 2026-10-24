@@ -13,6 +13,7 @@ from datetime import datetime
 
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import Fact, TimelineEvent
+from cascadeguard.knowledge.retrieval import RoleClause, clauses_for_role
 from cascadeguard.simulation.state import SimulationState
 
 
@@ -38,6 +39,9 @@ class RoleView:
     allowed_actions: tuple[str, ...]
     clauses: tuple[ClauseSummary, ...]  # loaded clauses relevant to this inject
     own_history: tuple[str, ...]  # "T+15 raise_security_incident" for the role's accepted actions
+    # Loaded clauses that concern the role or its allowed actions (knowledge/retrieval.py), with
+    # text and labels; repair rules in a replay appear marked not citable.
+    role_clauses: tuple[RoleClause, ...]
 
 
 def view_for(
@@ -45,6 +49,7 @@ def view_for(
     role_id: str,
     event: TimelineEvent,
     clauses: dict[str, PolicyClause],
+    corpus_ids: frozenset[str],
 ) -> RoleView:
     role = state.roles.role(role_id)
     boundary = state.boundary(role_id)
@@ -71,4 +76,5 @@ def view_for(
         allowed_actions=role.allowed_actions,
         clauses=relevant,
         own_history=tuple(f"T+{m:02d} {a}" for m, a in state.actions_done(role_id)),
+        role_clauses=clauses_for_role(clauses, corpus_ids, role.id, role.allowed_actions),
     )

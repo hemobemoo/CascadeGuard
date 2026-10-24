@@ -1,7 +1,9 @@
 """CascadeGuard demo UI (Phase 4; see specs/004-demo-ui.md).
 
 The UI only displays engine results: runs, searches and replays come from the same helpers
-the CLI uses, with scripted agents, and `ui/view_model.py` formats them. No logic lives here.
+the CLI uses, and `ui/view_model.py` formats them. No logic lives here. The agents toggle picks
+scripted agents (default), LLM agents from the decision cache only, or live LLM calls
+(specs/005-llm-agents.md).
 """
 
 import os
@@ -9,7 +11,8 @@ from dataclasses import dataclass
 
 from nicegui import run, ui
 
-from cascadeguard.cli import World, load_world, search_repairs
+from cascadeguard.agents.llm import LLMConfigError
+from cascadeguard.cli import LLM, SCRIPTED, AgentChoice, World, load_world, search_repairs
 from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
@@ -17,6 +20,17 @@ from cascadeguard.ui import view_model as vm
 
 DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
 PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
+AGENT_MODES = {
+    "scripted": "Scripted",
+    "llm-offline": "LLM (cached only)",
+    "llm-live": "LLM (live, paid calls)",
+}
+
+
+def agent_choice(mode: str) -> AgentChoice:
+    if mode == "scripted":
+        return AgentChoice(SCRIPTED)
+    return AgentChoice(LLM, offline=mode == "llm-offline")
 
 
 def port() -> int:
@@ -38,6 +52,7 @@ class Session:
     failure: str | None = None  # highlighted in the graph; None: every failure
     role: str | None = None
     minute: int = 0
+    mode: str = "scripted"
 
 
 def heading(text: str) -> None:
@@ -63,8 +78,12 @@ def index() -> None:
     with ui.row().classes("items-end gap-4"):
         names = scenarios()
         picker = ui.select(names, value=names[0], label="Scenario").classes("w-72")
+        ui.toggle(
+            AGENT_MODES, value=s.mode, on_change=lambda e: setattr(s, "mode", str(e.value))
+        ).mark("agents")
         run_button = ui.button("Run baseline")
-    status = ui.label("Pick a scenario and run the baseline (scripted agents).")
+    status = ui.label("Pick a scenario and the agents, then run the baseline.")
+    agents_label = ui.label("Agents: not run yet").classes("text-sm").mark("agents-label")
 
     @ui.refreshable
     def baseline_view() -> None:
@@ -122,6 +141,7 @@ def index() -> None:
                 ("Decision points", v.decision_points),
                 ("Facts known (inside its boundary)", v.facts),
                 ("Clauses shown with this inject", v.clauses),
+                ("Clauses relevant to this role (what an LLM agent may cite)", v.role_clauses),
                 ("Own accepted actions so far", v.own_history),
                 ("Data categories inside its boundary", v.inside),
                 ("Data categories outside its boundary (never shown to it)", v.outside),
@@ -250,7 +270,14 @@ def index() -> None:
 
     async def run_baseline() -> None:
         status.set_text("Running the baseline ...")
-        world = await run.io_bound(load_world, str(picker.value))
+        try:
+            world = await run.io_bound(
+                load_world, str(picker.value), None, SCENARIOS_DIR, agent_choice(s.mode)
+            )
+        except LLMConfigError as exc:  # names missing variables, never values
+            status.set_text(str(exc))
+            ui.notify(str(exc), type="warning")
+            return
         assert world is not None  # load_world raises on failure
         baseline = await run.io_bound(world.baseline)
         assert baseline is not None
@@ -262,6 +289,7 @@ def index() -> None:
             f"Clause set: {s.baseline.clause_set}"
         )
         clause_set.set_text(f"Clause set: {s.baseline.clause_set}")
+        agents_label.set_text(f"Agents: {world.agent_label}" + cache_text(world))
         baseline_view.refresh()
         repairs_view.refresh()
         export_view.refresh()
@@ -271,9 +299,11 @@ def index() -> None:
             ui.notify("Run the baseline first.")
             return
         status.set_text("Replaying every candidate repair on the identical incident ...")
-        found = await run.io_bound(search_repairs, s.world.scenario.id)
+        world = s.world
+        found = await run.io_bound(lambda: search_repairs(world.scenario.id, world=world))
         s.search, s.selected = found, None
         status.set_text(f"{len(found.ranked) if found else 0} repairs ranked.")
+        agents_label.set_text(f"Agents: {world.agent_label}" + cache_text(world))
         repairs_view.refresh()
         export_view.refresh()
 
@@ -289,6 +319,13 @@ def index() -> None:
     ui.button("Find repairs", on_click=find_repairs).classes("mt-2")
     repairs_view()
     export_view()
+
+
+def cache_text(world: World) -> str:
+    if world.cache is None:
+        return ""
+    st = world.cache.stats
+    return f" | decision cache: {st.hits} steps reused, {st.misses} not cached"
 
 
 def main() -> None:
