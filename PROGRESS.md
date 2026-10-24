@@ -4,11 +4,10 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 3 — Repair and replay: merged** (PR #4, merge commit 5cf4b1a, tag `phase-3`,
-2026-10-24, on the human's instruction after local checks and CI passed). **Not re-reviewed:**
-commit 5747e23 (fixes from the final test-breaker pass) and the follow-up commits f6ea214 and
-4f56dbe (ranking keys, certainty words, type check before copying agent output). **The Phase 4
-test-breaker round must cover them first.** Phase 4 has not started; the human is told first.
+**Phase 4 — Demo UI (branch `phase-4-ui`): spec written, skeleton only, waiting for the human
+to approve `specs/004-demo-ui.md`** before building further. The first Phase 4 test-breaker
+round (covering 5747e23, f6ea214, 4f56dbe, merged in Phase 3 without review) is running.
+Phase 3 is merged (PR #4, merge commit 5cf4b1a, tag `phase-3`).
 
 ## Done
 
@@ -417,6 +416,8 @@ human's side, none blocking:
 
 ## Next step
 
-1. Human: confirm the start of Phase 4 (NiceGUI demo UI) on `phase-4-ui`.
-2. Phase 4's first test-breaker round covers 5747e23, f6ea214 and 4f56dbe (not re-reviewed).
-   Requirements so far: `specs/004-demo-ui.md`.
+1. Human: approve `specs/004-demo-ui.md` and answer its two questions (pytest-asyncio for UI
+   tests; export as downloads only or also to `data/exports/`).
+2. Fix the first test-breaker round's findings (5747e23, f6ea214, 4f56dbe) before UI work.
+3. Build the UI per the spec; run the flow with Playwright; review loop; report with
+   screenshots; no merge before the human has seen them.

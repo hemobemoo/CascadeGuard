@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "duckdb>=2.0.0",
     "networkx>=3.7",
+    "nicegui>=3.18.0",
     "pdfplumber>=0.11.10",
     "pydantic>=2.14.1",
     "pyyaml>=6.0.3",

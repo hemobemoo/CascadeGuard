@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cascadeguard-ui",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-m", "cascadeguard.ui.app"],
+      "port": 8765, "autoPort": false
+    }
+  ]
+}
