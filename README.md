@@ -49,6 +49,12 @@ uv run cascadeguard run uae_health_access --repair <repair-id>   # replay (from 
 uv run python -m cascadeguard.ui.app                             # demo UI (from Phase 4)
 ```
 
+The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use another port.
+
+The browser smoke test (`tests/e2e`, marker `e2e`) needs Chromium once:
+`uv run playwright install chromium`. Skip it locally with `uv run pytest -m "not e2e"`;
+CI always runs it.
+
 ## Checks
 
 ```bash

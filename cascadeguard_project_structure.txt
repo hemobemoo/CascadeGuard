@@ -81,10 +81,10 @@ cascadeguard/
 │   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
 │   │
 │   ├── ui/                           [P4] NiceGUI (no separate frontend)
-│   │   ├── app.py
-│   │   ├── timeline.py
-│   │   ├── graph_view.py             ui.echarts graph series
-│   │   └── replay_view.py            baseline vs replay side by side
+│   │   ├── app.py                    one page: renders only (port 8765, CASCADEGUARD_UI_PORT)
+│   │   └── view_model.py             formats engine results into labelled rows (no decisions);
+│   │                                 replaces the planned timeline/graph_view/replay_view
+│   │                                 modules (spec 004)
 │   │
 │   └── observability/
 │       └── tracing.py                [P6] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
@@ -117,9 +117,11 @@ cascadeguard/
     ├── unit/                         [P0+] (P0: one empty test so the checks run)
     ├── integration/                  [P2+] full loop with ScriptedAgent
     ├── golden/                       [not used] the P3 goldens live under scenarios/
-    └── e2e/                          [later] Playwright smoke test of the demo flow
+    └── e2e/                          [P4] Playwright smoke test of the demo flow (marker e2e,
+                                      Chromium; CI always runs it)
 
 CI: .github/workflows/checks.yml [P3] runs `uv sync` and the full check command.
+.claude/launch.json [P4] preview config for the demo UI (dev tooling).
 
 Deferred until the core loop works: api/ (NiceGUI already runs on FastAPI),
 docker/, web ingestion scripts, docs/threat-model.md, Playwright e2e,

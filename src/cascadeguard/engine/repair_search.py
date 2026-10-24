@@ -45,6 +45,10 @@ from cascadeguard.simulation.replay import REPAIR_PREFIX
 
 MAX_EDITS = 2
 SCRIPTED_LIMIT = "scripted_agent_limit"
+# Labels shown wherever a comparison is printed (CLI, exports, UI).
+MASKED_LABEL = "masked (goal met another way)"
+REMOVED_LABEL = "removed (cause gone)"
+REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
 SCRIPTED_LIMIT_NOTE = (
     "scripted-agent limit: a duty the repair adds was never attempted because scripted agents do "
     "not adapt to a repair; revisit with LLM agents (Phase 5)"
