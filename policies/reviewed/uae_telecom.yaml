@@ -39,20 +39,12 @@ clauses:
     document_date: "2022"
     status: draft
     binding: true
-    normalized:
-      basis: interpreted
-      mapping_note: >-
-        Art 14 gives TDRA competence to issue rules regulating information requests; item 5 names
-        no addressee or data type. It is a power to issue rules, not a permission to request
-        information in this incident (7m), so the regulator's authority to request is uncertain.
-        No counterpart or data category is inferred.
-      kind: permission
-      actor: telecom_regulator
-      action: request_information
-      condition: >-
-        only as provided in TDRA regulations, instructions or decisions issued under Art 14, which
-        are not in the reviewed corpus
     notes: >-
+      No action mapping (human decision 2026-10-24, as for the 4d mappings): Art 14 gives TDRA
+      competence to issue rules regulating information requests, and item 5 names no addressee
+      or data type. It is a power to issue rules, not a permission to request information in
+      this incident (7m). Kept as draft context; illus.telecom.regulator-information-request
+      stays loaded.
       OCR — check against image. Quoted from the OCR'd copy, viewer page 14 (printed page 12),
       corrected against the page image of the original PDF; the OCR text runs words together and
       turns the item marker "5" into "5Requesting". Item 5 of the list governed by the Art 14
