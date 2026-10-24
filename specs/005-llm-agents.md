@@ -48,8 +48,12 @@ and the engine records a `no_decision` finding. The engine never repairs output.
 Key = sha256 of canonical JSON {role, view, prompt version, model id, schema}. One JSON file per
 key in `data/llm_cache/` (ignored): outcome, decision, tokens, cost, latency. Each step looks up
 the cache first; replays therefore reuse every decision whose view the repair did not change.
-Invalid-output outcomes are cached (replays stay identical); request errors are not. `--offline`
-uses the cache only; a miss is a `no_decision` (`not_cached`). Hits and misses are counted per run.
+Invalid-output outcomes are cached (replays stay identical); request errors are kept in
+memory for the life of the cache object (a baseline and its replays get the same outcome) but
+never written to disk. `--offline`
+uses the cache only; a miss is a `no_decision` (`not_cached`). Hits, misses and repeated
+request failures are counted per command (the baseline and any replays). A live repair search
+(CLI `repairs` / `run --repair`, UI "Find repairs") is refused until approved.
 
 ## CLI and UI
 

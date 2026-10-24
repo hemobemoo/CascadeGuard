@@ -39,6 +39,14 @@ one more call (see "Waiting on human"). Phase 4 is merged (PR #5, tag `phase-4`)
   and Markdown export and the audit summary (the CLI's scripted output gains one "Agents:" line,
   a deliberate change). MINORs: duplicate parameter names are invalid output (retry, then
   no_decision), never collapsed; an unreadable or mismatched cache file is a miss, not a crash.
+- **Review round 3 (5192248, last round), test-breaker FAIL; fixed after the round, not
+  re-reviewed, each with a test:** MAJOR, the UI's live-repair-search guard read the toggle, so
+  switching it after a live baseline still ran a live search; the guard now checks the world in
+  use (`cli.live_llm`), and the CLI refuses a live `repairs` / `run --repair` too. MINORs: a
+  cache entry whose outcome contradicts its fields, or a stored request failure, is untrusted (a
+  miss); repeated request failures are counted apart from reused steps, and the cache line says
+  it covers the baseline and replays; spec wording; tests for the agents label in `search_export`
+  and the audit summary.
 
 Verify:
 
@@ -522,6 +530,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   replay's hypothetical repair rules from T+00, so LLM agents can adapt to the repair, but those
   views get new cache keys: for the top repair 24 of 36 steps are re-asked (17 differ only by the
   rule). Alternative: hide repair rules (more reuse, agents unaware of the repair). Your choice.
+- **P5-6** (test-breaker question) Should `run --repair <id> --agents llm` replay only that
+  repair instead of the whole search? For now the CLI refuses any live repair search, like the UI.
 - **P5-4** Repair search with LLM agents: about 21 replays and about 312 uncached steps (scripted
   proxy). Run live only on explicit approval; the UI refuses a live repair search until then.
 
