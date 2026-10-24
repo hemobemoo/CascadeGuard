@@ -12,10 +12,12 @@ repair and reruns the incident.
    baseline held back under a prohibition or safeguard, or delivers to a new role a fact whose
    category a prohibition or safeguard names.
 4. Ranking is lexicographic (ADR 0001): clean repairs (no new conflict) above any repair that
-   introduces one; within each group most critical blockers removed (cause removed, not merely
-   masked), fewest edits, fewest roles touched, fewest clauses cited; then fewest new conflicts,
-   repairs not requiring authorization, and repair_id. Repairs with new conflicts are ranked
-   lower, never discarded: they are the failed repairs CascadeGuard.md section 6 records.
+   introduces one; then resolved (every critical goal met) above partial, most critical goals
+   met, most critical blockers removed (cause removed, not merely masked), fewest critical
+   blockers only masked, fewest edits, fewest roles touched, fewest clauses cited; then fewest
+   new conflicts, repairs not requiring authorization, and repair_id. Repairs with new
+   conflicts are ranked lower, never discarded: they are the failed repairs CascadeGuard.md
+   section 6 records.
 
 A repair that creates a permission with no reviewed, binding, unconditional basis is marked
 requires_authorization.
@@ -114,6 +116,12 @@ class ReplayComparison:
         critical = set(self.critical_goals)
         gone = set(self.removed)
         return sum(1 for f in self.baseline.failures if f.id in gone and critical & set(f.goals))
+
+    @property
+    def critical_blockers_masked(self) -> int:
+        critical = set(self.critical_goals)
+        hidden = set(self.masked)
+        return sum(1 for f in self.baseline.failures if f.id in hidden and critical & set(f.goals))
 
     @property
     def unmet_critical_goals(self) -> tuple[str, ...]:
@@ -498,18 +506,25 @@ def proposal(
 
 
 RANKING = (
-    "hard filter; clean repairs before repairs with new conflicts; most critical blockers "
-    "removed (masked ones do not count); fewest edits; fewest roles touched; fewest clauses "
-    "cited; fewest new conflicts; not requiring authorization; repair_id"
+    "hard filter; clean repairs before repairs with new conflicts; resolved before partial; "
+    "most critical goals met; most critical blockers removed (masked ones do not count); fewest "
+    "critical blockers only masked; fewest edits; fewest roles touched; fewest clauses cited; "
+    "fewest new conflicts; not requiring authorization; repair_id"
 )
 
 
-def rank_key(c: ReplayComparison) -> tuple[bool, int, int, int, int, int, bool, str]:
+def rank_key(
+    c: ReplayComparison,
+) -> tuple[bool, bool, int, int, int, int, int, int, int, bool, str]:
     p = c.proposal
     roles_touched = {r for e in p.edits for r in (e.role, e.counterpart) if r is not None}
+    unmet = len(c.unmet_critical_goals)
     return (
         bool(c.new_conflicts),
+        unmet > 0,  # resolved: every critical goal met in the replay
+        unmet,  # equivalently, most critical goals met
         -c.critical_blockers_removed,
+        c.critical_blockers_masked,
         len(p.edits),
         len(roles_touched),
         len(p.citations),

@@ -47,7 +47,8 @@ def test_search_and_both_replays_reproduce_the_golden(found: SearchResult) -> No
 
 
 def test_successful_repair_resolves_every_failure(found: SearchResult) -> None:
-    best = found.comparison(SUCCESS)
+    best = found.ranked[0]
+    assert best.proposal.repair_id == SUCCESS  # resolved repairs rank first (ADR 0001)
     assert best.outcome == "resolved"
     assert not best.unmet_critical_goals and not best.remaining and not best.new_conflicts
 
@@ -101,7 +102,14 @@ def test_no_replay_releases_patient_records_to_telecom(found: SearchResult) -> N
 
 def test_ranking_is_lexicographic(found: SearchResult) -> None:
     keys = [
-        (bool(c.new_conflicts), -c.critical_blockers_removed, len(c.proposal.edits))
+        (
+            bool(c.new_conflicts),
+            bool(c.unmet_critical_goals),
+            len(c.unmet_critical_goals),
+            -c.critical_blockers_removed,
+            c.critical_blockers_masked,
+            len(c.proposal.edits),
+        )
         for c in found.ranked
     ]
     assert keys == sorted(keys)

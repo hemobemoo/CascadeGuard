@@ -49,10 +49,17 @@ Ranking is lexicographic and deterministic (`CascadeGuard.md` §6; ADR
 1. Hard filter: discard any repair under which a prohibited action becomes permitted or a
    safeguard is violated. Record each discarded repair with its reason.
 2. Clean repairs (no new conflict) rank above any repair that introduces a new conflict.
-3. Within each group: most critical blockers removed, then fewest repair edits, then fewest
-   roles touched, then fewest clauses cited.
-4. Among repairs with new conflicts, fewest new conflicts breaks the remaining ties.
-5. Final tie-breaks: repairs not requiring authorization first, then `repair_id`.
+3. Resolved repairs (every critical goal met in the replay) above partial ones, then most
+   critical goals met.
+4. Most critical blockers removed at their cause.
+5. Fewest critical blockers that are only masked.
+6. Fewest repair edits.
+7. Fewest roles touched.
+8. Fewest clauses cited.
+9. Repairs not requiring authorization first.
+10. `repair_id`.
+
+Among repairs with new conflicts, fewest new conflicts breaks the ties left after step 8.
 
 A blocker counts as removed only when the repair removes its cause. A blocker that no longer
 blocks only because its goal was met another way is reported as "masked (goal met another

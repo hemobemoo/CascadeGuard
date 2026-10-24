@@ -59,14 +59,17 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
    baseline held back under a prohibition or safeguard is accepted, or if a fact whose category
    a prohibition or safeguard names reaches a role it did not reach in the baseline.
 3. **Replay** every combination of up to `MAX_EDITS = 2` safe edits.
-4. **Rank** lexicographically (human decisions 4a, 4b, 4e, 2026-10-24; ADR
+4. **Rank** lexicographically (human decisions 4a, 4b, 4e and the follow-up, 2026-10-24; ADR
    `docs/decisions/0001-repair-ranking.md`):
    1. hard filters (step 2), unchanged;
    2. clean repairs (no new conflict) above any repair that introduces a new conflict;
-   3. within each group: most critical blockers removed, fewest edits, fewest roles touched,
-      fewest clauses cited;
-   4. among repairs with new conflicts: fewest new conflicts;
-   5. then not requiring authorization, then `repair_id`.
+   3. resolved (every critical goal met in the replay) above partial, then most critical
+      goals met;
+   4. most critical blockers removed at their cause;
+   5. fewest critical blockers only masked;
+   6. fewest edits; 7. fewest roles touched; 8. fewest clauses cited;
+   9. not requiring authorization; 10. `repair_id`.
+   Among repairs with new conflicts, fewest new conflicts breaks the ties left after 8.
 
 - A *critical blocker* is a baseline failure that blocks a critical goal. It counts as
   **removed** only when the repair removes its cause: the replay is diagnosed a second time with
@@ -110,8 +113,8 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
 
 - `tests/integration/test_repairs.py` reproduces `scenarios/uae_health_access/expected_repairs.yaml`:
   the ranked search, one successful repair (owner of lock reversal + minimum status share:
-  every critical goal met, no failure blocking, two masked) and one unsuccessful repair (status share only: the information
-  deadlock clears but the lockouts stay unresolved). The baseline golden still reproduces.
+  ranked first; every critical goal met, no failure blocking, two masked) and one unsuccessful
+  repair (status share only: the information deadlock clears but the lockouts stay unresolved). The baseline golden still reproduces.
 - The patient-record share is discarded under FL 2/2019 Art 4 and Art 16, and no replay
   releases patient records to the telecom operator.
 - The search is identical across processes and hash seeds.

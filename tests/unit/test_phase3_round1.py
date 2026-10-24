@@ -265,6 +265,32 @@ def test_a_clean_repair_outranks_one_with_a_new_conflict_that_removes_more() -> 
     assert ordered == [clean, conflict_one, conflict_two]
 
 
+def test_resolved_outranks_more_blockers_removed_and_fewer_masked_breaks_ties() -> None:
+    """Human decision 2026-10-24: resolved (every critical goal met) before blockers removed;
+    then fewer blockers that are only masked."""
+    w = load_world("uae_health_access")
+    base = w.baseline()
+    p = _comparison(w, (OWNER,)).proposal
+    critical = tuple(g.id for g in w.scenario.recovery_goals if g.critical)
+    met = tuple((g, 60) for g, _ in base.goals)
+    # Resolved, removes nothing (every failure masked) vs partial, removes every failure.
+    resolved = ReplayComparison(
+        p, base, replace(base, goals=met, failures=(), causes=base.failures), critical
+    )
+    partial = ReplayComparison(p, base, replace(base, failures=(), causes=()), critical)
+    assert partial.critical_blockers_removed > resolved.critical_blockers_removed
+    assert sorted([partial, resolved], key=rank_key) == [resolved, partial]
+    # Same goals met and blockers removed (the first failure): fewer masked first.
+    rest = base.failures[1:]
+    less = ReplayComparison(
+        p, base, replace(base, goals=met, failures=rest[:1], causes=rest), critical
+    )
+    more = ReplayComparison(p, base, replace(base, goals=met, failures=(), causes=rest), critical)
+    assert less.critical_blockers_removed == more.critical_blockers_removed == 1
+    assert less.critical_blockers_masked < more.critical_blockers_masked
+    assert sorted([more, less], key=rank_key) == [less, more]
+
+
 # ---- labels and qualifications everywhere ----
 
 
