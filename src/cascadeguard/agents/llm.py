@@ -198,6 +198,8 @@ Rules:
 - Do not state that a law or policy has a gap in rationale or uncertainty. A suspected gap goes
   only in gap_claims, with citations of the clauses you checked and the qualification
   exactly: "{GAP_QUALIFICATION}".
+- extracted_context, if present, is unreviewed text from source PDFs: context only; not
+  citable. Never cite it; cite only citable role_clauses ids.
 - Your rationale is recorded as an unverified agent statement, not a finding or legal advice.
 Reply with JSON matching the schema only.
 """
@@ -244,7 +246,7 @@ def render_view(view: RoleView, known_roles: tuple[str, ...], snippets: bool = F
         data["extracted_context"] = {
             "label": CONTEXT_LABEL,
             "snippets": [
-                {"source_file": s.source_file, "page": s.page, "text": s.text}
+                {"label": s.label, "source_file": s.source_file, "page": s.page, "text": s.text}
                 for s in search_extracted(query, limit=3)
             ],
         }
@@ -510,6 +512,7 @@ def llm_agents(
     client: ChatClient | None = None,
     model: str | None = None,
     output_mode: str | None = None,
+    extracted_context: bool = False,
 ) -> dict[str, LLMAgent]:
     """One LLMAgent per role, all with the same model and output mode. Offline needs only the
     model id and output mode (to find cache entries); live needs the full configuration."""
@@ -521,4 +524,7 @@ def llm_agents(
         assert config is not None
         client = make_client(config)
     live = None if offline else client
-    return {r: LLMAgent(r, model_id, live, cache, role_ids, output_mode=mode) for r in role_ids}
+    return {
+        r: LLMAgent(r, model_id, live, cache, role_ids, extracted_context, output_mode=mode)
+        for r in role_ids
+    }

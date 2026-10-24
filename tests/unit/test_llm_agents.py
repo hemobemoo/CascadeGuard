@@ -726,3 +726,41 @@ def test_single_repair_offline_replays_only_that_repair(
     assert [c.proposal.repair_id for c in found.ranked] == [SUCCESS]
     with pytest.raises(KeyError, match="unknown repair"):
         cli.single_repair(offline, "assign.nothing")
+
+
+# --- P5-3: extracted-PDF context snippets (opt-in) ---------------------------------------------
+
+
+def test_extracted_context_snippets_are_labelled_and_never_from_the_books(scripted: World) -> None:
+    from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
+
+    assert CONTEXT_LABEL == "context only; not citable"
+    seen = 0
+    for v in scripted.baseline().views:
+        if not v.event_id:
+            continue
+        data = json.loads(build_messages(v, (), snippets=True)[1]["content"])
+        block = data["extracted_context"]
+        assert block["label"] == CONTEXT_LABEL
+        for snip in block["snippets"]:
+            seen += 1
+            assert snip["label"] == CONTEXT_LABEL
+            name = snip["source_file"].casefold()
+            assert "abhivardhan" not in name and "oxford handbook" not in name
+        assert "extracted_context" not in json.loads(build_messages(v, ())[1]["content"])
+    assert seen  # the check ran on real snippets
+
+
+def test_extracted_context_changes_the_prompt_version_and_label(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plain = LLMAgent("r", MODEL, None, DecisionCache(tmp_path), ())
+    extra = LLMAgent("r", MODEL, None, DecisionCache(tmp_path), (), extracted_context=True)
+    assert plain.prompt_version != extra.prompt_version
+    monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+    argv = ["run", SCENARIO, "--agents", "llm", "--offline", "--extracted-context"]
+    assert main([*argv, "--cache", str(tmp_path)]) == 0
+    assert "extracted-PDF context snippets (context only; not citable)" in capsys.readouterr().out

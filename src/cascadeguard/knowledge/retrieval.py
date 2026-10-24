@@ -19,7 +19,8 @@ from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.knowledge.loader import BOOK_MARKERS, EXTRACTED_DIR
 
 NOT_CITABLE_LABEL = "hypothetical repair rule (not a source clause; not citable)"
-CONTEXT_LABEL = "context only: unreviewed extracted PDF text, not a clause, not citable"
+# Human decision P5-3 (2026-10-24): this exact label on every snippet sent to an agent.
+CONTEXT_LABEL = "context only; not citable"
 
 
 @dataclass(frozen=True, slots=True)
