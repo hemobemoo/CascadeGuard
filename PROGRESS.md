@@ -4,11 +4,10 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 5 — LLM agents: real-model baseline done, stopped for the human's review** (branch
-`phase-5-llm`, not merged, not pushed; the human said not to merge and to stop after the
-baseline report). Smoke call and one capped LLM baseline ran on 2026-10-24 in `json_object`
-mode (results below). Next: the human's decisions on the baseline report (P5-4 live repair
-search, P5-6 a live single replay) and the review of the real-model run. Phase 4 is merged.
+**Phase 5 — LLM agents: v3 baseline done, stopped for the human** (branch `phase-5-llm`; not
+pushed, no PR, not merged, not tagged until the human approves). Report:
+`docs/review/phase-5-report.md`. The golden repair's live replay was not run: the dry run shows
+25 uncached steps, above the human's limit of 20. Phase 4 is merged.
 
 ## Done
 
@@ -77,6 +76,17 @@ search, P5-6 a live single replay) and the review of the real-model run. Phase 4
     that decision; policy_legal_adviser at T+75 cited 5 clauses without proposing
     provide_policy_analysis and was rejected. Telecom roles also cited FL 2/2019 Art 4, which is
     not in their list.
+- **2026-10-25 (human instructions):** baseline review written
+  (`docs/evaluation/llm-baseline-review.md`, from the export and cache only). Prompt v3: citable
+  clauses grouped by the proposed action that makes them citable, and the rules "every citation
+  must support an action proposed in this same decision" and "analysis-only citations require
+  provide_policy_analysis" (engine unchanged, still strict). Failed requests: the no_decision
+  finding carries class, HTTP status and a short redacted message. **v3 baseline** (one run,
+  cap 72, `CASCADEGUARD_OUTPUT_MODE=json_object` from `.env`): 37 requests, 36/36 steps
+  decided, 0 no_decision (v2: 5), 1 rejected citation (v2: 12; telecom_operator citing FL Art 4,
+  correctly rejected), 1 free-text gap rejection, the same 4 diagnosed failures, oversight
+  notified at T+15, cost 0.000000, 85.4k / 14.1k tokens. Export `data/llm_baseline_v3/`.
+  **Golden repair, single replay:** dry run 25 uncached replay steps, above 20: not run.
 - P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
   each labelled "context only; not citable". Off by default, because it changes every prompt
   (the cached baseline would not be reused).
@@ -625,9 +635,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 5: wait for the human after the baseline report. Then: the review round on the real-model
-run (covering the round-3 fixes first), any approved live single replay (`--live`), and the PR
-(do not merge). Set `CASCADEGUARD_OUTPUT_MODE=json_object` in `.env` (the human's step).
+Phase 5: wait for the human. Open: approve (or not) the golden repair's live replay (25+
+requests, above the limit of 20); then the review round on the real-model run (covering the
+round-3 fixes first); then, on approval, push, tag and open the PR (do not merge).
 
 Earlier (done):
 

@@ -257,6 +257,8 @@ def cache_line(world: World) -> str | None:
     if world.cache is None:
         return None
     st = world.cache.stats
+    if not (st.hits or st.misses or st.failures_repeated):  # nothing ran (e.g. a refusal)
+        return None
     line = (
         f"LLM decision cache (baseline and replays): {st.hits} steps reused, {st.misses} not cached"
     )
