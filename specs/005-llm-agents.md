@@ -83,6 +83,12 @@ can handle the requested parameters". OpenRouter's public model list shows the c
 does not support `response_format` / `structured_outputs`, so `require_parameters` leaves no
 endpoint. No tokens, no cost, no decision.
 
+One more call (2026-10-24, human's model, `json_object`): valid AgentDecision, citations
+passed the engine, 6.06 s, 2,643 / 619 tokens, cost 0. One capped LLM baseline followed
+(PROGRESS.md "Real-model runs").
+
+`--extracted-context` (opt-in, P5-3) adds keyword snippets labelled "context only; not citable".
+
 ## Questions for the human
 
 1. May keyword-search snippets from `policies/extracted/` (non-book PDFs) be sent to OpenRouter

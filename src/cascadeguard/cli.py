@@ -114,6 +114,12 @@ def build_parser() -> argparse.ArgumentParser:
             default=DEFAULT_CACHE_DIR,
             help=f"LLM decision cache directory (default {_display(DEFAULT_CACHE_DIR)})",
         )
+        cmd.add_argument(
+            "--extracted-context",
+            action="store_true",
+            help="LLM only: add keyword snippets of the non-book extracted PDFs to each prompt, "
+            "labelled 'context only; not citable' (changes the prompt: no reuse of other runs)",
+        )
     return parser
 
 
@@ -156,6 +162,7 @@ class AgentChoice:
     kind: str = SCRIPTED
     offline: bool = False
     cache_dir: Path = DEFAULT_CACHE_DIR
+    extracted_context: bool = False  # P5-3: labelled snippets of non-book extracted PDFs
 
 
 SCRIPTED_CHOICE = AgentChoice()
@@ -185,11 +192,19 @@ def load_world(
     cache = DecisionCache(choice.cache_dir)
     role_ids = tuple(r.id for r in roles.roles)
     if choice.offline:  # the model id is still needed to find its cache entries
-        llm = llm_agents(role_ids, cache, offline=True, model=LLMConfig.model_from_env())
+        llm = llm_agents(
+            role_ids,
+            cache,
+            offline=True,
+            model=LLMConfig.model_from_env(),
+            extracted_context=choice.extracted_context,
+        )
         how = "offline: decision cache only"
     else:
-        llm = llm_agents(role_ids, cache)
+        llm = llm_agents(role_ids, cache, extracted_context=choice.extracted_context)
         how = "live calls through the decision cache"
+    if choice.extracted_context:
+        how += "; extracted-PDF context snippets (context only; not citable)"
     mode = next(iter(llm.values())).output_mode
     # The model id is a .env value: it keys the cache but is never printed or exported.
     agent_label = f"LLM agents (model from CASCADEGUARD_MODEL; output mode {mode}; {how})"
@@ -443,7 +458,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command not in ("run", "repairs"):
         parser.print_help()
         return 0
-    choice = AgentChoice(args.agents, args.offline, args.cache)
+    choice = AgentChoice(args.agents, args.offline, args.cache, args.extracted_context)
     try:
         world = load_world(args.scenario, args.clauses, choice=choice)
     except LLMConfigError as exc:

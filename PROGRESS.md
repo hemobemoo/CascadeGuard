@@ -4,11 +4,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 5 — LLM agents: built, blocked on the human** (branch `phase-5-llm`, not merged; the
-human said not to merge). The scripted path is unchanged and default. The one approved live call
-was refused by OpenRouter (HTTP 404, no endpoint supports the requested parameters): the
-configured model does not support structured outputs. Waiting on a model choice and approval of
-one more call (see "Waiting on human"). Phase 4 is merged (PR #5, tag `phase-4`).
+**Phase 5 — LLM agents: real-model baseline done, stopped for the human's review** (branch
+`phase-5-llm`, not merged, not pushed; the human said not to merge and to stop after the
+baseline report). Smoke call and one capped LLM baseline ran on 2026-10-24 in `json_object`
+mode (results below). Next: the human's decisions on the baseline report (P5-4 live repair
+search, P5-6 a live single replay) and the review of the real-model run. Phase 4 is merged.
 
 ## Done
 
@@ -48,10 +48,43 @@ one more call (see "Waiting on human"). Phase 4 is merged (PR #5, tag `phase-4`)
   it covers the baseline and replays; spec wording; tests for the agents label in `search_export`
   and the audit summary.
 
+- **Real-model runs (2026-10-24, model chosen by the human, `CASCADEGUARD_OUTPUT_MODE=json_object`
+  set in the process environment because `.env` did not set it yet):**
+  - Public model list checked first: `response_format`, `reasoning`, `temperature` supported;
+    reasoning not mandatory.
+  - Smoke call (health_service_operator, T+15): 1 call, 6.06 s, 2,643 input / 619 output
+    tokens, cost 0.000000 (free model). Validated against AgentDecision; 3 citations, all
+    passed the engine; 4 actions accepted, 1 share rejected (`outside_recipient_boundary`).
+  - LLM baseline (uae_health_access, no repairs, cap 72): 47 requests sent (41 for steps
+    written to the cache + 3 steps x 2 failed attempts), cap not reached. 31 of 36 steps
+    produced a decision; 5 `no_decision` findings (3 `request_failed`, error type not kept;
+    2 `invalid_output`, policy_legal_adviser T+45 and T+60). 12 `citation_out_of_scope`
+    rejections (no unknown or draft citations); 1 `uncited_gap_claim`; 4 candidate gap claims
+    (with the fixed qualification); 11 rejected actions (`outside_recipient_boundary`,
+    `unknown_data_category`, `authority_uncertain`). About 82,900 input / 29,100 output tokens;
+    total cost 0.000000; about 8.6 minutes in API calls. Export:
+    `data/llm_baseline/uae_health_access-llm-baseline.{json,md}` (ignored).
+  - Diagnosis vs scripted: the same 4 failures (information deadlock on
+    network_incident_status, orphan duties activate_fallback_channel and
+    reverse_automated_lockouts, undefined trigger review_automated_lockouts). Goals: the same
+    two critical goals unmet; network_incident_reported met at T+30 (scripted T+45). Accepted
+    actions: 46 LLM vs 11 scripted, 5 in common (LLM agents act more, e.g. repeated monitor /
+    request_information; they never notified health-data oversight).
+  - Offline replay of the LLM baseline from the cache: identical actions, goals, failures,
+    obligations, fact releases and findings (33 steps reused, the 3 failed steps not cached).
+  - Observation for the human (no change made): retrieval gives a role the clauses it may cite
+    for its *allowed* actions, but the engine's 7n scope check uses the actions *proposed* in
+    that decision; policy_legal_adviser at T+75 cited 5 clauses without proposing
+    provide_policy_analysis and was rejected. Telecom roles also cited FL 2/2019 Art 4, which is
+    not in their list.
+- P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
+  each labelled "context only; not citable". Off by default, because it changes every prompt
+  (the cached baseline would not be reused).
+
 Verify:
 
 ```bash
-uv run cascadeguard run uae_health_access --agents llm --offline   # cache only, no call
+CASCADEGUARD_OUTPUT_MODE=json_object uv run cascadeguard run uae_health_access --agents llm --offline
 uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
 ```
 
@@ -592,9 +625,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 5: after P5-1, run `uv run python scripts/llm_smoke_test.py` once, report, estimate a full
-run, and wait for approval before any full LLM run. Then the Phase 5 review round on the Phase 5
-code and the PR (do not merge).
+Phase 5: wait for the human after the baseline report. Then: the review round on the real-model
+run (covering the round-3 fixes first), any approved live single replay (`--live`), and the PR
+(do not merge). Set `CASCADEGUARD_OUTPUT_MODE=json_object` in `.env` (the human's step).
 
 Earlier (done):
 
