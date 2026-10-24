@@ -144,3 +144,26 @@ def test_a_multiline_rationale_is_stored_labelled_on_one_line(tmp_path: Path) ->
         assert all(AGENT_STATEMENT in line for line in lines if "XYZZY" in line), where
     stored = [e.detail for e in result.log if e.kind == "decision" and "XYZZY" in e.detail]
     assert stored == [f"{AGENT_STATEMENT}ok {MARK}"]
+
+
+# ---- outside the pass scope, fixed on the human's request (2026-10-24) ----
+
+
+@pytest.mark.parametrize("word", ["conclusively", "definitely", "absolutely"])
+def test_a_gap_claim_stated_with_certainty_is_rejected(word: str) -> None:
+    result = _run("policy_legal_adviser", 45, _gap(f"UAE law {word} leaves this duty unassigned"))
+    assert not [f for f in result.findings if f.kind == "candidate_gap_claim"]
+    assert [f for f in result.findings if f.kind == "overstated_gap_claim"]
+
+
+def test_agent_output_type_is_checked_before_it_is_copied() -> None:
+    ran: list[str] = []
+
+    class Hostile:
+        def __deepcopy__(self, memo: Any) -> Any:
+            ran.append("deepcopy")
+            return self
+
+    result = _run("telecom_operator", 0, lambda d: Hostile())
+    assert not ran
+    assert [f for f in result.findings if f.kind == "malformed_decision" and f.minute == 0]

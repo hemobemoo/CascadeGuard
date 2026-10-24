@@ -33,7 +33,8 @@ GAP_CLAIM = re.compile(
 )
 # A GapClaim statement must not overstate: the qualification says "not a confirmed gap".
 OVERSTATED = re.compile(
-    r"\b(?:confirmed|definitive(?:ly)?|certain(?:ly)?|clearly|undoubtedly|proven|established)\b",
+    r"\b(?:confirmed|definitive(?:ly)?|certain(?:ly)?|clearly|undoubtedly|proven|established"
+    r"|conclusively|definitely|absolutely)\b",
     re.IGNORECASE,
 )
 AGENT_STATEMENT = "agent statement (unverified; not a finding or a legal conclusion): "
