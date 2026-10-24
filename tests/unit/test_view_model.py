@@ -2,6 +2,7 @@
 hostile agent text. The page itself is checked end to end with Playwright."""
 
 import json
+import re
 from dataclasses import replace
 from typing import Any
 
@@ -10,9 +11,15 @@ import pytest
 from cascadeguard.cli import World, load_world, search_repairs
 from cascadeguard.domain.decisions import GAP_QUALIFICATION, AgentDecision, Citation, GapClaim
 from cascadeguard.engine.constraints import AGENT_STATEMENT
-from cascadeguard.engine.repair_search import SCRIPTED_LIMIT_NOTE, SearchResult
+from cascadeguard.engine.repair_search import (
+    REMOVED_LABEL,
+    SCRIPTED_LIMIT,
+    SCRIPTED_LIMIT_NOTE,
+    SearchResult,
+)
 from cascadeguard.simulation.boundaries import RoleView
 from cascadeguard.simulation.replay import REPAIR_LABEL
+from cascadeguard.storage.export import REPAIR_NOTE, SCRIPTED_NOTE
 from cascadeguard.ui import app
 from cascadeguard.ui import view_model as vm
 
@@ -21,6 +28,10 @@ SUCCESS = (
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 MARK = "UAE law leaves this unassigned XYZZY"
+CATEGORIES = load_world("uae_health_access").roles.known_categories()
+CLAUSE = re.compile(
+    r"\b((?:dha|uae|illus|eu|nist|oecd|itu|mocai|repair)\.[\w.+-]+)(?: \[([^\]]+)\])?"
+)
 
 
 @pytest.fixture(scope="module")
@@ -73,7 +84,7 @@ def test_role_views_show_only_what_the_role_could_see(world: World) -> None:
     b = world.baseline()
     for event in world.scenario.events:
         for role in world.roles.roles:
-            v = vm.role_view(b, role.id, event.at_minute)
+            v = vm.role_view(b, role.id, event.at_minute, CATEGORIES)
             assert set(v.inside).isdisjoint(v.outside)
             assert set(v.inside) == set(role.boundary.visible_categories)
             for fact in v.facts:
@@ -88,7 +99,7 @@ def test_role_views_show_only_what_the_role_could_see(world: World) -> None:
 def test_telecom_never_sees_patient_records(world: World) -> None:
     b = world.baseline()
     for event in world.scenario.events:
-        v = vm.role_view(b, "telecom_operator", event.at_minute)
+        v = vm.role_view(b, "telecom_operator", event.at_minute, CATEGORIES)
         assert "patient_account_records" in v.outside
         assert not any("patient_account_records" in f for f in v.facts)
 
@@ -181,7 +192,7 @@ def test_hostile_agent_text_appears_only_labelled(world: World) -> None:
 
     b = replace(world, agents={**world.agents, "policy_legal_adviser": Adviser()}).baseline()  # type: ignore[dict-item]
     shown = [
-        *vm.role_view(b, "policy_legal_adviser", 45).agent_statements,
+        *vm.role_view(b, "policy_legal_adviser", 45, CATEGORIES).agent_statements,
         *vm.findings(b),
         *(line for row in vm.timeline(b, world.scenario) for line in row.lines),
     ]
@@ -196,3 +207,81 @@ def test_port_defaults_to_8765_and_can_be_overridden(monkeypatch: pytest.MonkeyP
     assert app.port() == 8765
     monkeypatch.setenv(app.PORT_VARIABLE, "9123")
     assert app.port() == 9123
+
+
+# ---- Phase 4 review round 3: one test per display path ----
+
+
+def _assert_labelled(texts: list[str], labels: dict[str, str]) -> int:
+    """Every clause id in the texts carries its loaded status label (or "not loaded")."""
+    seen = 0
+    for text in texts:
+        for cid, label in CLAUSE.findall(text):
+            if cid.startswith("repair."):
+                continue
+            assert label == labels.get(cid, "not loaded"), (cid, text)
+            seen += 1
+    return seen
+
+
+def test_timeline_failures_and_role_view_clauses_carry_status_labels(world: World) -> None:
+    b = world.baseline()
+    labels = dict(b.loaded_clauses)
+    timeline = [line for row in vm.timeline(b, world.scenario) for line in row.lines]
+    assert _assert_labelled(timeline, labels)
+    failure_clauses = [f.clauses for f in vm.failures(b)]
+    assert _assert_labelled(failure_clauses, labels)
+    shown = [
+        c
+        for e in world.scenario.events
+        for r in world.roles.roles
+        for c in vm.role_view(b, r.id, e.at_minute, CATEGORIES).clauses
+    ]
+    assert _assert_labelled(shown, labels)
+
+
+def test_failure_rows_keep_the_engine_qualification(world: World) -> None:
+    b = world.baseline()
+    rows = vm.failures(b)
+    assert [r.qualification for r in rows] == [f.qualification for f in b.failures]
+    assert all(r.qualification for r in rows)
+
+
+def test_comparison_labels_targets_removed_tags_and_notes(found: SearchResult) -> None:
+    success = vm.comparison(found.comparison(SUCCESS))
+    assert success.notes == (REPAIR_NOTE, SCRIPTED_NOTE)
+    assert success.removed and all(r.endswith(f": {REMOVED_LABEL}") for r in success.removed)
+    tagged = next(c for c in found.ranked if c.conflict_tags())
+    v = vm.comparison(tagged)
+    new = [r for r in v.replay_failures if "NEW conflict" in r]
+    assert new and all(f"[{SCRIPTED_LIMIT}: {SCRIPTED_LIMIT_NOTE}]" in r for r in new)
+    labels = dict(tagged.replay.loaded_clauses)
+    if tagged.proposal.citations:
+        assert _assert_labelled([v.targets], labels)
+    for c in found.ranked:  # every target list is labelled
+        _assert_labelled([vm.comparison(c).targets], dict(c.replay.loaded_clauses))
+
+
+def test_role_view_shows_only_its_own_role_and_the_whole_view(world: World) -> None:
+    def marked(role: str) -> Any:
+        agent = world.agents[role]
+
+        class Agent:
+            def observe(self, view: RoleView) -> AgentDecision:
+                return agent.observe(view).model_copy(update={"rationale": f"MARK-{role}"})
+
+        return Agent()
+
+    b = replace(world, agents={r: marked(r) for r in world.agents}).baseline()  # type: ignore[arg-type]
+    for event in world.scenario.events:
+        for role in world.roles.roles:
+            v = vm.role_view(b, role.id, event.at_minute, CATEGORIES)
+            for s in v.agent_statements:
+                assert s == f"{AGENT_STATEMENT}MARK-{role.id}"
+            received = next(
+                x for x in b.views if x.role_id == role.id and x.minute == event.at_minute
+            )
+            assert v.instructions == received.instructions
+            assert v.allowed_actions == received.allowed_actions
+            assert v.at == received.at.isoformat()
+            assert set(v.outside) == set(CATEGORIES) - set(v.inside)

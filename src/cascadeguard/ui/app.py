@@ -108,13 +108,17 @@ def index() -> None:
                     label="Inject",
                     on_change=lambda e: pick_minute(int(e.value)),
                 ).classes("w-40")
-            v = vm.role_view(b, s.role or roles[0], s.minute)
+            v = vm.role_view(b, s.role or roles[0], s.minute, w.roles.known_categories())
             ui.label(
                 v.title if v.recipient else f"{v.title} (not a recipient of this inject)"
             ).classes("font-medium")
+            ui.label(f"Simulation time: {v.at}").classes("text-sm text-gray-600")
             if v.description:
                 ui.label(v.description)
+            ui.label("Role instructions").classes("font-semibold mt-2")
+            ui.label(v.instructions).classes("text-sm")
             for title, items in (
+                ("Allowed actions", v.allowed_actions),
                 ("Decision points", v.decision_points),
                 ("Facts known (inside its boundary)", v.facts),
                 ("Clauses shown with this inject", v.clauses),

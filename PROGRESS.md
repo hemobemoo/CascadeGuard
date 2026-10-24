@@ -4,13 +4,12 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 4 — Demo UI (branch `phase-4-ui`): built, review loop running.** The human approved
-`specs/004-demo-ui.md` on 2026-10-24 (no pytest-asyncio: view-model tests plus a Playwright run
-for the page; exports as browser downloads only) and the CascadeGuard.md section 6 wording
-(fbc51e1). The full flow works in the browser with scripted agents (Playwright MCP run,
-screenshots in `docs/review/phase-4-screens/`). Review round 2: evidence-auditor PASS,
-test-breaker FAIL (no BLOCKER; one MAJOR, see "Waiting on human"), phase-auditor PASS.
-Do not merge before the human has seen the screenshots.
+**Phase 4 — Demo UI (branch `phase-4-ui`): built, review loop finished (3 rounds), PR open,
+not merged; waiting for the human** to look at the screenshots and decide. The full flow works
+in the browser with scripted agents (Playwright MCP run; the phase-auditor also ran it in
+headless Edge). Final verdicts: evidence-auditor PASS (round 2), phase-auditor PASS (round 2),
+test-breaker FAIL (round 3: no broken guarantee; two MAJORs about missing proof). The round-3
+fixes are mutation-checked but not re-reviewed (round limit); see "Waiting on human".
 
 ## Done
 
@@ -410,6 +409,17 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   127.0.0.1 only; the baseline runs off the event loop. QUESTION-FOR-HUMAN items: confirm the
   CascadeGuard.md section 6 approval in the PR, and approve or drop `.claude/launch.json`.
 
+- **Phase 4 review round 3 (2026-10-24, last round), test-breaker: FAIL.** No probe broke a
+  guarantee (hostile text, view mutation, `_copy`, determinism across hash seeds, replay
+  identity all held). MAJOR 1: the view-model tests missed 9 of 12 label mutations. Fixed after
+  the round, not re-reviewed: one test per display path (status labels on timeline, failure
+  rows, role-view clauses and comparison targets; engine qualifications; removed label;
+  `scripted_agent_limit` tag and explanation; replay notes; a role view shows only its own
+  role's statements); all 9 mutants now fail the tests. MAJOR 2: no repeatable browser test
+  (still human gate 0). MINORs fixed: role view filters unlabelled agent text instead of a bare
+  `assert`; "outside its boundary" uses every scenario category; the role view also shows
+  instructions, allowed actions and simulation time (the whole `RoleView`).
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -450,7 +460,10 @@ Answered on 2026-10-24: items 3-7 of the Phase 3 list, the spec 004 questions an
 CascadeGuard.md section 6 question (see Decisions). Re-approval needed
 (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open:
 
-0. **Phase 4 MAJOR (test-breaker round 2), human gate:** no automated test drives the page in a
+0a. **Phase 4 round-3 fixes not re-reviewed (review loop exhausted):** the new display-path
+   tests and the role-view changes after test-breaker round 3 are mutation-checked (9 of 9
+   mutants killed) but no reviewer has seen them. Accept, or ask for another round.
+0. **Phase 4 MAJOR (test-breaker rounds 2 and 3), human gate:** no automated test drives the page in a
    browser; the flow is proven by the Playwright MCP run and its screenshots, as the human
    decided. A repeatable test would need the Python `playwright` package (listed in AGENTS.md as
    "Playwright (later)") as a dev dependency plus a browser download in CI. Add it now, or
@@ -485,5 +498,6 @@ CascadeGuard.md section 6 question (see Decisions). Re-approval needed
 
 ## Next step
 
-1. Finish the Phase 4 review loop (round 3 for the reviewers that failed), push, open the PR.
-2. Human: look at the screenshots in the PR, answer "Waiting on human" item 0, decide on merge.
+1. Human: look at the screenshots in the Phase 4 PR; answer "Waiting on human" 0, 0a and the
+   other Phase 4 questions; decide whether the PR merges. Auto-merge does not apply.
+2. After merge: tag `phase-4`, update this file, stop and report before Phase 5.
