@@ -5,9 +5,10 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 ## Current phase
 
 **Phase 4 — Demo UI (branch `phase-4-ui`): spec written, skeleton only, waiting for the human
-to approve `specs/004-demo-ui.md`** before building further. The first Phase 4 test-breaker
-round (covering 5747e23, f6ea214, 4f56dbe, merged in Phase 3 without review) is running.
-Phase 3 is merged (PR #4, merge commit 5cf4b1a, tag `phase-3`).
+to approve `specs/004-demo-ui.md`** before building further. Review round 1 (test-breaker, on
+5747e23, f6ea214, 4f56dbe) returned FAIL; its BLOCKER and three MINORs are fixed with tests
+(not re-reviewed yet; round 2 will check them). Phase 3 is merged (PR #4, 5cf4b1a, tag
+`phase-3`).
 
 ## Done
 
@@ -352,6 +353,18 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
   typed parameters.
 
+- **Phase 4 review round 1 (2026-10-24), test-breaker on 5747e23, f6ea214, 4f56dbe: FAIL.**
+  BLOCKER: a cited clause id outside the corpus (decision or GapClaim citation) was stored and
+  printed verbatim, so invented text and a forged CLI line reached every output. Fixed: such
+  ids are shown as `<not a scenario id; agent text withheld>` everywhere (the existing test for
+  unknown citations now expects that placeholder instead of the invented id, a deliberate rule
+  change). MINORs fixed: `agent_statement` replaces control and format characters (terminal
+  escapes, zero-width and bidi marks); the orchestrator rebuilds each decision from JSON
+  instead of deep-copying, so a foreign object inside a `model_construct` decision runs no
+  code; a test pins "not requiring authorization" after clauses cited. MINOR not fixed (human
+  decision: no further words): OVERSTATED is a word list and is bypassed by homoglyphs or
+  synonyms; the label and fixed qualification remain the safeguard.
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -392,6 +405,12 @@ Answered on 2026-10-24: items 3-7 of the previous list (see Decisions). Re-appro
 (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, all on the
 human's side, none blocking:
 
+0. **Phase 4 (blocking further UI work):** approve `specs/004-demo-ui.md` and answer its two
+   questions (pytest-asyncio for UI tests; downloads only or also `data/exports/`).
+   QUESTION-FOR-HUMAN from review round 1 (gate 6): CascadeGuard.md section 6 still says
+   "remove critical blockers second", while the approved ranking puts "resolved / critical
+   goals met" before blockers removed. Amend section 6, or add a note there pointing to
+   ADR 0001?
 1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
    from 4.18.4, outside its quote (the two clauses stay separate).
 2. **Sources missing from `policies/sources/`** (optional).

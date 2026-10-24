@@ -5,7 +5,6 @@ At each inject every role decides on the same snapshot (views are built before a
 applied), then the engine processes the decisions in roles.yaml order. Same inputs, same run.
 """
 
-import copy
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -105,13 +104,21 @@ class RunResult:
         }
 
 
+class _Unreadable:
+    """Stands in for agent output that cannot be rebuilt as plain data; the engine rejects it as
+    a malformed decision."""
+
+
 def _copy(returned: object) -> object:
-    """Copy an agent's decision. The type is checked first, so no code of another type (e.g. a
-    custom __deepcopy__) runs; anything else goes to the engine uncopied and is rejected there
-    as a malformed decision."""
+    """Copy an agent's decision by rebuilding it from JSON: the type is checked first, and a
+    field holding a foreign object fails serialisation instead of running that object's code
+    (no __deepcopy__); anything else reaches the engine as _Unreadable."""
     if type(returned) is not AgentDecision:
-        return returned
-    return copy.deepcopy(returned)
+        return _Unreadable()
+    try:
+        return AgentDecision.model_validate_json(returned.model_dump_json())
+    except Exception:  # any failure means the output is not a plain AgentDecision
+        return _Unreadable()
 
 
 def run(
