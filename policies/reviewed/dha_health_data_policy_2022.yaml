@@ -142,5 +142,7 @@ clauses:
       Binding status: see dha.pp11.applicability. The text names "both the UAE Information Office
       and DHA"; only DHA (health_data_oversight) is modelled. The UAE Information Office is out of
       scope for this slice (human decision h2, 2026-10-23). The quote stops before
-      "(HISH@dha.gov.ae).", a contact address; no qualifier is lost. Whether to quote 4.18.4 and
-      4.18.5 as one clause is open (PROGRESS 3p).
+      "(HISH@dha.gov.ae).", a contact address; no qualifier is lost. The actor is not in this
+      quote: it comes from 4.18.4 ("The Entity is required to report breaches/incidents",
+      dha.pp11.4-18-4). The two clauses stay separate (human decision 3p, 2026-10-24); the
+      actor's source is part of this clause's review.

@@ -4,12 +4,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 3 — Repair and replay: PR #4 open, not merged, waiting for the human.** The human's
-2026-10-24 answers (items 3-5) are applied. The final test-breaker pass they asked for (scope:
-a4b5c82 and every place agent free text is stored, exported or printed) returned **FAIL with a
-BLOCKER** (a free-text `target` on any action was stored and printed unlabelled). Per the
-human's instruction it was fixed with tests and the PR was **not merged**; no further review
-round was run. CI (GitHub Actions) passed on 99a5b72; the fix commit is checked locally.
+**Phase 3 — Repair and replay: complete pending the merge of PR #4** (the human approved the
+merge on 2026-10-24 once local checks and CI pass; no further review round). **Not
+re-reviewed:** commit 5747e23 (fixes from the final test-breaker pass) and the follow-up fixes
+in this PR (ranking keys, certainty words, type check before copying agent output). **The
+Phase 4 test-breaker round must cover them first.**
 
 ## Done
 
@@ -332,6 +331,23 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   (10 tests) fails on the old code and passes now. Not fixed (not in the human's scope, see
   "Waiting on human" 6): the OVERSTATED wording list, and `copy.deepcopy` running on agent
   output before the type check.
+- **Human decisions, 2026-10-24 (follow-up to the final pass):**
+  - **Ranking, two keys added** (ADR 0001, AGENTS.md, spec 003): hard filters; clean before
+    new conflict; resolved (every critical goal met in the replay) before partial, then most
+    critical goals met; most critical blockers removed at their cause; fewest critical
+    blockers only masked; fewest edits; fewest roles; fewest clauses cited; not requiring
+    authorization; `repair_id`. Among repairs with a new conflict, fewest new conflicts still
+    breaks the ties left after clauses cited. Why resolved outranks blockers removed: the aim
+    is a feasible recovery path, and masked blockers stay visible as findings.
+    `expected_repairs.yaml` regenerated; owner + share is rank 1 again.
+  - **3p: not applied.** The two clauses stay separate; the draft `dha.pp11.4-18-5` notes that
+    its actor comes from 4.18.4. 3p is now part of the human's clause review.
+  - **3a:** the reviewed Art 4 clause is not edited.
+  - **Outside the pass scope, fixed with a test each:** OVERSTATED now also catches
+    "conclusively", "definitely", "absolutely" (no further words: the label and the fixed
+    qualification are the real safeguard); the orchestrator checks the type of agent output
+    before deep-copying it (anything else goes to the engine uncopied and is rejected as
+    malformed).
 - **`RepairProposal` shape (Phase 3 decision).** `operation`/`applies_to`/`parameters` became
   `edits: tuple[RepairEdit, ...]`, because the ranking counts repair edits and a repair can need
   two (CascadeGuard.md section 6, "Repair 2"). Each edit keeps one closed operation type with
@@ -373,29 +389,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-Answered on 2026-10-24: items 3 (except 3b, 3i), 4a-4e and 5 (see Decisions). Re-approval
-needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open:
+Answered on 2026-10-24: items 3-7 of the previous list (see Decisions). Re-approval needed
+(gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, all on the
+human's side, none blocking:
 
-1. **Clause review** of the remaining drafts (the human's side; no action needed).
-2. **Sources missing from `policies/sources/`** (the human's side; no action needed).
+1. **Clause review** of the remaining drafts, including 3p: `dha.pp11.4-18-5` takes its actor
+   from 4.18.4, outside its quote (the two clauses stay separate).
+2. **Sources missing from `policies/sources/`** (optional).
 3. **3b:** the human checks the Arabic text of FL 2/2019 ("Health Authority").
-   **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing; see
-   Decisions).
-4. **3p not applied (conflict, gate 8).** Merging `dha.pp11.4-18-4` and `4-18-5` edits the
-   reviewed clause 4-18-4, which the gate-1 rule sends back to draft. The engine then no longer
-   loads it: the T+45 health-operator decision cites it, so that whole decision is rejected
-   (`draft_citation`), `review_automated_lockouts` and the notification are never proposed, and
-   the baseline, the diagnosis and the repair search all change until the human re-approves.
-   Merge now and accept that, or merge and re-approve in the same step?
-5. **Ranking consequence (ADR 0001).** With blockers counted by cause, six two-edit repairs
-   tie at 2 removed; roles touched then puts owner + trigger (partial, one role) first and the
-   resolved owner + share fourth. Keep, or add a key (e.g. unmet critical goals) before roles
-   touched? Also: "not requiring authorization" was placed after the human's keys.
-6. **From the final test-breaker pass, outside the agreed scope:** widen the OVERSTATED list
-   ("conclusively", "definitely", "absolutely" pass today), and `copy.deepcopy` runs on agent
-   output before the type check (a custom `__deepcopy__` would run first). Fix, or leave?
-7. **Merge PR #4?** Not merged because the final pass found a BLOCKER (the human's rule). The
-   fix commit has not been reviewed.
+   **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing).
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -415,6 +417,7 @@ needed (gate 1): none (`policies/approvals.yaml`, `reapproval_needed: []`). Stil
 
 ## Next step
 
-1. Human: read the PR #4 report; answer "Waiting on human" 4-7; decide whether PR #4 merges.
-2. After merge: tag `phase-3`, update this file, stop and report before Phase 4
-   (`specs/004-demo-ui.md` holds the requirements fixed so far).
+1. Merge PR #4, tag `phase-3`, record it here.
+2. Stop and report to the human before Phase 4. Phase 4's first test-breaker round covers
+   5747e23 and the follow-up fixes (not re-reviewed). Requirements so far:
+   `specs/004-demo-ui.md`.

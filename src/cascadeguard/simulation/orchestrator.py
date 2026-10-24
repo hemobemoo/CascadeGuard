@@ -12,6 +12,7 @@ from typing import Any
 
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.scripted import ScriptedAgent
+from cascadeguard.domain.decisions import AgentDecision
 from cascadeguard.domain.findings import CoordinationFailure, Finding, LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
@@ -104,6 +105,15 @@ class RunResult:
         }
 
 
+def _copy(returned: object) -> object:
+    """Copy an agent's decision. The type is checked first, so no code of another type (e.g. a
+    custom __deepcopy__) runs; anything else goes to the engine uncopied and is rejected there
+    as a malformed decision."""
+    if type(returned) is not AgentDecision:
+        return returned
+    return copy.deepcopy(returned)
+
+
 def run(
     scenario: Scenario,
     roles: RoleSet,
@@ -120,7 +130,7 @@ def run(
         views = {r.id: view_for(state, r.id, event, loaded) for r in roles.roles}
         # Each decision is copied as soon as it is returned, so a later agent in the same
         # step cannot alter an earlier one before the engine processes it.
-        decisions = [(r.id, copy.deepcopy(agents[r.id].observe(views[r.id]))) for r in roles.roles]
+        decisions = [(r.id, _copy(agents[r.id].observe(views[r.id]))) for r in roles.roles]
         for role_id, decision in decisions:
             engine.process(decision, expected_role=role_id)
     engine.close(scenario.events[-1].at_minute)
