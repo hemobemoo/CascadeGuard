@@ -17,6 +17,7 @@ from cascadeguard.engine.repair_search import (
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
+    outcome_definition,
 )
 from cascadeguard.simulation.orchestrator import RunResult
 
@@ -94,6 +95,12 @@ def run_export(result: RunResult) -> dict[str, Any]:
 def search_export(result: SearchResult) -> dict[str, Any]:
     labels = dict(result.loaded_clauses)
     data = _label_clause_fields(result.summary(), labels)
+    by_id = {c.proposal.repair_id: c for c in result.ranked}
+    for row in data["ranked"]:
+        c = by_id[row["repair"]]
+        row["outcome_definition"] = outcome_definition(c.outcome)
+        if c.masked:
+            row["masked_note"] = f"{len(c.masked)} masked failures: cause still present"
     return {"clause_set": result.clause_set, "agents": result.agents, "note": REPAIR_NOTE, **data}
 
 
@@ -104,9 +111,19 @@ def comparison_export(c: ReplayComparison) -> dict[str, Any]:
     for key in ("failures_removed", "failures_masked", "failures_remaining", "new_conflicts"):
         data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
     data["targets_clauses"] = _labelled((x.clause_id for x in c.proposal.citations), labels)
-    data["note"] = f"{REPAIR_NOTE} {SCRIPTED_NOTE}"
+    data["outcome_definition"] = outcome_definition(c.outcome)
+    if c.masked:
+        data["masked_note"] = f"{len(c.masked)} masked failures: cause still present"
+    data["note"] = " ".join(comparison_notes(c))
     data["agents"] = c.replay.agents
     return data
+
+
+def comparison_notes(c: ReplayComparison) -> tuple[str, ...]:
+    """The repair note always; the scripted-agents note only when both runs were scripted."""
+    if c.baseline.scripted and c.replay.scripted:
+        return (REPAIR_NOTE, SCRIPTED_NOTE)
+    return (REPAIR_NOTE,)
 
 
 def comparison_markdown(c: ReplayComparison) -> str:
@@ -133,7 +150,8 @@ def comparison_markdown(c: ReplayComparison) -> str:
             if c.failed_steps
             else []
         ),
-        f"- Outcome: **{c.outcome}**",
+        f"- Outcome: **{c.outcome}** ({outcome_definition(c.outcome)})"
+        + (f"; {len(c.masked)} masked failures: cause still present" if c.masked else ""),
         "- Requires authorization: "
         + (
             "**yes**: creates a permission with no reviewed, binding basis; needs human and "
@@ -179,7 +197,7 @@ def comparison_markdown(c: ReplayComparison) -> str:
         )
     if not s["changed_actions"]:
         lines.append("none")
-    lines += ["", f"_{SCRIPTED_NOTE}_", ""]
+    lines += ["", *(f"_{note}_" for note in comparison_notes(c)[1:]), ""]
     return "\n".join(lines)
 
 

@@ -46,8 +46,33 @@ from cascadeguard.simulation.replay import REPAIR_PREFIX
 MAX_EDITS = 2
 SCRIPTED_LIMIT = "scripted_agent_limit"
 INCONCLUSIVE = "inconclusive: {n} steps failed for infrastructure reasons"
+# How an inconclusive replay is listed in a search: after the ranked ones, unranked, no counts.
+INCONCLUSIVE_LISTED = "inconclusive: {n} steps missing; not comparable"
+# Shown next to every outcome (human decision 2026-10-26), so "resolved" never reads as "every
+# failure fixed".
+OUTCOME_DEFINITIONS = {
+    "resolved": "all critical goals met; masked failures may remain",
+    "partial": "at least one failure removed at its cause; critical goals still unmet",
+    "no effect": "no failure removed; critical goals still unmet",
+    "introduces new conflict": "the replay shows a failure the baseline did not have",
+    "inconclusive": "steps had no decision for infrastructure reasons; not comparable",
+}
+
+
+def outcome_definition(outcome: str) -> str:
+    return OUTCOME_DEFINITIONS[outcome.split(":", 1)[0]]
+
+
+def outcome_text(c: "ReplayComparison") -> str:
+    """The outcome with its definition and, if any, the masked count: for text outputs."""
+    text = f"{c.outcome} ({outcome_definition(c.outcome)})"
+    if c.masked:
+        text += f"; {len(c.masked)} masked failures: cause still present"
+    return text
+
+
 # Labels shown wherever a comparison is printed (CLI, exports, UI).
-MASKED_LABEL = "masked (goal met another way)"
+MASKED_LABEL = "masked (goal met another way; cause still present)"
 REMOVED_LABEL = "removed (cause gone)"
 REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
 SCRIPTED_LIMIT_NOTE = (
@@ -156,8 +181,15 @@ class ReplayComparison:
         """Actions whose verdict differs between baseline and replay (same minute, role, action)."""
 
         def verdicts(result: RunResult) -> dict[tuple[int, str, str, str], str]:
+            # Display only: a target that is the acting role itself is shown as no target, so
+            # the same action is not listed twice (the recorded decisions are unchanged).
             return {
-                (e.minute, e.role or "", e.action, e.target or ""): e.kind
+                (
+                    e.minute,
+                    e.role or "",
+                    e.action,
+                    "" if e.target == e.role else e.target or "",
+                ): e.kind
                 for e in result.log
                 if e.kind in ("accepted", "rejected") and e.action is not None
             }
@@ -225,12 +257,15 @@ class Discarded:
 class SearchResult:
     clause_set: str  # the baseline's clause-set label, shown with every result
     loaded_clauses: tuple[tuple[str, str], ...]  # the baseline's (clause id, status label)
-    ranked: tuple[ReplayComparison, ...]
+    ranked: tuple[ReplayComparison, ...]  # complete replays only, in ranking order
     discarded: tuple[Discarded, ...]
     agents: str = "scripted agents (scripted_decisions.yaml)"  # the baseline's agents label
+    # Replays with steps missing for infrastructure reasons: listed after the ranked ones,
+    # unranked and not comparable (human decision 2026-10-26).
+    inconclusive: tuple[ReplayComparison, ...] = ()
 
     def comparison(self, repair_id: str) -> ReplayComparison:
-        for c in self.ranked:
+        for c in (*self.ranked, *self.inconclusive):
             if c.proposal.repair_id == repair_id:
                 return c
         dropped = [d for d in self.discarded if d.repair_id == repair_id]
@@ -257,6 +292,21 @@ class SearchResult:
                 }
                 for i, c in enumerate(self.ranked)
             ],
+            **(
+                {
+                    "inconclusive": [
+                        {
+                            "repair": c.proposal.repair_id,
+                            "edits": len(c.proposal.edits),
+                            "requires_authorization": c.proposal.requires_authorization,
+                            "status": INCONCLUSIVE_LISTED.format(n=len(c.failed_steps)),
+                        }
+                        for c in self.inconclusive
+                    ]
+                }
+                if self.inconclusive
+                else {}
+            ),
             "discarded": [
                 {"repair": d.repair_id, "reason": d.reason, "clauses": list(d.clause_ids)}
                 for d in self.discarded
@@ -608,12 +658,14 @@ def _judge(
             dropped.append(Discarded(p.repair_id, "the replay got around a restriction", lifted))
         else:
             compared.append(comparison)
+    complete = [c for c in compared if not c.failed_steps]
     return SearchResult(
         baseline.clause_set,
         baseline.loaded_clauses,
-        tuple(sorted(compared, key=rank_key)),
+        tuple(sorted(complete, key=rank_key)),  # an inconclusive replay is never ranked
         tuple(dropped),
         baseline.agents,
+        tuple(c for c in compared if c.failed_steps),
     )
 
 

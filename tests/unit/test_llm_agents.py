@@ -723,7 +723,9 @@ def test_single_repair_offline_replays_only_that_repair(
     llm_world(scripted, filler, DecisionCache(tmp_path)).baseline()
     offline = llm_world(scripted, None, DecisionCache(tmp_path))
     found = cli.single_repair(offline, SUCCESS)
-    assert [c.proposal.repair_id for c in found.ranked] == [SUCCESS]
+    # Only the baseline is cached: the replay has missing steps, so it is listed, not ranked.
+    assert not found.ranked
+    assert [c.proposal.repair_id for c in found.inconclusive] == [SUCCESS]
     with pytest.raises(KeyError, match="unknown repair"):
         cli.single_repair(offline, "assign.nothing")
 
@@ -957,3 +959,118 @@ def test_complete_runs_keep_their_verdict(scripted: World) -> None:
     c = search_repairs(SCENARIO).comparison(SUCCESS)
     assert c.outcome == "resolved" and not c.failed_steps
     assert "failed_steps" not in c.summary()
+
+
+# --- Display, ranking and exports (human decision 2026-10-26) --------------------------------
+
+OWNER_RULE = "repair.owner.reverse_automated_lockouts.health_service_operator"
+SHARE_RULE = "repair.share.network_incident_status.telecom_operator.health_service_operator"
+
+
+def _search_with_golden_inconclusive(scripted: World, tmp_path: Path) -> Any:
+    """LLM search where only the golden replay loses one late step to a request failure."""
+    base = scripted_replies(scripted)
+
+    def reply(request: dict[str, Any]) -> str | Exception:
+        v, text = view_of(request), request["messages"][1]["content"]
+        golden = OWNER_RULE in text and SHARE_RULE in text
+        if golden and (v["role_id"], v["minute"]) == ("policy_legal_adviser", 75):
+            return ConnectionError("down")
+        return base(request)
+
+    return search_repairs(
+        SCENARIO, world=llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path))
+    )
+
+
+def test_an_inconclusive_replay_never_ranks_above_a_complete_one(
+    scripted: World, tmp_path: Path
+) -> None:
+    from cascadeguard.cli import format_search
+    from cascadeguard.engine.repair_search import rank_key
+    from cascadeguard.storage.export import search_export
+    from cascadeguard.ui import view_model as vm
+
+    found = _search_with_golden_inconclusive(scripted, tmp_path)
+    golden = found.comparison(SUCCESS)
+    assert golden.failed_steps and golden in found.inconclusive
+    # By the old order it would have ranked first; now it is not ranked at all.
+    assert rank_key(golden) < rank_key(found.ranked[0])
+    assert all(not c.failed_steps for c in found.ranked)
+    assert SUCCESS not in [c.proposal.repair_id for c in found.ranked]
+    label = "inconclusive: 1 steps missing; not comparable"
+    text = format_search(found)
+    tail = text.split("Inconclusive (unranked; not comparable")[1].split("Discarded")[0]
+    assert f"- {SUCCESS}: {label}" in tail and "critical blockers" not in tail
+    assert text.index("Inconclusive (unranked") > text.index(
+        f"1. {found.ranked[0].proposal.repair_id}"
+    )
+    (row,) = search_export(found)["inconclusive"]
+    assert row["status"] == label and "critical_blockers_removed" not in row
+    assert "unmet_critical_goals" not in row
+    assert vm.inconclusive(found) == [(SUCCESS, label)]
+    assert SUCCESS not in [r.repair_id for r in vm.repairs(found)]
+
+
+def test_scripted_note_only_when_both_runs_were_scripted(scripted: World, tmp_path: Path) -> None:
+    from cascadeguard.storage.export import (
+        SCRIPTED_NOTE,
+        comparison_export,
+        comparison_markdown,
+    )
+    from cascadeguard.ui import view_model as vm
+
+    sc = search_repairs(SCENARIO).comparison(SUCCESS)
+    assert SCRIPTED_NOTE in vm.comparison(sc).notes
+    assert SCRIPTED_NOTE in comparison_export(sc)["note"]
+    assert SCRIPTED_NOTE in comparison_markdown(sc)
+    w = llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path))
+    lc = search_repairs(SCENARIO, world=w).comparison(SUCCESS)
+    assert not lc.replay.scripted and not lc.failed_steps
+    assert SCRIPTED_NOTE not in vm.comparison(lc).notes
+    assert SCRIPTED_NOTE not in comparison_export(lc)["note"]
+    assert SCRIPTED_NOTE not in comparison_markdown(lc)
+
+
+def test_outcomes_carry_their_definition_and_masked_count() -> None:
+    from cascadeguard.cli import format_search
+    from cascadeguard.storage.export import comparison_export, comparison_markdown, search_export
+    from cascadeguard.ui import view_model as vm
+
+    found = search_repairs(SCENARIO)
+    c = found.comparison(SUCCESS)
+    assert c.outcome == "resolved" and len(c.masked) == 2
+    definition = "all critical goals met; masked failures may remain"
+    text = f"resolved ({definition}); 2 masked failures: cause still present"
+    assert text in format_search(found)
+    assert f"- Outcome: **resolved** ({definition}); 2 masked failures" in comparison_markdown(c)
+    data = comparison_export(c)
+    assert data["outcome_definition"] == definition
+    assert data["masked_note"] == "2 masked failures: cause still present"
+    assert search_export(found)["ranked"][0]["outcome_definition"] == definition
+    assert vm.comparison(c).outcome == text
+    assert vm.repairs(found)[0].outcome == text
+    assert vm.MASKED == "masked (goal met another way; cause still present)"
+    for row in search_export(found)["ranked"]:
+        assert row["outcome_definition"]  # every outcome is defined
+
+
+def test_incomplete_banner_and_self_target_display(scripted: World, tmp_path: Path) -> None:
+    from cascadeguard.engine.repair_search import ReplayComparison
+    from cascadeguard.ui import view_model as vm
+
+    failing = llm_world(
+        scripted, FakeClient(lambda _: ConnectionError("x")), DecisionCache(tmp_path)
+    ).baseline()
+    assert vm.incomplete_banner(failing.failed_steps).startswith(
+        "Incomplete run: 36 steps had no decision: T+00 health_service_operator (request_failed)"
+    )
+    assert vm.incomplete_banner(scripted.baseline().failed_steps) == ""
+    # A self-targeted action and the same action without a target are one row, not two.
+    b = scripted.baseline()
+    entry = next(e for e in b.log if e.kind == "accepted" and e.target is None and e.role)
+    moved = tuple(e.model_copy(update={"target": e.role}) if e is entry else e for e in b.log)
+    c = search_repairs(SCENARIO).comparison(SUCCESS)
+    same = ReplayComparison(c.proposal, b, replace(b, log=moved), c.critical_goals)
+    assert same.changed_actions() == []
+    assert [e.target for e in moved if e.seq == entry.seq] == [entry.role]  # data unchanged

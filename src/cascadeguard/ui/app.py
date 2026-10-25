@@ -103,6 +103,11 @@ def index() -> None:
         b, w = s.baseline, s.world
         if b is None or w is None:
             return
+        banner = vm.incomplete_banner(b.failed_steps)
+        if banner:
+            ui.label(banner).classes("text-red-700 font-medium [overflow-wrap:anywhere]").mark(
+                "incomplete"
+            )
         with ui.card().classes("w-full"):
             heading("Clause set")
             ui.label(b.clause_set)
@@ -235,6 +240,18 @@ def index() -> None:
                             ui.label(f"new conflict: {conflict}").classes(
                                 "text-sm text-red-700 [overflow-wrap:anywhere]"
                             )
+        unranked = vm.inconclusive(r)
+        if unranked:
+            with ui.card().classes("w-full").mark("inconclusive"):
+                heading("Inconclusive (unranked; not comparable: steps had no decision)")
+                for repair_id, label in unranked:
+                    with ui.row().classes("items-start w-full gap-3 border-b py-1 no-wrap"):
+                        ui.button("Compare", on_click=lambda _, rid=repair_id: compare(rid)).props(
+                            "dense flat"
+                        )
+                        ui.label(f"{repair_id}: {label}").classes(
+                            "font-mono text-sm [overflow-wrap:anywhere]"
+                        )
         with ui.card().classes("w-full"):
             heading("Discarded by the hard filter")
             lines(vm.discarded(r))
@@ -248,6 +265,8 @@ def index() -> None:
         v = vm.comparison(c)
         with ui.card().classes("w-full").mark("comparison"):
             heading(f"Baseline vs replay: {v.repair_id}")
+            if v.incomplete:
+                ui.label(v.incomplete).classes("text-red-700 font-medium [overflow-wrap:anywhere]")
             ui.label(f"Outcome: {v.outcome}" + (f"; {v.authorization}" if v.authorization else ""))
             lines(v.edits)
             ui.label(f"Clauses the repair targets: {v.targets}").classes("text-sm")
@@ -320,7 +339,14 @@ def index() -> None:
         world = s.world
         found = await run.io_bound(lambda: search_repairs(world.scenario.id, world=world))
         s.search, s.selected = found, None
-        status.set_text(f"{len(found.ranked) if found else 0} repairs ranked.")
+        status.set_text(
+            f"{len(found.ranked) if found else 0} repairs ranked."
+            + (
+                f" {len(found.inconclusive)} inconclusive (unranked)."
+                if found and found.inconclusive
+                else ""
+            )
+        )
         agents_label.set_text(f"Agents: {world.agent_label}" + cache_text(world))
         repairs_view.refresh()
         export_view.refresh()

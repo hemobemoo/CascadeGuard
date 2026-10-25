@@ -107,6 +107,16 @@ failures.
   and they reached the finding text (in memory and the console only; nothing in the repository).
   Error details now keep only the body's `message`, cut before any `headers` key (test added).
 
+## Finding: an LLM agent did not take up a repair's ownership duty (ADR 0002, option C)
+
+In the paced replay of the golden repair, the health operator never proposed
+reverse_automated_lockouts, so the LLM replay is **partial** where the scripted replay is
+**resolved**. This is **possibly caused by how repairs are shown to agents**: the ownership rule
+appears only as a non-citable hypothetical rule, and it opens no obligation that the view would
+list. It is **not a confirmed policy gap**, and it says nothing about the source law. Option A
+(the owner repair opens an obligation; views list open obligations) is the first task after
+Phase 5 (ADR 0002).
+
 ## Reviews
 
 - Round 1 (Phase 4 tail): phase-auditor PASS, test-breaker PASS, evidence-auditor FAIL (2 MINOR

@@ -134,7 +134,9 @@ def test_repair_rows_show_masked_tags_and_authorization(found: SearchResult) -> 
     assert rows[0].authorization == vm.REQUIRES_AUTHORIZATION
     tagged = [c for r in rows for c in r.new_conflicts]
     assert tagged and all(f"scripted_agent_limit: {SCRIPTED_LIMIT_NOTE}" in c for c in tagged)
-    assert all(not r.new_conflicts for r in rows if r.outcome != "introduces new conflict")
+    assert all(
+        not r.new_conflicts for r in rows if not r.outcome.startswith("introduces new conflict")
+    )
     assert vm.discarded(found) and all("[reviewed" in d for d in vm.discarded(found))
 
 
