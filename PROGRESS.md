@@ -4,13 +4,23 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 5 — LLM agents: complete, PR open, waiting for the human to merge and tag** (branch
-`phase-5-llm`). Report: `docs/review/phase-5-report.md`. Closing check and display fixes done
-2026-10-26 (below). Phase 4 is merged.
+**Phase 5 — LLM agents: merged to main via PR #6 (merge commit, branch `phase-5-llm` kept),
+tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
+`docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
+
+**Open items:**
+- **ADR 0002 option A** (the owner repair opens an obligation; role views list open
+  obligations): waiting for the human's decision on when the obligation opens and its deadline.
+- **`uae.fl2-2019.art16-exceptions`** (draft; FL 2/2019 PDF, page 5): awaiting the human's review.
+- **Deferred MINORs** (round 4, see "Known limitations"): cache file check does not re-check
+  `prompt_version`/`model_sha256` inside the file; `Usage.calls` counts agent attempts, not
+  request retries.
+- **Known limitation:** the gap-wording pattern flags "no authority has been triggered" (pinned
+  by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
 
-### Phase 5 — LLM agents (branch `phase-5-llm`, PR #6 open)
+### Phase 5 — LLM agents (merged via PR #6, tag `phase-5`)
 - Review round 1 on the Phase 4 tail (a0b6342, 2f0ddc8, 9f27e4d): phase-auditor PASS,
   test-breaker PASS, evidence-auditor FAIL (2 MINOR stale notes). All MINORs fixed in dc6c7d3
   (notes, e2e scoping, graph check, view-model placeholder). Triage:
@@ -717,10 +727,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 5: the human merges the PR and tags `phase-5`. Then, first task after Phase 5: ADR 0002
-option A, after the human decides when an owner obligation opens and its deadline. Still open:
-the review of the real-model runs (it covers the round-3 fixes first; not run yet), the human's
-review of `uae.fl2-2019.art16-exceptions`, and the gap-wording known limitation.
+ADR 0002 option A, after the human decides when an owner obligation opens and its deadline
+(work on a new branch; do not start before that decision). Still open: the human's review of
+`uae.fl2-2019.art16-exceptions`, the deferred MINORs, and the gap-wording known limitation. The
+review of the real-model runs was done in round 4 (2026-10-26).
 
 Earlier (done):
 
