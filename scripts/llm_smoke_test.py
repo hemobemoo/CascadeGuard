@@ -70,7 +70,7 @@ def main() -> int:
     llm = LLMAgent(
         args.role,
         config.model,
-        make_client(config),
+        make_client(config, cap=1),  # one approved call: retries stop at the cap
         cache,
         role_ids,
         attempts=1,

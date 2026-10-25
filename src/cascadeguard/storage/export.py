@@ -84,6 +84,10 @@ def run_export(result: RunResult) -> dict[str, Any]:
     ]
     data["loaded_clauses"] = _labelled(labels, labels)
     data["agents"] = result.agents
+    if result.failed_steps:
+        data["failed_steps"] = [
+            {"minute": m, "role": r, "reason": why} for m, r, why in result.failed_steps
+        ]
     return data
 
 
@@ -121,6 +125,14 @@ def comparison_markdown(c: ReplayComparison) -> str:
         f"- Scenario: `{s['scenario']}` (synthetic, hypothetical)",
         f"- Clause set: {s['clause_set']}",
         f"- Agents: {c.replay.agents}",
+        *(
+            [
+                "- Steps with no decision (infrastructure): "
+                + ", ".join(f"{run} T+{m:02d} {r} ({why})" for run, m, r, why in c.failed_steps)
+            ]
+            if c.failed_steps
+            else []
+        ),
         f"- Outcome: **{c.outcome}**",
         "- Requires authorization: "
         + (

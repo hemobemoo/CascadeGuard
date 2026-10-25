@@ -75,8 +75,9 @@ def main() -> int:
     scripted_world = load_world(args.scenario)
     roles = tuple(r.id for r in scripted_world.roles.roles)
     cache = DecisionCache(DEFAULT_CACHE_DIR)
-    client = CappedClient(make_client(config), args.cap)
-    agents = llm_agents(roles, cache, config=config, client=client)
+    paced = make_client(config, cap=args.cap)
+    client: CappedClient = paced.inner
+    agents = llm_agents(roles, cache, config=config, client=paced)
     label = (
         f"LLM agents (model from CASCADEGUARD_MODEL; output mode {config.output_mode}; "
         f"live calls through the decision cache, capped at {args.cap} requests)"

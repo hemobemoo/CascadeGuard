@@ -332,6 +332,11 @@ def format_result(result: RunResult, excluded_drafts: int | None = None) -> str:
     lines = [f"Scenario: {result.scenario_id} (synthetic, hypothetical)"]
     lines.append(f"Clause set: {result.clause_set}")
     lines.append(f"Agents: {result.agents}")
+    if result.failed_steps:
+        lines.append(
+            f"INCOMPLETE RUN: {len(result.failed_steps)} steps had no decision for infrastructure "
+            "reasons: " + ", ".join(f"T+{m:02d} {r} ({why})" for m, r, why in result.failed_steps)
+        )
     lines.append(f"  {len(result.loaded_clauses)} clauses loaded")
     if excluded_drafts:
         lines.append(f"  {excluded_drafts} draft clauses not loaded (awaiting human review)")

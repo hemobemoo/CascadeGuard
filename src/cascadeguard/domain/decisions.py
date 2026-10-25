@@ -40,6 +40,9 @@ class GapClaim(DomainModel):
 # invalid_output: the model's reply failed validation twice; request_failed: the API call failed
 # twice; not_cached: offline mode and no cached decision for this exact view.
 NoDecisionReason = Literal["invalid_output", "request_failed", "not_cached"]
+# Steps with no decision for infrastructure reasons (the API failed, or offline and not cached):
+# any such step makes a replay comparison inconclusive (human decision 2026-10-25).
+INFRASTRUCTURE_REASONS = frozenset({"request_failed", "not_cached"})
 
 
 class AgentDecision(DomainModel):

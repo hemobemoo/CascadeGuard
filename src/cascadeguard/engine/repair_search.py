@@ -45,6 +45,7 @@ from cascadeguard.simulation.replay import REPAIR_PREFIX
 
 MAX_EDITS = 2
 SCRIPTED_LIMIT = "scripted_agent_limit"
+INCONCLUSIVE = "inconclusive: {n} steps failed for infrastructure reasons"
 # Labels shown wherever a comparison is printed (CLI, exports, UI).
 MASKED_LABEL = "masked (goal met another way)"
 REMOVED_LABEL = "removed (cause gone)"
@@ -133,7 +134,18 @@ class ReplayComparison:
         return tuple(g for g in self.critical_goals if met.get(g) is None)
 
     @property
+    def failed_steps(self) -> tuple[tuple[str, int, str, str], ...]:
+        """("baseline" | "replay", minute, role, reason) of steps with no decision for
+        infrastructure reasons."""
+        return tuple(("baseline", *s) for s in self.baseline.failed_steps) + tuple(
+            ("replay", *s) for s in self.replay.failed_steps
+        )
+
+    @property
     def outcome(self) -> str:
+        # A missing decision is not evidence about the repair (human decision 2026-10-25).
+        if self.failed_steps:
+            return INCONCLUSIVE.format(n=len(self.failed_steps))
         if self.new_conflicts:
             return "introduces new conflict"
         if not self.unmet_critical_goals:
@@ -187,6 +199,16 @@ class ReplayComparison:
             "new_conflicts": list(self.new_conflicts),
             "new_conflict_tags": self.conflict_tags(),
             "changed_actions": self.changed_actions(),
+            **(
+                {
+                    "failed_steps": [
+                        {"run": run, "minute": m, "role": r, "reason": why}
+                        for run, m, r, why in self.failed_steps
+                    ]
+                }
+                if self.failed_steps
+                else {}
+            ),
         }
 
 
