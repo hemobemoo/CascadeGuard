@@ -11,8 +11,9 @@ from dataclasses import dataclass
 
 from nicegui import run, ui
 
-from cascadeguard.agents.llm import LLMConfigError
+from cascadeguard.agents.llm import DailyLimitReached, LLMConfigError
 from cascadeguard.cli import (
+    DAILY_LIMIT_STOP,
     LLM,
     SCRIPTED,
     AgentChoice,
@@ -267,6 +268,8 @@ def index() -> None:
             heading(f"Baseline vs replay: {v.repair_id}")
             if v.incomplete:
                 ui.label(v.incomplete).classes("text-red-700 font-medium [overflow-wrap:anywhere]")
+            if v.withheld:
+                ui.label(f"Not comparable: {v.withheld}.").classes("italic").mark("withheld")
             ui.label(f"Outcome: {v.outcome}" + (f"; {v.authorization}" if v.authorization else ""))
             lines(v.edits)
             ui.label(f"Clauses the repair targets: {v.targets}").classes("text-sm")
@@ -310,6 +313,10 @@ def index() -> None:
             status.set_text(str(exc))
             ui.notify(str(exc), type="warning")
             return
+        except DailyLimitReached:
+            status.set_text(DAILY_LIMIT_STOP)
+            ui.notify(DAILY_LIMIT_STOP, type="warning")
+            return
         assert world is not None  # load_world raises on failure
         baseline = await run.io_bound(world.baseline)
         assert baseline is not None
@@ -337,7 +344,12 @@ def index() -> None:
             return
         status.set_text("Replaying every candidate repair on the identical incident ...")
         world = s.world
-        found = await run.io_bound(lambda: search_repairs(world.scenario.id, world=world))
+        try:
+            found = await run.io_bound(lambda: search_repairs(world.scenario.id, world=world))
+        except DailyLimitReached:
+            status.set_text(DAILY_LIMIT_STOP)
+            ui.notify(DAILY_LIMIT_STOP, type="warning")
+            return
         s.search, s.selected = found, None
         status.set_text(
             f"{len(found.ranked) if found else 0} repairs ranked."

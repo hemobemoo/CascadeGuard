@@ -213,7 +213,7 @@ def main() -> int:
         f"cost {client.cost:.6f} credits (USD); time in API calls {client.seconds:.1f} s"
     )
 
-    if not found.ranked:
+    if not (found.ranked or found.inconclusive):
         print(f"Replay discarded by the hard filter: {[d.reason for d in found.discarded]}")
         return 0
     llm_c = found.comparison(args.repair)

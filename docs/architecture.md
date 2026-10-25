@@ -56,10 +56,12 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   by role, view, prompt version, model and schema; a replay reuses every unchanged step. A reply
   that fails validation twice becomes `AgentDecision.no_decision`, which the engine records as a
   `no_decision` finding. `--offline` (or the UI's "LLM (cached only)") never calls the API.
+  A run with missing steps is "inconclusive": never ranked or scored (`SearchResult.inconclusive`).
 
 ```
 view ──> cache_key ──hit──> cached AgentDecision
-              └─miss──> build_messages(view) ──> OpenRouter ──> validate ──(1 retry)──> cache
+              └─miss──> build_messages(view) ──> ResilientClient(pacing, backoff)
+                        ──> CappedClient(cap) ──> OpenRouter ──> validate ──(1 retry)──> cache
 ```
 
 Specs: `specs/001-domain-and-scenario.md`, `specs/002-engine-and-diagnosis.md`,

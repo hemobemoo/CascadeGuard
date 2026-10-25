@@ -14,7 +14,15 @@ from typing import Any
 from cascadeguard import __version__
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
-from cascadeguard.agents.llm import LLMAgent, LLMConfig, LLMConfigError, llm_agents
+from cascadeguard.agents.llm import (
+    CAP_VARIABLE,
+    DailyLimitReached,
+    LLMAgent,
+    LLMConfig,
+    LLMConfigError,
+    RetryPolicy,
+    llm_agents,
+)
 from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.repairs import RepairProposal
@@ -117,6 +125,12 @@ def build_parser() -> argparse.ArgumentParser:
             help=f"LLM decision cache directory (default {_display(DEFAULT_CACHE_DIR)})",
         )
         cmd.add_argument(
+            "--cap",
+            type=int,
+            default=None,
+            help=f"live LLM runs: max requests, retries included (or {CAP_VARIABLE} in .env)",
+        )
+        cmd.add_argument(
             "--extracted-context",
             action="store_true",
             help="LLM only: add keyword snippets of the non-book extracted PDFs to each prompt, "
@@ -165,6 +179,7 @@ class AgentChoice:
     offline: bool = False
     cache_dir: Path = DEFAULT_CACHE_DIR
     extracted_context: bool = False  # P5-3: labelled snippets of non-book extracted PDFs
+    cap: int | None = None  # live LLM runs: max requests, retries included
 
 
 SCRIPTED_CHOICE = AgentChoice()
@@ -203,8 +218,17 @@ def load_world(
         )
         how = "offline: decision cache only"
     else:
-        llm = llm_agents(role_ids, cache, extracted_context=choice.extracted_context)
-        how = "live calls through the decision cache"
+        config = LLMConfig.from_env()  # missing variables are reported before the cap
+        cap = choice.cap if choice.cap is not None else RetryPolicy.from_env().request_cap
+        if cap is None:
+            raise LLMConfigError(
+                f"live LLM runs need a request cap: --cap N or {CAP_VARIABLE} in .env "
+                "(requests, retries included)"
+            )
+        llm = llm_agents(
+            role_ids, cache, config=config, extracted_context=choice.extracted_context, cap=cap
+        )
+        how = f"live calls through the decision cache, capped at {cap} requests"
     if choice.extracted_context:
         how += "; extracted-PDF context snippets (context only; not citable)"
     mode = next(iter(llm.values())).output_mode
@@ -273,6 +297,7 @@ LIVE_SEARCH_REFUSED = (
     "repair search with live LLM calls is not enabled (every candidate is replayed: hundreds of "
     "paid calls; needs explicit approval). Use --offline to search from cached decisions."
 )
+DAILY_LIMIT_STOP = "the provider's daily request limit was reached; the run was stopped."
 LIVE_REPLAY_NEEDS_FLAG = (
     "a single-repair replay with live LLM calls needs --live (paid calls; needs approval)."
 )
@@ -411,7 +436,11 @@ def format_search(result: SearchResult) -> str:
     lines.append("binding clause supports the permission it creates; it needs human and")
     lines.append("institutional approval.")
     if not result.ranked:
-        lines.append("  no candidate repair passed the hard filter")
+        lines.append(
+            "  no complete replay to rank"
+            if result.inconclusive
+            else "  no candidate repair passed the hard filter"
+        )
     for i, c in enumerate(result.ranked, 1):
         p = c.proposal
         auth = ", requires authorization" if p.requires_authorization else ""
@@ -476,13 +505,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command not in ("run", "repairs"):
         parser.print_help()
         return 0
-    choice = AgentChoice(args.agents, args.offline, args.cache, args.extracted_context)
+    choice = AgentChoice(args.agents, args.offline, args.cache, args.extracted_context, args.cap)
     try:
         world = load_world(args.scenario, args.clauses, choice=choice)
     except LLMConfigError as exc:
         print(f"cascadeguard: {exc}")
         return 2
-    status = _main(args, world)
+    try:
+        status = _main(args, world)
+    except DailyLimitReached:  # fixed text: the provider's message is not printed here
+        print(f"cascadeguard: {DAILY_LIMIT_STOP}")
+        return 2
     if (line := cache_line(world)) is not None:
         print(line)
     return status
@@ -507,8 +540,9 @@ def _main(args: argparse.Namespace, world: World) -> int:
                         return 2
                     print(
                         f"Uncached steps (dry run from the cache): {replay_missing} replay steps, "
-                        "each up to 2 calls; a lower bound, since a live decision can change "
-                        "later views."
+                        f"each up to {RetryPolicy.from_env().max_requests_per_step} requests "
+                        "(invalid-output retry x request retries); a lower bound, since a live "
+                        "decision can change later views."
                     )
                     if not args.live:
                         print(f"cascadeguard: {LIVE_REPLAY_NEEDS_FLAG}")

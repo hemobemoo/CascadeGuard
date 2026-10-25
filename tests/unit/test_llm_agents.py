@@ -1074,3 +1074,189 @@ def test_incomplete_banner_and_self_target_display(scripted: World, tmp_path: Pa
     same = ReplayComparison(c.proposal, b, replace(b, log=moved), c.critical_goals)
     assert same.changed_actions() == []
     assert [e.target for e in moved if e.seq == entry.seq] == [entry.role]  # data unchanged
+
+
+# --- Review round 4 (2026-10-26) ----------------------------------------------------------
+
+
+def _inconclusive_comparison(scripted: World, tmp_path: Path) -> Any:
+    from cascadeguard import cli
+
+    base = scripted_replies(scripted)
+    llm_world(scripted, FakeClient(base), DecisionCache(tmp_path)).baseline()
+
+    def reply(request: dict[str, Any]) -> str | Exception:
+        v = view_of(request)
+        if v["role_id"] == "telecom_operator" and v["minute"] in (15, 30):
+            return ConnectionError("down")
+        return base(request)
+
+    w = llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path))
+    return cli.single_repair(w, SUCCESS).comparison(SUCCESS)
+
+
+SCORED = (
+    "goals",
+    "failures_removed",
+    "failures_masked",
+    "failures_remaining",
+    "new_conflicts",
+    "new_conflict_tags",
+    "changed_actions",
+)
+
+
+def test_inconclusive_comparison_is_never_scored_in_any_output(
+    scripted: World, tmp_path: Path
+) -> None:
+    import duckdb
+
+    from cascadeguard.storage.audit import AuditStore
+    from cascadeguard.storage.export import comparison_export, comparison_markdown
+    from cascadeguard.ui import view_model as vm
+
+    c = _inconclusive_comparison(scripted, tmp_path)
+    assert c.failed_steps
+    summary = c.summary()
+    assert not set(SCORED) & set(summary) and "not comparable" in summary["withheld"]
+    data = comparison_export(c)
+    assert not set(SCORED) & set(data) and "masked_note" not in data
+    md = comparison_markdown(c)
+    for heading in (
+        "Recovery goals",
+        "Removed (",
+        "Masked (",
+        "Remaining",
+        "New conflicts",
+        "Actions whose verdict changed",
+        "masked failures",
+    ):
+        assert heading not in md, heading
+    assert "## Not comparable" in md
+    v = vm.comparison(c)
+    assert v.goals == v.removed == v.replay_failures == v.changed_actions == ()
+    assert v.withheld and v.incomplete
+    db = tmp_path / "audit.duckdb"
+    store = AuditStore(db)
+    try:
+        store.record_comparison(c)
+    finally:
+        store.close()
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        (row,) = con.execute("SELECT summary FROM comparisons").fetchall()
+    finally:
+        con.close()
+    assert not set(SCORED) & set(json.loads(row[0]))
+
+
+def test_record_search_keeps_inconclusive_replays_unranked(scripted: World, tmp_path: Path) -> None:
+    import duckdb
+
+    from cascadeguard.storage.audit import AuditStore
+
+    found = _search_with_golden_inconclusive(scripted, tmp_path / "c")
+    db = tmp_path / "audit.duckdb"
+    store = AuditStore(db)
+    try:
+        store.record_search(found.ranked[0].baseline, found)
+    finally:
+        store.close()
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        rows = con.execute(
+            "SELECT rank, critical_blockers_removed, outcome FROM repairs WHERE repair_id = ?",
+            [SUCCESS],
+        ).fetchall()
+        total = con.execute("SELECT count(*) FROM repairs").fetchone()
+    finally:
+        con.close()
+    assert rows == [(None, None, "inconclusive: 1 steps missing; not comparable")]
+    assert total is not None
+    assert total[0] == len(found.ranked) + len(found.inconclusive) + len(found.discarded)
+
+
+def test_one_attempt_invalid_output_is_never_reused_by_a_full_run(
+    scripted: World, tmp_path: Path
+) -> None:
+    view = scripted.baseline().views[0]
+    bad = FakeClient(lambda _: "not json")
+    one = LLMAgent(view.role_id, MODEL, bad, DecisionCache(tmp_path), (), attempts=1)
+    assert one.observe(view).no_decision == "invalid_output"
+    assert not list(tmp_path.glob("*.json"))  # kept in memory only
+    good = FakeClient(scripted_replies(scripted))
+    full = LLMAgent(view.role_id, MODEL, good, DecisionCache(tmp_path), ())
+    assert full.observe(view).no_decision is None and len(good.requests) == 1
+
+
+DAILY_MODEL = "vendorx/model-zz-9b:free"
+
+
+class DailyLimit429(Exception):
+    status_code = 429
+    body: ClassVar[dict[str, Any]] = {
+        "message": "Rate limit exceeded: free-models-per-day. Model " + DAILY_MODEL,
+        "metadata": {"headers": {"X-RateLimit-Limit": "50"}},
+        "user_id": "user_FAKE123",
+    }
+
+    def __str__(self) -> str:
+        return "Error code: 429 - " + json.dumps(self.body)
+
+
+def test_daily_limit_message_is_redacted_and_not_chained(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import traceback
+
+    from cascadeguard.agents.llm import DailyLimitReached, ResilientClient, RetryPolicy
+
+    def create(**_: Any) -> Any:
+        raise DailyLimit429()
+
+    sdk = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+    def no_sleep(_: float) -> None:
+        return None
+
+    client = ResilientClient(sdk, RetryPolicy(), sleep=no_sleep, redact=("sk-x", DAILY_MODEL))
+    with pytest.raises(DailyLimitReached) as err:
+        client.create(model=DAILY_MODEL)
+    text = "".join(traceback.format_exception(err.value))
+    assert err.value.__cause__ is None and err.value.__suppress_context__
+    for leak in (DAILY_MODEL, "model-zz-9b", "X-RateLimit", "headers", "user_FAKE123"):
+        assert leak not in text, leak
+    # The CLI turns it into one fixed line and exit code 2.
+    role_ids = tuple(r.id for r in scripted.roles.roles)
+    cache = DecisionCache(tmp_path)
+    agents = {r: LLMAgent(r, DAILY_MODEL, client, cache, role_ids) for r in role_ids}
+    _patch_world(monkeypatch, replace(scripted, agents=dict(agents), cache=cache))
+    assert main(["run", SCENARIO, "--agents", "llm"]) == 2
+    out = capsys.readouterr()
+    assert "daily request limit was reached" in out.out
+    assert "X-RateLimit" not in out.out + out.err and DAILY_MODEL not in out.out + out.err
+
+
+def test_model_id_variants_are_redacted() -> None:
+    from cascadeguard.agents.llm import error_detail
+
+    for message in (
+        "model-zz-9b:free is temporarily rate-limited upstream",
+        "VENDORX/MODEL-ZZ-9B:FREE overloaded",
+        "vendorx/model-zz-9b is temporarily rate-limited upstream",
+    ):
+        detail = error_detail(ConnectionError(message), (DAILY_MODEL,))
+        assert "model-zz-9b" not in detail.lower(), detail
+
+
+def test_live_cli_run_without_a_cap_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "http://127.0.0.1:9")
+    monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+    assert main(["run", SCENARIO, "--agents", "llm", "--cache", str(tmp_path)]) == 2
+    assert "live LLM runs need a request cap" in capsys.readouterr().out

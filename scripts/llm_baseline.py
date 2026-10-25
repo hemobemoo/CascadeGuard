@@ -16,7 +16,13 @@ from dataclasses import replace
 from pathlib import Path
 
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
-from cascadeguard.agents.llm import CappedClient, LLMConfig, llm_agents, make_client
+from cascadeguard.agents.llm import (
+    CappedClient,
+    DailyLimitReached,
+    LLMConfig,
+    llm_agents,
+    make_client,
+)
 from cascadeguard.cli import baseline_markdown, load_world
 from cascadeguard.engine.constraints import Reason
 from cascadeguard.knowledge.loader import PROJECT_ROOT
@@ -83,7 +89,11 @@ def main() -> int:
         f"live calls through the decision cache, capped at {args.cap} requests)"
     )
     world = replace(scripted_world, agents=dict(agents), agent_label=label, cache=cache)
-    result = world.baseline()
+    try:
+        result = world.baseline()
+    except DailyLimitReached as exc:  # message already redacted; nothing chained
+        print(f"STOP: provider daily limit reached ({exc}). Requests sent: {client.requests}.")
+        return 2
     scripted = scripted_world.baseline()
 
     no_decision = [f for f in result.findings if f.kind == Reason.NO_DECISION.value]

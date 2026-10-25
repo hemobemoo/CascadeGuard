@@ -33,3 +33,15 @@ telecom viewer page 14 was also checked against the page image.
 
 The three NEEDS-HUMAN-JUDGMENT items are the existing open clause-review questions
 (PROGRESS "Waiting on human" 1); nothing new.
+
+## Round 4 (2026-10-26): 2f98197..0adff73
+
+evidence-auditor verdict: **FAIL** (on code findings; all clauses verbatim). New clause:
+
+| clause_id | result | note |
+|---|---|---|
+| uae.fl2-2019.art16-exceptions | NEEDS-HUMAN-JUDGMENT | Verbatim on extracted page 5 and in a live pdfplumber read; the full list (items 1-5; Article 17 follows); no gaps; no normalized block. Whether item 3 or 5 covers a share is legal interpretation. MINOR fixed: notes now spell out the binding scope. |
+
+All other clauses re-confirmed CLEAN, or NEEDS-HUMAN-JUDGMENT as before (dha.pp11.applicability,
+dha.pp11.4-18-5, mocai.ethics.fallback-plan); uae.telecom-law.art14-5 carried forward from round 1.
+

@@ -1,6 +1,6 @@
 # Phase 5 report — LLM agents
 
-Branch `phase-5-llm` (not pushed, no PR, not merged, not tagged: waiting for the human).
+Branch `phase-5-llm`, PR #6 (open; not merged, not tagged: waiting for the human).
 Spec: `specs/005-llm-agents.md`. Baseline review: `docs/evaluation/llm-baseline-review.md`.
 
 ## What was built
@@ -25,7 +25,9 @@ Spec: `specs/005-llm-agents.md`. Baseline review: `docs/evaluation/llm-baseline-
   search is refused; `run --repair <id> --agents llm` replays one repair, printing the
   uncached steps first and requiring `--live`. UI toggle: Scripted / LLM (cached only) /
   LLM (live).
-- Scripts: `llm_smoke_test.py` (exactly one call) and `llm_baseline.py` (hard request cap).
+- Scripts: `llm_smoke_test.py` (exactly one call), `llm_baseline.py` and `llm_replay.py`
+  (hard request cap, retries included). Live CLI/UI runs need a cap too (`--cap` or
+  `CASCADEGUARD_REQUEST_CAP`).
 
 ## How to run
 
@@ -36,7 +38,7 @@ uv run cascadeguard run uae_health_access --repair <id> --agents llm       # est
 uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
 ```
 
-Tests: 329 passed (including the e2e browser test). No test can reach a live LLM
+Tests: all pass (including the e2e browser test; count in the PR). No test can reach a live LLM
 (`tests/conftest.py`).
 
 ## Real-model runs (model chosen by the human, json_object, total cost 0.000000)
@@ -48,13 +50,14 @@ Tests: 329 passed (including the e2e browser test). No test can reach a live LLM
 | no_decision findings | 5 | **0** | 0 |
 | Rejected citations | 12 (out of scope) | **1** (telecom_operator citing FL Art 4, correctly rejected) | 1 (draft) |
 | Free-text gap rejections | 1 (a false positive) | 1 ("no clause authorizes me ...": a free-text absence claim) | 0 |
-| Accepted actions | 46 | 62 (9 in common with scripted) | 11 |
+| Accepted actions, distinct (minute, role, action) | 46 (47 entries) | 62 (9 in common with scripted) | 11 |
 | Diagnosed failures | the same 4 | the same 4 | 4 |
 | network_incident_reported | T+30 | T+15 | T+45 |
 | Health-data oversight notified | no | **yes, T+15** | T+45 |
 | Tokens in / out | ~82.9k / ~29.1k | 85.4k / 14.1k | – |
 
-The v2 baseline replays exactly from the cache offline. Smoke call (v2): valid, citations passed,
+At the time (prompt v2), the v2 baseline replayed exactly from the cache offline; current
+code (prompt v3) no longer selects v2 entries. Smoke call (v2): valid, citations passed,
 6.06 s, 2,643 / 619 tokens.
 
 **Engine catching an LLM reasoning error (example).** `dha.pp11.4-18-1` obliges the operator
@@ -84,7 +87,8 @@ stayed diagnosed. The agent misread the clause; the deterministic rule held.
   view (as a non-citable hypothetical rule). The ownership rule gives authority but opens no
   obligation, and the view lists no open obligations (the deferred question). A finding about
   how LLM agents take up repairs, not a defect in the engine.
-- Export: `data/llm_replay_paced/` (rebuilt offline from the cache, identical: 72 steps reused).
+- Export: `data/llm_replay_paced/` (rebuilt offline from the cache with current code: 72 steps
+  reused, the same decisions; re-exported after the round-4 display fixes).
 
 **Earlier single-repair live replay (cap 50, unpaced):** inconclusive because of provider
 failures.
@@ -138,4 +142,4 @@ Phase 5 (ADR 0002).
    now: it changes every prompt and invalidates the cache.
 5. Clause review: `uae.fl2-2019.art16-exceptions` (draft; FL 2/2019 PDF, page 5).
 
-Next: the review round on the real-model run, then the PR (do not merge) when approved.
+Next: the human merges PR #6 and tags `phase-5`; then ADR 0002 option A.

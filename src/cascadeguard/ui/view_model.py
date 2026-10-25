@@ -327,11 +327,31 @@ class Comparison:
     changed_actions: tuple[str, ...]
     notes: tuple[str, ...] = field(default=(REPAIR_NOTE,))
     incomplete: str = ""  # an "Incomplete run" banner when steps had no decision
+    withheld: str = ""  # set when the replay is not comparable (verdicts withheld)
 
 
 def comparison(c: ReplayComparison) -> Comparison:
     labels = dict(c.replay.loaded_clauses)
     s = c.summary()
+    if c.failed_steps:  # not comparable: no goals, failure attributions or changed actions
+        p = c.proposal
+        return Comparison(
+            repair_id=p.repair_id,
+            outcome=outcome_text(c),
+            authorization=REQUIRES_AUTHORIZATION if p.requires_authorization else "",
+            edits=tuple(f"{e.operation.value} ({e.edit_id}) [{REPAIR_LABEL}]" for e in p.edits),
+            targets=cite((x.clause_id for x in p.citations), labels) or "none",
+            goals=(),
+            baseline_failures=(),
+            replay_failures=(),
+            removed=(),
+            changed_actions=(),
+            notes=comparison_notes(c),
+            incomplete=incomplete_banner(
+                tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
+            ),
+            withheld=str(s["withheld"]),
+        )
     tags = c.conflict_tags()
     p = c.proposal
     replay_rows = [f"{f}: remaining" for f in c.remaining]
