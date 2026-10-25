@@ -12,11 +12,19 @@ requests, retries, failures (with their error detail) and cost. Never prints .en
 
 import argparse
 import sys
+import time
 from dataclasses import dataclass, field, replace
 from typing import Any
 
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache, cache_key
-from cascadeguard.agents.llm import CappedClient, LLMAgent, LLMConfig, llm_agents, make_client
+from cascadeguard.agents.llm import (
+    CappedClient,
+    DailyLimitReached,
+    LLMAgent,
+    LLMConfig,
+    llm_agents,
+    make_client,
+)
 from cascadeguard.cli import World, load_world, search_repairs, single_repair
 from cascadeguard.domain.decisions import AgentDecision
 from cascadeguard.engine.constraints import RuleBook
@@ -135,8 +143,9 @@ def main() -> int:
     base_world = load_world(SCENARIO)
     roles = tuple(r.id for r in base_world.roles.roles)
     cache = DecisionCache(DEFAULT_CACHE_DIR)
-    client = CappedClient(make_client(config), args.cap)
-    llm = llm_agents(roles, cache, config=config, client=client)
+    paced = make_client(config, cap=args.cap)
+    client: CappedClient = paced.inner
+    llm = llm_agents(roles, cache, config=config, client=paced)
     world = replace(base_world, agents=dict(llm), cache=cache)
 
     base_keys, replay_keys, missing = dry_keys(world, args.repair)
@@ -157,11 +166,19 @@ def main() -> int:
     log: list[Step] = []
     agents = {rid: Watched(a, client, cache, first, log, counter) for rid, a in llm.items()}
     live_world = replace(world, agents=dict(agents))
+    started = time.monotonic()
     try:
         found = single_repair(live_world, args.repair)
     except StopRun as exc:
         print(f"STOP: {exc}. Requests sent: {client.requests}.")
         return 2
+    except DailyLimitReached as exc:
+        print(
+            f"STOP: provider daily limit reached ({exc}). Requests sent: {client.requests}; "
+            f"failures by type: {paced.failures}; wall clock {time.monotonic() - started:.0f} s."
+        )
+        return 2
+    wall = time.monotonic() - started
 
     replay_steps = [s for s in log if s.index >= STEPS]
     print("")
@@ -180,10 +197,16 @@ def main() -> int:
     print(f"All replay steps before the first change were cache hits: {before_hits}")
     live = [s for s in replay_steps if s.source == "live"]
     asked_calls = sum(s.calls for s in live)
+    output_retries = asked_calls - len(live) - paced.retries
     print(f"Replay: {len(replay_steps) - len(live)} from the cache, {len(live)} live")
     print(
-        f"Requests: {client.requests} of {args.cap} (retries: {asked_calls - len(live)}; "
-        f"refused at the cap: {client.refused})"
+        f"Requests: {client.requests} of {args.cap} (request retries: {paced.retries}; "
+        f"invalid-output retries: {output_retries}; refused at the cap: {client.refused})"
+    )
+    print(f"Failed requests by type: {paced.failures or 'none'}")
+    print(
+        f"Wall clock: {wall:.0f} s (pacing waits {paced.paced_seconds:.0f} s, "
+        f"backoff waits {paced.backoff_seconds:.0f} s)"
     )
     print(
         f"Tokens: {client.prompt_tokens} input, {client.completion_tokens} output; "
@@ -194,10 +217,16 @@ def main() -> int:
         print(f"Replay discarded by the hard filter: {[d.reason for d in found.discarded]}")
         return 0
     llm_c = found.comparison(args.repair)
+    if llm_c.failed_steps:
+        print(f"RESULT: {llm_c.outcome}")
+        for run, m, r, why in llm_c.failed_steps:
+            print(f"  {run} T+{m:02d} {r}: {why}")
     failures = [f for f in llm_c.replay.findings if f.kind == "no_decision"]
     print(f"no_decision findings in the replay: {len(failures)}")
     for f in failures:
         print(f"  T+{f.minute:02d} {f.role}: {f.detail}")
+    if llm_c.failed_steps:
+        return 0  # no comparison table for an inconclusive replay
     scripted = search_repairs(SCENARIO).comparison(args.repair).summary()
     mine = llm_c.summary()
     print("")

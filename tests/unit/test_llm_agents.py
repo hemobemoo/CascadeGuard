@@ -901,3 +901,59 @@ def test_known_limitation_gap_pattern_flags_own_inaction(scripted: World) -> Non
         expected_role=role,
     )
     assert [f.kind for f in state.findings if f.role == role] == [Reason.UNCITED_GAP_CLAIM.value]
+
+
+# --- Inconclusive verdict when steps fail for infrastructure reasons (2026-10-25) --------------
+
+
+def test_failed_steps_make_the_comparison_inconclusive_everywhere(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from cascadeguard import cli
+    from cascadeguard.cli import format_result
+    from cascadeguard.storage.export import comparison_export, comparison_markdown, run_export
+
+    base = scripted_replies(scripted)
+    fill = FakeClient(base)
+    llm_world(scripted, fill, DecisionCache(tmp_path)).baseline()  # cached baseline
+
+    def reply(request: dict[str, Any]) -> str | Exception:
+        v = view_of(request)
+        if v["role_id"] == "telecom_operator" and v["minute"] in (15, 30):
+            return ConnectionError("down")
+        return base(request)
+
+    w = llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path))
+    c = cli.single_repair(w, SUCCESS).comparison(SUCCESS)
+    expected = "inconclusive: 2 steps failed for infrastructure reasons"
+    assert c.outcome == expected
+    assert c.failed_steps == (
+        ("replay", 15, "telecom_operator", "request_failed"),
+        ("replay", 30, "telecom_operator", "request_failed"),
+    )
+    data = comparison_export(c)
+    assert data["outcome"] == expected and len(data["failed_steps"]) == 2
+    markdown = comparison_markdown(c)
+    assert f"**{expected}**" in markdown and "replay T+15 telecom_operator" in markdown
+    # CLI: the same verdict.
+    w2 = llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path))
+    _patch_world(monkeypatch, w2)
+    assert main(["run", SCENARIO, "--repair", SUCCESS, "--agents", "llm", "--live"]) == 0
+    assert expected in capsys.readouterr().out
+    # A baseline with a failed step says so in the text and the JSON export.
+    failing = llm_world(
+        scripted, FakeClient(lambda _: ConnectionError("x")), DecisionCache(tmp_path / "b")
+    )
+    result = failing.baseline()
+    assert len(result.failed_steps) == 36
+    assert run_export(result)["failed_steps"][0]["reason"] == "request_failed"
+    assert "INCOMPLETE RUN: 36 steps had no decision" in format_result(result)
+
+
+def test_complete_runs_keep_their_verdict(scripted: World) -> None:
+    c = search_repairs(SCENARIO).comparison(SUCCESS)
+    assert c.outcome == "resolved" and not c.failed_steps
+    assert "failed_steps" not in c.summary()

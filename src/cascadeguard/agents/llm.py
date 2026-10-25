@@ -335,16 +335,231 @@ class ChatClient(Protocol):
     def chat(self) -> Any: ...
 
 
-def make_client(config: LLMConfig) -> ChatClient:
+class CapReached(Exception):
+    """The approved request budget is spent; no request was sent."""
+
+
+@dataclass
+class CappedClient:
+    """Wraps the SDK client for an approved live run: counts every request (retries
+    included), refuses past the cap before anything is sent, and sums usage."""
+
+    inner: Any
+    cap: int
+    requests: int = 0
+    refused: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost: float = 0.0
+    cost_missing: int = 0
+    seconds: float = 0.0
+    errors: list[str] = field(default_factory=list[str])
+
+    @property
+    def chat(self) -> Any:
+        return self
+
+    @property
+    def completions(self) -> Any:
+        return self
+
+    def create(self, **request: Any) -> Any:
+        if self.requests >= self.cap:
+            self.refused += 1
+            raise CapReached(f"cap of {self.cap} requests reached")
+        self.requests += 1
+        started = time.perf_counter()
+        try:
+            response = self.inner.chat.completions.create(**request)
+        except Exception as exc:
+            self.errors.append(f"{type(exc).__name__} (HTTP {getattr(exc, 'status_code', None)})")
+            raise
+        finally:
+            self.seconds += time.perf_counter() - started
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            self.prompt_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
+            self.completion_tokens += int(getattr(usage, "completion_tokens", 0) or 0)
+            extra: dict[str, Any] = getattr(usage, "model_extra", None) or {}
+            cost = extra.get("cost")
+            if isinstance(cost, int | float):
+                self.cost += float(cost)
+            else:
+                self.cost_missing += 1
+        return response
+
+
+RPM_VARIABLE = "CASCADEGUARD_REQUESTS_PER_MINUTE"
+RETRIES_VARIABLE = "CASCADEGUARD_REQUEST_RETRIES"
+BACKOFF_VARIABLE = "CASCADEGUARD_BACKOFF_SECONDS"
+MAX_RETRY_AFTER_SECONDS = 300.0  # a longer Retry-After is waited only up to this
+
+
+@dataclass(frozen=True, slots=True)
+class RetryPolicy:
+    """Pacing and retries for failed *requests* (429, 5xx, connection errors). Separate from the
+    single retry for invalid model output. Code defaults, overridable in .env; read only here."""
+
+    requests_per_minute: int = 15
+    max_retries: int = 3  # per request, then the step is request_failed
+    backoff_seconds: tuple[float, ...] = (5.0, 15.0, 45.0)  # never an immediate retry
+
+    @classmethod
+    def from_env(cls, env_file: Path | None = None) -> "RetryPolicy":
+        path = ENV_FILE if env_file is None else env_file
+        file_values = dotenv_values(path)
+
+        def raw(name: str) -> str | None:
+            value = os.environ.get(name) or file_values.get(name)
+            return value.strip() if value else None
+
+        default = cls()
+        try:
+            rpm = int(raw(RPM_VARIABLE) or default.requests_per_minute)
+            retries = int(raw(RETRIES_VARIABLE) or default.max_retries)
+            backoff_raw = raw(BACKOFF_VARIABLE)
+            backoff = (
+                tuple(float(x) for x in backoff_raw.split(","))
+                if backoff_raw
+                else default.backoff_seconds
+            )
+        except ValueError:
+            raise LLMConfigError(
+                f"{RPM_VARIABLE} and {RETRIES_VARIABLE} must be integers and {BACKOFF_VARIABLE} "
+                "a comma-separated list of seconds"
+            ) from None
+        if rpm < 1 or retries < 0 or not backoff or min(backoff) <= 0:
+            raise LLMConfigError(
+                f"{RPM_VARIABLE} must be >= 1, {RETRIES_VARIABLE} >= 0, and every "
+                f"{BACKOFF_VARIABLE} value > 0 (no immediate retries)"
+            )
+        return cls(rpm, retries, backoff)
+
+
+class DailyLimitReached(Exception):
+    """The provider's daily request limit (a 429 that is not the per-minute one): the run must
+    stop at once, so this is never turned into a no-decision step."""
+
+
+def _status(exc: BaseException) -> int | None:
+    status = getattr(exc, "status_code", None)
+    return status if isinstance(status, int) else None
+
+
+def _body_message(exc: BaseException) -> str:
+    body: Any = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error: Any = cast(dict[str, Any], body).get("error", body)
+        if isinstance(error, dict):
+            return str(cast(dict[str, Any], error).get("message", ""))
+    return ""
+
+
+def _retry_after(exc: BaseException) -> float | None:
+    headers: Any = getattr(getattr(exc, "response", None), "headers", None)
+    if headers is None:
+        return None
+    try:
+        value = float(headers.get("retry-after"))
+    except (TypeError, ValueError):  # absent, or an HTTP date: use the backoff instead
+        return None
+    return min(max(value, 0.0), MAX_RETRY_AFTER_SECONDS)
+
+
+def _is_daily_limit(exc: BaseException) -> bool:
+    text = _body_message(exc).casefold()
+    return _status(exc) == 429 and ("per-day" in text or "per day" in text or "daily" in text)
+
+
+def _retryable(exc: BaseException) -> bool:
+    status = _status(exc)
+    if status is not None:
+        return status == 429 or status >= 500
+    return isinstance(exc, ConnectionError | TimeoutError) or type(exc).__name__ in (
+        "APIConnectionError",
+        "APITimeoutError",
+    )
+
+
+def failure_kind(exc: BaseException) -> str:
+    status = _status(exc)
+    return f"HTTP {status}" if status is not None else type(exc).__name__
+
+
+@dataclass
+class ResilientClient:
+    """Client-side pacing (at most `requests_per_minute` sends in any 60 s) and backoff retries
+    for failed requests, under one RetryPolicy. Wraps the SDK client, or a CappedClient so the
+    cap counts every retry. The clock and sleep are injectable for tests."""
+
+    inner: Any
+    policy: RetryPolicy = field(default_factory=RetryPolicy)
+    sleep: Any = time.sleep
+    clock: Any = time.monotonic
+    retries: int = 0
+    failures: dict[str, int] = field(default_factory=dict[str, int])
+    paced_seconds: float = 0.0
+    backoff_seconds: float = 0.0
+    sent: list[float] = field(default_factory=list[float])
+
+    @property
+    def chat(self) -> Any:
+        return self
+
+    @property
+    def completions(self) -> Any:
+        return self
+
+    def _pace(self) -> None:
+        while True:
+            now = self.clock()
+            self.sent = [t for t in self.sent if now - t < 60.0]
+            if len(self.sent) < self.policy.requests_per_minute:
+                self.sent.append(now)
+                return
+            wait = 60.0 - (now - self.sent[0])
+            self.paced_seconds += wait
+            self.sleep(wait)
+
+    def create(self, **request: Any) -> Any:
+        attempt = 0
+        while True:
+            self._pace()
+            try:
+                return self.inner.chat.completions.create(**request)
+            except CapReached:
+                raise
+            except Exception as exc:
+                kind = failure_kind(exc)
+                self.failures[kind] = self.failures.get(kind, 0) + 1
+                if _is_daily_limit(exc):
+                    raise DailyLimitReached(_body_message(exc)[:120]) from exc
+                if not _retryable(exc) or attempt >= self.policy.max_retries:
+                    raise
+                steps = self.policy.backoff_seconds
+                wait = _retry_after(exc)
+                if wait is None or wait <= 0:
+                    wait = steps[min(attempt, len(steps) - 1)]
+                self.backoff_seconds += wait
+                self.sleep(wait)
+                attempt += 1
+                self.retries += 1
+
+
+def make_client(
+    config: LLMConfig, cap: int | None = None, policy: RetryPolicy | None = None
+) -> ResilientClient:
+    """The live client: SDK (no SDK retries) -> optional request cap -> pacing and retries."""
     from openai import OpenAI  # imported here: the scripted path never needs the SDK
 
-    # max_retries=0: the agent's own single retry is the only one, so calls (and cost) are known.
-    return OpenAI(
+    sdk: Any = OpenAI(
         api_key=config.api_key,
         base_url=config.base_url,
         timeout=REQUEST_TIMEOUT_SECONDS,
         max_retries=0,
     )
+    inner: Any = sdk if cap is None else CappedClient(sdk, cap)
+    return ResilientClient(inner, policy or RetryPolicy.from_env())
 
 
 KEY_SHAPED = re.compile(r"\b(?:sk|or|key)-[A-Za-z0-9_\-]{8,}|Bearer\s+\S+", re.IGNORECASE)
@@ -514,7 +729,9 @@ class LLMAgent:
         assert self.client is not None
         try:
             return self.client.chat.completions.create(**request)
-        except Exception as exc:  # any SDK or transport error
+        except DailyLimitReached:  # stop the whole run, never a no-decision step
+            raise
+        except Exception as exc:  # any SDK or transport error, after the client's retries
             self.last_error = error_detail(exc, (self.model, *self.redact))
             raise RequestFailed(type(exc).__name__) from exc
 
@@ -547,60 +764,6 @@ class LLMAgent:
                 "usage": usage,
             }
         )
-
-
-class CapReached(Exception):
-    """The approved request budget is spent; no request was sent."""
-
-
-@dataclass
-class CappedClient:
-    """Wraps the SDK client for an approved live run: counts every request (retries
-    included), refuses past the cap before anything is sent, and sums usage."""
-
-    inner: Any
-    cap: int
-    requests: int = 0
-    refused: int = 0
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    cost: float = 0.0
-    cost_missing: int = 0
-    seconds: float = 0.0
-    errors: list[str] = field(default_factory=list[str])
-
-    @property
-    def chat(self) -> Any:
-        return self
-
-    @property
-    def completions(self) -> Any:
-        return self
-
-    def create(self, **request: Any) -> Any:
-        if self.requests >= self.cap:
-            self.refused += 1
-            raise CapReached(f"cap of {self.cap} requests reached")
-        self.requests += 1
-        started = time.perf_counter()
-        try:
-            response = self.inner.chat.completions.create(**request)
-        except Exception as exc:
-            self.errors.append(f"{type(exc).__name__} (HTTP {getattr(exc, 'status_code', None)})")
-            raise
-        finally:
-            self.seconds += time.perf_counter() - started
-        usage = getattr(response, "usage", None)
-        if usage is not None:
-            self.prompt_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
-            self.completion_tokens += int(getattr(usage, "completion_tokens", 0) or 0)
-            extra: dict[str, Any] = getattr(usage, "model_extra", None) or {}
-            cost = extra.get("cost")
-            if isinstance(cost, int | float):
-                self.cost += float(cost)
-            else:
-                self.cost_missing += 1
-        return response
 
 
 def llm_agents(
