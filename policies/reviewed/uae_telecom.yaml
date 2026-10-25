@@ -55,10 +55,11 @@ clauses:
       were added by Amendment No. (23) of 2020, and item 5 is not among them). Binding scope:
       federal law; confers rule-making competence on TDRA (Art 14 chapeau) and imposes no stated
       duty on licensees; the PDF is an English consolidated version and the Arabic text was not
-      checked. Candidate source for illus.telecom.regulator-information-request. Human decision 7m
-      (2026-10-23): a power to issue rules on requesting information is not a permission to
-      request it in this incident; the reading stays interpreted, with the result "authority
-      uncertain". illus.telecom.regulator-information-request stays loaded.
+      checked. Human decision 7m (2026-10-23): a power to issue rules on requesting information
+      is not a permission to request it in this incident. Superseded in part on 2026-10-24: the
+      interpreted reading ("authority uncertain") was dropped with the mapping; the clause gives
+      no authority on its own and does not replace
+      illus.telecom.regulator-information-request.
 
   - id: illus.telecom.incident-report
     title: "ILLUSTRATIVE: operator reports a significant network incident to the regulator"
@@ -111,6 +112,5 @@ clauses:
     notes: >-
       Gives the regulator its telecom-only remit in the simulation. Art 12, 13, 14(3) and 30 do
       not state it. Art 14(5) (uae.telecom-law.art14-5, draft) gives TDRA competence to issue
-      rules on "Requesting any information required for the activities of TDRA"; when that
-      clause is reviewed, this illustrative rule can be retired in its favour. Until then the
-      engine keeps this one, because draft clauses are not loaded.
+      rules on "Requesting any information required for the activities of TDRA", but it has no
+      action mapping (human decision 2026-10-24), so reviewing it would not replace this rule.

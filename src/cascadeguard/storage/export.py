@@ -17,6 +17,8 @@ from cascadeguard.engine.repair_search import (
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
+    invalid_output_caveat,
+    outcome_definition,
 )
 from cascadeguard.simulation.orchestrator import RunResult
 
@@ -83,13 +85,24 @@ def run_export(result: RunResult) -> dict[str, Any]:
         for row, f in zip(data["findings"], result.findings, strict=True)
     ]
     data["loaded_clauses"] = _labelled(labels, labels)
+    data["agents"] = result.agents
+    if result.failed_steps:
+        data["failed_steps"] = [
+            {"minute": m, "role": r, "reason": why} for m, r, why in result.failed_steps
+        ]
     return data
 
 
 def search_export(result: SearchResult) -> dict[str, Any]:
     labels = dict(result.loaded_clauses)
     data = _label_clause_fields(result.summary(), labels)
-    return {"clause_set": result.clause_set, "note": REPAIR_NOTE, **data}
+    by_id = {c.proposal.repair_id: c for c in result.ranked}
+    for row in data["ranked"]:
+        c = by_id[row["repair"]]
+        row["outcome_definition"] = outcome_definition(c.outcome)
+        if c.masked:
+            row["masked_note"] = f"{len(c.masked)} masked failures: cause still present"
+    return {"clause_set": result.clause_set, "agents": result.agents, "note": REPAIR_NOTE, **data}
 
 
 def comparison_export(c: ReplayComparison) -> dict[str, Any]:
@@ -97,10 +110,22 @@ def comparison_export(c: ReplayComparison) -> dict[str, Any]:
     by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
     data = c.summary()
     for key in ("failures_removed", "failures_masked", "failures_remaining", "new_conflicts"):
-        data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
+        if key in data:  # absent when the replay is inconclusive (withheld)
+            data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
     data["targets_clauses"] = _labelled((x.clause_id for x in c.proposal.citations), labels)
-    data["note"] = f"{REPAIR_NOTE} {SCRIPTED_NOTE}"
+    data["outcome_definition"] = outcome_definition(c.outcome)
+    if c.masked and not c.failed_steps:
+        data["masked_note"] = f"{len(c.masked)} masked failures: cause still present"
+    data["note"] = " ".join(comparison_notes(c))
+    data["agents"] = c.replay.agents
     return data
+
+
+def comparison_notes(c: ReplayComparison) -> tuple[str, ...]:
+    """The repair note always; the scripted-agents note only when both runs were scripted."""
+    if c.baseline.scripted and c.replay.scripted:
+        return (REPAIR_NOTE, SCRIPTED_NOTE)
+    return (REPAIR_NOTE,)
 
 
 def comparison_markdown(c: ReplayComparison) -> str:
@@ -118,7 +143,22 @@ def comparison_markdown(c: ReplayComparison) -> str:
         "",
         f"- Scenario: `{s['scenario']}` (synthetic, hypothetical)",
         f"- Clause set: {s['clause_set']}",
-        f"- Outcome: **{c.outcome}**",
+        f"- Agents: {c.replay.agents}",
+        *(
+            [
+                "- Steps with no decision (infrastructure): "
+                + ", ".join(f"{run} T+{m:02d} {r} ({why})" for run, m, r, why in c.failed_steps)
+            ]
+            if c.failed_steps
+            else []
+        ),
+        f"- Outcome: **{c.outcome}** ({outcome_definition(c.outcome)})"
+        + (
+            f"; {len(c.masked)} masked failures: cause still present"
+            if c.masked and not c.failed_steps
+            else ""
+        )
+        + (f"\n- **Caveat:** {invalid_output_caveat(c)}" if c.invalid_steps else ""),
         "- Requires authorization: "
         + (
             "**yes**: creates a permission with no reviewed, binding basis; needs human and "
@@ -136,6 +176,10 @@ def comparison_markdown(c: ReplayComparison) -> str:
         )
         lines.append(f"- `{e.operation.value}`: {params}")
     lines += ["", f"Clauses the repair targets: {cite(x.clause_id for x in p.citations)}", ""]
+    if c.failed_steps:  # not comparable: no goals, failure attributions or changed actions
+        lines += ["## Not comparable", "", f"_{s['withheld']}._", ""]
+        lines += [f"_{note}_" for note in comparison_notes(c)[1:]]
+        return "\n".join([*lines, ""])
     lines += ["## Recovery goals", "", "| Goal | Baseline | Replay |", "|---|---|---|"]
     lines += [f"| {g} | {v['baseline']} | {v['replay']} |" for g, v in s["goals"].items()]
     lines += ["", "## Diagnosed failures", ""]
@@ -164,7 +208,7 @@ def comparison_markdown(c: ReplayComparison) -> str:
         )
     if not s["changed_actions"]:
         lines.append("none")
-    lines += ["", f"_{SCRIPTED_NOTE}_", ""]
+    lines += ["", *(f"_{note}_" for note in comparison_notes(c)[1:]), ""]
     return "\n".join(lines)
 
 

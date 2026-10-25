@@ -14,12 +14,14 @@ from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.repair_search import (
+    INCONCLUSIVE_LISTED,
     MASKED_LABEL,
     REMOVED_LABEL,
     REQUIRES_AUTHORIZATION_LABEL,
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
+    outcome_text,
 )
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.simulation.replay import REPAIR_LABEL
@@ -28,15 +30,16 @@ from cascadeguard.storage.export import (
 )
 from cascadeguard.storage.export import (
     REPAIR_NOTE,
-    SCRIPTED_NOTE,
     comparison_export,
     comparison_markdown,
+    comparison_notes,
     run_export,
     search_export,
 )
 
 MASKED = MASKED_LABEL
 REQUIRES_AUTHORIZATION = REQUIRES_AUTHORIZATION_LABEL
+UNLABELLED = "<unlabelled agent text withheld>"
 
 
 def cite(ids: Iterable[str], labels: dict[str, str]) -> str:
@@ -100,6 +103,7 @@ class RoleViewRows:
     decision_points: tuple[str, ...]
     facts: tuple[str, ...]
     clauses: tuple[str, ...]
+    role_clauses: tuple[str, ...]  # with labels; repair rules marked not citable
     own_history: tuple[str, ...]
     inside: tuple[str, ...]  # data categories inside the role's boundary
     outside: tuple[str, ...]
@@ -111,15 +115,12 @@ def role_view(result: RunResult, role: str, minute: int, categories: Iterable[st
     every scenario data category (`categories`) and its own labelled agent statements."""
     view = next(v for v in result.views if v.role_id == role and v.minute == minute)
     inside = dict(result.boundaries)[role]
-    # Only this role's own decision entries, and only labelled ones (the engine always labels
-    # agent text; anything else is not shown).
+    # Only this role's own decision entries. The engine always labels agent text; an unlabelled
+    # entry (a regression) is shown as a placeholder, never as text and never dropped silently.
     statements = tuple(
-        e.detail
+        e.detail if e.detail.startswith(AGENT_STATEMENT) else UNLABELLED
         for e in result.log
-        if e.kind == "decision"
-        and e.role == role
-        and e.minute == minute
-        and e.detail.startswith(AGENT_STATEMENT)
+        if e.kind == "decision" and e.role == role and e.minute == minute
     )
     return RoleViewRows(
         role=role,
@@ -135,6 +136,7 @@ def role_view(result: RunResult, role: str, minute: int, categories: Iterable[st
             f"{f.id} ({f.data_category}, {f.certainty.value}): {f.statement}" for f in view.facts
         ),
         clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.clauses),
+        role_clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.role_clauses),
         own_history=view.own_history,
         inside=inside,
         outside=tuple(c for c in sorted(set(categories)) if c not in inside),
@@ -275,7 +277,7 @@ def repairs(result: SearchResult) -> list[RepairRow]:
             RepairRow(
                 rank=i,
                 repair_id=c.proposal.repair_id,
-                outcome=c.outcome,
+                outcome=outcome_text(c),
                 edits=len(c.proposal.edits),
                 removed=c.critical_blockers_removed,
                 masked=tuple(f"{f}: {MASKED}" for f in c.masked),
@@ -287,6 +289,23 @@ def repairs(result: SearchResult) -> list[RepairRow]:
             )
         )
     return rows
+
+
+def inconclusive(result: SearchResult) -> list[tuple[str, str]]:
+    """(repair id, status) of replays listed after the ranked ones: unranked, no counts."""
+    return [
+        (c.proposal.repair_id, INCONCLUSIVE_LISTED.format(n=len(c.failed_steps)))
+        for c in result.inconclusive
+    ]
+
+
+def incomplete_banner(failed: tuple[tuple[int, str, str], ...], run: str = "") -> str:
+    """The UI banner for a run with steps that had no decision (as the CLI and Markdown)."""
+    if not failed:
+        return ""
+    where = f"{run} " if run else ""
+    steps = ", ".join(f"T+{m:02d} {r} ({why})" for m, r, why in failed)
+    return f"Incomplete run: {len(failed)} {where}steps had no decision: {steps}"
 
 
 def discarded(result: SearchResult) -> list[str]:
@@ -306,12 +325,33 @@ class Comparison:
     replay_failures: tuple[str, ...]  # remaining, masked and new, each marked
     removed: tuple[str, ...]
     changed_actions: tuple[str, ...]
-    notes: tuple[str, ...] = field(default=(REPAIR_NOTE, SCRIPTED_NOTE))
+    notes: tuple[str, ...] = field(default=(REPAIR_NOTE,))
+    incomplete: str = ""  # an "Incomplete run" banner when steps had no decision
+    withheld: str = ""  # set when the replay is not comparable (verdicts withheld)
 
 
 def comparison(c: ReplayComparison) -> Comparison:
     labels = dict(c.replay.loaded_clauses)
     s = c.summary()
+    if c.failed_steps:  # not comparable: no goals, failure attributions or changed actions
+        p = c.proposal
+        return Comparison(
+            repair_id=p.repair_id,
+            outcome=outcome_text(c),
+            authorization=REQUIRES_AUTHORIZATION if p.requires_authorization else "",
+            edits=tuple(f"{e.operation.value} ({e.edit_id}) [{REPAIR_LABEL}]" for e in p.edits),
+            targets=cite((x.clause_id for x in p.citations), labels) or "none",
+            goals=(),
+            baseline_failures=(),
+            replay_failures=(),
+            removed=(),
+            changed_actions=(),
+            notes=comparison_notes(c),
+            incomplete=incomplete_banner(
+                tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
+            ),
+            withheld=str(s["withheld"]),
+        )
     tags = c.conflict_tags()
     p = c.proposal
     replay_rows = [f"{f}: remaining" for f in c.remaining]
@@ -322,7 +362,7 @@ def comparison(c: ReplayComparison) -> Comparison:
     ]
     return Comparison(
         repair_id=p.repair_id,
-        outcome=c.outcome,
+        outcome=outcome_text(c),
         authorization=REQUIRES_AUTHORIZATION if p.requires_authorization else "",
         edits=tuple(f"{e.operation.value} ({e.edit_id}) [{REPAIR_LABEL}]" for e in p.edits),
         targets=cite((x.clause_id for x in p.citations), labels) or "none",
@@ -335,6 +375,10 @@ def comparison(c: ReplayComparison) -> Comparison:
             + (f" -> {a['target']}" if "target" in a else "")
             + f": {a['baseline']} -> {a['replay']}"
             for a in s["changed_actions"]
+        ),
+        notes=comparison_notes(c),
+        incomplete=incomplete_banner(
+            tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
         ),
     )
 

@@ -134,7 +134,9 @@ def test_repair_rows_show_masked_tags_and_authorization(found: SearchResult) -> 
     assert rows[0].authorization == vm.REQUIRES_AUTHORIZATION
     tagged = [c for r in rows for c in r.new_conflicts]
     assert tagged and all(f"scripted_agent_limit: {SCRIPTED_LIMIT_NOTE}" in c for c in tagged)
-    assert all(not r.new_conflicts for r in rows if r.outcome != "introduces new conflict")
+    assert all(
+        not r.new_conflicts for r in rows if not r.outcome.startswith("introduces new conflict")
+    )
     assert vm.discarded(found) and all("[reviewed" in d for d in vm.discarded(found))
 
 
@@ -256,10 +258,12 @@ def test_comparison_labels_targets_removed_tags_and_notes(found: SearchResult) -
     new = [r for r in v.replay_failures if "NEW conflict" in r]
     assert new and all(f"[{SCRIPTED_LIMIT}: {SCRIPTED_LIMIT_NOTE}]" in r for r in new)
     labels = dict(tagged.replay.loaded_clauses)
-    if tagged.proposal.citations:
-        assert _assert_labelled([v.targets], labels)
-    for c in found.ranked:  # every target list is labelled
-        _assert_labelled([vm.comparison(c).targets], dict(c.replay.loaded_clauses))
+    assert tagged.proposal.citations  # the check below must see clause ids
+    assert _assert_labelled([v.targets], labels)
+    for c in found.ranked:  # every target list with citations is labelled, and checked
+        seen = _assert_labelled([vm.comparison(c).targets], dict(c.replay.loaded_clauses))
+        corpus_cited = [x for x in c.proposal.citations if not x.clause_id.startswith("repair.")]
+        assert seen >= len({x.clause_id for x in corpus_cited}), c.proposal.repair_id
 
 
 def test_role_view_shows_only_its_own_role_and_the_whole_view(world: World) -> None:
@@ -284,4 +288,22 @@ def test_role_view_shows_only_its_own_role_and_the_whole_view(world: World) -> N
             assert v.instructions == received.instructions
             assert v.allowed_actions == received.allowed_actions
             assert v.at == received.at.isoformat()
-            assert set(v.outside) == set(CATEGORIES) - set(v.inside)
+            # Against the scenario's vocabulary, not the argument the view model was given.
+            assert set(v.outside) == world.roles.known_categories() - set(v.inside)
+            decided = any(
+                e.kind == "decision" and e.role == role.id and e.minute == event.at_minute
+                for e in b.log
+            )
+            assert bool(v.agent_statements) == decided  # nothing dropped silently
+
+
+def test_unlabelled_decision_text_is_withheld_not_dropped(world: World) -> None:
+    """A regression that stored agent text without its label shows a placeholder."""
+    from cascadeguard.domain.findings import LogEntry
+
+    b = world.baseline()
+    role, minute = world.roles.roles[0].id, world.scenario.events[0].at_minute
+    forged = LogEntry(seq=10_000, minute=minute, kind="decision", role=role, detail=MARK)
+    v = vm.role_view(replace(b, log=(*b.log, forged)), role, minute, CATEGORIES)
+    assert vm.UNLABELLED in v.agent_statements
+    assert all(MARK not in s for s in v.agent_statements)
