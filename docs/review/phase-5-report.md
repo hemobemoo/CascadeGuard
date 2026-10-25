@@ -65,8 +65,29 @@ among the citations (T+15, T+60, T+75). The engine rejected each
 proposal as `authority_uncertain`, and the orphan-duty failure for activate_fallback_channel
 stayed diagnosed. The agent misread the clause; the deterministic rule held.
 
-**Single-repair live replay (golden repair, owner + share; approved, cap 50; v3 cache):**
-inconclusive because of provider failures.
+**Paced single-repair replay (golden repair; approved, cap 40; 2026-10-25) — complete:**
+- 36/36 baseline steps and 14 replay steps from the cache (3 of the 4 previously cached replay
+  steps were reused; the 4th, T+30 policy_legal_adviser, had a changed view), 22 live.
+- 27 requests: 3 request retries after HTTP 502 (each recovered by one 15 s backoff), 2
+  invalid-output retries; no request failed, no 429. Wall clock 344 s; cost 0.000000;
+  65.3k / 10.6k tokens.
+- 35 of 36 replay steps decided; telecom_operator T+15 returned invalid output twice
+  (`invalid_output`, a model failure, not infrastructure), so the verdict is not inconclusive.
+- Result vs scripted: LLM **partial**, scripted **resolved**. Both remove the information
+  deadlock and the reverse_automated_lockouts orphan duty; no new conflicts in either.
+  alert_cause_known_to_health is met at T+30 in both. patient_access_restored stays unmet in the
+  LLM replay (scripted: T+60), and activate_fallback_channel and review_automated_lockouts
+  remain (scripted: masked). network_incident_reported: LLM T+30, scripted T+45.
+- Why: the health operator received the network status (T+30) but never proposed
+  reverse_automated_lockouts. At T+45 it listed "who owns reviewing and reversing automated
+  lockouts within my remit" as unknown, although the repair rule naming it the owner was in its
+  view (as a non-citable hypothetical rule). The ownership rule gives authority but opens no
+  obligation, and the view lists no open obligations (the deferred question). A finding about
+  how LLM agents take up repairs, not a defect in the engine.
+- Export: `data/llm_replay_paced/` (rebuilt offline from the cache, identical: 72 steps reused).
+
+**Earlier single-repair live replay (cap 50, unpaced):** inconclusive because of provider
+failures.
 - Dry run before any call: baseline fully cached; 25 of 36 replay steps change; the first
   changed step is #0 (T+00 health_service_operator). Repair rules are shown from T+00 to the
   roles they concern (P5-5), so no replay step precedes the change. The baseline came 36/36 from
@@ -98,8 +119,8 @@ inconclusive because of provider failures.
 
 ## Open for the human
 
-1. Golden-repair replay: rerun with pacing under the free tier's 20 requests a minute (or on a
-   paid endpoint)? The 4 successful live steps are cached and would be reused.
+1. How should repair rules reach LLM agents so they act on them (e.g. an ownership rule as an
+   open duty in the view)? Related to item 4; changes every prompt.
 2. P5-4: a live repair search (declined for now).
 3. Known limitation: the gap pattern's false positive on "no authority has been triggered"
    (pinned by a test; not changed).

@@ -91,6 +91,12 @@ pushed, no PR, not merged, not tagged until the human approves). Report:
   decided, 21 `request_failed` (HTTP 502, then 429 free-tier rate limit); inconclusive (details
   in `docs/review/phase-5-report.md`). Error details now drop the response headers OpenRouter
   puts in its error body. 4.18.1 recorded in the report as the engine catching an LLM error.
+- **2026-10-25 (human instructions, second set):** cache audit (no request_failed on disk);
+  scratchpad output with rate-limit headers checked (no key or token) and deleted; inconclusive
+  verdict for any infrastructure failure (CLI, JSON, Markdown; earlier replay re-exported
+  offline as "inconclusive: 21 steps failed for infrastructure reasons", `data/llm_replay/`);
+  RetryPolicy pacing/backoff (15 rpm, Retry-After or 5/15/45 s, max 3 retries, daily-limit
+  stop). Paced golden replay: see "Waiting on human".
 - P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
   each labelled "context only; not citable". Off by default, because it changes every prompt
   (the cached baseline would not be reused).
@@ -620,8 +626,11 @@ none blocking until the LLM baseline report.
 - **Open question for after Phase 5:** role views do not list open obligations (nor action
   descriptions). Adding them would change every prompt and invalidate the cache, so it is
   deferred (human decision 2026-10-25). In the v2 baseline the notify obligation stayed open.
-- **Golden-repair live replay:** inconclusive (21 of 25 live steps failed: HTTP 502, then 429
-  free-tier rate limit). Rerun with pacing, or not?
+- **Golden-repair live replay:** the paced rerun (cap 40) completed: 27 requests, 3 HTTP 502
+  recovered by backoff, 35/36 replay steps decided (1 invalid_output), verdict **partial** (LLM)
+  vs **resolved** (scripted): the operator never proposed reverse_automated_lockouts although
+  the ownership rule was in its view. Question: how should repair rules reach LLM agents so
+  they act on them? (tied to the open-obligations question)
 
 Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
 the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
