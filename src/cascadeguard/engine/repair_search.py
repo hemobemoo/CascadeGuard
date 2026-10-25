@@ -67,11 +67,27 @@ def outcome_definition(outcome: str) -> str:
     return OUTCOME_DEFINITIONS[outcome.split(":", 1)[0]]
 
 
+def invalid_output_caveat(c: "ReplayComparison") -> str:
+    """The caveat shown with an outcome when a baseline or replay step ended in invalid output
+    (model behaviour: flagged, not inconclusive), or "" when none did."""
+    steps = c.invalid_steps
+    if not steps:
+        return ""
+    where = ", ".join(f"{role} at T+{m:02d} ({run})" for run, m, role in steps)
+    return (
+        f"{len(steps)} steps with no decision (model returned invalid output): {where}; "
+        "the result may depend on them"
+    )
+
+
 def outcome_text(c: "ReplayComparison") -> str:
-    """The outcome with its definition and, if any, the masked count: for text outputs."""
+    """The outcome with its definition and, if any, the masked count and the invalid-output
+    caveat: for text outputs."""
     text = f"{c.outcome} ({outcome_definition(c.outcome)})"
     if c.masked and not c.failed_steps:
         text += f"; {len(c.masked)} masked failures: cause still present"
+    if caveat := invalid_output_caveat(c):
+        text += f". Caveat: {caveat}"
     return text
 
 
@@ -171,6 +187,13 @@ class ReplayComparison:
         )
 
     @property
+    def invalid_steps(self) -> tuple[tuple[str, int, str], ...]:
+        """("baseline" | "replay", minute, role) of steps that ended in invalid output."""
+        return tuple(("baseline", *s) for s in self.baseline.invalid_steps) + tuple(
+            ("replay", *s) for s in self.replay.invalid_steps
+        )
+
+    @property
     def outcome(self) -> str:
         # A missing decision is not evidence about the repair (human decision 2026-10-25).
         if self.failed_steps:
@@ -225,6 +248,9 @@ class ReplayComparison:
             "requires_authorization": self.proposal.requires_authorization,
             "edits": [e.model_dump(mode="json", exclude_none=True) for e in self.proposal.edits],
             "outcome": self.outcome,
+            **(
+                {"invalid_output_caveat": invalid_output_caveat(self)} if self.invalid_steps else {}
+            ),
         }
         if self.failed_steps:
             # Missing steps: no goal verdicts, failure attributions or changed actions at all,
@@ -238,12 +264,7 @@ class ReplayComparison:
                 ],
             }
         return {
-            "scenario": self.baseline.scenario_id,
-            "clause_set": self.baseline.clause_set,
-            "repair": self.proposal.repair_id,
-            "requires_authorization": self.proposal.requires_authorization,
-            "edits": [e.model_dump(mode="json", exclude_none=True) for e in self.proposal.edits],
-            "outcome": self.outcome,
+            **head,
             "goals": {
                 g: {"baseline": goal(base_goals[g]), "replay": goal(new_goals[g])}
                 for g in base_goals
@@ -312,6 +333,11 @@ class SearchResult:
                     "unmet_critical_goals": list(c.unmet_critical_goals),
                     "new_conflicts": list(c.new_conflicts),
                     "new_conflict_tags": c.conflict_tags(),
+                    **(
+                        {"invalid_output_caveat": invalid_output_caveat(c)}
+                        if c.invalid_steps
+                        else {}
+                    ),
                 }
                 for i, c in enumerate(self.ranked)
             ],

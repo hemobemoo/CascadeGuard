@@ -11,7 +11,12 @@ from typing import Any
 
 import duckdb
 
-from cascadeguard.engine.repair_search import INCONCLUSIVE_LISTED, ReplayComparison, SearchResult
+from cascadeguard.engine.repair_search import (
+    INCONCLUSIVE_LISTED,
+    ReplayComparison,
+    SearchResult,
+    invalid_output_caveat,
+)
 from cascadeguard.simulation.orchestrator import RunResult
 
 DEFAULT_DB = Path(__file__).resolve().parents[3] / "data" / "audit.duckdb"
@@ -156,7 +161,7 @@ class AuditStore:
                 len(c.proposal.edits),
                 c.proposal.requires_authorization,
                 c.critical_blockers_removed,
-                c.outcome,
+                c.outcome + (f"; {invalid_output_caveat(c)}" if c.invalid_steps else ""),
                 None,
                 [x.clause_id for x in c.proposal.citations],
             ]

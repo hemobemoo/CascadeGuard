@@ -586,6 +586,14 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   - Phase 5 round-3 fixes accepted without another round; the review of the real-model run
     covers them first. Do not merge; stop after the baseline report.
 
+- **Human decision 2026-10-26 (invalid_output):** `invalid_output` stays out of the inconclusive
+  rule: it is model behaviour, a defined no-decision outcome under AGENTS.md, and deterministic
+  from the cache. A run with one is still ranked and scored, and every outcome shows the caveat
+  "N steps with no decision (model returned invalid output): <role at time, ...>; the result may
+  depend on them" (CLI, UI, JSON `invalid_output_caveat`, Markdown, audit). Recorded in spec 003.
+  Paced golden replay check (cache only): the missing telecom_operator T+15 decision changed no
+  view or event the health operator received from T+30 to T+75 (details in the Phase 5 report).
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -649,9 +657,8 @@ none blocking until the LLM baseline report.
 
 </details>
 
-**2026-10-26 (round 4) QUESTION-FOR-HUMAN:** should `invalid_output` steps also make a run
-inconclusive? Today only `request_failed` and `not_cached` do (decision 2026-10-25), so the
-paced golden replay (telecom_operator T+15 `invalid_output`) is ranked and scored as "partial".
+**2026-10-26 (round 4) question answered by the human:** `invalid_output` steps do not make a
+run inconclusive (see Decisions).
 
 **2026-10-25 additions:**
 - **Clause review (gate 1):** new draft `uae.fl2-2019.art16-exceptions` — Art 16 items 1-5,

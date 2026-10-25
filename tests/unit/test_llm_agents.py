@@ -1260,3 +1260,65 @@ def test_live_cli_run_without_a_cap_is_refused(
     monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
     assert main(["run", SCENARIO, "--agents", "llm", "--cache", str(tmp_path)]) == 2
     assert "live LLM runs need a request cap" in capsys.readouterr().out
+
+
+# --- invalid_output: flagged, not inconclusive (human decision 2026-10-26) --------------------
+
+
+def test_invalid_output_is_flagged_everywhere_but_still_ranked(
+    scripted: World, tmp_path: Path
+) -> None:
+    import duckdb
+
+    from cascadeguard.cli import format_search
+    from cascadeguard.storage.audit import AuditStore
+    from cascadeguard.storage.export import comparison_export, comparison_markdown, search_export
+    from cascadeguard.ui import view_model as vm
+
+    base = scripted_replies(scripted)
+
+    def reply(request: dict[str, Any]) -> str:
+        v, text = view_of(request), request["messages"][1]["content"]
+        golden = OWNER_RULE in text and SHARE_RULE in text
+        if golden and (v["role_id"], v["minute"]) == ("policy_legal_adviser", 75):
+            return "not json"  # invalid twice: a defined no-decision outcome
+        return base(request)
+
+    w = llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path / "c"))
+    found = search_repairs(SCENARIO, world=w)
+    c = found.comparison(SUCCESS)
+    assert c.invalid_steps == (("replay", 75, "policy_legal_adviser"),)
+    assert not c.failed_steps and c in found.ranked  # ranked and scored, not inconclusive
+    assert c.outcome == "resolved"
+    caveat = (
+        "1 steps with no decision (model returned invalid output): policy_legal_adviser at "
+        "T+75 (replay); the result may depend on them"
+    )
+    assert caveat in format_search(found)
+    assert f"**Caveat:** {caveat}" in comparison_markdown(c)
+    assert comparison_export(c)["invalid_output_caveat"] == caveat
+    (row,) = [r for r in search_export(found)["ranked"] if r["repair"] == SUCCESS]
+    assert row["invalid_output_caveat"] == caveat
+    assert caveat in vm.comparison(c).outcome
+    assert caveat in next(r.outcome for r in vm.repairs(found) if r.repair_id == SUCCESS)
+    db = tmp_path / "audit.duckdb"
+    store = AuditStore(db)
+    try:
+        store.record_comparison(c)
+        store.record_search(c.baseline, found)
+    finally:
+        store.close()
+    con = duckdb.connect(str(db), read_only=True)
+    try:
+        (summary,) = con.execute("SELECT summary FROM comparisons").fetchone() or ("{}",)
+        (outcome,) = con.execute(
+            "SELECT outcome FROM repairs WHERE repair_id = ?", [SUCCESS]
+        ).fetchone() or ("",)
+    finally:
+        con.close()
+    assert json.loads(summary)["invalid_output_caveat"] == caveat
+    assert caveat in outcome
+    # A run without invalid output carries no caveat (and the goldens stay unchanged).
+    clean = search_repairs(SCENARIO).comparison(SUCCESS)
+    assert "invalid_output_caveat" not in clean.summary()
+    assert "Caveat" not in comparison_markdown(clean)

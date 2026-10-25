@@ -75,7 +75,20 @@ stayed diagnosed. The agent misread the clause; the deterministic rule held.
   invalid-output retries; no request failed, no 429. Wall clock 344 s; cost 0.000000;
   65.3k / 10.6k tokens.
 - 35 of 36 replay steps decided; telecom_operator T+15 returned invalid output twice
-  (`invalid_output`, a model failure, not infrastructure), so the verdict is not inconclusive.
+  (`invalid_output`, a model failure, not infrastructure), so the verdict is not inconclusive;
+  every output now carries the caveat "1 steps with no decision (model returned invalid
+  output): telecom_operator at T+15 (replay); the result may depend on them".
+- **Did the missing telecom_operator decision at T+15 change what the health operator received
+  from T+30 to T+75?** Checked from the cache only (offline rebuild, 72 steps reused): **no**.
+  At T+15 the telecom operator held only `network_telemetry` facts (sms_latency_spike,
+  traffic_model_update), which stay outside the health operator's boundary even with the repair,
+  so no T+15 action could have delivered anything to it. The health operator's views from T+30
+  to T+75 hold only facts released by the fixed injects (otp_delivery_status and
+  no_confirmed_intrusion at T+30; patients_still_locked_out and call_centre_not_authorised at
+  T+60); every telecom share to it came at T+30 or later; injects are fixed by the scenario.
+  One effect elsewhere: network_incident_reported was met at T+30 in the replay, against T+15 in
+  the v3 baseline, where the telecom operator reported in its T+15 step. That goal does not
+  decide the verdict (partial rests on patient_access_restored and the remaining failures).
 - Result vs scripted: LLM **partial**, scripted **resolved**. Both remove the information
   deadlock and the reverse_automated_lockouts orphan duty; no new conflicts in either.
   alert_cause_known_to_health is met at T+30 in both. patient_access_restored stays unmet in the
