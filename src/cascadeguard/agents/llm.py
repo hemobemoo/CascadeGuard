@@ -392,6 +392,7 @@ class CappedClient:
 RPM_VARIABLE = "CASCADEGUARD_REQUESTS_PER_MINUTE"
 RETRIES_VARIABLE = "CASCADEGUARD_REQUEST_RETRIES"
 BACKOFF_VARIABLE = "CASCADEGUARD_BACKOFF_SECONDS"
+CAP_VARIABLE = "CASCADEGUARD_REQUEST_CAP"  # live CLI/UI runs: max requests, retries included
 MAX_RETRY_AFTER_SECONDS = 300.0  # a longer Retry-After is waited only up to this
 
 
@@ -403,6 +404,14 @@ class RetryPolicy:
     requests_per_minute: int = 15
     max_retries: int = 3  # per request, then the step is request_failed
     backoff_seconds: tuple[float, ...] = (5.0, 15.0, 45.0)  # never an immediate retry
+    # Hard budget for a live CLI/UI run (requests, retries included); no default: a live run
+    # without a cap (here or --cap) is refused.
+    request_cap: int | None = None
+
+    @property
+    def max_requests_per_step(self) -> int:
+        """Invalid-output attempts x (first send + request retries)."""
+        return ATTEMPTS * (1 + self.max_retries)
 
     @classmethod
     def from_env(cls, env_file: Path | None = None) -> "RetryPolicy":
@@ -415,6 +424,8 @@ class RetryPolicy:
 
         default = cls()
         try:
+            cap_raw = raw(CAP_VARIABLE)
+            cap = int(cap_raw) if cap_raw else None
             rpm = int(raw(RPM_VARIABLE) or default.requests_per_minute)
             retries = int(raw(RETRIES_VARIABLE) or default.max_retries)
             backoff_raw = raw(BACKOFF_VARIABLE)
@@ -425,15 +436,21 @@ class RetryPolicy:
             )
         except ValueError:
             raise LLMConfigError(
-                f"{RPM_VARIABLE} and {RETRIES_VARIABLE} must be integers and {BACKOFF_VARIABLE} "
-                "a comma-separated list of seconds"
+                f"{RPM_VARIABLE}, {RETRIES_VARIABLE} and {CAP_VARIABLE} must be integers and "
+                f"{BACKOFF_VARIABLE} a comma-separated list of seconds"
             ) from None
-        if rpm < 1 or retries < 0 or not backoff or min(backoff) <= 0:
+        if (
+            rpm < 1
+            or retries < 0
+            or not backoff
+            or min(backoff) <= 0
+            or (cap is not None and cap < 1)
+        ):
             raise LLMConfigError(
-                f"{RPM_VARIABLE} must be >= 1, {RETRIES_VARIABLE} >= 0, and every "
-                f"{BACKOFF_VARIABLE} value > 0 (no immediate retries)"
+                f"{RPM_VARIABLE} and {CAP_VARIABLE} must be >= 1, {RETRIES_VARIABLE} >= 0, "
+                f"and every {BACKOFF_VARIABLE} value > 0 (no immediate retries)"
             )
-        return cls(rpm, retries, backoff)
+        return cls(rpm, retries, backoff, cap)
 
 
 class DailyLimitReached(Exception):
@@ -501,6 +518,7 @@ class ResilientClient:
     paced_seconds: float = 0.0
     backoff_seconds: float = 0.0
     sent: list[float] = field(default_factory=list[float])
+    redact: tuple[str, ...] = ()  # e.g. the API key and model id: never in an error message
 
     @property
     def chat(self) -> Any:
@@ -521,9 +539,23 @@ class ResilientClient:
             self.paced_seconds += wait
             self.sleep(wait)
 
+    def _cap_spent(self) -> bool:
+        inner = self.inner
+        return isinstance(inner, CappedClient) and inner.requests >= inner.cap
+
+    def _refuse(self) -> None:
+        """Refuse before pacing or backoff: no waiting for a request the cap would refuse."""
+        assert isinstance(self.inner, CappedClient)
+        self.inner.refused += 1
+        raise CapReached(f"cap of {self.inner.cap} requests reached")
+
     def create(self, **request: Any) -> Any:
         attempt = 0
         while True:
+            if self._cap_spent():
+                self._refuse()
+            if attempt:
+                self.retries += 1  # counted only when the retry is actually sent
             self._pace()
             try:
                 return self.inner.chat.completions.create(**request)
@@ -533,17 +565,19 @@ class ResilientClient:
                 kind = failure_kind(exc)
                 self.failures[kind] = self.failures.get(kind, 0) + 1
                 if _is_daily_limit(exc):
-                    raise DailyLimitReached(_body_message(exc)[:120]) from exc
+                    # Redacted, and not chained: the SDK error carries the whole body.
+                    raise DailyLimitReached(error_detail(exc, self.redact)) from None
                 if not _retryable(exc) or attempt >= self.policy.max_retries:
                     raise
                 steps = self.policy.backoff_seconds
                 wait = _retry_after(exc)
                 if wait is None or wait <= 0:
                     wait = steps[min(attempt, len(steps) - 1)]
+                if self._cap_spent():  # the retry would be refused: do not wait for it
+                    self._refuse()
                 self.backoff_seconds += wait
                 self.sleep(wait)
                 attempt += 1
-                self.retries += 1
 
 
 def make_client(
@@ -558,8 +592,10 @@ def make_client(
         timeout=REQUEST_TIMEOUT_SECONDS,
         max_retries=0,
     )
+    policy = policy or RetryPolicy.from_env()
+    cap = cap if cap is not None else policy.request_cap
     inner: Any = sdk if cap is None else CappedClient(sdk, cap)
-    return ResilientClient(inner, policy or RetryPolicy.from_env())
+    return ResilientClient(inner, policy, redact=(config.api_key, config.model))
 
 
 KEY_SHAPED = re.compile(r"\b(?:sk|or|key)-[A-Za-z0-9_\-]{8,}|Bearer\s+\S+", re.IGNORECASE)
@@ -567,6 +603,17 @@ ERROR_DETAIL_LIMIT = 200
 
 
 HEADERS_ONWARD = re.compile(r"""['"]?headers['"]?\s*[:=].*""", re.IGNORECASE)
+
+
+def _variants(redact: tuple[str, ...]) -> set[str]:
+    """Each value, plus (for model ids) the part after '/' and the id without its ':suffix'."""
+    out: set[str] = set()
+    for value in (v for v in redact if v):
+        slug = value.split("/")[-1]
+        for v in (value, value.split(":")[0], slug, slug.split(":")[0]):
+            if len(v) >= 4:
+                out.add(v)
+    return out
 
 
 def error_detail(exc: BaseException, redact: tuple[str, ...]) -> str:
@@ -582,8 +629,8 @@ def error_detail(exc: BaseException, redact: tuple[str, ...]) -> str:
     else:
         message = " ".join(str(exc).split())
     message = HEADERS_ONWARD.sub("", message).strip()
-    for value in sorted({v for v in redact if v}, key=len, reverse=True):
-        message = message.replace(value, "<redacted>")
+    for value in sorted(_variants(redact), key=len, reverse=True):
+        message = re.sub(re.escape(value), "<redacted>", message, flags=re.IGNORECASE)
     message = KEY_SHAPED.sub("<redacted>", message)
     status = getattr(exc, "status_code", None)
     return f"{type(exc).__name__} (HTTP {status}): {message}"[:ERROR_DETAIL_LIMIT]
@@ -722,7 +769,11 @@ class LLMAgent:
             entry = entry.model_copy(update={"no_decision_detail": self.last_error})
             self.cache.remember(entry)
             return self._no_decision(view, "request_failed", self.last_error)
-        self.cache.put(self._entry(key, "no_decision", usage, no_decision="invalid_output"))
+        entry = self._entry(key, "no_decision", usage, no_decision="invalid_output")
+        if self.attempts < ATTEMPTS:  # e.g. the one-call smoke test: never reused by a full run
+            self.cache.remember(entry)
+        else:
+            self.cache.put(entry)
         return self._no_decision(view, "invalid_output")
 
     def _call(self, request: dict[str, Any]) -> Any:
@@ -775,6 +826,7 @@ def llm_agents(
     model: str | None = None,
     output_mode: str | None = None,
     extracted_context: bool = False,
+    cap: int | None = None,
 ) -> dict[str, LLMAgent]:
     """One LLMAgent per role, all with the same model and output mode. Offline needs only the
     model id and output mode (to find cache entries); live needs the full configuration."""
@@ -784,7 +836,7 @@ def llm_agents(
     mode = output_mode or (config.output_mode if config else LLMConfig.output_mode_from_env())
     if not offline and client is None:
         assert config is not None
-        client = make_client(config)
+        client = make_client(config, cap=cap)
     live = None if offline else client
     secrets = (config.api_key,) if config else ()
     return {

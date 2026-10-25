@@ -16,6 +16,7 @@ from typing import Any
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache, cache_key
 from cascadeguard.agents.llm import (
     PROMPT_VERSION,
+    DailyLimitReached,
     LLMAgent,
     LLMConfig,
     build_messages,
@@ -75,10 +76,17 @@ def main() -> int:
         role_ids,
         attempts=1,
         output_mode=config.output_mode,
+        redact=(config.api_key,),
     )
     step = OneStep(world.agents[args.role], llm, args.minute)
     agents = {**world.agents, args.role: step}
-    result = run(world.scenario, world.roles, world.clauses, world.corpus_ids, agents, world.label)
+    try:
+        result = run(
+            world.scenario, world.roles, world.clauses, world.corpus_ids, agents, world.label
+        )
+    except DailyLimitReached as exc:  # message already redacted; nothing chained
+        print(f"STOP: provider daily limit reached ({exc}).")
+        return 2
 
     decision, usage = step.decision, llm.last_usage
     print(f"Smoke test: {args.role} at T+{args.minute:02d} (model from CASCADEGUARD_MODEL)")

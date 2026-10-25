@@ -20,10 +20,10 @@ None is overstated.
 
 ## Rejected free-text gap claim (1)
 
-T+00 health_data_oversight, an empty decision: "... no authority has been triggered that would
+T+00 health_data_oversight, a decision proposing only `monitor`: "... no authority has been triggered that would
 justify issuing a determination ...". The engine's gap pattern matches "no authority", so it
 recorded `uncited_gap_claim`. This is a **false positive**: the sentence states the agent's own
-inaction, not a gap in the law. It changed nothing (no action was proposed). By design the
+inaction, not a gap in the law. It changed nothing of substance (the only proposed action was `monitor`). By design the
 pattern stays conservative (human decision, Phase 3), so this is logged, not fixed.
 
 ## Spot-check of accepted decisions (10)
@@ -31,7 +31,7 @@ pattern stays conservative (human decision, Phase 3), so this is logged, not fix
 | Step | Action(s) | Cited | Does the rationale match the clause? |
 |---|---|---|---|
 | T+15 health_service_operator | raise_security_incident, review_automated_lockouts | dha.pp11.4-18-2, uae.ai-charter.human-oversight | Yes: suspected alert investigated as an incident; human review of AI lockouts. |
-| T+15 policy_legal_adviser | provide_policy_analysis | 8 clauses | Yes: binding vs illustrative kept apart; notes the Executive Regulations and the Art 16 exceptions are not in the corpus. |
+| T+15 policy_legal_adviser | provide_policy_analysis, request_information | 8 clauses | Yes: binding vs illustrative kept apart; notes the Executive Regulations and the Art 16 exceptions are not in the corpus. |
 | T+15 telecom_regulator | request_information (telecom_operator) | illus.telecom.regulator-information-request | Yes: exact match, labelled illustrative. |
 | T+30 telecom_operator | report_to_telecom_regulator | illus.telecom.incident-report | Yes: reported at T+30, inside the 60-minute illustrative deadline. |
 | T+30 public_access_inclusion | assess_access_impact | art16, regulator-information-request | Partly: art16 is cited as generic "confidentiality is relevant", not as support for the action. |
@@ -39,7 +39,7 @@ pattern stays conservative (human decision, Phase 3), so this is logged, not fix
 | T+60 public_access_inclusion | recommend_measure (alternative channel) | regulator-information-request, art16 | Weak: neither clause supports the recommendation. |
 | T+75 health_data_oversight | recommend_measure (no sharing until an exception is confirmed) | art6, art16 | Yes, and careful: says the exceptions are unquoted, so applicability is uncertain. |
 | T+75 health_service_operator | maintain_fallback_plan, review_automated_lockouts | dha.pp11.4-18-1, human-oversight, 4-18-2 | Yes. |
-| T+00 health_service_operator | maintain_fallback_plan, review_automated_lockouts | 4-18-1, human-oversight, 4-18-4 | Mostly: it reads 4.18.4 as "report to health data oversight", but the quote names no recipient (the mapping takes it from 4.18.5). |
+| T+00 health_service_operator | maintain_fallback_plan, review_automated_lockouts, request_information, monitor | 4-18-1, 4-18-2, 4-18-4, human-oversight | Mostly: it reads 4.18.4 as "report to health data oversight", but the quote names no recipient (the mapping takes it from 4.18.5). |
 
 Rejected, but for context: T+60 health_service_operator read 4.18.1 as authority to *activate* a
 fallback channel. Decision h2 says it gives only a duty to *maintain* a plan, and the engine
@@ -63,7 +63,7 @@ descriptions.
 | | LLM (v2) | Scripted |
 |---|---|---|
 | Steps with a decision | 31 / 36 | 36 / 36 |
-| Accepted actions | 46 (5 in common) | 11 |
+| Accepted actions, distinct (minute, role, action) | 46 (47 entries; 5 in common) | 11 |
 | Rejected decisions / citation rejections | 18 / 12 | 1 / 1 |
 | Diagnosed failures | the same 4 | 4 |
 | network_incident_reported | T+30 | T+45 |

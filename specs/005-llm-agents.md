@@ -98,3 +98,16 @@ passed the engine, 6.06 s, 2,643 / 619 tokens, cost 0. One capped LLM baseline f
    prints the uncached steps from a dry run of the cache and needs `--live`.
 3. Choose a model that supports structured outputs (`response_format` json_schema) and
    approve one more smoke call. The settings above stay as specified.
+
+## Added after review (2026-10-25/26)
+
+- Requests: `RetryPolicy` (code defaults, `.env` overrides) drives `ResilientClient`: at most 15
+  requests a minute, Retry-After or 5/15/45 s backoff on 429/5xx, at most 3 retries, never
+  immediate; a daily-limit 429 raises `DailyLimitReached` (redacted, not chained) and stops the
+  run. `CappedClient` sits inside it, so the cap counts every retry; the cap is checked before
+  any pacing or backoff wait. Live CLI/UI runs need a cap (`--cap` or `CASCADEGUARD_REQUEST_CAP`).
+- Missing steps (`request_failed`, `not_cached`): the outcome is "inconclusive: N steps failed
+  for infrastructure reasons"; the comparison withholds goals, failure attributions and changed
+  actions in every output; a search lists such replays after the ranked ones
+  (`SearchResult.inconclusive`), unranked and without counts.
+- An `invalid_output` from a one-attempt run (smoke test) is kept in memory only.

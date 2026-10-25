@@ -109,10 +109,11 @@ def comparison_export(c: ReplayComparison) -> dict[str, Any]:
     by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
     data = c.summary()
     for key in ("failures_removed", "failures_masked", "failures_remaining", "new_conflicts"):
-        data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
+        if key in data:  # absent when the replay is inconclusive (withheld)
+            data[key] = [_failure(by_id[fid], labels) for fid in data[key]]
     data["targets_clauses"] = _labelled((x.clause_id for x in c.proposal.citations), labels)
     data["outcome_definition"] = outcome_definition(c.outcome)
-    if c.masked:
+    if c.masked and not c.failed_steps:
         data["masked_note"] = f"{len(c.masked)} masked failures: cause still present"
     data["note"] = " ".join(comparison_notes(c))
     data["agents"] = c.replay.agents
@@ -151,7 +152,11 @@ def comparison_markdown(c: ReplayComparison) -> str:
             else []
         ),
         f"- Outcome: **{c.outcome}** ({outcome_definition(c.outcome)})"
-        + (f"; {len(c.masked)} masked failures: cause still present" if c.masked else ""),
+        + (
+            f"; {len(c.masked)} masked failures: cause still present"
+            if c.masked and not c.failed_steps
+            else ""
+        ),
         "- Requires authorization: "
         + (
             "**yes**: creates a permission with no reviewed, binding basis; needs human and "
@@ -169,6 +174,10 @@ def comparison_markdown(c: ReplayComparison) -> str:
         )
         lines.append(f"- `{e.operation.value}`: {params}")
     lines += ["", f"Clauses the repair targets: {cite(x.clause_id for x in p.citations)}", ""]
+    if c.failed_steps:  # not comparable: no goals, failure attributions or changed actions
+        lines += ["## Not comparable", "", f"_{s['withheld']}._", ""]
+        lines += [f"_{note}_" for note in comparison_notes(c)[1:]]
+        return "\n".join([*lines, ""])
     lines += ["## Recovery goals", "", "| Goal | Baseline | Replay |", "|---|---|---|"]
     lines += [f"| {g} | {v['baseline']} | {v['replay']} |" for g, v in s["goals"].items()]
     lines += ["", "## Diagnosed failures", ""]

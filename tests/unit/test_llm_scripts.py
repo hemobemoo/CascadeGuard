@@ -150,3 +150,20 @@ def test_retry_policy_comes_from_code_defaults_or_env(
     monkeypatch.setenv("CASCADEGUARD_BACKOFF_SECONDS", "0,5")
     with pytest.raises(LLMConfigError, match="no immediate retries"):
         RetryPolicy.from_env(env)
+
+
+def test_a_retried_5xx_uses_up_the_cap_and_no_wait_is_spent_past_it() -> None:
+    clock = Clock()
+    inner, calls = scripted_inner([HTTPError(502), HTTPError(502), "ok"])
+    capped = CappedClient(inner, cap=2)
+    client = ResilientClient(capped, RetryPolicy(), sleep=clock.sleep, clock=clock.time)
+    with pytest.raises(CapReached):
+        client.create(model="m")
+    assert len(calls) == 2 and capped.requests == 2  # the first send and one retry
+    assert client.retries == 1  # the refused retry is not counted
+    assert clock.sleeps == [5.0]  # no backoff slept for the refused retry
+    # Once spent, further requests are refused without pacing waits.
+    for _ in range(40):
+        with pytest.raises(CapReached):
+            client.create(model="m")
+    assert client.paced_seconds == 0.0

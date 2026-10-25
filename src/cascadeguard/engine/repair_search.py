@@ -48,6 +48,10 @@ SCRIPTED_LIMIT = "scripted_agent_limit"
 INCONCLUSIVE = "inconclusive: {n} steps failed for infrastructure reasons"
 # How an inconclusive replay is listed in a search: after the ranked ones, unranked, no counts.
 INCONCLUSIVE_LISTED = "inconclusive: {n} steps missing; not comparable"
+WITHHELD_NOTE = (
+    "goals, failure attributions and changed actions withheld: {n} steps had no decision, so the "
+    "replay is not comparable with the baseline"
+)
 # Shown next to every outcome (human decision 2026-10-26), so "resolved" never reads as "every
 # failure fixed".
 OUTCOME_DEFINITIONS = {
@@ -66,7 +70,7 @@ def outcome_definition(outcome: str) -> str:
 def outcome_text(c: "ReplayComparison") -> str:
     """The outcome with its definition and, if any, the masked count: for text outputs."""
     text = f"{c.outcome} ({outcome_definition(c.outcome)})"
-    if c.masked:
+    if c.masked and not c.failed_steps:
         text += f"; {len(c.masked)} masked failures: cause still present"
     return text
 
@@ -214,6 +218,25 @@ class ReplayComparison:
         def goal(m: int | None) -> str:
             return f"met at T+{m}" if m is not None else "unmet"
 
+        head = {
+            "scenario": self.baseline.scenario_id,
+            "clause_set": self.baseline.clause_set,
+            "repair": self.proposal.repair_id,
+            "requires_authorization": self.proposal.requires_authorization,
+            "edits": [e.model_dump(mode="json", exclude_none=True) for e in self.proposal.edits],
+            "outcome": self.outcome,
+        }
+        if self.failed_steps:
+            # Missing steps: no goal verdicts, failure attributions or changed actions at all,
+            # in any output built on this summary (exports, audit, CLI, UI).
+            return {
+                **head,
+                "withheld": WITHHELD_NOTE.format(n=len(self.failed_steps)),
+                "failed_steps": [
+                    {"run": run, "minute": m, "role": r, "reason": why}
+                    for run, m, r, why in self.failed_steps
+                ],
+            }
         return {
             "scenario": self.baseline.scenario_id,
             "clause_set": self.baseline.clause_set,
@@ -704,6 +727,7 @@ def replay_one(
     repair_id: str,
 ) -> SearchResult:
     """Replay and judge a single repair (same hard filter and comparison as the search). The
-    result holds one ranked comparison, or one discard if the replay got around a restriction."""
+    result holds one ranked comparison, one inconclusive comparison (steps missing), or one
+    discard if the replay got around a restriction."""
     p = find_proposal(baseline, scenario, roles, rules, repair_id)
     return _judge((p,), (), baseline, scenario, rules, replay)

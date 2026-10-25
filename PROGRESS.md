@@ -10,7 +10,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Done
 
-### Phase 5 — LLM agents (branch `phase-5-llm`, in progress)
+### Phase 5 — LLM agents (branch `phase-5-llm`, PR #6 open)
 - Review round 1 on the Phase 4 tail (a0b6342, 2f0ddc8, 9f27e4d): phase-auditor PASS,
   test-breaker PASS, evidence-auditor FAIL (2 MINOR stale notes). All MINORs fixed in dc6c7d3
   (notes, e2e scoping, graph check, view-model placeholder). Triage:
@@ -93,7 +93,8 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 - **2026-10-25 (human instructions, second set):** cache audit (no request_failed on disk);
   scratchpad output with rate-limit headers checked (no key or token) and deleted; inconclusive
   verdict for any infrastructure failure (CLI, JSON, Markdown; earlier replay re-exported
-  offline as "inconclusive: 21 steps failed for infrastructure reasons", `data/llm_replay/`);
+  offline as "inconclusive: 21 steps failed for infrastructure reasons"; that export was later
+  removed (2026-10-26): the paced rerun cached the same steps, so it can no longer be rebuilt);
   RetryPolicy pacing/backoff (15 rpm, Retry-After or 5/15/45 s, max 3 retries, daily-limit
   stop). Paced golden replay: see "Waiting on human".
 - **2026-10-26 closing check and display fixes (human instructions; display, ranking and export
@@ -108,6 +109,26 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
   Playwright flow re-run in both modes (LLM cache-only, no calls); 343 tests pass. ADR 0002
   decided: Phase 5 closes with C; A is the first task after Phase 5, pending the human's
   decision on when the owner obligation opens and its deadline.
+- **Review round 4 (2f98197..0adff73, 2026-10-26):** phase-auditor FAIL, test-breaker FAIL,
+  evidence-auditor FAIL. Fixed with tests (each headline fix mutation-checked):
+  - BLOCKER/MAJOR (all three reviewers): an inconclusive single comparison was still scored.
+    `ReplayComparison.summary()` now withholds goals, failure attributions and changed actions
+    when steps are missing, in JSON, Markdown, CLI, UI and the audit store.
+  - MAJOR: `DailyLimitReached` carried the raw provider body and was chained to the SDK error
+    (headers, model id in tracebacks). Now redacted with `error_detail` and raised `from None`;
+    the CLI, UI and all three scripts catch it with a fixed or redacted line.
+  - MAJOR: live CLI/UI runs had no request cap, and the estimate said "up to 2 calls". Live runs
+    now need `--cap` or `CASCADEGUARD_REQUEST_CAP`; the estimate says up to 8 requests per step.
+  - MAJOR: a one-attempt smoke run could store `invalid_output` and a full run would reuse it
+    without retrying. One-attempt invalid outputs are now kept in memory only.
+  - MAJOR: `llm_replay.py` reported an inconclusive run as a hard-filter discard (fixed).
+  - MINORs fixed: inconclusive replays recorded in the audit `repairs` table (rank NULL);
+    the cap is checked before pacing/backoff and a retry counts only when sent (test for a
+    retried 5xx using up the cap); model-id variants redacted (case, slug, without `:suffix`);
+    "no complete replay to rank" wording; smoke script passes the key to redaction; report and
+    review doc corrections (PR state, scripts, test count, v2 replay sentence now historical,
+    accepted-action basis 46 distinct / 47 entries, decision details); Art 16 exceptions notes
+    spell out the binding scope; spec and architecture updated; replay export re-exported.
 - P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
   each labelled "context only; not citable". Off by default, because it changes every prompt
   (the cached baseline would not be reused).
@@ -628,6 +649,10 @@ none blocking until the LLM baseline report.
 
 </details>
 
+**2026-10-26 (round 4) QUESTION-FOR-HUMAN:** should `invalid_output` steps also make a run
+inconclusive? Today only `request_failed` and `not_cached` do (decision 2026-10-25), so the
+paced golden replay (telecom_operator T+15 `invalid_output`) is ranked and scored as "partial".
+
 **2026-10-25 additions:**
 - **Clause review (gate 1):** new draft `uae.fl2-2019.art16-exceptions` — Art 16 items 1-5,
   verbatim, from `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf`, viewer
@@ -654,6 +679,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
    **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing).
 
 ## Known limitations
+
+- **Deferred MINORs (round 4):** `DecisionCache._read` checks only the key, not
+  `prompt_version`/`model_sha256` inside the file (safe in normal use: both are hashed into the
+  key); `Usage.calls` counts agent attempts, not request retries (the clients' own counters are
+  exact).
 
 - **Gap-wording false positive (2026-10-25):** the free-text gap pattern matches "no authority"
   when an agent describes its own inaction ("no authority has been triggered ..."), so the
