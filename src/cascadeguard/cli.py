@@ -21,12 +21,14 @@ from cascadeguard.domain.repairs import RepairProposal
 from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.engine.repair_search import (
+    INCONCLUSIVE_LISTED,
     MASKED_LABEL,
     RANKING,
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
     find_proposal,
+    outcome_text,
     replay_one,
     search,
 )
@@ -415,7 +417,7 @@ def format_search(result: SearchResult) -> str:
         auth = ", requires authorization" if p.requires_authorization else ""
         lines.append(f"{i:3}. {p.repair_id}")
         lines.append(
-            f"     {c.outcome}; critical blockers removed {c.critical_blockers_removed}; "
+            f"     {outcome_text(c)}; critical blockers removed {c.critical_blockers_removed}; "
             f"{len(p.edits)} edit(s){auth}"
         )
         if c.masked:
@@ -424,6 +426,15 @@ def format_search(result: SearchResult) -> str:
         for fid in c.new_conflicts:
             tag = f"  [{tags[fid]}: {SCRIPTED_LIMIT_NOTE}]" if fid in tags else ""
             lines.append(f"     new conflict: {fid}{tag}")
+    if result.inconclusive:
+        lines.append("")
+        lines.append("Inconclusive (unranked; not comparable: steps had no decision)")
+        for c in result.inconclusive:
+            auth = ", requires authorization" if c.proposal.requires_authorization else ""
+            status = INCONCLUSIVE_LISTED.format(n=len(c.failed_steps))
+            lines.append(
+                f"  - {c.proposal.repair_id}: {status}; {len(c.proposal.edits)} edit(s){auth}"
+            )
     lines.append("")
     lines.append("Discarded by the hard filter")
     if not result.discarded:

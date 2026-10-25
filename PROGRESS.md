@@ -4,10 +4,9 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 5 — LLM agents: v3 baseline done, stopped for the human** (branch `phase-5-llm`; not
-pushed, no PR, not merged, not tagged until the human approves). Report:
-`docs/review/phase-5-report.md`. The golden repair's live replay was not run: the dry run shows
-25 uncached steps, above the human's limit of 20. Phase 4 is merged.
+**Phase 5 — LLM agents: complete, PR open, waiting for the human to merge and tag** (branch
+`phase-5-llm`). Report: `docs/review/phase-5-report.md`. Closing check and display fixes done
+2026-10-26 (below). Phase 4 is merged.
 
 ## Done
 
@@ -97,6 +96,18 @@ pushed, no PR, not merged, not tagged until the human approves). Report:
   offline as "inconclusive: 21 steps failed for infrastructure reasons", `data/llm_replay/`);
   RetryPolicy pacing/backoff (15 rpm, Retry-After or 5/15/45 s, max 3 retries, daily-limit
   stop). Paced golden replay: see "Waiting on human".
+- **2026-10-26 closing check and display fixes (human instructions; display, ranking and export
+  code only):** complete replays are ranked first; inconclusive ones are listed after them,
+  unranked, as "inconclusive: N steps missing; not comparable", with no goal or blocker counts
+  (CLI, UI, JSON, Markdown; `SearchResult.inconclusive`); the scripted-agents note appears only
+  when both runs were scripted; every outcome shows its definition ("resolved: all critical goals
+  met; masked failures may remain"), JSON exports carry `outcome_definition` and `masked_note`,
+  and "N masked failures: cause still present" sits next to the outcome; the masked label is
+  "masked (goal met another way; cause still present)"; the UI shows an "Incomplete run" banner;
+  changed-action lists treat a self-target as no target (display only). Golden files unchanged.
+  Playwright flow re-run in both modes (LLM cache-only, no calls); 343 tests pass. ADR 0002
+  decided: Phase 5 closes with C; A is the first task after Phase 5, pending the human's
+  decision on when the owner obligation opens and its deadline.
 - P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
   each labelled "context only; not citable". Off by default, because it changes every prompt
   (the cached baseline would not be reused).
@@ -669,9 +680,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 5: wait for the human. Open: approve (or not) the golden repair's live replay (25+
-requests, above the limit of 20); then the review round on the real-model run (covering the
-round-3 fixes first); then, on approval, push, tag and open the PR (do not merge).
+Phase 5: the human merges the PR and tags `phase-5`. Then, first task after Phase 5: ADR 0002
+option A, after the human decides when an owner obligation opens and its deadline. Still open:
+the review of the real-model runs (it covers the round-3 fixes first; not run yet), the human's
+review of `uae.fl2-2019.art16-exceptions`, and the gap-wording known limitation.
 
 Earlier (done):
 

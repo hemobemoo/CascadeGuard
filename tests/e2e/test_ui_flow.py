@@ -17,6 +17,7 @@ import pytest
 from playwright.sync_api import Page, expect, sync_playwright
 
 from cascadeguard.cli import load_world, main
+from cascadeguard.engine.repair_search import MASKED_LABEL
 from cascadeguard.simulation.replay import REPAIR_LABEL
 from cascadeguard.storage.export import DISCLAIMER
 
@@ -138,7 +139,7 @@ def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
     expect(page.get_by_text(f"Baseline vs replay: {TOP}")).to_be_visible()
     expect(page.get_by_text(f"[{REPAIR_LABEL}]").first).to_be_visible()
     expect(page.get_by_text("patient_access_restored: met at T+60")).to_be_visible()
-    expect(page.get_by_text("masked (goal met another way)").first).to_be_visible()
+    expect(page.get_by_text(MASKED_LABEL).first).to_be_visible()
 
     # Both exports (JSON and Markdown) match what `cli --export` writes.
     cli = tmp_path / "cli"

@@ -14,12 +14,14 @@ from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.repair_search import (
+    INCONCLUSIVE_LISTED,
     MASKED_LABEL,
     REMOVED_LABEL,
     REQUIRES_AUTHORIZATION_LABEL,
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
+    outcome_text,
 )
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.simulation.replay import REPAIR_LABEL
@@ -28,9 +30,9 @@ from cascadeguard.storage.export import (
 )
 from cascadeguard.storage.export import (
     REPAIR_NOTE,
-    SCRIPTED_NOTE,
     comparison_export,
     comparison_markdown,
+    comparison_notes,
     run_export,
     search_export,
 )
@@ -275,7 +277,7 @@ def repairs(result: SearchResult) -> list[RepairRow]:
             RepairRow(
                 rank=i,
                 repair_id=c.proposal.repair_id,
-                outcome=c.outcome,
+                outcome=outcome_text(c),
                 edits=len(c.proposal.edits),
                 removed=c.critical_blockers_removed,
                 masked=tuple(f"{f}: {MASKED}" for f in c.masked),
@@ -287,6 +289,23 @@ def repairs(result: SearchResult) -> list[RepairRow]:
             )
         )
     return rows
+
+
+def inconclusive(result: SearchResult) -> list[tuple[str, str]]:
+    """(repair id, status) of replays listed after the ranked ones: unranked, no counts."""
+    return [
+        (c.proposal.repair_id, INCONCLUSIVE_LISTED.format(n=len(c.failed_steps)))
+        for c in result.inconclusive
+    ]
+
+
+def incomplete_banner(failed: tuple[tuple[int, str, str], ...], run: str = "") -> str:
+    """The UI banner for a run with steps that had no decision (as the CLI and Markdown)."""
+    if not failed:
+        return ""
+    where = f"{run} " if run else ""
+    steps = ", ".join(f"T+{m:02d} {r} ({why})" for m, r, why in failed)
+    return f"Incomplete run: {len(failed)} {where}steps had no decision: {steps}"
 
 
 def discarded(result: SearchResult) -> list[str]:
@@ -306,7 +325,8 @@ class Comparison:
     replay_failures: tuple[str, ...]  # remaining, masked and new, each marked
     removed: tuple[str, ...]
     changed_actions: tuple[str, ...]
-    notes: tuple[str, ...] = field(default=(REPAIR_NOTE, SCRIPTED_NOTE))
+    notes: tuple[str, ...] = field(default=(REPAIR_NOTE,))
+    incomplete: str = ""  # an "Incomplete run" banner when steps had no decision
 
 
 def comparison(c: ReplayComparison) -> Comparison:
@@ -322,7 +342,7 @@ def comparison(c: ReplayComparison) -> Comparison:
     ]
     return Comparison(
         repair_id=p.repair_id,
-        outcome=c.outcome,
+        outcome=outcome_text(c),
         authorization=REQUIRES_AUTHORIZATION if p.requires_authorization else "",
         edits=tuple(f"{e.operation.value} ({e.edit_id}) [{REPAIR_LABEL}]" for e in p.edits),
         targets=cite((x.clause_id for x in p.citations), labels) or "none",
@@ -335,6 +355,10 @@ def comparison(c: ReplayComparison) -> Comparison:
             + (f" -> {a['target']}" if "target" in a else "")
             + f": {a['baseline']} -> {a['replay']}"
             for a in s["changed_actions"]
+        ),
+        notes=comparison_notes(c),
+        incomplete=incomplete_banner(
+            tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
         ),
     )
 

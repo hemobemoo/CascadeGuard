@@ -1,6 +1,9 @@
-# ADR 0002 — How repairs reach LLM agents (DRAFT, proposed; not implemented)
+# ADR 0002 — How repairs reach LLM agents
 
-Status: proposed, waiting for the human's decision. Date: 2026-10-26.
+Status: **decided (human, 2026-10-26)**. Option A is not implemented yet.
+
+**Decision:** Phase 5 closes with C. A is the first task after Phase 5, pending the human's
+decision on when the owner obligation opens and its deadline. B is not taken.
 
 ## Context
 

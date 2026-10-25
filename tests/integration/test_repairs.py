@@ -67,7 +67,7 @@ def test_blockers_hidden_by_a_goal_met_another_way_are_masked_not_removed(
         "undefined_trigger:review_automated_lockouts",
     )
     assert c.critical_blockers_removed == 2
-    assert "masked (goal met another way)" in format_search(found)
+    assert "masked (goal met another way; cause still present)" in format_search(found)
 
 
 def test_unsuccessful_repair_clears_the_deadlock_but_not_the_lockout(found: SearchResult) -> None:
