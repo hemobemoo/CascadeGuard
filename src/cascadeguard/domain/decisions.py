@@ -1,8 +1,8 @@
 """What an agent (scripted or LLM) may return. Agents propose; only the engine decides."""
 
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, model_validator
 
 from cascadeguard.domain.base import DomainModel
 
@@ -36,6 +36,15 @@ class GapClaim(DomainModel):
     ]
 
 
+# Why an agent produced no decision at a step (closed set: no model text is carried).
+# invalid_output: the model's reply failed validation twice; request_failed: the API call failed
+# twice; not_cached: offline mode and no cached decision for this exact view.
+NoDecisionReason = Literal["invalid_output", "request_failed", "not_cached"]
+# Steps with no decision for infrastructure reasons (the API failed, or offline and not cached):
+# any such step makes a replay comparison inconclusive (human decision 2026-10-25).
+INFRASTRUCTURE_REASONS = frozenset({"request_failed", "not_cached"})
+
+
 class AgentDecision(DomainModel):
     role_id: str
     at: AwareDatetime  # simulation time, not wall-clock
@@ -44,3 +53,18 @@ class AgentDecision(DomainModel):
     citations: tuple[Citation, ...]
     uncertainty: tuple[str, ...]
     gap_claims: tuple[GapClaim, ...] = ()
+    # Set only by an LLM agent that could not decide; the engine records a no_decision finding.
+    no_decision: NoDecisionReason | None = None
+    # request_failed only: "<exception class> (HTTP <status>): <short message>", built by the
+    # agent's code from the API error (never headers, keys or .env values; model id redacted).
+    no_decision_detail: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def _check_no_decision(self) -> Self:
+        if self.no_decision is not None and (
+            self.proposed_actions or self.citations or self.gap_claims
+        ):
+            raise ValueError("a no-decision step proposes nothing and cites nothing")
+        if self.no_decision_detail is not None and self.no_decision != "request_failed":
+            raise ValueError("only a failed request carries an error detail")
+        return self

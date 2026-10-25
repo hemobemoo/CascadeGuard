@@ -54,7 +54,7 @@ cascadeguard/
 │   │
 │   ├── knowledge/                    [P1]
 │   │   ├── loader.py                 load + validate reviewed clauses
-│   │   └── retrieval.py              [P5] clause lookup for LLM agents (keyword first; embeddings only if needed)
+│   │   └── retrieval.py              [P5] role clauses (engine scope rule) + keyword search of extracted text
 │   │
 │   ├── simulation/                   [P2]
 │   │   ├── loader.py                 [P1] load + validate scenario, roles, clause references
@@ -98,7 +98,8 @@ cascadeguard/
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
 │
 ├── scripts/
-│   └── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
+│   ├── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
+│   └── llm_smoke_test.py             [P5] exactly one live LLM call; latency, tokens, cost
 │
 ├── scenarios/
 │   └── uae_health_access/            [P1]

@@ -140,3 +140,34 @@ clauses:
       Human decision 7t (2026-10-23): a conditional prohibition, not a flat ban. The engine never
       decides that the condition or an exception is met; a share it covers is held as "authority
       uncertain - requires determination".
+
+  - id: uae.fl2-2019.art16-exceptions
+    title: Exceptions to the confidentiality of patient information (Art 16 items 1-5)
+    text: >-
+      1. The health data or information requested by the health insurance companies or any
+      authority funding the health services regarding the health services received by the
+      patient, for the review, approval or verification of the financial entitlements related to
+      such services. 2. Purposes of the scientific and clinical research, provided that not to
+      disclose the identity of the patients and to observe the morals and rules of the scientific
+      researches. 3. To take the preventive and curative procedures related to the public health
+      or to keep the health and safety of the patient or any other person contacting him. 4. Upon
+      a request by the competent judicial authorities. 5. Upon a request by the Health Authority
+      for purposes of monitoring and inspection and keeping the public health.
+    source_file: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    page: 5
+    article: Article (16), items 1-5
+    issuer: United Arab Emirates (federal)
+    jurisdiction: UAE
+    document_date: "2019"
+    status: draft
+    binding: true
+    notes: >-
+      Completes uae.fl2-2019.art16 (reviewed), whose quote ends at "except in any of the
+      following cases:" on PDF page 4; the five items are the whole list on page 5, quoted in full
+      (no gaps). Drafted as a separate clause so the reviewed clause is not edited (gate 1). No
+      normalized reading: none of the items names incident coordination with a telecom operator,
+      and whether item 3 (public health, safety of the patient) or item 5 (request by the Health
+      Authority) could cover a share in this scenario is a question for a human expert; the engine
+      never decides that an exception is met. Binding scope: federal law, applying to ICT uses in
+      the area of health in the State, including the free zones (Art 2); the PDF is an English
+      translation and the Arabic text was not checked.

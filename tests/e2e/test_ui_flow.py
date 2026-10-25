@@ -16,7 +16,8 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
 
-from cascadeguard.cli import main
+from cascadeguard.cli import load_world, main
+from cascadeguard.engine.repair_search import MASKED_LABEL
 from cascadeguard.simulation.replay import REPAIR_LABEL
 from cascadeguard.storage.export import DISCLAIMER
 
@@ -42,6 +43,9 @@ def server() -> Iterator[str]:
     # Without pytest's variables: NiceGUI switches to its own test mode when it sees them.
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
     env["CASCADEGUARD_UI_PORT"] = str(port)
+    # LLM mode is only exercised from the cache, under a model id that has no cache entries.
+    env["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
+    env["CASCADEGUARD_OUTPUT_MODE"] = "json_schema"
     process = subprocess.Popen(
         [sys.executable, "-m", "cascadeguard.ui.app"],
         env=env,
@@ -101,24 +105,41 @@ def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
     expect(page.get_by_text(DISCLAIMER)).to_be_visible()
     expect(page.get_by_text("uae.fl2-2019.art4 [reviewed (interpreted)]").first).to_be_visible()
 
-    # A role view: the health operator at T+30 sees its inject, but not network data.
+    # A role view: the health operator at T+30 sees its inject, but not network data. Checked
+    # inside the role card only, on text that exists only at T+30.
+    card = page.locator(".q-card", has_text="Role views")
+    expect(card.locator(".q-field", has_text="Inject")).to_contain_text("T+00")
     _pick(page, "Inject", "T+30")
-    expect(page.get_by_text("The evidence is incomplete").first).to_be_visible()
-    expect(page.get_by_text("Data categories outside its boundary")).to_be_visible()
-    expect(page.get_by_text("network_incident_status", exact=True)).to_be_visible()
+    expect(card.locator(".q-field", has_text="Inject")).to_contain_text("T+30")
+    world = load_world(SCENARIO)
+    expect(
+        card.get_by_text(f"Simulation time: {world.scenario.time_at(30).isoformat()}")
+    ).to_be_visible()
+    t30 = next(e for e in world.scenario.events if e.at_minute == 30)
+    expect(card.get_by_text(t30.title, exact=True)).to_be_visible()
+    expect(card.get_by_text("Data categories outside its boundary")).to_be_visible()
+    expect(card.get_by_text("network_incident_status", exact=True)).to_be_visible()
+
+    # The dependency graph renders, and clicking a failure highlights it.
+    graph = page.locator(".q-card", has_text="Dependency graph")
+    expect(graph.locator("canvas").first).to_be_visible()
+    failure = world.baseline().failures[0].id
+    graph.get_by_role("button", name=f"[{failure.split(':')[0]}] {failure}").click()
+    expect(graph.locator(".q-field", has_text="Highlight")).to_contain_text(failure)
 
     # The top-ranked repair carries "requires authorization"; its rules are hypothetical.
     page.get_by_role("button", name="Find repairs").click()
     expect(page.get_by_text("repairs ranked")).to_be_visible()
-    expect(page.get_by_text(f"1. {TOP}")).to_be_visible()
-    expect(page.get_by_text("requires authorization").first).to_be_visible()
+    top = page.locator("div.border-b", has_text=f"1. {TOP}")
+    expect(top).to_have_count(1)
+    expect(top.get_by_text("requires authorization")).to_be_visible()
     page.get_by_role("button", name="Compare").first.click()
 
     # Baseline and replay side by side.
     expect(page.get_by_text(f"Baseline vs replay: {TOP}")).to_be_visible()
     expect(page.get_by_text(f"[{REPAIR_LABEL}]").first).to_be_visible()
     expect(page.get_by_text("patient_access_restored: met at T+60")).to_be_visible()
-    expect(page.get_by_text("masked (goal met another way)").first).to_be_visible()
+    expect(page.get_by_text(MASKED_LABEL).first).to_be_visible()
 
     # Both exports (JSON and Markdown) match what `cli --export` writes.
     cli = tmp_path / "cli"
@@ -127,3 +148,17 @@ def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
     for button, suffix in (("Replay JSON", "json"), ("Replay Markdown", "md")):
         got = _download(page, button, tmp_path / f"ui.{suffix}")
         assert got == (cli / f"{name}.{suffix}").read_text(encoding="utf-8"), button
+
+    # The agents toggle: LLM agents from the cache only (no call is possible). Every step is
+    # a no-decision finding, and the result says which agents produced it.
+    page.get_by_text("LLM (cached only)", exact=True).click()
+    page.get_by_role("button", name="Run baseline").click()
+    agents = page.get_by_text(
+        "Agents: LLM agents (model from CASCADEGUARD_MODEL; output mode json_schema; offline"
+    )
+    expect(agents).to_be_visible()
+    expect(agents).to_contain_text("0 steps reused, 36 not cached")
+    expect(page.get_by_text("made no decision at this step (not_cached)").first).to_be_visible()
+    page.get_by_text("Scripted", exact=True).click()
+    page.get_by_role("button", name="Run baseline").click()
+    expect(page.get_by_text("Agents: scripted agents")).to_be_visible()

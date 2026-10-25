@@ -4,16 +4,153 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 4 — Demo UI (branch `phase-4-ui`): built, review loop finished (3 rounds), PR open,
-not merged; waiting for the human** to look at the screenshots and decide. The full flow works
-in the browser with scripted agents (Playwright MCP run; the phase-auditor also ran it in
-headless Edge). Final verdicts: evidence-auditor PASS (round 2), phase-auditor PASS (round 2),
-test-breaker FAIL (round 3: no broken guarantee; two MAJORs about missing proof). The round-3
-fixes are mutation-checked but not re-reviewed (round limit); see "Waiting on human".
+**Phase 5 — LLM agents: merged to main via PR #6 (merge commit, branch `phase-5-llm` kept),
+tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
+`docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
+
+**Open items:**
+- **ADR 0002 option A** (the owner repair opens an obligation; role views list open
+  obligations): waiting for the human's decision on when the obligation opens and its deadline.
+- **`uae.fl2-2019.art16-exceptions`** (draft; FL 2/2019 PDF, page 5): awaiting the human's review.
+- **Deferred MINORs** (round 4, see "Known limitations"): cache file check does not re-check
+  `prompt_version`/`model_sha256` inside the file; `Usage.calls` counts agent attempts, not
+  request retries.
+- **Known limitation:** the gap-wording pattern flags "no authority has been triggered" (pinned
+  by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
 
-### Phase 4 — Demo UI (branch `phase-4-ui`, not merged)
+### Phase 5 — LLM agents (merged via PR #6, tag `phase-5`)
+- Review round 1 on the Phase 4 tail (a0b6342, 2f0ddc8, 9f27e4d): phase-auditor PASS,
+  test-breaker PASS, evidence-auditor FAIL (2 MINOR stale notes). All MINORs fixed in dc6c7d3
+  (notes, e2e scoping, graph check, view-model placeholder). Triage:
+  `docs/review/phase-5-clause-triage.md`.
+- `agents/llm.py` (OpenRouter via `openai`, temperature 0, strict json_schema from
+  `AgentDecision`, `provider.require_parameters`, response healing explicitly disabled, one retry,
+  then `AgentDecision.no_decision`), `agents/cache.py` (key: role, view, prompt version, model,
+  schema; model stored only as a hash), `knowledge/retrieval.py` (role clauses by the engine's
+  7n rule; `search_extracted`, books excluded, off in prompts), `RoleView.role_clauses`.
+- Engine: `no_decision` finding. CLI `--agents scripted|llm`, `--offline`, `--cache`. UI toggle:
+  Scripted / LLM (cached only) / LLM (live, paid calls). `scripts/llm_smoke_test.py` (one call).
+- Tests: `tests/unit/test_llm_agents.py`, `tests/unit/test_retrieval.py` (fake client, no
+  network), e2e toggle check; `tests/conftest.py` refuses any live client in unit and
+  integration tests. The e2e UI runs as a subprocess outside conftest: in "LLM (cached
+  only)" mode it reads `.env` for the model id only (overridden by a fake id) and makes no call.
+  Spec: `specs/005-llm-agents.md`.
+- **Review round 2 (7eaf00b).** phase-auditor FAIL: BLOCKER, no live LLM run has completed
+  (human gate P5-1); MINORs fixed (live repair search refused in the UI; spec wording; the e2e
+  subprocess note). test-breaker FAIL, all fixed with tests: BLOCKER, a step whose request failed
+  was not cached, so a replay with the same view could call again and credit the change to the
+  repair; now every outcome is fixed for the life of the cache object (one run family; request
+  failures still never written to disk), mutation-checked. MAJOR, exports did not say which
+  agents produced them; `RunResult.agents` / `SearchResult.agents` now in every CLI output, JSON
+  and Markdown export and the audit summary (the CLI's scripted output gains one "Agents:" line,
+  a deliberate change). MINORs: duplicate parameter names are invalid output (retry, then
+  no_decision), never collapsed; an unreadable or mismatched cache file is a miss, not a crash.
+- **Review round 3 (5192248, last round), test-breaker FAIL; fixed after the round, not
+  re-reviewed, each with a test:** MAJOR, the UI's live-repair-search guard read the toggle, so
+  switching it after a live baseline still ran a live search; the guard now checks the world in
+  use (`cli.live_llm`), and the CLI refuses a live `repairs` / `run --repair` too. MINORs: a
+  cache entry whose outcome contradicts its fields, or a stored request failure, is untrusted (a
+  miss); repeated request failures are counted apart from reused steps, and the cache line says
+  it covers the baseline and replays; spec wording; tests for the agents label in `search_export`
+  and the audit summary.
+
+- **Real-model runs (2026-10-24, model chosen by the human, `CASCADEGUARD_OUTPUT_MODE=json_object`
+  set in the process environment because `.env` did not set it yet):**
+  - Public model list checked first: `response_format`, `reasoning`, `temperature` supported;
+    reasoning not mandatory.
+  - Smoke call (health_service_operator, T+15): 1 call, 6.06 s, 2,643 input / 619 output
+    tokens, cost 0.000000 (free model). Validated against AgentDecision; 3 citations, all
+    passed the engine; 4 actions accepted, 1 share rejected (`outside_recipient_boundary`).
+  - LLM baseline (uae_health_access, no repairs, cap 72): 47 requests sent (41 for steps
+    written to the cache + 3 steps x 2 failed attempts), cap not reached. 31 of 36 steps
+    produced a decision; 5 `no_decision` findings (3 `request_failed`, error type not kept;
+    2 `invalid_output`, policy_legal_adviser T+45 and T+60). 12 `citation_out_of_scope`
+    rejections (no unknown or draft citations); 1 `uncited_gap_claim`; 4 candidate gap claims
+    (with the fixed qualification); 11 rejected actions (`outside_recipient_boundary`,
+    `unknown_data_category`, `authority_uncertain`). About 82,900 input / 29,100 output tokens;
+    total cost 0.000000; about 8.6 minutes in API calls. Export:
+    `data/llm_baseline/uae_health_access-llm-baseline.{json,md}` (ignored).
+  - Diagnosis vs scripted: the same 4 failures (information deadlock on
+    network_incident_status, orphan duties activate_fallback_channel and
+    reverse_automated_lockouts, undefined trigger review_automated_lockouts). Goals: the same
+    two critical goals unmet; network_incident_reported met at T+30 (scripted T+45). Accepted
+    actions: 46 LLM vs 11 scripted, 5 in common (LLM agents act more, e.g. repeated monitor /
+    request_information; they never notified health-data oversight).
+  - Offline replay of the LLM baseline from the cache: identical actions, goals, failures,
+    obligations, fact releases and findings (33 steps reused, the 3 failed steps not cached).
+  - Observation for the human (no change made): retrieval gives a role the clauses it may cite
+    for its *allowed* actions, but the engine's 7n scope check uses the actions *proposed* in
+    that decision; policy_legal_adviser at T+75 cited 5 clauses without proposing
+    provide_policy_analysis and was rejected. Telecom roles also cited FL 2/2019 Art 4, which is
+    not in their list.
+- **2026-10-25 (human instructions):** baseline review written
+  (`docs/evaluation/llm-baseline-review.md`, from the export and cache only). Prompt v3: citable
+  clauses grouped by the proposed action that makes them citable, and the rules "every citation
+  must support an action proposed in this same decision" and "analysis-only citations require
+  provide_policy_analysis" (engine unchanged, still strict). Failed requests: the no_decision
+  finding carries class, HTTP status and a short redacted message. **v3 baseline** (one run,
+  cap 72, `CASCADEGUARD_OUTPUT_MODE=json_object` from `.env`): 37 requests, 36/36 steps
+  decided, 0 no_decision (v2: 5), 1 rejected citation (v2: 12; telecom_operator citing FL Art 4,
+  correctly rejected), 1 free-text gap rejection, the same 4 diagnosed failures, oversight
+  notified at T+15, cost 0.000000, 85.4k / 14.1k tokens. Export `data/llm_baseline_v3/`.
+  **Golden repair, single replay:** dry run 25 uncached replay steps, above 20: not run; then
+  approved (cap 50) and run once with `scripts/llm_replay.py`: 47 requests, 4 of 25 live steps
+  decided, 21 `request_failed` (HTTP 502, then 429 free-tier rate limit); inconclusive (details
+  in `docs/review/phase-5-report.md`). Error details now drop the response headers OpenRouter
+  puts in its error body. 4.18.1 recorded in the report as the engine catching an LLM error.
+- **2026-10-25 (human instructions, second set):** cache audit (no request_failed on disk);
+  scratchpad output with rate-limit headers checked (no key or token) and deleted; inconclusive
+  verdict for any infrastructure failure (CLI, JSON, Markdown; earlier replay re-exported
+  offline as "inconclusive: 21 steps failed for infrastructure reasons"; that export was later
+  removed (2026-10-26): the paced rerun cached the same steps, so it can no longer be rebuilt);
+  RetryPolicy pacing/backoff (15 rpm, Retry-After or 5/15/45 s, max 3 retries, daily-limit
+  stop). Paced golden replay: see "Waiting on human".
+- **2026-10-26 closing check and display fixes (human instructions; display, ranking and export
+  code only):** complete replays are ranked first; inconclusive ones are listed after them,
+  unranked, as "inconclusive: N steps missing; not comparable", with no goal or blocker counts
+  (CLI, UI, JSON, Markdown; `SearchResult.inconclusive`); the scripted-agents note appears only
+  when both runs were scripted; every outcome shows its definition ("resolved: all critical goals
+  met; masked failures may remain"), JSON exports carry `outcome_definition` and `masked_note`,
+  and "N masked failures: cause still present" sits next to the outcome; the masked label is
+  "masked (goal met another way; cause still present)"; the UI shows an "Incomplete run" banner;
+  changed-action lists treat a self-target as no target (display only). Golden files unchanged.
+  Playwright flow re-run in both modes (LLM cache-only, no calls); 343 tests pass. ADR 0002
+  decided: Phase 5 closes with C; A is the first task after Phase 5, pending the human's
+  decision on when the owner obligation opens and its deadline.
+- **Review round 4 (2f98197..0adff73, 2026-10-26):** phase-auditor FAIL, test-breaker FAIL,
+  evidence-auditor FAIL. Fixed with tests (each headline fix mutation-checked):
+  - BLOCKER/MAJOR (all three reviewers): an inconclusive single comparison was still scored.
+    `ReplayComparison.summary()` now withholds goals, failure attributions and changed actions
+    when steps are missing, in JSON, Markdown, CLI, UI and the audit store.
+  - MAJOR: `DailyLimitReached` carried the raw provider body and was chained to the SDK error
+    (headers, model id in tracebacks). Now redacted with `error_detail` and raised `from None`;
+    the CLI, UI and all three scripts catch it with a fixed or redacted line.
+  - MAJOR: live CLI/UI runs had no request cap, and the estimate said "up to 2 calls". Live runs
+    now need `--cap` or `CASCADEGUARD_REQUEST_CAP`; the estimate says up to 8 requests per step.
+  - MAJOR: a one-attempt smoke run could store `invalid_output` and a full run would reuse it
+    without retrying. One-attempt invalid outputs are now kept in memory only.
+  - MAJOR: `llm_replay.py` reported an inconclusive run as a hard-filter discard (fixed).
+  - MINORs fixed: inconclusive replays recorded in the audit `repairs` table (rank NULL);
+    the cap is checked before pacing/backoff and a retry counts only when sent (test for a
+    retried 5xx using up the cap); model-id variants redacted (case, slug, without `:suffix`);
+    "no complete replay to rank" wording; smoke script passes the key to redaction; report and
+    review doc corrections (PR state, scripts, test count, v2 replay sentence now historical,
+    accepted-action basis 46 distinct / 47 entries, decision details); Art 16 exceptions notes
+    spell out the binding scope; spec and architecture updated; replay export re-exported.
+- P5-3: `--extracted-context` (opt-in) adds keyword snippets of the non-book extracted PDFs,
+  each labelled "context only; not citable". Off by default, because it changes every prompt
+  (the cached baseline would not be reused).
+
+Verify:
+
+```bash
+CASCADEGUARD_OUTPUT_MODE=json_object uv run cascadeguard run uae_health_access --agents llm --offline
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
+
+### Phase 4 — Demo UI (merged, PR #5, tag `phase-4`)
 - `ui/app.py` (NiceGUI, port 8765 or `CASCADEGUARD_UI_PORT`): scenario picker, timeline, role
   views, dependency graph (`ui.echart`) with failures highlighted (click a failure or pick it),
   ranked and discarded repairs, baseline vs replay, JSON/Markdown downloads.
@@ -436,6 +573,37 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   - CascadeGuard.md section 6 wording confirmed by the human (approved in chat 2026-10-24).
   - `.claude/launch.json` kept: no secrets, no machine-specific paths.
 
+- **Human decisions, 2026-10-24 (Phase 5, answers to P5-1 to P5-6):**
+  - **P5-1:** model chosen by the human; it has JSON mode. New setting
+    `CASCADEGUARD_OUTPUT_MODE` = `json_schema` (default) | `json_object`, chosen explicitly,
+    never automatic; `json_object` sends `response_format: {"type": "json_object"}` with the
+    schema in the prompt; `require_parameters` stays; reasoning off; temperature 0; validation
+    unchanged; the mode is in the prompt version and cache key and shown in runs and exports.
+    Before the call the public model list must show `response_format` support. Then ONE smoke
+    call; if it succeeds, ONE capped baseline (uae_health_access, no repairs, at most 72
+    requests including retries); if it fails, stop.
+  - **P5-2 acknowledged:** before the first smoke call, a test bug (`env_file` default bound at
+    import) made one CLI test send 72 unapproved requests to OpenRouter (36 steps x 2 attempts),
+    all failed. Fixed: `env_file` read at call time; `tests/conftest.py` clears the LLM
+    variables, points `.env` at a missing file and makes building a live client an error.
+  - **P5-3:** yes, after the baseline works: keyword snippets only from non-book extracted PDFs,
+    labelled "context only; not citable"; citations stay reviewed/illustrative clause ids only.
+  - **P5-4:** live repair search declined for now; decided after the LLM baseline.
+  - **P5-5:** LLM roles see repair rules (uncitable, labelled hypothetical); lower cache reuse
+    accepted.
+  - **P5-6:** `run --repair <id> --agents llm` replays a single repair; before any live call it
+    prints the uncached steps and needs `--live`. None run until approved.
+  - Phase 5 round-3 fixes accepted without another round; the review of the real-model run
+    covers them first. Do not merge; stop after the baseline report.
+
+- **Human decision 2026-10-26 (invalid_output):** `invalid_output` stays out of the inconclusive
+  rule: it is model behaviour, a defined no-decision outcome under AGENTS.md, and deterministic
+  from the cache. A run with one is still ranked and scored, and every outcome shows the caveat
+  "N steps with no decision (model returned invalid output): <role at time, ...>; the result may
+  depend on them" (CLI, UI, JSON `invalid_output_caveat`, Markdown, audit). Recorded in spec 003.
+  Paced golden replay check (cache only): the missing telecom_operator T+15 decision changed no
+  view or event the health operator received from T+30 to T+75 (details in the Phase 5 report).
+
 ## Approved gate-5 exceptions
 
 - **2026-10-22, book history purge (one time, approved by the human in chat).** Both book PDFs were
@@ -472,6 +640,51 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
+none blocking until the LLM baseline report.
+
+<details><summary>Earlier wording of P5-1 to P5-6</summary>
+
+
+- **P5-1 Model.** The configured model does not support `response_format`/`structured_outputs`
+  (OpenRouter public model list), so with `require_parameters: true` no endpoint accepts the
+  request. Choose a model that supports structured outputs and approve one more smoke call.
+- **P5-2 Disclosure.** Before the smoke call, a test bug (default `env_file` bound at import, so
+  a monkeypatch missed it) made one CLI test build a live client from the real `.env`: 36 steps x
+  2 attempts = 72 requests of the same shape, all failed (most likely the same 404 routing
+  refusal; the error type was not kept). Fixed: `env_file` is read at call time and
+  `tests/conftest.py` makes building a live client in any test an error.
+- **P5-3** May keyword-search snippets of `policies/extracted/` (non-book PDFs) be sent to
+  OpenRouter as context? Default: no (`search_extracted` exists but is off in prompts).
+- **P5-5 Repair rules in LLM views** (phase-auditor question). `RoleView.role_clauses` shows a
+  replay's hypothetical repair rules from T+00, so LLM agents can adapt to the repair, but those
+  views get new cache keys: for the top repair 24 of 36 steps are re-asked (17 differ only by the
+  rule). Alternative: hide repair rules (more reuse, agents unaware of the repair). Your choice.
+- **P5-6** (test-breaker question) Should `run --repair <id> --agents llm` replay only that
+  repair instead of the whole search? For now the CLI refuses any live repair search, like the UI.
+- **P5-4** Repair search with LLM agents: about 21 replays and about 312 uncached steps (scripted
+  proxy). Run live only on explicit approval; the UI refuses a live repair search until then.
+
+</details>
+
+**2026-10-26 (round 4) question answered by the human:** `invalid_output` steps do not make a
+run inconclusive (see Decisions).
+
+**2026-10-25 additions:**
+- **Clause review (gate 1):** new draft `uae.fl2-2019.art16-exceptions` — Art 16 items 1-5,
+  verbatim, from `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf`, viewer
+  page 5. It completes `uae.fl2-2019.art16` (reviewed, unchanged; its quote stops at "except in
+  any of the following cases:" on page 4). No normalized reading (whether item 3 or 5 could
+  cover a share is for a human expert).
+- **Open question for after Phase 5:** role views do not list open obligations (nor action
+  descriptions). Adding them would change every prompt and invalidate the cache, so it is
+  deferred (human decision 2026-10-25). In the v2 baseline the notify obligation stayed open.
+- **Golden-repair live replay:** the paced rerun (cap 40) completed: 27 requests, 3 HTTP 502
+  recovered by backoff, 35/36 replay steps decided (1 invalid_output), verdict **partial** (LLM)
+  vs **resolved** (scripted): the operator never proposed reverse_automated_lockouts although
+  the ownership rule was in its view. Question: how should repair rules reach LLM agents so
+  they act on them? (tied to the open-obligations question)
+
 Answered on 2026-10-24: the Phase 3 items, the spec 004 questions, the section 6 question and
 the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 (`policies/approvals.yaml`, `reapproval_needed: []`). Still open, none blocking:
@@ -481,6 +694,20 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 2. **Sources missing from `policies/sources/`** (optional).
 3. **3b:** the human checks the Arabic text of FL 2/2019 ("Health Authority").
    **3i:** the human looks for a complete DHA copy (footers 51/52 and 52/52 missing).
+
+## Known limitations
+
+- **Deferred MINORs (round 4):** `DecisionCache._read` checks only the key, not
+  `prompt_version`/`model_sha256` inside the file (safe in normal use: both are hashed into the
+  key); `Usage.calls` counts agent attempts, not request retries (the clients' own counters are
+  exact).
+
+- **Gap-wording false positive (2026-10-25):** the free-text gap pattern matches "no authority"
+  when an agent describes its own inaction ("no authority has been triggered ..."), so the
+  decision is rejected as `uncited_gap_claim` (v2 LLM baseline, health_data_oversight T+00).
+  Not changed (human decision; the pattern stays conservative).
+  `test_known_limitation_gap_pattern_flags_own_inaction` pins the behaviour so a fix is
+  deliberate.
 
 ## Deferred MINOR findings (Phase 1 review)
 
@@ -500,6 +727,17 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-1. Human: look at the screenshots in the Phase 4 PR; answer "Waiting on human" 0, 0a and the
-   other Phase 4 questions; decide whether the PR merges. Auto-merge does not apply.
-2. After merge: tag `phase-4`, update this file, stop and report before Phase 5.
+ADR 0002 option A, after the human decides when an owner obligation opens and its deadline
+(work on a new branch; do not start before that decision). Still open: the human's review of
+`uae.fl2-2019.art16-exceptions`, the deferred MINORs, and the gap-wording known limitation. The
+review of the real-model runs was done in round 4 (2026-10-26).
+
+Earlier (done):
+
+1. Human, before Phase 5 (LLM agents) can start:
+   - put the three variables in `.env` (never committed; names only in `.env.example`):
+     `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `CASCADEGUARD_MODEL`;
+   - choose the model (`CASCADEGUARD_MODEL`); it is never picked, guessed or defaulted;
+   - approve the paid Phase 5 smoke test (gate 4: anything that costs money).
+2. Then start Phase 5 on `phase-5-llm`; its first test-breaker round covers a0b6342 and the
+   Phase 4 commits after it.

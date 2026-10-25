@@ -45,8 +45,54 @@ from cascadeguard.simulation.replay import REPAIR_PREFIX
 
 MAX_EDITS = 2
 SCRIPTED_LIMIT = "scripted_agent_limit"
+INCONCLUSIVE = "inconclusive: {n} steps failed for infrastructure reasons"
+# How an inconclusive replay is listed in a search: after the ranked ones, unranked, no counts.
+INCONCLUSIVE_LISTED = "inconclusive: {n} steps missing; not comparable"
+WITHHELD_NOTE = (
+    "goals, failure attributions and changed actions withheld: {n} steps had no decision, so the "
+    "replay is not comparable with the baseline"
+)
+# Shown next to every outcome (human decision 2026-10-26), so "resolved" never reads as "every
+# failure fixed".
+OUTCOME_DEFINITIONS = {
+    "resolved": "all critical goals met; masked failures may remain",
+    "partial": "at least one failure removed at its cause; critical goals still unmet",
+    "no effect": "no failure removed; critical goals still unmet",
+    "introduces new conflict": "the replay shows a failure the baseline did not have",
+    "inconclusive": "steps had no decision for infrastructure reasons; not comparable",
+}
+
+
+def outcome_definition(outcome: str) -> str:
+    return OUTCOME_DEFINITIONS[outcome.split(":", 1)[0]]
+
+
+def invalid_output_caveat(c: "ReplayComparison") -> str:
+    """The caveat shown with an outcome when a baseline or replay step ended in invalid output
+    (model behaviour: flagged, not inconclusive), or "" when none did."""
+    steps = c.invalid_steps
+    if not steps:
+        return ""
+    where = ", ".join(f"{role} at T+{m:02d} ({run})" for run, m, role in steps)
+    return (
+        f"{len(steps)} steps with no decision (model returned invalid output): {where}; "
+        "the result may depend on them"
+    )
+
+
+def outcome_text(c: "ReplayComparison") -> str:
+    """The outcome with its definition and, if any, the masked count and the invalid-output
+    caveat: for text outputs."""
+    text = f"{c.outcome} ({outcome_definition(c.outcome)})"
+    if c.masked and not c.failed_steps:
+        text += f"; {len(c.masked)} masked failures: cause still present"
+    if caveat := invalid_output_caveat(c):
+        text += f". Caveat: {caveat}"
+    return text
+
+
 # Labels shown wherever a comparison is printed (CLI, exports, UI).
-MASKED_LABEL = "masked (goal met another way)"
+MASKED_LABEL = "masked (goal met another way; cause still present)"
 REMOVED_LABEL = "removed (cause gone)"
 REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
 SCRIPTED_LIMIT_NOTE = (
@@ -133,7 +179,25 @@ class ReplayComparison:
         return tuple(g for g in self.critical_goals if met.get(g) is None)
 
     @property
+    def failed_steps(self) -> tuple[tuple[str, int, str, str], ...]:
+        """("baseline" | "replay", minute, role, reason) of steps with no decision for
+        infrastructure reasons."""
+        return tuple(("baseline", *s) for s in self.baseline.failed_steps) + tuple(
+            ("replay", *s) for s in self.replay.failed_steps
+        )
+
+    @property
+    def invalid_steps(self) -> tuple[tuple[str, int, str], ...]:
+        """("baseline" | "replay", minute, role) of steps that ended in invalid output."""
+        return tuple(("baseline", *s) for s in self.baseline.invalid_steps) + tuple(
+            ("replay", *s) for s in self.replay.invalid_steps
+        )
+
+    @property
     def outcome(self) -> str:
+        # A missing decision is not evidence about the repair (human decision 2026-10-25).
+        if self.failed_steps:
+            return INCONCLUSIVE.format(n=len(self.failed_steps))
         if self.new_conflicts:
             return "introduces new conflict"
         if not self.unmet_critical_goals:
@@ -144,8 +208,15 @@ class ReplayComparison:
         """Actions whose verdict differs between baseline and replay (same minute, role, action)."""
 
         def verdicts(result: RunResult) -> dict[tuple[int, str, str, str], str]:
+            # Display only: a target that is the acting role itself is shown as no target, so
+            # the same action is not listed twice (the recorded decisions are unchanged).
             return {
-                (e.minute, e.role or "", e.action, e.target or ""): e.kind
+                (
+                    e.minute,
+                    e.role or "",
+                    e.action,
+                    "" if e.target == e.role else e.target or "",
+                ): e.kind
                 for e in result.log
                 if e.kind in ("accepted", "rejected") and e.action is not None
             }
@@ -170,13 +241,30 @@ class ReplayComparison:
         def goal(m: int | None) -> str:
             return f"met at T+{m}" if m is not None else "unmet"
 
-        return {
+        head = {
             "scenario": self.baseline.scenario_id,
             "clause_set": self.baseline.clause_set,
             "repair": self.proposal.repair_id,
             "requires_authorization": self.proposal.requires_authorization,
             "edits": [e.model_dump(mode="json", exclude_none=True) for e in self.proposal.edits],
             "outcome": self.outcome,
+            **(
+                {"invalid_output_caveat": invalid_output_caveat(self)} if self.invalid_steps else {}
+            ),
+        }
+        if self.failed_steps:
+            # Missing steps: no goal verdicts, failure attributions or changed actions at all,
+            # in any output built on this summary (exports, audit, CLI, UI).
+            return {
+                **head,
+                "withheld": WITHHELD_NOTE.format(n=len(self.failed_steps)),
+                "failed_steps": [
+                    {"run": run, "minute": m, "role": r, "reason": why}
+                    for run, m, r, why in self.failed_steps
+                ],
+            }
+        return {
+            **head,
             "goals": {
                 g: {"baseline": goal(base_goals[g]), "replay": goal(new_goals[g])}
                 for g in base_goals
@@ -187,6 +275,16 @@ class ReplayComparison:
             "new_conflicts": list(self.new_conflicts),
             "new_conflict_tags": self.conflict_tags(),
             "changed_actions": self.changed_actions(),
+            **(
+                {
+                    "failed_steps": [
+                        {"run": run, "minute": m, "role": r, "reason": why}
+                        for run, m, r, why in self.failed_steps
+                    ]
+                }
+                if self.failed_steps
+                else {}
+            ),
         }
 
 
@@ -203,11 +301,15 @@ class Discarded:
 class SearchResult:
     clause_set: str  # the baseline's clause-set label, shown with every result
     loaded_clauses: tuple[tuple[str, str], ...]  # the baseline's (clause id, status label)
-    ranked: tuple[ReplayComparison, ...]
+    ranked: tuple[ReplayComparison, ...]  # complete replays only, in ranking order
     discarded: tuple[Discarded, ...]
+    agents: str = "scripted agents (scripted_decisions.yaml)"  # the baseline's agents label
+    # Replays with steps missing for infrastructure reasons: listed after the ranked ones,
+    # unranked and not comparable (human decision 2026-10-26).
+    inconclusive: tuple[ReplayComparison, ...] = ()
 
     def comparison(self, repair_id: str) -> ReplayComparison:
-        for c in self.ranked:
+        for c in (*self.ranked, *self.inconclusive):
             if c.proposal.repair_id == repair_id:
                 return c
         dropped = [d for d in self.discarded if d.repair_id == repair_id]
@@ -231,9 +333,29 @@ class SearchResult:
                     "unmet_critical_goals": list(c.unmet_critical_goals),
                     "new_conflicts": list(c.new_conflicts),
                     "new_conflict_tags": c.conflict_tags(),
+                    **(
+                        {"invalid_output_caveat": invalid_output_caveat(c)}
+                        if c.invalid_steps
+                        else {}
+                    ),
                 }
                 for i, c in enumerate(self.ranked)
             ],
+            **(
+                {
+                    "inconclusive": [
+                        {
+                            "repair": c.proposal.repair_id,
+                            "edits": len(c.proposal.edits),
+                            "requires_authorization": c.proposal.requires_authorization,
+                            "status": INCONCLUSIVE_LISTED.format(n=len(c.failed_steps)),
+                        }
+                        for c in self.inconclusive
+                    ]
+                }
+                if self.inconclusive
+                else {}
+            ),
             "discarded": [
                 {"repair": d.repair_id, "reason": d.reason, "clauses": list(d.clause_ids)}
                 for d in self.discarded
@@ -538,13 +660,11 @@ def rank_key(
     )
 
 
-def search(
-    baseline: RunResult,
-    scenario: Scenario,
-    roles: RoleSet,
-    rules: RuleBook,
-    replay: Callable[[RepairProposal], RunResult],
-) -> SearchResult:
+def screen(
+    baseline: RunResult, scenario: Scenario, roles: RoleSet, rules: RuleBook
+) -> tuple[tuple[RepairProposal, ...], tuple[Discarded, ...]]:
+    """Every candidate repair (up to MAX_EDITS edits) that passes the static hard filter, in
+    search order, and the edits it discarded. No replay is run."""
     edits = candidate_edits(baseline, scenario, roles, rules)
     discarded: list[Discarded] = []
     safe: list[RepairEdit] = []
@@ -561,22 +681,79 @@ def search(
             )
         else:
             safe.append(edit)
+    proposals = tuple(
+        proposal(combo, edits, rules, roles)
+        for size in range(1, MAX_EDITS + 1)
+        for combo in combinations(safe, size)
+    )
+    return proposals, tuple(discarded)
+
+
+def _judge(
+    proposals: tuple[RepairProposal, ...],
+    discarded: tuple[Discarded, ...],
+    baseline: RunResult,
+    scenario: Scenario,
+    rules: RuleBook,
+    replay: Callable[[RepairProposal], RunResult],
+) -> SearchResult:
     critical = tuple(g.id for g in scenario.recovery_goals if g.critical)
+    dropped = list(discarded)
     compared: list[ReplayComparison] = []
-    for size in range(1, MAX_EDITS + 1):
-        for combo in combinations(safe, size):
-            p = proposal(combo, edits, rules, roles)
-            comparison = ReplayComparison(p, baseline, replay(p), critical)
-            lifted = _lifted_restrictions(comparison, rules, scenario)
-            if lifted:
-                discarded.append(
-                    Discarded(p.repair_id, "the replay got around a restriction", lifted)
-                )
-            else:
-                compared.append(comparison)
+    for p in proposals:
+        comparison = ReplayComparison(p, baseline, replay(p), critical)
+        lifted = _lifted_restrictions(comparison, rules, scenario)
+        if lifted:
+            dropped.append(Discarded(p.repair_id, "the replay got around a restriction", lifted))
+        else:
+            compared.append(comparison)
+    complete = [c for c in compared if not c.failed_steps]
     return SearchResult(
         baseline.clause_set,
         baseline.loaded_clauses,
-        tuple(sorted(compared, key=rank_key)),
-        tuple(discarded),
+        tuple(sorted(complete, key=rank_key)),  # an inconclusive replay is never ranked
+        tuple(dropped),
+        baseline.agents,
+        tuple(c for c in compared if c.failed_steps),
     )
+
+
+def search(
+    baseline: RunResult,
+    scenario: Scenario,
+    roles: RoleSet,
+    rules: RuleBook,
+    replay: Callable[[RepairProposal], RunResult],
+) -> SearchResult:
+    proposals, discarded = screen(baseline, scenario, roles, rules)
+    return _judge(proposals, discarded, baseline, scenario, rules, replay)
+
+
+def find_proposal(
+    baseline: RunResult, scenario: Scenario, roles: RoleSet, rules: RuleBook, repair_id: str
+) -> RepairProposal:
+    """The candidate with this id from the baseline's own diagnosis, without any replay.
+    KeyError (with the reason) if it is unknown or statically discarded."""
+    proposals, discarded = screen(baseline, scenario, roles, rules)
+    for p in proposals:
+        if p.repair_id == repair_id:
+            return p
+    for d in discarded:
+        if d.repair_id == repair_id:
+            raise KeyError(f"{repair_id} was discarded: {d.reason}")
+    raise KeyError(f"unknown repair {repair_id} for this baseline")
+
+
+def replay_one(
+    baseline: RunResult,
+    scenario: Scenario,
+    roles: RoleSet,
+    rules: RuleBook,
+    replay: Callable[[RepairProposal], RunResult],
+    repair_id: str,
+) -> SearchResult:
+    """Replay and judge a single repair (same hard filter and comparison as the search). The
+    result holds one ranked comparison, one inconclusive comparison (steps missing), or one
+    discard if the replay got around a restriction."""
+    p = find_proposal(baseline, scenario, roles, rules, repair_id)
+    return _judge((p,), (), baseline, scenario, rules, replay)

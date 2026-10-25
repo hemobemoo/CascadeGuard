@@ -67,7 +67,7 @@ def test_blockers_hidden_by_a_goal_met_another_way_are_masked_not_removed(
         "undefined_trigger:review_automated_lockouts",
     )
     assert c.critical_blockers_removed == 2
-    assert "masked (goal met another way)" in format_search(found)
+    assert "masked (goal met another way; cause still present)" in format_search(found)
 
 
 def test_unsuccessful_repair_clears_the_deadlock_but_not_the_lockout(found: SearchResult) -> None:
@@ -176,7 +176,13 @@ def test_replay_is_the_identical_incident_except_for_the_repair(repair_id: str) 
         if a["replay"] == "accepted"
     }
     for b, r in zip(seen["baseline"], seen["replay"], strict=True):
-        assert replace(b, facts=r.facts, own_history=r.own_history) == r
+        assert (
+            replace(b, facts=r.facts, own_history=r.own_history, role_clauses=r.role_clauses) == r
+        )
+        # The only clause difference: the repair's own rules, shown as not citable (Phase 5).
+        assert set(b.role_clauses) <= set(r.role_clauses)
+        added = set(r.role_clauses) - set(b.role_clauses)
+        assert all(c.id.startswith("repair.") and not c.citable for c in added)
         extra_history = {(r.role_id, h) for h in set(r.own_history) - set(b.own_history)}
         assert set(b.own_history) <= set(r.own_history)
         assert extra_history <= flipped

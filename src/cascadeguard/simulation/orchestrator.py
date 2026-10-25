@@ -14,7 +14,13 @@ from pydantic_core import TzInfo
 
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.scripted import ScriptedAgent
-from cascadeguard.domain.decisions import AgentDecision, Citation, GapClaim, ProposedAction
+from cascadeguard.domain.decisions import (
+    INFRASTRUCTURE_REASONS,
+    AgentDecision,
+    Citation,
+    GapClaim,
+    ProposedAction,
+)
 from cascadeguard.domain.findings import CoordinationFailure, Finding, LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
@@ -23,6 +29,9 @@ from cascadeguard.engine.diagnosis import diagnose
 from cascadeguard.engine.graph import DependencyGraph, build_graph
 from cascadeguard.simulation.boundaries import RoleView, view_for
 from cascadeguard.simulation.state import ObligationStatus, SimulationState
+
+SCRIPTED_AGENTS = "scripted agents (scripted_decisions.yaml)"
+OTHER_AGENTS = "non-scripted agents (e.g. LLM)"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +52,14 @@ class RunResult:
     # information boundary (data categories) in this run.
     views: tuple[RoleView, ...]
     boundaries: tuple[tuple[str, tuple[str, ...]], ...]
+    # Which agents produced this run, shown in every output and export (the CLI and UI set the
+    # exact label, e.g. which LLM mode). Not part of summary(), so goldens stay unchanged.
+    agents: str = SCRIPTED_AGENTS
+    # (minute, role, reason) of every step with no decision for infrastructure reasons.
+    failed_steps: tuple[tuple[int, str, str], ...] = ()
+    # (minute, role) of steps where the model returned invalid output twice: a defined
+    # no-decision outcome, flagged in every result but not inconclusive (2026-10-26).
+    invalid_steps: tuple[tuple[int, str], ...] = ()
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
@@ -166,20 +183,35 @@ def run(
     state = SimulationState(scenario, roles)
     engine = ConstraintEngine(state, loaded, corpus_clause_ids)
     shown: list[RoleView] = []
+    failed: list[tuple[int, str, str]] = []
+    invalid: list[tuple[int, str]] = []
     for event in scenario.events:
         engine.release(event)
-        views = {r.id: view_for(state, r.id, event, loaded) for r in roles.roles}
+        views = {r.id: view_for(state, r.id, event, loaded, corpus_clause_ids) for r in roles.roles}
         # A separately built copy is kept for display, never the object an agent was given.
-        shown += [view_for(state, r.id, event, loaded) for r in roles.roles]
+        shown += [view_for(state, r.id, event, loaded, corpus_clause_ids) for r in roles.roles]
         # Each decision is copied as soon as it is returned, so a later agent in the same
         # step cannot alter an earlier one before the engine processes it.
         decisions = [(r.id, _copy(agents[r.id].observe(views[r.id]))) for r in roles.roles]
+        failed += [
+            (event.at_minute, role_id, d.no_decision)
+            for role_id, d in decisions
+            if isinstance(d, AgentDecision)
+            and d.no_decision is not None
+            and d.no_decision in INFRASTRUCTURE_REASONS
+        ]
+        invalid += [
+            (event.at_minute, role_id)
+            for role_id, d in decisions
+            if isinstance(d, AgentDecision) and d.no_decision == "invalid_output"
+        ]
         for role_id, decision in decisions:
             engine.process(decision, expected_role=role_id)
     engine.close(scenario.events[-1].at_minute)
     graph = build_graph(state, loaded)
     failures = diagnose(state, graph, engine.rules, clause_set)
     causes = diagnose(state, graph, engine.rules, clause_set, include_met=True)
+    scripted = all(isinstance(a, ScriptedAgent) for a in agents.values())
     return RunResult(
         scenario_id=scenario.id,
         clause_set=clause_set,
@@ -191,7 +223,10 @@ def run(
         failures=failures,
         causes=causes,
         graph=graph,
-        scripted=all(isinstance(a, ScriptedAgent) for a in agents.values()),
+        scripted=scripted,
         views=tuple(shown),
         boundaries=tuple((r.id, tuple(sorted(state.boundary(r.id)))) for r in roles.roles),
+        agents=SCRIPTED_AGENTS if scripted else OTHER_AGENTS,
+        failed_steps=tuple(failed),
+        invalid_steps=tuple(invalid),
     )

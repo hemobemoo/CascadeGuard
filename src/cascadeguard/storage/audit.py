@@ -11,7 +11,12 @@ from typing import Any
 
 import duckdb
 
-from cascadeguard.engine.repair_search import ReplayComparison, SearchResult
+from cascadeguard.engine.repair_search import (
+    INCONCLUSIVE_LISTED,
+    ReplayComparison,
+    SearchResult,
+    invalid_output_caveat,
+)
 from cascadeguard.simulation.orchestrator import RunResult
 
 DEFAULT_DB = Path(__file__).resolve().parents[3] / "data" / "audit.duckdb"
@@ -79,7 +84,7 @@ class AuditStore:
                 result.scenario_id,
                 result.clause_set,
                 repair_id,
-                _json(result.summary()),
+                _json({**result.summary(), "agents": result.agents}),
             ],
         )
         self.con.executemany(
@@ -156,11 +161,25 @@ class AuditStore:
                 len(c.proposal.edits),
                 c.proposal.requires_authorization,
                 c.critical_blockers_removed,
-                c.outcome,
+                c.outcome + (f"; {invalid_output_caveat(c)}" if c.invalid_steps else ""),
                 None,
                 [x.clause_id for x in c.proposal.citations],
             ]
             for rank, c in enumerate(result.ranked, 1)
+        ]
+        rows += [  # inconclusive: unranked, no counts (not comparable)
+            [
+                base,
+                c.proposal.repair_id,
+                None,
+                len(c.proposal.edits),
+                c.proposal.requires_authorization,
+                None,
+                INCONCLUSIVE_LISTED.format(n=len(c.failed_steps)),
+                None,
+                [x.clause_id for x in c.proposal.citations],
+            ]
+            for c in result.inconclusive
         ]
         rows += [
             [base, d.repair_id, None, None, None, None, None, d.reason, list(d.clause_ids)]
