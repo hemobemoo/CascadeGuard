@@ -84,6 +84,15 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
   attempted the action, in a replay run only by scripted agents, is tagged
   `scripted_agent_limit` (revisit in Phase 5). Outcomes otherwise: resolved (every critical
   goal met), partial, no effect.
+- **Missing decisions (Phase 5, human decisions 2026-10-25/26).** A baseline or replay step with
+  no decision for infrastructure reasons (`request_failed`, or offline `not_cached`) makes the
+  comparison **inconclusive**: never ranked or scored; goals, failure attributions and changed
+  actions are withheld in every output. A step that ended in **`invalid_output`** is not
+  inconclusive: it is model behaviour, a defined no-decision outcome under AGENTS.md (retry once,
+  then a finding), and deterministic from the cache, so the run is still ranked and scored, with
+  the caveat "N steps with no decision (model returned invalid output): <role at time, ...>; the
+  result may depend on them" wherever the outcome appears (CLI, UI, JSON field
+  `invalid_output_caveat`, Markdown, audit store).
 - **`requires_authorization`** is true when an edit creates a permission that no reviewed,
   binding clause already gives: a data share unless, for every role that could send the
   category once the boundary widens (allowed to share and able to see it), a reviewed, binding,

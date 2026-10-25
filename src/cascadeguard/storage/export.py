@@ -17,6 +17,7 @@ from cascadeguard.engine.repair_search import (
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
+    invalid_output_caveat,
     outcome_definition,
 )
 from cascadeguard.simulation.orchestrator import RunResult
@@ -156,7 +157,8 @@ def comparison_markdown(c: ReplayComparison) -> str:
             f"; {len(c.masked)} masked failures: cause still present"
             if c.masked and not c.failed_steps
             else ""
-        ),
+        )
+        + (f"\n- **Caveat:** {invalid_output_caveat(c)}" if c.invalid_steps else ""),
         "- Requires authorization: "
         + (
             "**yes**: creates a permission with no reviewed, binding basis; needs human and "

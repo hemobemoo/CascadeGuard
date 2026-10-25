@@ -57,6 +57,9 @@ class RunResult:
     agents: str = SCRIPTED_AGENTS
     # (minute, role, reason) of every step with no decision for infrastructure reasons.
     failed_steps: tuple[tuple[int, str, str], ...] = ()
+    # (minute, role) of steps where the model returned invalid output twice: a defined
+    # no-decision outcome, flagged in every result but not inconclusive (2026-10-26).
+    invalid_steps: tuple[tuple[int, str], ...] = ()
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
@@ -181,6 +184,7 @@ def run(
     engine = ConstraintEngine(state, loaded, corpus_clause_ids)
     shown: list[RoleView] = []
     failed: list[tuple[int, str, str]] = []
+    invalid: list[tuple[int, str]] = []
     for event in scenario.events:
         engine.release(event)
         views = {r.id: view_for(state, r.id, event, loaded, corpus_clause_ids) for r in roles.roles}
@@ -195,6 +199,11 @@ def run(
             if isinstance(d, AgentDecision)
             and d.no_decision is not None
             and d.no_decision in INFRASTRUCTURE_REASONS
+        ]
+        invalid += [
+            (event.at_minute, role_id)
+            for role_id, d in decisions
+            if isinstance(d, AgentDecision) and d.no_decision == "invalid_output"
         ]
         for role_id, decision in decisions:
             engine.process(decision, expected_role=role_id)
@@ -219,4 +228,5 @@ def run(
         boundaries=tuple((r.id, tuple(sorted(state.boundary(r.id)))) for r in roles.roles),
         agents=SCRIPTED_AGENTS if scripted else OTHER_AGENTS,
         failed_steps=tuple(failed),
+        invalid_steps=tuple(invalid),
     )
