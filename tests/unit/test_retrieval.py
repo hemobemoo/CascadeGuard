@@ -15,7 +15,7 @@ from cascadeguard.knowledge.retrieval import (
 from cascadeguard.simulation.replay import apply_repair
 
 SUCCESS = (
-    "owner.reverse_automated_lockouts.health_service_operator"
+    "owner.reverse_automated_lockouts.health_service_operator.30m"
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 

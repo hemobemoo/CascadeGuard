@@ -193,7 +193,7 @@ Verify:
 
 ```bash
 uv run cascadeguard repairs uae_health_access
-uv run cascadeguard run uae_health_access --repair owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+uv run cascadeguard run uae_health_access --repair owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator
 uv run cascadeguard run uae_health_access --repair share.network_incident_status.telecom_operator.health_service_operator
 uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
 ```

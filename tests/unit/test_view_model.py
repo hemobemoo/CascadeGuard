@@ -24,7 +24,7 @@ from cascadeguard.ui import app
 from cascadeguard.ui import view_model as vm
 
 SUCCESS = (
-    "owner.reverse_automated_lockouts.health_service_operator"
+    "owner.reverse_automated_lockouts.health_service_operator.30m"
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 MARK = "UAE law leaves this unassigned XYZZY"
