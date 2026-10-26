@@ -17,4 +17,7 @@ jobs:
       - run: uv sync --locked
       # Chromium only, for the e2e smoke test of the demo UI (tests/e2e), which CI always runs.
       - run: uv run playwright install --with-deps chromium
+      # Demo UI performance budgets (spec 006) are multiplied by this factor on CI runners.
       - run: uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+        env:
+          CASCADEGUARD_PERF_FACTOR: "3"

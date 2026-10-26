@@ -271,14 +271,21 @@ def index() -> None:
             on_change=lambda e: pick_lanes(e.value),
         ).props("data-testid=lanes-run")
 
-        @ui.refreshable
-        def lanes_view() -> None:
+        cells: dict[tuple[str, int], ui.element] = {}  # to mark the open cell in place
+
+        def lanes_result() -> RunResult | None:
             d = s.data
             if d is None:
+                return None
+            replay_run = s.lanes_run == "replay" and s.selected is not None
+            return s.selected.replay if replay_run and s.selected else d.baseline
+
+        @ui.refreshable
+        def lanes_view() -> None:
+            d, result = s.data, lanes_result()
+            if d is None or result is None:
                 return
-            result = (
-                d.baseline if s.lanes_run == "baseline" or s.selected is None else s.selected.replay
-            )
+            cells.clear()
             events = d.world.scenario.events
             with ui.element("div").classes("cg-lanes").props("data-testid=lanes"):
                 ui.label("role").classes("cg-lane-head")
@@ -293,10 +300,15 @@ def index() -> None:
                         with ui.element("div").classes("cg-bars"):
                             for bar in lane.bars:
                                 obligation(bar, len(events))
-            if s.cell is not None:
+
+        @ui.refreshable
+        def role_panel_view() -> None:
+            result = lanes_result()
+            if result is not None and s.cell is not None:
                 role_panel(result, *s.cell)
 
         lanes_view()
+        role_panel_view()
 
     def cell(role: str, c: vm.Cell) -> None:
         css = "cg-cell" + (" cg-cell-recipient" if c.recipient else "")
@@ -305,8 +317,9 @@ def index() -> None:
             ui.element("div")
             .classes(css)
             .on("click", lambda _, r=role, m=c.minute: open_cell(r, m))
-            .props(f"data-testid=cell-{role}-{c.minute}")
+            .props(f"data-testid=cell-{role}-{c.minute}") as box
         ):
+            cells[(role, c.minute)] = box
             for f in c.facts:
                 with ui.element("div").classes("cg-factline"):
                     ui.label(f.text).classes("cg-chip-id")
@@ -631,7 +644,7 @@ def index() -> None:
 
     views = {
         "a": verdict_view.refresh,
-        "b": lanes_view.refresh,
+        "b": lambda: (lanes_view.refresh(), role_panel_view.refresh()),
         "c": refresh_graph,
         "d": diagnosis_view.refresh,
         "e": ladder_view.refresh,
@@ -689,10 +702,15 @@ def index() -> None:
     def pick_lanes(which: str) -> None:
         s.lanes_run, s.cell = which, None
         lanes_view.refresh()
+        role_panel_view.refresh()
 
     def open_cell(role: str, minute: int) -> None:
+        if s.cell in cells:
+            cells[s.cell].classes(remove="cg-cell-selected")
         s.cell = None if s.cell == (role, minute) else (role, minute)
-        lanes_view.refresh()
+        if s.cell is not None:
+            cells[s.cell].classes(add="cg-cell-selected")
+        role_panel_view.refresh()
 
     def pick_failure(failure: str | None) -> None:
         s.failure = failure
