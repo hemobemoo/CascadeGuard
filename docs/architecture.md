@@ -57,6 +57,13 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   that fails validation twice becomes `AgentDecision.no_decision`, which the engine records as a
   `no_decision` finding. `--offline` (or the UI's "LLM (cached only)") never calls the API.
   A run with missing steps is "inconclusive": never ranked or scored (`SearchResult.inconclusive`).
+- **Owner obligations (ADR 0002 option A).** `replay.apply_repair` lists each owner rule in
+  `Scenario.owner_obligations`. After every inject and every accepted action, the engine
+  (`ConstraintEngine._open_owner_obligations`) opens the owner's obligation once the action's
+  `owner_obligation_opens_when` (roles.yaml) holds; it is due `deadline_minutes` later. A missed
+  one is the finding `obligation_overdue` and keeps its orphan duty as a remaining blocker in
+  `ReplayComparison`. `RoleView.open_obligations` lists each role's unfulfilled obligations
+  (scenario and repair, with labels); the LLM prompt (v4) shows them as `your_open_obligations`.
 
 ```
 view ──> cache_key ──hit──> cached AgentDecision

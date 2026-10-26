@@ -159,7 +159,7 @@ clauses:
     issuer: United Arab Emirates (federal)
     jurisdiction: UAE
     document_date: "2019"
-    status: draft
+    status: reviewed
     binding: true
     notes: >-
       Completes uae.fl2-2019.art16 (reviewed), whose quote ends at "except in any of the

@@ -14,7 +14,7 @@ search:
     repair_id
   ranked:
   - rank: 1
-    repair: owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+    repair: owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
@@ -49,7 +49,7 @@ search:
     new_conflicts: []
     new_conflict_tags: {}
   - rank: 4
-    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+owner.reverse_automated_lockouts.health_service_operator
+    repair: fallback.activate_fallback_channel.health_service_operator.t60_public_access_affected.15m+owner.reverse_automated_lockouts.health_service_operator.30m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
@@ -97,7 +97,7 @@ search:
     new_conflicts: []
     new_conflict_tags: {}
   - rank: 8
-    repair: owner.reverse_automated_lockouts.health_service_operator+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
+    repair: owner.reverse_automated_lockouts.health_service_operator.30m+trigger.review_automated_lockouts.health_service_operator.t45_responsibilities_diverge.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 2
@@ -121,7 +121,7 @@ search:
     new_conflicts: []
     new_conflict_tags: {}
   - rank: 10
-    repair: owner.reverse_automated_lockouts.health_service_operator
+    repair: owner.reverse_automated_lockouts.health_service_operator.30m
     edits: 1
     requires_authorization: true
     critical_blockers_removed: 1
@@ -217,7 +217,7 @@ search:
     new_conflict_tags:
       temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 17
-    repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
+    repair: owner.reverse_automated_lockouts.health_service_operator.30m+requester.activate_fallback_channel.health_service_operator.health_data_oversight.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
@@ -231,7 +231,7 @@ search:
     new_conflict_tags:
       temporal_infeasibility:request_determination: scripted_agent_limit
   - rank: 18
-    repair: owner.reverse_automated_lockouts.health_service_operator+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
+    repair: owner.reverse_automated_lockouts.health_service_operator.30m+requester.activate_fallback_channel.health_service_operator.telecom_regulator.t60_public_access_affected.15m
     edits: 2
     requires_authorization: true
     critical_blockers_removed: 1
@@ -296,12 +296,13 @@ search:
 successful:
   scenario: uae_health_access
   clause_set: 'policies/reviewed: reviewed + illustrative clauses'
-  repair: owner.reverse_automated_lockouts.health_service_operator+share.network_incident_status.telecom_operator.health_service_operator
+  repair: owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator
   requires_authorization: true
   edits:
   - operation: assign_owner
     role: health_service_operator
     action: reverse_automated_lockouts
+    deadline_minutes: 30
   - operation: define_minimum_data_share
     role: telecom_operator
     data_category: network_incident_status

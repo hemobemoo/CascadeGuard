@@ -14,12 +14,12 @@ uv run cascadeguard run uae_health_access --repair <id> [--export DIR] [--audit 
 
 A `RepairProposal` is one or more `RepairEdit`s; `repair_id` is the sorted edit ids joined by
 `+`. An edit id names every parameter (trigger edits end in `.<event>.<deadline>m`), so two
-different edits never share an id. Each edit is one of the five operation types with typed parameters only (no free text);
+different edits never share an id; owner edits end in `.<deadline>m`. Each edit is one of the five operation types with typed parameters only (no free text);
 missing or extra parameters are rejected. Proposals are immutable (tuples).
 
 | Operation | Parameters | Hypothetical rule in the replay |
 |---|---|---|
-| `assign_owner` | role, action | obligation: role is responsible for action (gives authority; no trigger) |
+| `assign_owner` | role, action, deadline_minutes (default 30) | obligation: role is responsible for action (gives authority); opens when the action's opening condition first holds (below) |
 | `add_escalation_trigger` | role, action, trigger_event, deadline_minutes | obligation opened by trigger_event |
 | `define_minimum_data_share` | role (sender), counterpart, data_category | permission to share; counterpart's boundary gains the category |
 | `add_fallback_channel` | role, `activate_fallback_channel`, trigger_event, deadline_minutes | obligation opened by trigger_event |
@@ -34,7 +34,35 @@ event's `opens_obligations`, and a data share widens one boundary by one categor
 clauses and the input objects are never changed. The proposal is re-validated from plain data,
 and each edit must name an action its role may take; a decision requester must be allowed
 the action it asks about, and its counterpart must be able to issue determinations.
-`deadline_minutes` is a strict integer. Agents cannot cite repair rules: a
+`deadline_minutes` is a strict integer.
+
+**Owner obligations (ADR 0002 option A, human decision 2026-10-26).** An owner rule is listed in
+`Scenario.owner_obligations`. The engine opens one obligation for the owner at the first step
+where the action's `owner_obligation_opens_when` (roles.yaml) holds, checked after every inject
+and every accepted action in the usual deterministic order: the owner holds a fact in every
+`owner_holds` category, a fact in every `in_place` category has been released, and no role has
+had the action accepted. For `reverse_automated_lockouts`: `owner_holds:
+[network_incident_status]` (evidence that the risk signal is disputed) and `in_place:
+[patient_account_records]` (the lock records, "account and lock status"; the alert's own
+category `fraud_model_alerts` was not used because the lock records are the lockouts
+themselves). The check reads only release, so it moves no fact to any role. If the condition
+never holds, the obligation never opens (owner-only repairs do not resolve). It is due
+`deadline_minutes` after opening. If it is not fulfilled by then (fulfilled exactly at the
+deadline is on time), the engine records the finding `obligation_overdue`, dated exactly at the
+deadline. That does not discard the repair: the orphan duty the owner edit targets counts as a
+remaining blocker (never removed or masked), and the missed obligation is not a new
+`temporal_infeasibility` conflict. Comparisons with one list `obligations_overdue`. An owner obligation still open when the
+incident ends (unfulfilled, deadline not yet passed) is not `obligation_overdue`; its orphan
+duty also counts as remaining, never removed or masked, labelled "owner obligation open at
+incident end" (`obligations_open_at_end`; human decision 2026-10-26). An action
+without `owner_obligation_opens_when` gets authority only from an owner edit, as before.
+
+Every role view lists the role's unfulfilled obligations (`RoleView.open_obligations`, including
+obligations on `any`): id, action, source clause or repair rule with its status label (repair
+rules: "hypothetical repair rule (not a source clause)"), opened_at, due_at (or undetermined)
+and status (open or overdue). Only the engine opens, fulfils or marks them overdue.
+
+Agents cannot cite repair rules: a
 citation must be a loaded clause from the corpus (`unknown_citation` otherwise).
 
 A data share widens the recipient's boundary (the information model in `roles.yaml`), so facts in
@@ -102,6 +130,10 @@ ranking live in `engine/`, as AGENTS.md requires; `simulation/replay.py` only ap
   for a determination, or to take an action that needs no authority, creates no permission.
 
 ## Known limits
+
+- `obligation_overdue` applies to owner obligations only (human decision 2026-10-26). Other
+  missed obligations (scenario clauses, trigger, fallback and requester rules) are recorded as
+  `obligation_missed` and diagnosed as `temporal_infeasibility`, as before.
 
 - Scripted agents replay the same decisions; they do not react to a repair. A new duty that no
   scripted decision fulfils is reported as a missed obligation (`temporal_infeasibility`), as

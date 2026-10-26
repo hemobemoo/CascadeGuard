@@ -3,10 +3,11 @@
 Identical means the same scenario (seed, timeline, facts), the same agents and the same clause
 set. The only changes are the repair's own: each edit becomes a hypothetical rule (an
 illustrative clause with id `repair.<edit id>`, never a source clause and never citable), an
-escalation trigger is added to its event's `opens_obligations`, and a minimum data share widens
-the recipient's boundary by one category. Hypothetical rules are labelled as such in every
-output. Judging the replay (outcome, blockers, ranking) is the engine's job:
-`engine/repair_search.py`.
+escalation trigger is added to its event's `opens_obligations`, an owner rule is listed in the
+scenario's `owner_obligations` (the engine opens it when the action's condition first holds),
+and a minimum data share widens the recipient's boundary by one category. Hypothetical rules
+are labelled as such in every output. Judging the replay (outcome, blockers, ranking) is the
+engine's job: `engine/repair_search.py`.
 """
 
 from collections.abc import Mapping
@@ -16,6 +17,8 @@ from cascadeguard.agents.base import Agent
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.repairs import (
     DETERMINATION_ACTION,
+    REPAIR_LABEL,
+    REPAIR_PREFIX,
     RepairEdit,
     RepairOperationType,
     RepairProposal,
@@ -26,8 +29,6 @@ from cascadeguard.simulation.orchestrator import RunResult, run
 
 SHARE = "share_incident_status"
 DETERMINER_ACTION = "issue_determination"
-REPAIR_PREFIX = "repair."
-REPAIR_LABEL = "hypothetical repair rule (not a source clause)"
 REPAIR_ISSUER = "CascadeGuard repair search (hypothetical)"
 
 
@@ -46,7 +47,10 @@ def _rule(edit: RepairEdit) -> PolicyClause:
         )
     elif op is RepairOperationType.ASSIGN_OWNER:
         kind, action = "obligation", edit.action
-        text = f"{edit.role} is responsible for {edit.action}."
+        text = (
+            f"{edit.role} is responsible for {edit.action}; once the action's opening condition "
+            f"holds, it must {edit.action} within {edit.deadline_minutes} minutes."
+        )
     elif op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
         kind, action = "obligation", DETERMINATION_ACTION
         text = (
@@ -96,6 +100,7 @@ def apply_repair(
     proposal = RepairProposal.model_validate(proposal.model_dump(mode="python"))
     repaired = dict(clauses)
     triggers: dict[str, list[str]] = {}
+    owners: list[str] = []
     widen: dict[str, list[str]] = {}
     for edit in proposal.edits:
         rule = _rule(edit)
@@ -104,6 +109,8 @@ def apply_repair(
         repaired[rule.id] = rule
         if edit.trigger_event is not None:
             triggers.setdefault(edit.trigger_event, []).append(rule.id)
+        if edit.operation is RepairOperationType.ASSIGN_OWNER:
+            owners.append(rule.id)
         if edit.operation is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
             assert edit.counterpart is not None and edit.data_category is not None
             widen.setdefault(edit.counterpart, []).append(edit.data_category)
@@ -146,7 +153,9 @@ def apply_repair(
         for r in roles.roles
     )
     return (
-        scenario.model_copy(update={"events": events}),
+        scenario.model_copy(
+            update={"events": events, "owner_obligations": (*scenario.owner_obligations, *owners)}
+        ),
         roles.model_copy(update={"roles": new_roles}),
         repaired,
     )

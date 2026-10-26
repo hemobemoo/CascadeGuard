@@ -23,6 +23,8 @@
 #   requires_information  the role must have seen a fact in each listed category
 #   requires_prior        the role must already have had each listed action accepted
 #   uncertain_authority_from  an obligation to a listed action gives only uncertain authority
+#   owner_obligation_opens_when  when an owner repair for the action opens the owner's
+#                         obligation (ADR 0002 option A); without it, an owner repair opens none
 
 actions:
   - id: investigate_network_fault
@@ -47,6 +49,14 @@ actions:
     # Disputing the alert needs evidence that the failure is network-side.
     requires_information: [network_incident_status]
     requires_prior: [review_automated_lockouts]
+    # ADR 0002 option A (human decision 2026-10-26): an owner repair opens the owner's obligation
+    # once the owner holds evidence that the risk signal is disputed and the automated lockouts
+    # are in place: the lock records (patient_account_records, "account and lock status") were
+    # released and no role has reversed the locks yet. Only release is checked; the condition
+    # moves no fact to any role.
+    owner_obligation_opens_when:
+      owner_holds: [network_incident_status]
+      in_place: [patient_account_records]
   - id: activate_fallback_channel
     description: Open an alternative access or authentication channel for affected patients.
     requires_authority: true
