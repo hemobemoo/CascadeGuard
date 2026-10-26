@@ -10,7 +10,11 @@ tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 
 **ADR 0002 option A: merged to main via PR #7 (merge commit, branch `adr-0002-option-a` kept),
 tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report:
-`docs/review/adr-0002-option-a-report.md`. Next: Phase 6 — Demo UI v2.
+`docs/review/adr-0002-option-a-report.md`.
+
+**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR open, not merged (human instruction).**
+Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
+before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
 **Open items:**
 - **ADR 0002 option A:** merged (PR #7, tag `adr-0002-a`). Known limitation: two owners for
@@ -23,6 +27,50 @@ tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
+
+### Phase 6 — Demo UI v2 (branch `phase-6-ui`, PR open)
+- Scope decision (human, 2026-10-26): Phase 6 = Demo UI v2, tracing moves to Phase 7; recorded
+  in `START_PROMPT.md` (c529306), `AGENTS.md` (Phoenix is Phase 7, 4fb2515, approved by the
+  human in chat) and the structure file.
+- `ui/app.py` rewritten: page opens precomputed (scripted baseline and search at startup; LLM
+  cache-only in the background, per-key locks); header with scenario, agents (Scripted | LLM
+  (cached only), no live mode), Guided | Expert, light/dark; sections a verdict strip, b
+  timeline swimlanes with obligation bars and role views, c cascade graph (created once, fixed
+  layered layout, options updated in place), d diagnosis cards per category, e repair ladder
+  (badge rule below), f split screen with the scripted vs LLM row, g exports (unchanged
+  builders, built on click) and the disclaimer; Expert adds clause set and findings.
+  `ui/theme.css`: design tokens, light/dark, fixed clause-status colours; local assets only;
+  Tailwind runtime off. `ui/view_model.py` gains formatting-only builders (verdict, swimlanes,
+  bars, diagnosis cards, ladder, scripted vs LLM). No engine change.
+- `scenarios/uae_health_access/evaluation_findings.yaml`: the human-worded ADR 0002 finding,
+  shown only for the exact prompt version (`phase5-v4+json_object`), the same repair and
+  matching computed verdicts; validated on load.
+- Tests: `tests/unit/test_view_model_v2.py` (21), `tests/e2e/test_ui_flow.py` (5: guided flow
+  a-f, expert, LLM cache-only row, no model configured, performance budget). CI sets
+  `CASCADEGUARD_PERF_FACTOR=3`.
+- Performance (details and both methods in the report): first meaningful paint 588 ms with no
+  click (before: 1,276 ms after a "Run baseline" click); budget test (median of 5, factor 1):
+  paint 700 ms, every click 91-140 ms. Back-to-back script: two clicks over 200 ms while hidden
+  sections stream (see "Waiting on human").
+- Playwright MCP demo flow run (2026-10-26): verdict on open, timeline with obligations and
+  labels, replay split screen, exports, LLM (cached only) with the real local cache showing
+  "resolved vs partial" and the recorded finding (`after-f-llm.png`).
+- Review round 1: evidence-auditor PASS (triage `docs/review/phase-6-clause-triage.md`);
+  phase-auditor FAIL (MAJOR: stale PROGRESS, fixed here; MINORs fixed: swimlane switch
+  measured, bundle lock, exact prompt match, findings validation, mode-aware rerun text, spec
+  test name, structure file, role-view boundary assertion); test-breaker FAIL (MAJORs fixed:
+  no scripted results under the LLM toggle when no model is configured, swimlane budget
+  tested; MINORs fixed: prompt match, baseline caveat with nothing ranked, bundle lock, engine
+  labels, changed actions in both modes, export without selection).
+
+Verify:
+
+```bash
+uv run python -m cascadeguard.ui.app      # http://localhost:8765, opens precomputed
+uv run pytest tests/unit/test_view_model_v2.py
+uv run pytest tests/e2e -s                # guided flow, budgets (prints every number)
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### ADR 0002 option A (merged via PR #7, tag `adr-0002-a`; human decision 2026-10-26)
 - An owner edit carries `deadline_minutes` (default 30, in the id: `owner.<action>.<role>.30m`).
@@ -698,6 +746,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Phase 6 (2026-10-26):**
+- Badge rule: is a run with `invalid_output` steps "complete" for the "smallest safe repair"
+  badge? Today only infrastructure failures (inconclusive) block it (test-breaker question).
+- Performance: the e2e budget passes (500 ms between clicks); a back-to-back script shows the
+  two-click dropdown highlight and the first agents switch at 217 / 221 ms. Accept, or tighten?
+- Gate 6: confirm the `START_PROMPT.md` and `AGENTS.md` edits (Phase 6/7) recorded as approved
+  in chat; `START_PROMPT.md` Phase 6 has no "Done when" sentence yet.
+- Merge PR (not merged, by instruction).
+
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
 
@@ -791,13 +848,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6 — Demo UI v2 on `phase-6-ui`: `specs/006-demo-ui-v2.md` written; **waiting for the
-human's approval and answers to its four questions before any code.** "Before" measurements
-(Phase 4 UI, median of 3, localhost) in the spec; "before" screenshots in
-`docs/review/phase-6-ui/`. **Scope decision (human, 2026-10-26):** Phase 6 = Demo UI v2;
-tracing moves to Phase 7 (optional, off by default, scope unchanged); recorded in
-`START_PROMPT.md` and the structure file. `AGENTS.md` still says "Phoenix (Phase 6, optional)":
-not edited (gate 6), flagged for the human. Still open: the deferred MINORs,
+The human reviews the Phase 6 PR (branch `phase-6-ui`) and answers the Phase 6 items in
+"Waiting on human". Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
