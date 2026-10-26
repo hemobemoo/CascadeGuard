@@ -791,9 +791,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6 — Demo UI v2 (the human's wording, 2026-10-26), on a new branch. **Question for the
-human first:** `START_PROMPT.md` defines Phase 6 as "Tracing (optional)"; confirm the scope of
-"Demo UI v2" (and whether it replaces or precedes tracing) before starting. Still open: the deferred MINORs,
+Phase 6 — Demo UI v2 on `phase-6-ui`: write `specs/006-demo-ui-v2.md`, then stop for the
+human's approval before any code. **Scope decision (human, 2026-10-26):** Phase 6 = Demo UI v2;
+tracing moves to Phase 7 (optional, off by default, scope unchanged); recorded in
+`START_PROMPT.md` and the structure file. `AGENTS.md` still says "Phoenix (Phase 6, optional)":
+not edited (gate 6), flagged for the human. Still open: the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
