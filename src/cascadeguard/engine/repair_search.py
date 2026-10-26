@@ -86,6 +86,8 @@ def outcome_text(c: "ReplayComparison") -> str:
     text = f"{c.outcome} ({outcome_definition(c.outcome)})"
     if c.masked and not c.failed_steps:
         text += f"; {len(c.masked)} masked failures: cause still present"
+    if c.overdue_blockers and not c.failed_steps:
+        text += f"; {len(c.overdue_blockers)} remaining: owner obligation overdue"
     if caveat := invalid_output_caveat(c):
         text += f". Caveat: {caveat}"
     return text
@@ -96,7 +98,7 @@ MASKED_LABEL = "masked (goal met another way; cause still present)"
 REMOVED_LABEL = "removed (cause gone)"
 OVERDUE_LABEL = (
     "owner obligation overdue (finding obligation_overdue): the assigned owner did not act by "
-    "its deadline, so this blocker remains"
+    "its deadline (acted late or not at all), so this blocker remains"
 )
 REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
 SCRIPTED_LIMIT_NOTE = (

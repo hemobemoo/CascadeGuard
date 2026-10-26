@@ -403,6 +403,10 @@ def test_overdue_blocker_is_explained_in_markdown_cli_and_ui(world: World) -> No
     late, on_time = comparisons(world)
     orphan = f"orphan_duty:{REVERSE}"
     assert late.overdue_blockers == (orphan,) and on_time.overdue_blockers == ()
+    from cascadeguard.engine.repair_search import outcome_text
+
+    assert "1 remaining: owner obligation overdue" in outcome_text(late)
+    assert "owner obligation overdue" not in outcome_text(on_time)
     assert OVERDUE_LABEL in comparison_markdown(late)
     assert OVERDUE_LABEL not in comparison_markdown(on_time)
     assert f"{orphan}: remaining [{OVERDUE_LABEL}]" in vm.comparison(late).replay_failures

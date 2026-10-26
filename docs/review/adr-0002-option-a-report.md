@@ -77,7 +77,7 @@ of leaving it implicit.
 - Round 1: evidence-auditor **PASS** (triage: `adr-0002-option-a-clause-triage.md`);
   phase-auditor **FAIL** (2 MAJOR, 4 MINOR, all fixed); test-breaker **PASS** (4 MINOR: 2 fixed
   with tests, 2 recorded as known limitations / a question for the human).
-- Round 2: phase-auditor, see the PR body.
+- Round 2: phase-auditor FAIL (MAJOR: PR not yet opened when the hand-off said so, fixed by opening it; MINORs fixed: overdue count in the outcome text, label wording "acted late or not at all"; triage file name kept, as this task is not a numbered phase).
 
 ## Open for the human
 
