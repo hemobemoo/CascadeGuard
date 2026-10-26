@@ -1,25 +1,29 @@
-"""Browser smoke test of the demo UI's core flow (Playwright, Chromium, scripted agents).
+"""Browser tests of the demo UI v2 (spec 006): guided flow, expert mode, exports, LLM (cached
+only), and the performance budget (Playwright, Chromium).
 
 CI always runs it. Locally: `uv run pytest -m "not e2e"` skips it; running it needs
-`uv run playwright install chromium` once.
+`uv run playwright install chromium` once. Budgets are multiplied by CASCADEGUARD_PERF_FACTOR
+(default 1; CI sets 3); every measured number and the budget applied are printed.
 """
 
 import os
 import socket
+import statistics
 import subprocess
 import sys
 import time
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, expect, sync_playwright
+from playwright.sync_api import Browser, Locator, Page, expect, sync_playwright
 
-from cascadeguard.cli import load_world, main
+from cascadeguard.cli import main
 from cascadeguard.engine.repair_search import MASKED_LABEL
 from cascadeguard.simulation.replay import REPAIR_LABEL
 from cascadeguard.storage.export import DISCLAIMER
+from cascadeguard.ui.view_model import SMALLEST_SAFE
 
 pytestmark = pytest.mark.e2e
 
@@ -29,6 +33,9 @@ TOP = (
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 TIMEOUT_MS = 60_000
+FACTOR = float(os.environ.get("CASCADEGUARD_PERF_FACTOR", "1"))
+PAINT_BUDGET_MS = 1500 * FACTOR
+CLICK_BUDGET_MS = 200 * FACTOR
 
 
 def _free_port() -> int:
@@ -70,22 +77,27 @@ def server() -> Iterator[str]:
 
 
 @pytest.fixture(scope="module")
-def page(server: str) -> Iterator[Page]:
+def browser() -> Iterator[Browser]:
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        context = browser.new_context(
-            accept_downloads=True, viewport={"width": 1400, "height": 1000}
-        )
-        pg = context.new_page()
-        pg.set_default_timeout(TIMEOUT_MS)
-        pg.goto(server)
-        yield pg
-        browser.close()
+        b = p.chromium.launch()
+        yield b
+        b.close()
 
 
-def _pick(page: Page, field: str, option: str) -> None:
-    page.locator(".q-field", has_text=field).first.click()
-    page.get_by_role("option", name=option, exact=True).click()
+@pytest.fixture
+def page(server: str, browser: Browser) -> Iterator[Page]:
+    context = browser.new_context(accept_downloads=True, viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server)
+    pg.locator(".cg-verdict").wait_for()
+    pg.locator(".cg-lanes").wait_for(state="attached")  # the other sections have streamed in
+    yield pg
+    context.close()
+
+
+def section(page: Page, key: str) -> Locator:
+    return page.locator(f'[data-testid="section-{key}"]')
 
 
 def _download(page: Page, button: str, target: Path) -> str:
@@ -95,53 +107,76 @@ def _download(page: Page, button: str, target: Path) -> str:
     return target.read_text(encoding="utf-8")
 
 
-def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
-    # Pick the scenario and run the baseline.
-    _pick(page, "Scenario", SCENARIO)
-    page.get_by_role("button", name="Run baseline").click()
-    expect(page.get_by_text("4 diagnosed failures")).to_be_visible()
+def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
+    # Opens precomputed: the verdict is on screen without any click; disclaimer always visible.
+    expect(page.get_by_text(DISCLAIMER).first).to_be_visible()
+    expect(page.locator('[data-testid="clause-set"]')).to_contain_text("policies/reviewed")
+    a = section(page, "a")
+    expect(a).to_be_visible()
+    expect(page.locator('[data-testid="verdict-badge"]')).to_have_text(SMALLEST_SAFE)
+    expect(page.locator('[data-testid="verdict-outcome"]')).to_contain_text(
+        "resolved (all critical goals met; masked failures may remain)"
+    )
+    for key in "bcdef":
+        expect(section(page, key)).to_be_hidden()
 
-    # The disclaimer and a clause status label are visible.
-    expect(page.get_by_text(DISCLAIMER)).to_be_visible()
-    expect(page.get_by_text("uae.fl2-2019.art4 [reviewed (interpreted)]").first).to_be_visible()
+    # b. Swimlanes: facts per role; the health operator's obligations with source labels.
+    page.get_by_role("button", name="Next").click()
+    b = section(page, "b")
+    expect(b).to_be_visible()
+    expect(a).to_be_hidden()
+    expect(b.get_by_text("locked_account_records").first).to_be_visible()
+    expect(b.get_by_text("dha.pp11.4-18-4").first).to_be_visible()
+    expect(b.get_by_text("reviewed (interpreted)").first).to_be_visible()
+    page.locator('[data-testid="cell-health_service_operator-30"]').click()
+    view = page.locator('[data-testid="role-view"]')
+    expect(view).to_contain_text("Role view: health_service_operator at T+30")
+    expect(view).to_contain_text("Data categories outside its boundary")
+    page.get_by_text("Replay (selected repair)").click()
+    expect(b.get_by_text(REPAIR_LABEL).first).to_be_visible()
+    expect(b.get_by_text("fulfilled at T+60").first).to_be_visible()
 
-    # A role view: the health operator at T+30 sees its inject, but not network data. Checked
-    # inside the role card only, on text that exists only at T+30.
-    card = page.locator(".q-card", has_text="Role views")
-    expect(card.locator(".q-field", has_text="Inject")).to_contain_text("T+00")
-    _pick(page, "Inject", "T+30")
-    expect(card.locator(".q-field", has_text="Inject")).to_contain_text("T+30")
-    world = load_world(SCENARIO)
-    expect(
-        card.get_by_text(f"Simulation time: {world.scenario.time_at(30).isoformat()}")
-    ).to_be_visible()
-    t30 = next(e for e in world.scenario.events if e.at_minute == 30)
-    expect(card.get_by_text(t30.title, exact=True)).to_be_visible()
-    expect(card.get_by_text("Data categories outside its boundary")).to_be_visible()
-    expect(card.get_by_text("network_incident_status", exact=True)).to_be_visible()
+    # c. Cascade graph renders; highlighting changes its options in place.
+    page.get_by_role("button", name="Next").click()
+    c = section(page, "c")
+    expect(c.locator("canvas").first).to_be_visible()
+    handle = c.locator('[data-testid="graph"]').element_handle()
+    c.locator(".q-field", has_text="Highlight").click()
+    page.get_by_role("option", name="orphan_duty:reverse_automated_lockouts").click()
+    expect(c.locator(".q-field", has_text="Highlight")).to_contain_text("reverse_automated")
+    assert handle is not None and handle.evaluate("e => e.isConnected")  # never rebuilt
 
-    # The dependency graph renders, and clicking a failure highlights it.
-    graph = page.locator(".q-card", has_text="Dependency graph")
-    expect(graph.locator("canvas").first).to_be_visible()
-    failure = world.baseline().failures[0].id
-    graph.get_by_role("button", name=f"[{failure.split(':')[0]}] {failure}").click()
-    expect(graph.locator(".q-field", has_text="Highlight")).to_contain_text(failure)
+    # d. Diagnosis: one card per category, evidence chips with status labels.
+    page.get_by_role("button", name="Next").click()
+    d = section(page, "d")
+    for category in (
+        "orphan_duty",
+        "mandate_overlap",
+        "information_deadlock",
+        "temporal_infeasibility",
+        "undefined_trigger",
+    ):
+        expect(d.locator(f'[data-testid="category-{category}"]')).to_be_visible()
+    expect(d.get_by_text("dha.pp11.4-18-1").first).to_be_visible()
+    expect(d.locator('[data-testid="category-mandate_overlap"]')).to_contain_text("none found")
 
-    # The top-ranked repair carries "requires authorization"; its rules are hypothetical.
-    page.get_by_role("button", name="Find repairs").click()
-    expect(page.get_by_text("repairs ranked")).to_be_visible()
-    top = page.locator("div.border-b", has_text=f"1. {TOP}")
-    expect(top).to_have_count(1)
-    expect(top.get_by_text("requires authorization")).to_be_visible()
-    page.get_by_role("button", name="Compare").first.click()
+    # e. Repair ladder: rank 1 badged, requires authorization, roles touched.
+    page.get_by_role("button", name="Next").click()
+    rung = page.locator('[data-testid="rung-1"]')
+    expect(rung).to_contain_text(SMALLEST_SAFE)
+    expect(rung).to_contain_text("requires authorization")
+    expect(rung).to_contain_text("roles touched: health_service_operator, telecom_operator")
+    expect(page.locator('[data-testid="rung-2"]')).not_to_contain_text(SMALLEST_SAFE)
 
-    # Baseline and replay side by side.
-    expect(page.get_by_text(f"Baseline vs replay: {TOP}")).to_be_visible()
-    expect(page.get_by_text(f"[{REPAIR_LABEL}]").first).to_be_visible()
-    expect(page.get_by_text("patient_access_restored: met at T+60")).to_be_visible()
-    expect(page.get_by_text(MASKED_LABEL).first).to_be_visible()
+    # f. Split screen for the top repair.
+    page.get_by_role("button", name="Next").click()
+    f = section(page, "f")
+    expect(f.locator('[data-testid="comparison-id"]')).to_have_text(TOP)
+    expect(f.get_by_text("patient_access_restored: met at T+60")).to_be_visible()
+    expect(f.get_by_text(MASKED_LABEL).first).to_be_visible()
+    expect(f.get_by_text(f"[{REPAIR_LABEL}]").first).to_be_visible()
 
-    # Both exports (JSON and Markdown) match what `cli --export` writes.
+    # g. Exports equal the CLI's (unchanged builders).
     cli = tmp_path / "cli"
     assert main(["run", SCENARIO, "--repair", TOP, "--export", str(cli)]) == 0
     name = f"{SCENARIO}-replay-{TOP}"
@@ -149,16 +184,141 @@ def test_core_flow_in_the_browser(page: Page, tmp_path: Path) -> None:
         got = _download(page, button, tmp_path / f"ui.{suffix}")
         assert got == (cli / f"{name}.{suffix}").read_text(encoding="utf-8"), button
 
-    # The agents toggle: LLM agents from the cache only (no call is possible). Every step is
-    # a no-decision finding, and the result says which agents produced it.
+
+def test_expert_mode_shows_every_section(page: Page) -> None:
+    page.get_by_text("Expert", exact=True).click()
+    for key in "abcdefgx":
+        expect(section(page, key)).to_be_visible()
+    expect(section(page, "x")).to_contain_text("draft clauses not loaded")
+    expect(section(page, "x")).to_contain_text("[reviewed (interpreted)]")
+    # Compare another repair: the ladder highlights it in place; the split screen follows.
+    page.locator('[data-testid="rung-2"]').get_by_role("button", name="Compare").click()
+    expect(page.locator('[data-testid="rung-2"]')).to_have_class("cg-rung cg-rung-selected")
+    expect(page.locator('[data-testid="comparison-id"]')).not_to_have_text(TOP)
+
+
+def test_llm_cached_mode_never_calls_and_shows_the_agents_row(page: Page) -> None:
+    page.get_by_text("Expert", exact=True).click()
     page.get_by_text("LLM (cached only)", exact=True).click()
-    page.get_by_role("button", name="Run baseline").click()
-    agents = page.get_by_text(
-        "Agents: LLM agents (model from CASCADEGUARD_MODEL; output mode json_schema; offline"
-    )
-    expect(agents).to_be_visible()
-    expect(agents).to_contain_text("0 steps reused, 36 not cached")
-    expect(page.get_by_text("made no decision at this step (not_cached)").first).to_be_visible()
+    agents = page.locator('[data-testid="agents-label"]')
+    expect(agents).to_contain_text("LLM agents (model from CASCADEGUARD_MODEL")
+    expect(agents).to_contain_text("offline: decision cache only")
+    expect(agents).to_contain_text("0 steps reused")  # baseline and every replay: no entry
+    # No step is cached under this model id: every replay is inconclusive, never ranked.
+    expect(page.locator('[data-testid="inconclusive"]')).to_be_visible()
+    expect(page.locator('[data-testid="incomplete"]')).to_be_visible()
+    page.locator('[data-testid="inconclusive"]').get_by_role("button", name="Compare").first.click()
+    row = page.locator('[data-testid="agents-row"]')
+    expect(row).to_contain_text("Same repair, scripted vs LLM agents")
+    expect(row).to_contain_text("LLM (cached): inconclusive")
+    expect(page.locator('[data-testid="agents-finding"]')).to_have_count(0)  # no match: nothing
+    expect(page.get_by_text("LLM (live", exact=False)).to_have_count(0)  # no live mode in the UI
     page.get_by_text("Scripted", exact=True).click()
-    page.get_by_role("button", name="Run baseline").click()
-    expect(page.get_by_text("Agents: scripted agents")).to_be_visible()
+    expect(agents).to_contain_text("scripted agents")
+
+
+def _median_ms(label: str, budget: float, runs: list[float]) -> None:
+    median = statistics.median(runs)
+    print(
+        f"{label}: median {median:.0f} ms (runs {', '.join(f'{r:.0f}' for r in runs)}); "
+        f"budget {budget:.0f} ms (factor {FACTOR:g})"
+    )
+    assert median < budget, label
+
+
+def test_performance_budget(server: str, browser: Browser) -> None:
+    paints: list[float] = []
+    for _ in range(6):  # one warm-up, then five measured
+        context = browser.new_context(viewport={"width": 1400, "height": 1000})
+        pg = context.new_page()
+        start = time.perf_counter()
+        pg.goto(server)
+        pg.locator(".cg-verdict").wait_for()
+        paints.append((time.perf_counter() - start) * 1000)
+        context.close()
+    _median_ms("first meaningful paint (verdict, no click)", PAINT_BUDGET_MS, paints[1:])
+
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server)
+    pg.locator(".cg-lanes").wait_for(state="attached")
+
+    def measure(label: str, action: Callable[[], object], reset: Callable[[], object]) -> None:
+        runs: list[float] = []
+        for _ in range(6):  # one warm-up, then five measured
+            reset()
+            pg.wait_for_timeout(500)  # sections streamed by the reset click finish first
+            start = time.perf_counter()
+            action()
+            runs.append((time.perf_counter() - start) * 1000)
+        _median_ms(label, CLICK_BUDGET_MS, runs[1:])
+
+    def to(key: str) -> Callable[[], object]:
+        return lambda: pg.locator(f'[data-testid="step-{key}"]').click()
+
+    measure(
+        "stepper: a -> b",
+        lambda: (to("b")(), section(pg, "b").wait_for(state="visible")),
+        lambda: (to("a")(), section(pg, "a").wait_for(state="visible")),
+    )
+    measure(
+        "swimlane cell -> role view",
+        lambda: (
+            pg.locator('[data-testid="cell-telecom_operator-30"]').click(),
+            pg.get_by_text("Role view: telecom_operator at T+30").wait_for(),
+        ),
+        lambda: (
+            to("b")(),
+            pg.locator('[data-testid="cell-telecom_operator-30"]').click()
+            if pg.locator('[data-testid="role-view"]').count()
+            else None,
+            pg.locator('[data-testid="role-view"]').wait_for(state="detached"),
+        ),
+    )
+    pg.get_by_text("Expert", exact=True).click()
+    section(pg, "c").wait_for(state="visible")
+    picker = section(pg, "c").locator(".q-field", has_text="Highlight")
+    measure(
+        "graph highlight (in place)",
+        lambda: (
+            pg.locator('[data-testid="section-d"] button', has_text="orphan_duty:activate").click(),
+            picker.filter(has_text="activate_fallback").wait_for(),
+        ),
+        lambda: (
+            picker.click(),
+            pg.get_by_role("option", name="all diagnosed failures").click(),
+            picker.filter(has_text="all diagnosed failures").wait_for(),
+        ),
+    )
+    pg.get_by_text("Guided", exact=True).click()
+
+    def reset_compare() -> None:
+        to("e")()
+        rung = pg.locator('[data-testid="rung-1"]')
+        rung.wait_for(state="visible")
+        rung.get_by_role("button", name="Compare").click()
+        to("e")()
+        rung.wait_for(state="visible")
+
+    measure(
+        "Compare -> split screen",
+        lambda: (
+            pg.locator('[data-testid="rung-3"]').get_by_role("button", name="Compare").click(),
+            pg.locator('[data-testid="comparison-id"]', has_text="trigger.review").wait_for(),
+        ),
+        reset_compare,
+    )
+    measure(
+        "agents: Scripted -> LLM (cached only), verdict updated",
+        lambda: (
+            pg.get_by_text("LLM (cached only)", exact=True).click(),
+            pg.locator('[data-testid="verdict-outcome"]', has_text="no complete replay").wait_for(),
+        ),
+        lambda: (
+            to("a")(),
+            pg.get_by_text("Scripted", exact=True).click(),
+            pg.locator('[data-testid="verdict-outcome"]', has_text="resolved").wait_for(),
+        ),
+    )
+    context.close()
