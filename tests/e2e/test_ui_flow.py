@@ -135,6 +135,9 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     a = section(page, "a")
     expect(a).to_be_visible()
     expect(page.locator('[data-testid="verdict-badge"]')).to_have_text(SMALLEST_SAFE)
+    expect(page.locator('[data-testid="verdict-authorization"]')).to_contain_text(
+        "requires authorization (needs human and institutional approval)"
+    )
     expect(page.locator('[data-testid="verdict-outcome"]')).to_contain_text(
         "resolved (all critical goals met; masked failures may remain)"
     )
@@ -164,10 +167,25 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     c = section(page, "c")
     expect(c.locator("canvas").first).to_be_visible()
     handle = c.locator('[data-testid="graph"]').element_handle()
+    assert handle is not None
+    sizes = (
+        "e => Object.fromEntries(getElement(e).chart.getOption().series[0].data"
+        ".map(n => [n.id, n.symbolSize]))"
+    )
+    before = handle.evaluate(sizes)
     c.locator(".q-field", has_text="Highlight").click()
     page.get_by_role("option", name="orphan_duty:reverse_automated_lockouts").click()
     expect(c.locator(".q-field", has_text="Highlight")).to_contain_text("reverse_automated")
-    assert handle is not None and handle.evaluate("e => e.isConnected")  # never rebuilt
+    page.wait_for_function(
+        "() => getElement(document.querySelector('[data-testid=graph]')).chart.getOption()"
+        ".series[0].data"
+        ".find(n => n.id === 'category:network_incident_status').symbolSize === 12"
+    )
+    after = handle.evaluate(sizes)
+    assert before["category:network_incident_status"] == 26  # every failure highlighted
+    assert after["category:network_incident_status"] == 12  # not part of this failure
+    assert after["action:reverse_automated_lockouts"] == 26
+    assert handle.evaluate("e => e.isConnected")  # the same chart, updated in place
 
     # d. Diagnosis: one card per category, evidence chips with status labels.
     page.get_by_role("button", name="Next").click()
@@ -230,6 +248,8 @@ def test_llm_cached_mode_never_calls_and_shows_the_agents_row(page: Page) -> Non
     # No step is cached under this model id: every replay is inconclusive, never ranked.
     expect(page.locator('[data-testid="inconclusive"]')).to_be_visible()
     expect(page.locator('[data-testid="incomplete"]')).to_be_visible()
+    # The incomplete-run banner is repeated where the baseline's diagnosis is shown.
+    expect(section(page, "d").locator('[data-testid="incomplete-note"]')).to_be_visible()
     page.locator('[data-testid="inconclusive"]').get_by_role("button", name="Compare").first.click()
     row = page.locator('[data-testid="agents-row"]')
     expect(row).to_contain_text("Same repair, scripted vs LLM agents")

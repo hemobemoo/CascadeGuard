@@ -46,8 +46,15 @@ def test_verdict_strip(world: World, found: SearchResult) -> None:
     assert v.baseline_failures == 4 and (v.removed, v.masked, v.remaining) == (2, 2, 0)
     assert v.repair_id == TOP and v.badge == vm.SMALLEST_SAFE
     assert v.outcome == outcome_text(found.ranked[0])  # engine wording, definition included
+    # AGENTS.md: a repair creating a permission without a reviewed basis is shown as needing
+    # human and institutional approval, on the first screen too.
+    assert found.ranked[0].proposal.requires_authorization
+    assert v.authorization == vm.REQUIRES_AUTHORIZATION
     empty = vm.verdict(world.baseline(), replace(found, ranked=()), world.scenario)
     assert empty.replay_met is None and empty.badge == "" and empty.repair_id == ""
+    # Nothing ranked: no counts at all (shown "n/a"), never zeros that read as "nothing left".
+    assert (empty.removed, empty.masked, empty.remaining, empty.new_conflicts) == (None,) * 4
+    assert empty.authorization == ""
 
 
 def test_badge_only_on_a_clean_complete_resolved_rank_one(found: SearchResult) -> None:
@@ -243,6 +250,20 @@ def test_evaluation_findings_file_is_validated(
     bad.write_text(f"findings:\n  - {fields}    source: 3\n", encoding="utf-8")
     with pytest.raises(ValueError, match="exactly the text fields"):
         app.findings_for(SCENARIO)
+    # Malformed shapes are the same clear error, never an AttributeError while rendering.
+    for text in (
+        "findings:\n  - just a string\n",
+        "findings:\n  repair: x\n",
+        "- findings\n",
+        "other: 1\n",
+        f"findings:\n  - {fields}    source: s\n",  # scripted "a" is not an outcome
+    ):
+        bad.write_text(text, encoding="utf-8")
+        with pytest.raises(ValueError, match="exactly the text fields"):
+            app.findings_for(SCENARIO)
+    good = fields.replace("scripted: a", "scripted: resolved").replace("llm: b", "llm: partial")
+    bad.write_text(f"findings:\n  - {good}    source: s\n", encoding="utf-8")
+    assert app.findings_for(SCENARIO)[0].llm == "partial"
 
 
 def test_verdict_shows_the_baseline_caveat_even_with_nothing_ranked(

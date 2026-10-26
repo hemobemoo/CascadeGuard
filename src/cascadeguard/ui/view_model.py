@@ -503,11 +503,12 @@ class Verdict:
     badge: str  # SMALLEST_SAFE, or "top-ranked repair (partial)"
     outcome: str  # engine wording: outcome, definition, masked count, caveats
     replay_met: int | None  # critical goals met in the best replay; None: no complete replay
-    removed: int
-    masked: int
-    remaining: int
-    new_conflicts: int
+    removed: int | None  # None (shown "n/a") when no complete replay is ranked
+    masked: int | None
+    remaining: int | None
+    new_conflicts: int | None
     caveat: str = ""  # the baseline's invalid_output caveat, shown even with nothing ranked
+    authorization: str = ""  # REQUIRES_AUTHORIZATION when the best repair needs approval
 
 
 def critical_goals(scenario: Scenario) -> tuple[str, ...]:
@@ -534,7 +535,9 @@ def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario
     head = (len(critical), _goals_met(baseline, critical), len(baseline.failures))
     caveat = baseline_caveat(baseline)
     if not search_result.ranked:
-        return Verdict(*head, "", "", "no complete replay to rank", None, 0, 0, 0, 0, caveat)
+        return Verdict(
+            *head, "", "", "no complete replay to rank", None, None, None, None, None, caveat
+        )
     c = search_result.ranked[0]
     return Verdict(
         *head,
@@ -547,6 +550,7 @@ def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario
         remaining=len(c.remaining),
         new_conflicts=len(c.new_conflicts),
         caveat=caveat,
+        authorization=REQUIRES_AUTHORIZATION if c.proposal.requires_authorization else "",
     )
 
 
@@ -734,6 +738,9 @@ def ladder(result: SearchResult) -> list[Rung]:
             )
         )
     return out
+
+
+FINDING_OUTCOMES = ("resolved", "partial", "no effect", "introduces new conflict")
 
 
 @dataclass(frozen=True, slots=True)
