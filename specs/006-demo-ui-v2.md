@@ -8,8 +8,12 @@ open at incident end, requires authorization, agent statement).
 
 ## Layout (one page, in this order; each section an `@ui.refreshable`)
 
+The page opens with the precomputed baseline, diagnosis and repair ladder already rendered:
+no "Run baseline" click is needed for first meaningful content. "Run baseline", "Find repairs"
+and "Compare" read the precomputed results; the buttons stay for re-running.
+
 - **Header (persistent):** CascadeGuard wordmark, scenario, agents (Scripted | LLM (cached
-  only)), mode (Guided | Expert), light/dark; the disclaimer and clause-set label always visible.
+  only); the UI has no live LLM mode, the CLI keeps live runs), mode (Guided | Expert), light/dark; the disclaimer and clause-set label always visible.
 - **a. Verdict strip:** baseline vs best replay: outcome with its definition, critical goals
   met (n/N), diagnosed failures, removed / masked / remaining counts, invalid_output caveat.
 - **b. Timeline swimlanes:** one lane per role, columns T+00…T+75. Each cell: facts that reached
@@ -22,14 +26,17 @@ open at incident end, requires authorization, agent statement).
   `chart.options` in place and calls `chart.update()`; never rebuilt.
 - **d. Diagnosis:** one card per failure category (five, empty ones say "none found"), each
   failure with description, qualification and evidence chips (clause id + status colour/label).
-- **e. Repair ladder:** ranked repairs; rank 1 badged "smallest safe repair" (only if clean and
-  complete); edits, roles touched, "requires authorization"; discarded (with reason, clauses);
+- **e. Repair ladder:** ranked repairs. Rank 1 is badged "smallest safe repair" only if it is
+  clean, complete and resolved; otherwise it is labelled "top-ranked repair" with its outcome
+  (e.g. "partial") next to it; edits, roles touched, "requires authorization"; discarded (with reason, clauses);
   inconclusive listed after, unranked.
 - **f. Split screen** baseline | replay for the selected repair: goals, removed / masked /
   remaining (with overdue / open-at-end labels) / new conflicts, outcome definition, caveat,
   changed actions. In LLM mode, a "same repair, scripted vs LLM" row shows both verdicts (e.g.
-  resolved vs partial) and, when a recorded evaluation finding matches that repair and those
-  verdicts, its wording and source doc.
+  resolved vs partial) and, when a finding in
+  `scenarios/<id>/evaluation_findings.yaml` (repair id, prompt version, scripted and LLM
+  verdicts, text, source doc) matches that repair and the computed verdicts, its wording and
+  source doc; otherwise nothing is shown for that row.
 - **g. Exports** (unchanged builders) and the disclaimer repeated at the foot.
 
 **Guided mode** (default): a stepper a → f with one sentence of narration per step, showing one
@@ -46,7 +53,8 @@ Roboto and Material icons from NiceGUI's own package; no CDN, works offline.
 
 Scripted baseline and search computed once at startup and held in memory (0.25 s today); LLM
 (cached only) world, baseline and search computed on first switch, held in memory, never live.
-Budgets on localhost: first meaningful paint (verdict strip visible) < 1.5 s; click-to-update
+Budgets on localhost (CI multiplies them by `CASCADEGUARD_PERF_FACTOR`, default 1, set to 3
+in the workflow; reports give both the measured number and the budget applied): first meaningful paint (verdict strip visible) < 1.5 s; click-to-update
 (stepper, graph highlight, compare, swimlane switch, role-view cell) < 200 ms, median of 5
 after one warm-up; no full-page re-render. Before (Phase 4 UI, median of 3): load 352 ms, first
 content after "Run baseline" 1,276 ms, find repairs 883 ms, compare 284 ms, inject switch
@@ -58,13 +66,10 @@ content after "Run baseline" 1,276 ms, find repairs 883 ms, compare 284 ms, inje
 category cards, every label from engine constants. `tests/e2e/test_ui_flow.py`: guided flow
 a → f, expert mode, exports equal to the CLI's, LLM (cached only) scripted-vs-LLM row, budgets.
 
-## Questions for the human
+## Human decisions (2026-10-26)
 
-1. "Reads the cache only" means the UI drops "LLM (live, paid calls)" (the CLI keeps live
-   runs). OK?
-2. Where should the evaluation finding's wording live? Proposal:
-   `scenarios/uae_health_access/evaluation_findings.yaml` (repair id, prompt version, scripted
-   and LLM verdicts, text, source doc), shown only when the computed verdicts match it.
-3. CI runners are slower than localhost. Enforce the same budgets in CI, or in CI only check
-   them with a factor (e.g. 3x) set in the workflow?
-4. "Smallest safe repair" badge: only on rank 1 when clean and not inconclusive (else no badge)?
+1. The UI drops "LLM (live, paid calls)"; LLM mode in the UI is cache-only.
+2. `evaluation_findings.yaml` as above, shown only when the computed verdicts match.
+3. Same budgets locally; CI factor via env var (default 1, CI 3); report both numbers.
+4. Badge only on a clean, complete and resolved rank 1; otherwise "top-ranked repair" + outcome.
+5. The page opens precomputed (above). Spec approved.
