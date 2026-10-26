@@ -8,6 +8,7 @@ cache only (no live calls in the UI; the CLI keeps live runs).
 """
 
 import asyncio
+import html
 import os
 import threading
 from dataclasses import dataclass, field
@@ -20,14 +21,23 @@ from nicegui import background_tasks, run, ui
 
 from cascadeguard.agents.llm import LLMAgent, LLMConfigError
 from cascadeguard.cli import LLM, SCRIPTED, AgentChoice, World, load_world, search_repairs
-from cascadeguard.engine.repair_search import ReplayComparison, SearchResult, outcome_definition
+from cascadeguard.engine.constraints import AGENT_STATEMENT
+from cascadeguard.engine.repair_search import (
+    MASKED_LABEL,
+    REMOVED_LABEL,
+    ReplayComparison,
+    SearchResult,
+    outcome_definition,
+)
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.ui import view_model as vm
 
+STATEMENT = AGENT_STATEMENT.split(" (", 1)[0]  # short form; the full label is the tooltip
 DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
 PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
 THEME = Path(__file__).with_name("theme.css")
+HIDDEN_DELAY = 0.3  # seconds before sections not on screen are refreshed after a click
 FILL_DELAY = 0.15  # seconds after the websocket connects before the other sections are sent
 EXPORTS = (
     "Baseline JSON",
@@ -72,8 +82,16 @@ def findings_for(scenario_id: str) -> tuple[vm.EvaluationFinding, ...]:
     path = SCENARIOS_DIR / scenario_id / "evaluation_findings.yaml"
     if not path.is_file():
         return ()
-    data = cast(dict[str, list[dict[str, str]]], yaml.safe_load(path.read_text(encoding="utf-8")))
-    return tuple(vm.EvaluationFinding(**f) for f in (data or {}).get("findings", []))
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data = cast(dict[str, list[dict[str, object]]], raw or {})
+    fields = set(vm.EvaluationFinding.__dataclass_fields__)
+    out: list[vm.EvaluationFinding] = []
+    for f in data.get("findings", []):
+        text = {k: v for k, v in f.items() if isinstance(v, str)}
+        if set(f) != fields or set(text) != fields:
+            raise ValueError(f"{path}: each finding needs exactly the text fields {sorted(fields)}")
+        out.append(vm.EvaluationFinding(**text))
+    return tuple(out)
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,12 +114,18 @@ def compute(scenario_id: str, mode: str) -> Bundle:
 
 
 _CACHE: dict[tuple[str, str], Bundle | str] = {}  # a str is the reason it could not be computed
-_LOCK = threading.Lock()
+# One lock per key, so an LLM precompute never blocks a page that needs the cached scripted one.
+_LOCKS: dict[tuple[str, str], threading.Lock] = {}
+_LOCKS_LOCK = threading.Lock()
 
 
 def bundle(scenario_id: str, mode: str) -> Bundle | str:
-    with _LOCK:
-        key = (scenario_id, mode)
+    key = (scenario_id, mode)
+    if (found := _CACHE.get(key)) is not None:
+        return found
+    with _LOCKS_LOCK:
+        lock = _LOCKS.setdefault(key, threading.Lock())
+    with lock:
         if key not in _CACHE:
             try:
                 _CACHE[key] = compute(scenario_id, mode)
@@ -111,8 +135,7 @@ def bundle(scenario_id: str, mode: str) -> Bundle | str:
 
 
 def recompute(scenario_id: str, mode: str) -> Bundle | str:
-    with _LOCK:
-        _CACHE.pop((scenario_id, mode), None)
+    _CACHE.pop((scenario_id, mode), None)
     return bundle(scenario_id, mode)
 
 
@@ -138,7 +161,19 @@ class Session:
     cell: tuple[str, int] | None = None  # (role, minute) of the opened role view
     step: int = 0
     guided: bool = True
+    error: str = ""  # why the selected agents have no result (shown instead of one)
     sections: dict[str, ui.element] = field(default_factory=dict[str, ui.element])
+
+
+def esc(text: str) -> str:
+    return html.escape(text, quote=True)
+
+
+def chip_html(c: vm.Chip) -> str:
+    return (
+        f'<span class="cg-chip {esc(c.css)}"><span class="cg-chip-id">{esc(c.text)}</span>'
+        f"<span>{esc(c.label)}</span></span>"
+    )
 
 
 def chips(items: tuple[vm.Chip, ...]) -> None:
@@ -234,6 +269,8 @@ def index() -> None:
         def verdict_view() -> None:
             d = s.data
             if d is None:
+                if s.error:  # e.g. LLM agents without a configured model: no result is shown
+                    ui.label(s.error).classes("cg-bad cg-wrap").props("data-testid=verdict-error")
                 return
             v = vm.verdict(d.baseline, d.search, d.world.scenario)
             with ui.element("div").classes("cg-verdict"):
@@ -242,8 +279,8 @@ def index() -> None:
                 good = v.replay_met == v.critical
                 stat(replay, "critical goals met: best replay", "cg-good" if good else "cg-warn")
                 stat(str(v.baseline_failures), "diagnosed failures (baseline)", "cg-bad")
-                stat(str(v.removed), "removed at their cause", "cg-good")
-                stat(str(v.masked), "masked (goal met another way)", "cg-warn")
+                stat(str(v.removed), REMOVED_LABEL, "cg-good")
+                stat(str(v.masked), MASKED_LABEL, "cg-warn")
                 stat(str(v.remaining + v.new_conflicts), "remaining or new", "")
             if v.repair_id:
                 with ui.row().classes("items-center gap-2 w-full"):
@@ -253,6 +290,8 @@ def index() -> None:
             ui.label(f"Outcome: {v.outcome}").classes("cg-wrap").props(
                 "data-testid=verdict-outcome"
             )
+            if v.caveat:
+                ui.label(f"Caveat: {v.caveat}").classes("cg-warn cg-wrap")
             if b := vm.incomplete_banner(d.baseline.failed_steps):
                 ui.label(b).classes("cg-bad cg-wrap").props("data-testid=incomplete")
 
@@ -271,30 +310,33 @@ def index() -> None:
             on_change=lambda e: pick_lanes(e.value),
         ).props("data-testid=lanes-run")
 
-        cells: dict[tuple[str, int], ui.element] = {}  # to mark the open cell in place
+        # (run, role, minute) -> cell, to mark the open cell in place. Baseline and replay lanes
+        # are both built; the switch only toggles which one is visible (spec 006 budget).
+        cells: dict[tuple[str, str, int], ui.element] = {}
 
-        def lanes_result() -> RunResult | None:
+        def run_result(run: str) -> RunResult | None:
             d = s.data
             if d is None:
                 return None
-            replay_run = s.lanes_run == "replay" and s.selected is not None
-            return s.selected.replay if replay_run and s.selected else d.baseline
+            if run == "replay":
+                return s.selected.replay if s.selected is not None else None
+            return d.baseline
 
-        @ui.refreshable
-        def lanes_view() -> None:
-            d, result = s.data, lanes_result()
+        def lanes(run: str) -> None:
+            d, result = s.data, run_result(run)
             if d is None or result is None:
                 return
-            cells.clear()
+            for key in [k for k in cells if k[0] == run]:
+                del cells[key]
             events = d.world.scenario.events
-            with ui.element("div").classes("cg-lanes").props("data-testid=lanes"):
+            with ui.element("div").classes("cg-lanes").props(f"data-testid=lanes-{run}"):
                 ui.label("role").classes("cg-lane-head")
                 for e in events:
                     ui.label(f"T+{e.at_minute:02d} {e.title}").classes("cg-lane-head")
                 for lane in vm.swimlanes(result, d.world.scenario):
                     ui.label(lane.role).classes("cg-lane-role")
                     for c in lane.cells:
-                        cell(lane.role, c)
+                        cell(run, lane.role, c)
                     if lane.bars:
                         ui.label("obligations").classes("cg-lane-head")
                         with ui.element("div").classes("cg-bars"):
@@ -302,34 +344,51 @@ def index() -> None:
                                 obligation(bar, len(events))
 
         @ui.refreshable
+        def baseline_lanes() -> None:
+            lanes("baseline")
+
+        @ui.refreshable
+        def replay_lanes() -> None:
+            lanes("replay")
+
+        @ui.refreshable
         def role_panel_view() -> None:
-            result = lanes_result()
+            result = run_result(s.lanes_run)
             if result is not None and s.cell is not None:
                 role_panel(result, *s.cell)
 
-        lanes_view()
+        with ui.element("div").classes("w-full") as baseline_box:
+            baseline_lanes()
+        with ui.element("div").classes("w-full") as replay_box:
+            replay_lanes()
+        replay_box.set_visibility(False)
         role_panel_view()
 
-    def cell(role: str, c: vm.Cell) -> None:
+    def cell(run: str, role: str, c: vm.Cell) -> None:
         css = "cg-cell" + (" cg-cell-recipient" if c.recipient else "")
-        css += " cg-cell-selected" if s.cell == (role, c.minute) else ""
+        css += " cg-cell-selected" if s.lanes_run == run and s.cell == (role, c.minute) else ""
         with (
             ui.element("div")
             .classes(css)
             .on("click", lambda _, r=role, m=c.minute: open_cell(r, m))
-            .props(f"data-testid=cell-{role}-{c.minute}") as box
+            .props(f"data-testid=cell-{run}-{role}-{c.minute}") as box
         ):
-            cells[(role, c.minute)] = box
-            for f in c.facts:
-                with ui.element("div").classes("cg-factline"):
-                    ui.label(f.text).classes("cg-chip-id")
-                    ui.label(f.label).classes("cg-fact-cat")
-            for a in c.accepted:
-                ui.label(f"✓ {a}").classes("cg-act-ok cg-wrap")
-            for a in c.rejected:
-                ui.label(f"✗ {a}").classes("cg-act-no cg-wrap")
-            for st in c.statements:
-                ui.label("agent statement").classes("cg-muted underline").tooltip(st)
+            cells[(run, role, c.minute)] = box
+            # One escaped HTML block per cell (DOMPurify on top): far fewer components, so
+            # the lanes render within the click budget. Agent text only in the labelled title.
+            parts = [
+                f'<div class="cg-factline"><div class="cg-chip-id">{esc(f.text)}</div>'
+                f'<div class="cg-fact-cat">{esc(f.label)}</div></div>'
+                for f in c.facts
+            ]
+            parts += [f'<div class="cg-act-ok cg-wrap">✓ {esc(a)}</div>' for a in c.accepted]
+            parts += [f'<div class="cg-act-no cg-wrap">✗ {esc(a)}</div>' for a in c.rejected]
+            parts += [
+                f'<div class="cg-muted underline" title="{esc(st)}">{esc(STATEMENT)}</div>'
+                for st in c.statements
+            ]
+            if parts:
+                ui.html("".join(parts))
 
     def obligation(bar: vm.Bar, columns: int) -> None:
         state = (
@@ -341,13 +400,10 @@ def index() -> None:
         )
         left = 100 * bar.start / columns
         width = 100 * (bar.end - bar.start + 1) / columns
-        with (
-            ui.element("div")
-            .classes(f"cg-bar {state}")
-            .style(f"margin-left: {left:.2f}%; width: {width:.2f}%")
-        ):
-            ui.label(f"{bar.action}: {bar.opened} → due {bar.due}; {bar.state}").classes("cg-wrap")
-            chips((bar.source,))
+        ui.html(
+            f'<div class="cg-wrap">{esc(bar.action)}: {esc(bar.opened)} → due {esc(bar.due)}; '
+            f"{esc(bar.state)}</div>{chip_html(bar.source)}"
+        ).classes(f"cg-bar {state}").style(f"margin-left: {left:.2f}%; width: {width:.2f}%")
 
     def role_panel(result: RunResult, role: str, minute: int) -> None:
         d = s.data
@@ -459,26 +515,28 @@ def index() -> None:
                     .props(f"data-testid=rung-{r.rank}") as rung
                 ):
                     rungs[r.repair_id] = rung
+                    css = "cg-badge-safe" if r.badge == vm.SMALLEST_SAFE else "cg-badge-top"
+                    badges = (
+                        f'<span class="cg-badge {css}">{esc(r.badge)}</span> ' if r.badge else ""
+                    ) + (
+                        f'<span class="cg-badge cg-badge-auth">{esc(r.authorization)}</span>'
+                        if r.authorization
+                        else ""
+                    )
+                    body = [
+                        f"<div>{badges}</div>" if badges else "",
+                        f'<div class="cg-mono">{esc(r.repair_id)}</div>',
+                        f'<div class="cg-wrap text-sm">{esc(r.outcome)}; {r.edits} edit(s); '
+                        f"roles touched: {esc(', '.join(r.roles))}; critical blockers removed "
+                        f"{r.removed}</div>",
+                        *(f'<div class="cg-mono">{esc(m)}</div>' for m in r.masked),
+                        *(
+                            f'<div class="cg-bad cg-wrap text-sm">new conflict: {esc(x)}</div>'
+                            for x in r.new_conflicts
+                        ),
+                    ]
                     ui.label(str(r.rank)).classes("cg-rank")
-                    with ui.column().classes("gap-0 min-w-0 flex-1"):
-                        with ui.row().classes("items-center gap-2"):
-                            if r.badge:
-                                css = (
-                                    "cg-badge-safe"
-                                    if r.badge == vm.SMALLEST_SAFE
-                                    else "cg-badge-top"
-                                )
-                                ui.label(r.badge).classes(f"cg-badge {css}")
-                            if r.authorization:
-                                ui.label(r.authorization).classes("cg-badge cg-badge-auth")
-                        ui.label(r.repair_id).classes("cg-mono")
-                        ui.label(
-                            f"{r.outcome}; {r.edits} edit(s); roles touched: "
-                            f"{', '.join(r.roles)}; critical blockers removed {r.removed}"
-                        ).classes("cg-wrap text-sm")
-                        lines(r.masked, "")
-                        for conflict in r.new_conflicts:
-                            ui.label(f"new conflict: {conflict}").classes("cg-bad cg-wrap text-sm")
+                    ui.html("".join(body)).classes("min-w-0 flex-1")
                     ui.button("Compare", on_click=lambda _, rid=r.repair_id: compare(rid)).props(
                         "outline dense no-caps"
                     )
@@ -486,7 +544,7 @@ def index() -> None:
             if unranked:
                 with ui.column().classes("w-full gap-0 mt-2").props("data-testid=inconclusive"):
                     ui.label(
-                        "Inconclusive (unranked; not comparable: steps had no decision)"
+                        f"inconclusive ({outcome_definition('inconclusive')}): unranked"
                     ).classes("font-semibold")
                     for repair_id, label in unranked:
                         with ui.row().classes("items-center gap-2 w-full no-wrap"):
@@ -533,9 +591,8 @@ def index() -> None:
                     ui.label("Diagnosed failures").classes("font-semibold")
                     lines((*v.removed, *v.replay_failures))
             agents_row(c)
-            if not s.guided:
-                ui.label("Actions whose verdict changed").classes("font-semibold")
-                lines(v.changed_actions)
+            ui.label("Actions whose verdict changed").classes("font-semibold")
+            lines(v.changed_actions)
             for note in v.notes:
                 ui.label(note).classes("cg-qual")
 
@@ -545,7 +602,7 @@ def index() -> None:
         """LLM mode: the same repair under scripted and LLM agents, with a recorded finding
         only when it matches the computed verdicts."""
         d = s.data
-        if d is None or s.mode == "scripted":
+        if d is None or not d.prompt_version:  # only a run that really used LLM agents
             return
         scripted = bundle(s.scenario, "scripted")
         if isinstance(scripted, str):
@@ -598,7 +655,10 @@ def index() -> None:
             if d is None:
                 return
             files = vm.export_files(d.world.scenario.id, d.baseline, d.search, s.selected)
-            f = next(f for f in files if f.label == label)
+            f = next((f for f in files if f.label == label), None)
+            if f is None:  # e.g. no replay selected
+                ui.notify(f"{label}: nothing to export yet", type="warning")
+                return
             ui.download.content(f.content, f.filename)
 
         with ui.row():
@@ -609,9 +669,10 @@ def index() -> None:
         with ui.row().classes("items-center gap-2"):
             ui.button("Run baseline", on_click=lambda: rerun()).props("flat no-caps")
             ui.button("Find repairs", on_click=lambda: rerun()).props("flat no-caps")
-            ui.label("Results are precomputed; these re-run the scripted engine.").classes(
-                "cg-muted"
-            )
+            ui.label(
+                "Results are precomputed; these re-run the engine for the selected agents "
+                "(LLM: from the decision cache only)."
+            ).classes("cg-muted")
         ui.label(vm.DISCLAIMER).classes("cg-qual")
 
     # ----- behaviour -----
@@ -634,17 +695,22 @@ def index() -> None:
         back.set_enabled(s.step > 0)
         forward.set_enabled(s.step < len(STEPS) - 1)
         show_sections()
-        if pending & {STEPS[s.step][0]}:  # not refreshed yet: do it now that it is shown
-            update(pending & {STEPS[s.step][0]})
+        if pending & step_views():  # not refreshed yet: do it now that it is shown
+            update(pending & step_views())
 
     def set_guided(guided: bool) -> None:
         s.guided = guided
         show_sections()
         split_view.refresh()
 
+    def step_views() -> set[str]:
+        key = STEPS[s.step][0]
+        return {key, "r"} if key == "b" else {key}
+
     views = {
         "a": verdict_view.refresh,
-        "b": lambda: (lanes_view.refresh(), role_panel_view.refresh()),
+        "b": lambda: (baseline_lanes.refresh(), role_panel_view.refresh()),
+        "r": lambda: (replay_lanes.refresh(), role_panel_view.refresh()),  # in section b
         "c": refresh_graph,
         "d": diagnosis_view.refresh,
         "e": ladder_view.refresh,
@@ -652,13 +718,17 @@ def index() -> None:
         "x": expert_view.refresh,
     }
     pending: set[str] = set()
+    in_section = {"r": "b"}  # view key -> the section that shows it
+
+    def visible(key: str) -> bool:
+        return s.sections[in_section.get(key, key)].visible
 
     def update(keys: set[str], now: set[str] | None = None) -> None:
         """Refresh what the click is about now (the verdict, or the guided step on screen) and
         everything else right after, so a click waits only for that (spec 006 budget)."""
         if now is None:
-            now = {"a", STEPS[s.step][0]} if s.guided else {"a"}
-        shown = {k for k in keys & now if s.sections[k].visible}
+            now = {"a", *step_views()} if s.guided else {"a"}
+        shown = {k for k in keys & now if visible(k)}
         pending.difference_update(shown)
         for k in sorted(shown):
             views[k]()
@@ -667,7 +737,7 @@ def index() -> None:
         pending.update(keys - shown)
 
     async def flush() -> None:
-        await asyncio.sleep(0.05)  # the visible update reaches the browser first
+        await asyncio.sleep(HIDDEN_DELAY)  # the visible update is drawn first
         while pending:
             views[pending.pop()]()
 
@@ -680,10 +750,21 @@ def index() -> None:
         update(set(views))
 
     def load(data: Bundle | str) -> None:
-        if isinstance(data, str):
+        if isinstance(data, str):  # never keep showing the other agents' results
             ui.notify(data, type="warning")
             agents_label.set_text(data)
+            s.data, s.selected, s.error, s.cell = None, None, data, None
+            clause_set.set_text("")
+            for view in (verdict_view, baseline_lanes, replay_lanes, role_panel_view):
+                view.refresh()
+            for view in (diagnosis_view, ladder_view, split_view, expert_view):
+                view.refresh()
+            if charts:
+                charts[0].set_visibility(False)
             return
+        s.error = ""
+        if charts:
+            charts[0].set_visibility(True)
         use(data)
         render_all()
 
@@ -700,16 +781,19 @@ def index() -> None:
         ui.notify("Re-ran the baseline and repair search.")
 
     def pick_lanes(which: str) -> None:
+        if s.cell is not None and (s.lanes_run, *s.cell) in cells:
+            cells[(s.lanes_run, *s.cell)].classes(remove="cg-cell-selected")
         s.lanes_run, s.cell = which, None
-        lanes_view.refresh()
+        baseline_box.set_visibility(which == "baseline")
+        replay_box.set_visibility(which == "replay")
         role_panel_view.refresh()
 
     def open_cell(role: str, minute: int) -> None:
-        if s.cell in cells:
-            cells[s.cell].classes(remove="cg-cell-selected")
+        if s.cell is not None and (s.lanes_run, *s.cell) in cells:
+            cells[(s.lanes_run, *s.cell)].classes(remove="cg-cell-selected")
         s.cell = None if s.cell == (role, minute) else (role, minute)
-        if s.cell is not None:
-            cells[s.cell].classes(add="cg-cell-selected")
+        if s.cell is not None and (s.lanes_run, *s.cell) in cells:
+            cells[(s.lanes_run, *s.cell)].classes(add="cg-cell-selected")
         role_panel_view.refresh()
 
     def pick_failure(failure: str | None) -> None:
@@ -726,7 +810,7 @@ def index() -> None:
             )
         if s.guided:
             go(len(STEPS) - 1)
-        update({"f"} | ({"b"} if s.lanes_run == "replay" else set()), now={"f"})
+        update({"f", "r"}, now={"f"})  # the replay lanes follow the selected repair
 
     # First paint: header, stepper and verdict only. The other sections are filled over the
     # websocket right after the page is shown (all from the precomputed bundle; no click).

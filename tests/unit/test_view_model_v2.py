@@ -210,14 +210,77 @@ def test_scripted_vs_llm_shows_a_finding_only_when_the_verdicts_match(found: Sea
     assert row.scripted == outcome_text(top) and row.llm == outcome_text(llm)
     assert "did not act within it" in row.finding
     assert row.source == "docs/evaluation/adr-0002-golden-llm-replay.md"
-    # Another prompt version, or a verdict that no longer matches: nothing is shown.
-    assert vm.scripted_vs_llm(top, llm, "phase5-v3+json_object", recorded).finding == ""
+    # Any other prompt version (exact match, mode and options included), or a verdict that no
+    # longer matches: nothing is shown.
+    for version in (
+        "phase5-v3+json_object",
+        "phase5-v4",
+        "phase5-v40+json_object",
+        "phase5-v4+json_schema",
+        "phase5-v4+json_object+extracted",
+    ):
+        assert vm.scripted_vs_llm(top, llm, version, recorded).finding == "", version
     assert vm.scripted_vs_llm(top, top, "phase5-v4+json_object", recorded).finding == ""
-    other = found.ranked[1]
-    assert vm.scripted_vs_llm(other, llm, "phase5-v4+json_object", recorded).finding == ""
+    # Two different repairs are never compared.
+    with pytest.raises(ValueError, match="same repair"):
+        vm.scripted_vs_llm(found.ranked[1], llm, "phase5-v4+json_object", recorded)
+
+
+def test_evaluation_findings_file_is_validated(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / SCENARIO).mkdir()
+    bad = tmp_path / SCENARIO / "evaluation_findings.yaml"
+    monkeypatch.setattr(app, "SCENARIOS_DIR", tmp_path)
+    assert app.findings_for(SCENARIO) == ()  # no file: no findings
+    bad.write_text("findings:\n  - repair: x\n    text: y\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="exactly the text fields"):
+        app.findings_for(SCENARIO)
+    fields = "repair: x\n    prompt_version: v\n    scripted: a\n    llm: b\n    text: t\n"
+    bad.write_text(f"findings:\n  - {fields}    source: s\n    extra: z\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="exactly the text fields"):
+        app.findings_for(SCENARIO)
+    bad.write_text(f"findings:\n  - {fields}    source: 3\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="exactly the text fields"):
+        app.findings_for(SCENARIO)
+
+
+def test_verdict_shows_the_baseline_caveat_even_with_nothing_ranked(
+    world: World, found: SearchResult
+) -> None:
+    base = replace(world.baseline(), invalid_steps=((15, TELECOM),))
+    for search_result in (found, replace(found, ranked=())):
+        v = vm.verdict(base, search_result, world.scenario)
+        assert v.caveat == (
+            "1 steps with no decision (model returned invalid output): telecom_operator at T+15 "
+            "(baseline); the result may depend on them"
+        )
+    assert vm.verdict(world.baseline(), found, world.scenario).caveat == ""
+
+
+def test_app_shows_engine_labels_not_typed_copies() -> None:
+    from pathlib import Path
+
+    source = Path(app.__file__).read_text(encoding="utf-8")
+    for typed in (
+        '"removed at their cause"',
+        '"masked (goal met another way)"',
+        '"agent statement"',
+        "Inconclusive (unranked",
+    ):
+        assert typed not in source, typed
+    assert app.STATEMENT == "agent statement"
 
 
 def test_ui_has_no_live_llm_mode() -> None:
     assert set(app.AGENT_MODES) == {"scripted", "llm-offline"}
     assert app.agent_choice("llm-offline").offline
     assert "live" not in " ".join(app.AGENT_MODES.values()).lower()
+
+
+def test_html_blocks_escape_untrusted_text() -> None:
+    hostile = '"><img src=x onerror=alert(1)><script>x</script>'
+    out = app.esc(hostile)
+    assert "<" not in out and ">" not in out and '"' not in out
+    chip = app.chip_html(vm.Chip(hostile, hostile, '" onclick="x'))
+    assert "<img" not in chip and "<script" not in chip and 'onclick="x' not in chip

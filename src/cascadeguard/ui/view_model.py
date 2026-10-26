@@ -228,14 +228,31 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
         kind, ident = n.split(":", 1)
         return f"{ident} [{labels.get(ident, 'not loaded')}]" if kind == "clause" else ident
 
+    # Fixed layered layout, one column per kind (roles -> actions -> categories -> clauses ->
+    # goals): the same positions for every highlight, so an update only restyles (no force
+    # simulation in the browser; spec 006 click budget).
+    columns: dict[str, list[str]] = {k: [] for k in KINDS}
+    for n in names:
+        columns[n.split(":", 1)[0]].append(n)
+    position = {
+        n: (160 * KINDS.index(kind), 34 * row)
+        for kind, members in columns.items()
+        for row, n in enumerate(members)
+    }
     nodes = [
         {
             "id": n,
             "name": label(n),
+            "x": position[n][0],
+            "y": position[n][1],
             "category": KINDS.index(n.split(":", 1)[0]),
             "symbolSize": 26 if n in hot else 12,
             "itemStyle": {"borderColor": "#c62828", "borderWidth": 4} if n in hot else {},
-            "label": {"show": n in hot or n.startswith("role:"), "color": "#1f2937"},
+            "label": {
+                "show": n in hot or n.startswith("role:"),
+                "color": "#1f2937",
+                "position": "right",
+            },
         }
         for n in names
     ]
@@ -256,10 +273,9 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
         "series": [
             {
                 "type": "graph",
-                "layout": "force",
+                "layout": "none",
                 "roam": True,
-                "draggable": True,
-                "force": {"repulsion": 160, "edgeLength": 70},
+                "lineStyle": {"curveness": 0.15},
                 "categories": [{"name": k} for k in KINDS],
                 "edgeSymbol": ["none", "arrow"],
                 "data": nodes,
@@ -491,6 +507,7 @@ class Verdict:
     masked: int
     remaining: int
     new_conflicts: int
+    caveat: str = ""  # the baseline's invalid_output caveat, shown even with nothing ranked
 
 
 def critical_goals(scenario: Scenario) -> tuple[str, ...]:
@@ -515,8 +532,9 @@ def badge(c: ReplayComparison, rank: int) -> str:
 def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario) -> Verdict:
     critical = critical_goals(scenario)
     head = (len(critical), _goals_met(baseline, critical), len(baseline.failures))
+    caveat = baseline_caveat(baseline)
     if not search_result.ranked:
-        return Verdict(*head, "", "", "no complete replay to rank", None, 0, 0, 0, 0)
+        return Verdict(*head, "", "", "no complete replay to rank", None, 0, 0, 0, 0, caveat)
     c = search_result.ranked[0]
     return Verdict(
         *head,
@@ -528,6 +546,20 @@ def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario
         masked=len(c.masked),
         remaining=len(c.remaining),
         new_conflicts=len(c.new_conflicts),
+        caveat=caveat,
+    )
+
+
+def baseline_caveat(baseline: RunResult) -> str:
+    """The engine's invalid_output caveat for the baseline alone (the same wording as
+    `invalid_output_caveat`, which needs a comparison)."""
+    steps = baseline.invalid_steps
+    if not steps:
+        return ""
+    where = ", ".join(f"{role} at T+{m:02d} (baseline)" for m, role in steps)
+    return (
+        f"{len(steps)} steps with no decision (model returned invalid output): {where}; "
+        "the result may depend on them"
     )
 
 
@@ -733,13 +765,16 @@ def scripted_vs_llm(
     recorded: Iterable[EvaluationFinding],
 ) -> AgentsRow:
     """The same repair under scripted and LLM agents. A recorded finding is shown only when it
-    names this repair and prompt version and both verdicts match what was computed now."""
+    names this repair and exactly this prompt version (output mode and options included) and
+    both verdicts match what was computed now."""
+    if llm.proposal.repair_id != scripted.proposal.repair_id:
+        raise ValueError("scripted and LLM comparisons must be for the same repair")
     match = next(
         (
             f
             for f in recorded
             if f.repair == scripted.proposal.repair_id
-            and prompt_version.startswith(f.prompt_version)
+            and prompt_version == f.prompt_version
             and f.scripted == scripted.outcome
             and f.llm == llm.outcome
         ),
