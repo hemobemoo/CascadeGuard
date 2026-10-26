@@ -791,8 +791,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6 — Demo UI v2 on `phase-6-ui`: write `specs/006-demo-ui-v2.md`, then stop for the
-human's approval before any code. **Scope decision (human, 2026-10-26):** Phase 6 = Demo UI v2;
+Phase 6 — Demo UI v2 on `phase-6-ui`: `specs/006-demo-ui-v2.md` written; **waiting for the
+human's approval and answers to its four questions before any code.** "Before" measurements
+(Phase 4 UI, median of 3, localhost) in the spec; "before" screenshots in
+`docs/review/phase-6-ui/`. **Scope decision (human, 2026-10-26):** Phase 6 = Demo UI v2;
 tracing moves to Phase 7 (optional, off by default, scope unchanged); recorded in
 `START_PROMPT.md` and the structure file. `AGENTS.md` still says "Phoenix (Phase 6, optional)":
 not edited (gate 6), flagged for the human. Still open: the deferred MINORs,
