@@ -63,3 +63,23 @@ After (guided steps):
 
 Also: `after-header.png`, `after-expert.png`, `after-viewport.png`, `after-full-page.png`,
 `after-dark-full-page.png`.
+
+## Review loop
+
+- **evidence-auditor (round 1): PASS.** The diff changes no clause. Triage is in
+  `docs/review/phase-6-clause-triage.md`: 19 CLEAN and 3 NEEDS-HUMAN-JUDGMENT (open items 3e,
+  3p and 4d, unchanged).
+- **test-breaker:**
+  - Round 1, FAIL: two MAJORs, fixed (scripted results showing under the LLM toggle when no
+    model is configured; the swimlane switch had no timed test), plus MINORs.
+  - Round 2, FAIL: one MAJOR, fixed (the authorization label was missing from the verdict
+    strip), plus MINORs.
+- **phase-auditor:**
+  - Round 1, FAIL: stale PROGRESS, fixed, plus MINORs.
+  - Round 2, FAIL: a BLOCKER on the factor-1 budget's flakiness under machine load (a human
+    gate), and the same authorization MAJOR, fixed.
+  - Disagreement: it asked to move the badge rule into `engine/`. Not done, because spec 006
+    says no engine change.
+- Round 3 was not run: the open item (the local budget) is the human's decision.
+- **Budget test after the fixes:** with the same code, every click took 73–91 ms in a quiet run
+  and up to 201–227 ms under load. CI uses factor 3.
