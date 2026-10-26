@@ -1,9 +1,31 @@
 # ADR 0002 — How repairs reach LLM agents
 
-Status: **decided (human, 2026-10-26)**. Option A is not implemented yet.
+Status: **decided (human, 2026-10-26)**. Option A implemented on branch `adr-0002-option-a`.
 
-**Decision:** Phase 5 closes with C. A is the first task after Phase 5, pending the human's
-decision on when the owner obligation opens and its deadline. B is not taken.
+**Decision:** Phase 5 closes with C. A is the first task after Phase 5. B is not taken.
+
+**Option A, as decided by the human (2026-10-26):**
+
+1. The owner repair (owner of `reverse_automated_lockouts`) opens an obligation for the owner
+   role when both hold: the owner holds a fact of category `network_incident_status` (evidence
+   that the risk signal is disputed), and the automated lockouts are in place. It opens at the
+   first simulation step where both are true; if they never are, it never opens (owner-only
+   repairs should not resolve). Implemented as data (`owner_obligation_opens_when` in
+   roles.yaml, `in_place: [patient_account_records]`, the lock records), checked after every
+   inject and accepted action; `Scenario.owner_obligations` lists the owner rules.
+2. Deadline: `deadline_minutes` after opening, a typed parameter of the edit, default 30, part
+   of the repair id (`owner.<action>.<role>.30m`).
+3. A missed deadline is the engine finding `obligation_overdue`. It does not discard the repair;
+   the targeted orphan duty counts as a remaining blocker (never removed or masked), and the
+   missed obligation is not a new `temporal_infeasibility` conflict. Applies to owner
+   obligations only (known limitation, spec 003).
+4. `RoleView.open_obligations`: every open obligation of that role (scenario and repair, and
+   obligations on `any`), with id, action, source and its status label, opened_at, due_at and
+   status. Only the engine opens, fulfils or overdues them.
+5. LLM prompt v4 (`phase5-v4`): `your_open_obligations` in the role view only; no new
+   instruction. Every cached decision is invalidated (accepted).
+6. The condition fits the existing fact and obligation model with a small addition (one typed
+   field on an action, one scenario field); no new mechanism.
 
 ## Context
 
@@ -13,7 +35,8 @@ listed "who owns reviewing and reversing automated lockouts within my remit" as 
 although the repair rule naming it the owner was in its view. Result: LLM **partial**, scripted
 **resolved**.
 
-What the engine does today (checked in code and on the golden replay):
+What the engine did before option A (checked in code and on the golden replay; superseded by
+the decision above):
 
 - `assign_owner` becomes a hypothetical rule `repair.<edit>` of kind *obligation*. That gives
   the owner **authority** (`RuleBook.authority`), but **no obligation is opened**. The engine
@@ -26,6 +49,9 @@ What the engine does today (checked in code and on the golden replay):
 ## Options
 
 ### A. The owner repair opens an obligation; views list open obligations
+
+_Options as written before the decision; where they differ (e.g. an unfulfilled owner obligation
+is not a new conflict, decision point 3), the decision above applies._
 
 The engine opens an obligation for the new owner when the owner repair applies, and `view_for`
 adds the role's open obligations (action, clause/rule id with label, due or "undetermined").

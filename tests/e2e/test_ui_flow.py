@@ -25,7 +25,7 @@ pytestmark = pytest.mark.e2e
 
 SCENARIO = "uae_health_access"
 TOP = (
-    "owner.reverse_automated_lockouts.health_service_operator"
+    "owner.reverse_automated_lockouts.health_service_operator.30m"
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 TIMEOUT_MS = 60_000

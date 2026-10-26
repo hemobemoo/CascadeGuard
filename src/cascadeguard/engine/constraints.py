@@ -12,6 +12,7 @@ from enum import StrEnum
 from cascadeguard.domain.decisions import AgentDecision, ProposedAction
 from cascadeguard.domain.findings import Finding
 from cascadeguard.domain.policies import ClauseStatus, PolicyClause, RuleKind
+from cascadeguard.domain.repairs import is_owner_rule
 from cascadeguard.domain.scenario import Role, TimelineEvent
 from cascadeguard.simulation.state import SimulationState
 
@@ -42,6 +43,7 @@ AGENT_STATEMENT = "agent statement (unverified; not a finding or a legal conclus
 # Shown instead of an agent string that is not a scenario id (action, role, target, category):
 # agent free text reaches the log, findings and exports only under AGENT_STATEMENT.
 CANDIDATE_GAP_CLAIM = "candidate_gap_claim"
+OBLIGATION_OVERDUE = "obligation_overdue"  # an owner obligation's deadline passed unfulfilled
 WITHHELD = "<not a scenario id; agent text withheld>"
 
 
@@ -249,10 +251,7 @@ class ConstraintEngine:
     def release(self, event: TimelineEvent) -> None:
         """Advance to an inject: release its facts, open its obligations, mark missed deadlines."""
         state = self.state
-        for ob in state.mark_missed(event.at_minute):
-            state.record(
-                "obligation_missed", role=ob.role, action=ob.action, clause_ids=(ob.clause_id,)
-            )
+        self._mark_missed(event.at_minute)
         state.advance_to(event)
         for fact in event.facts:
             for role in dict.fromkeys((fact.holder, *event.recipients)):
@@ -260,13 +259,62 @@ class ConstraintEngine:
                     state.record("fact_released", role=role, detail=fact.id)
         for clause_id in event.opens_obligations:
             self._open_obligation(clause_id)
+        self._open_owner_obligations()
         self._check_knowledge_goals()
 
     def close(self, end_minute: int) -> None:
-        for ob in self.state.mark_missed(end_minute + 1):
-            self.state.record(
+        self._mark_missed(end_minute + 1)
+
+    def _mark_missed(self, until: int) -> None:
+        """Mark obligations whose deadline passed before `until`. A missed owner obligation is
+        also the finding obligation_overdue, dated exactly at its deadline (ADR 0002 A)."""
+        state = self.state
+        for ob in state.mark_missed(until):
+            state.record(
                 "obligation_missed", role=ob.role, action=ob.action, clause_ids=(ob.clause_id,)
             )
+            if is_owner_rule(ob.clause_id, state.scenario.owner_obligations):
+                assert ob.due_at is not None  # owner obligations always have a deadline
+                state.add_finding(
+                    Finding(
+                        kind=OBLIGATION_OVERDUE,
+                        minute=ob.due_at,
+                        role=ob.role,
+                        clause_ids=(ob.clause_id,),
+                        detail=(
+                            f"{ob.role} did not {ob.action} by T+{ob.due_at} "
+                            f"(obligation opened at T+{ob.opened_at})"
+                        ),
+                    )
+                )
+
+    def _open_owner_obligations(self) -> None:
+        """Open each owner repair rule's obligation at the first step where its action's
+        `owner_obligation_opens_when` holds: the owner holds a fact in every `owner_holds`
+        category, a fact in every `in_place` category has been released, and no role has had
+        the action accepted yet. Checked after every inject and every accepted action. Opens at
+        most once; never opens if the condition never holds."""
+        state = self.state
+        opened = {ob.clause_id for ob in state.obligations}
+        for clause_id in state.scenario.owner_obligations:
+            clause = self.rules.clauses.get(clause_id)
+            if (
+                clause_id in opened
+                or not is_owner_rule(clause_id, state.scenario.owner_obligations)
+                or clause is None
+                or clause.normalized is None
+            ):
+                continue
+            n = clause.normalized
+            cond = state.roles.action(n.action).owner_obligation_opens_when
+            if cond is None:
+                continue
+            if (
+                all(state.has_seen_category(n.actor, c) for c in cond.owner_holds)
+                and all(state.category_released(c) for c in cond.in_place)
+                and not any(state.has_done(r.id, n.action) for r in state.roles.roles)
+            ):
+                self._open_obligation(clause_id)
 
     def _open_obligation(self, clause_id: str) -> None:
         state = self.state
@@ -620,6 +668,7 @@ class ConstraintEngine:
             if kind in goal.achieved_by and state.goal_met_at(goal.id) is None:
                 state.meet_goal(goal.id)
                 state.record("goal_met", role=role.id, action=kind, detail=goal.id)
+        self._open_owner_obligations()  # a share may have delivered the evidence
         self._check_knowledge_goals()
 
     def _check_knowledge_goals(self) -> None:

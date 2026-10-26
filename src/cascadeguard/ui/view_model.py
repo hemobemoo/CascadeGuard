@@ -16,6 +16,8 @@ from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     MASKED_LABEL,
+    OPEN_AT_END_LABEL,
+    OVERDUE_LABEL,
     REMOVED_LABEL,
     REQUIRES_AUTHORIZATION_LABEL,
     SCRIPTED_LIMIT_NOTE,
@@ -105,6 +107,7 @@ class RoleViewRows:
     clauses: tuple[str, ...]
     role_clauses: tuple[str, ...]  # with labels; repair rules marked not citable
     own_history: tuple[str, ...]
+    open_obligations: tuple[str, ...]  # with the source's status label and deadline
     inside: tuple[str, ...]  # data categories inside the role's boundary
     outside: tuple[str, ...]
     agent_statements: tuple[str, ...]  # always under the AGENT_STATEMENT label
@@ -138,6 +141,12 @@ def role_view(result: RunResult, role: str, minute: int, categories: Iterable[st
         clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.clauses),
         role_clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.role_clauses),
         own_history=view.own_history,
+        open_obligations=tuple(
+            f"{o.action} ({o.status}): opened T+{o.opened_at:02d}, due "
+            + ("undetermined" if o.due_at is None else f"T+{o.due_at:02d}")
+            + f"; {o.source} [{o.source_label}]"
+            for o in view.open_obligations
+        ),
         inside=inside,
         outside=tuple(c for c in sorted(set(categories)) if c not in inside),
         agent_statements=statements,
@@ -354,7 +363,12 @@ def comparison(c: ReplayComparison) -> Comparison:
         )
     tags = c.conflict_tags()
     p = c.proposal
-    replay_rows = [f"{f}: remaining" for f in c.remaining]
+    replay_rows = [
+        f"{f}: remaining"
+        + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
+        + (f" [{OPEN_AT_END_LABEL}]" if f in c.open_at_end_blockers else "")
+        for f in c.remaining
+    ]
     replay_rows += [f"{f}: {MASKED}" for f in c.masked]
     replay_rows += [
         f"{f}: NEW conflict" + (f" [{tags[f]}: {SCRIPTED_LIMIT_NOTE}]" if f in tags else "")

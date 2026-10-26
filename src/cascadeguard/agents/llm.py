@@ -38,7 +38,8 @@ ENV_FILE = PROJECT_ROOT / ".env"
 ENV_VARIABLES = ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "CASCADEGUARD_MODEL")
 # v2: reasoning explicitly off; output mode part of the request settings (human, 2026-10-24).
 # v3: citable clauses grouped by action; every citation must support a proposed action.
-PROMPT_VERSION = "phase5-v3"
+# v4: the role's open obligations in the role view (ADR 0002 option A, human, 2026-10-26).
+PROMPT_VERSION = "phase5-v4"
 OUTPUT_MODE_VARIABLE = "CASCADEGUARD_OUTPUT_MODE"
 # json_schema: strict structured output (default). json_object: JSON mode, with the schema in the
 # prompt; chosen explicitly in .env, never as an automatic fallback.
@@ -235,6 +236,18 @@ def render_view(view: RoleView, known_roles: tuple[str, ...], snippets: bool = F
         "allowed_actions": list(view.allowed_actions),
         "known_roles": list(known_roles),
         "your_accepted_actions_so_far": list(view.own_history),
+        "your_open_obligations": [
+            {
+                "id": o.id,
+                "action": o.action,
+                "source": o.source,
+                "source_status": o.source_label,
+                "opened_at": f"T+{o.opened_at:02d}",
+                "due_at": "undetermined" if o.due_at is None else f"T+{o.due_at:02d}",
+                "status": o.status,
+            }
+            for o in view.open_obligations
+        ],
         "clauses_shown_with_this_inject": [
             {"id": c.id, "title": c.title, "status": c.status_label} for c in view.clauses
         ],

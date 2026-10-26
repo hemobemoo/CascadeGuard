@@ -27,6 +27,8 @@ def load_scenario(
     roles = _load_model(directory / "roles.yaml", RoleSet)
     if scenario.id != scenario_id:
         raise ScenarioLoadError(f"scenario.yaml id {scenario.id!r} != directory {scenario_id!r}")
+    if scenario.owner_obligations:  # set only by a replay (simulation/replay.py)
+        raise ScenarioLoadError("scenario.yaml may not set owner_obligations")
 
     role_ids = {r.id for r in roles.roles}
     for event in scenario.events:

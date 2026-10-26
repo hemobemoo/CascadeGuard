@@ -162,6 +162,7 @@ def index() -> None:
                 ("Clauses shown with this inject", v.clauses),
                 ("Clauses relevant to this role (what an LLM agent may cite)", v.role_clauses),
                 ("Own accepted actions so far", v.own_history),
+                ("Open obligations (opened by the engine)", v.open_obligations),
                 ("Data categories inside its boundary", v.inside),
                 ("Data categories outside its boundary (never shown to it)", v.outside),
             ):

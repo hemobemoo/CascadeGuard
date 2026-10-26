@@ -47,6 +47,9 @@ and the engine records a `no_decision` finding. The engine never repairs output.
   concern the role (the engine's 7n rule over its allowed actions), with text, status label
   and normalized reading. The inject's clauses are listed separately by id and label. Repair rules in a replay appear labelled
   "hypothetical repair rule (not a source clause; not citable)", so an LLM agent can adapt.
+  Since prompt v4 (`phase5-v4`, ADR 0002 option A) the view also lists the role's open
+  obligations (`your_open_obligations`: id, action, source and its status label, opened_at,
+  due_at or "undetermined", open or overdue). Data only; the system prompt is unchanged.
 - `search_extracted(query)`: keyword search over `policies/extracted/` (books always excluded),
   "context only, unreviewed, not citable". **Off in prompts by default** (question 1).
 

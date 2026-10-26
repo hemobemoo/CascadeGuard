@@ -35,7 +35,7 @@ from cascadeguard.simulation.replay import replay
 SCENARIO = "uae_health_access"
 MODEL = "test/fake-model"  # never a real model id; tests make no calls
 SUCCESS = (
-    "owner.reverse_automated_lockouts.health_service_operator"
+    "owner.reverse_automated_lockouts.health_service_operator.30m"
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 
@@ -801,7 +801,7 @@ def test_prompt_states_the_citation_rules_and_groups(scripted: World) -> None:
     data = json.loads(user)
     assert data["citable_clauses_by_action"] == clauses_by_action(adviser.role_clauses)
     assert "role_clauses" not in data
-    assert PROMPT_VERSION == "phase5-v3"
+    assert PROMPT_VERSION == "phase5-v4"
 
 
 # --- Request error detail in the no_decision finding (human decision 2026-10-25) --------------
@@ -963,7 +963,7 @@ def test_complete_runs_keep_their_verdict(scripted: World) -> None:
 
 # --- Display, ranking and exports (human decision 2026-10-26) --------------------------------
 
-OWNER_RULE = "repair.owner.reverse_automated_lockouts.health_service_operator"
+OWNER_RULE = "repair.owner.reverse_automated_lockouts.health_service_operator.30m"
 SHARE_RULE = "repair.share.network_incident_status.telecom_operator.health_service_operator"
 
 
