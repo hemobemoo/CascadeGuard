@@ -48,6 +48,15 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
           ──> ui/view_model.py (labels: status, hypothetical rule, masked, tags, agent statement)
 ```
 
+- **Demo UI v2 (Phase 6, spec 006).** At startup `ui/app.py` computes each scenario's scripted
+  baseline and repair search once (and, in the background, the LLM cache-only ones) and holds
+  them in memory; the page opens with the verdict and streams the other sections (swimlanes,
+  cascade graph, diagnosis cards, repair ladder, split screen, exports) over the websocket.
+  Guided mode shows one section at a time; Expert shows all. Clicks refresh what is on screen
+  first. `ui/theme.css` holds the design tokens; `scenarios/<id>/evaluation_findings.yaml`
+  holds human-worded findings shown only when the computed verdicts match. The UI never makes
+  live LLM calls.
+
 - **LLM agents (Phase 5).** `agents/llm.py` plays a role with the model in `.env` (OpenRouter,
   `openai` SDK, temperature 0, strict `json_schema` built from `AgentDecision`,
   `require_parameters`, response healing off). The prompt is the role's `RoleView`, which now

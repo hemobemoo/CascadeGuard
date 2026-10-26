@@ -81,7 +81,9 @@ cascadeguard/
 │   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
 │   │
 │   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006)
-│   │   ├── app.py                    one page: renders only (port 8765, CASCADEGUARD_UI_PORT)
+│   │   ├── app.py                    one page: renders only (port 8765, CASCADEGUARD_UI_PORT);
+│   │   │                             [P6] precomputed results, guided/expert, sections a-g
+│   │   ├── theme.css                 [P6] design tokens (light/dark, clause status colours)
 │   │   └── view_model.py             formats engine results into labelled rows (no decisions);
 │   │                                 replaces the planned timeline/graph_view/replay_view
 │   │                                 modules (spec 004)
@@ -109,6 +111,7 @@ cascadeguard/
 │       ├── expected_baseline.yaml    golden: the failure that MUST reproduce
 │       ├── expected_repairs.yaml     [P3] golden: ranked search + one successful and one
 │       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
+│       ├── evaluation_findings.yaml  [P6] recorded scripted-vs-LLM findings shown in the UI
 │       └── README.md                 plain-language narrative of the incident
 │
 ├── data/                             gitignored — DuckDB file, LLM cache, exports
