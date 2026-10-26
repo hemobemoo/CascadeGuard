@@ -710,7 +710,7 @@ def index() -> None:
     views = {
         "a": verdict_view.refresh,
         "b": lambda: (baseline_lanes.refresh(), role_panel_view.refresh()),
-        "r": lambda: (replay_lanes.refresh(), role_panel_view.refresh()),  # in section b
+        "r": lambda: refresh_replay_lanes(),  # in section b
         "c": refresh_graph,
         "d": diagnosis_view.refresh,
         "e": ladder_view.refresh,
@@ -780,7 +780,20 @@ def index() -> None:
         load(cast(Bundle | str, await run.io_bound(recompute, s.scenario, s.mode)))
         ui.notify("Re-ran the baseline and repair search.")
 
+    replay_stale = [False]  # replay lanes not rebuilt since the data or selection changed
+
+    def refresh_replay_lanes() -> None:
+        """Rebuild the replay lanes only while they are shown; otherwise on the switch to them."""
+        if replay_box.visible:
+            replay_lanes.refresh()
+            role_panel_view.refresh()
+        else:
+            replay_stale[0] = True
+
     def pick_lanes(which: str) -> None:
+        if which == "replay" and replay_stale[0]:
+            replay_stale[0] = False
+            replay_lanes.refresh()
         if s.cell is not None and (s.lanes_run, *s.cell) in cells:
             cells[(s.lanes_run, *s.cell)].classes(remove="cg-cell-selected")
         s.lanes_run, s.cell = which, None

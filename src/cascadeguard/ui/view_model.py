@@ -235,7 +235,7 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
     for n in names:
         columns[n.split(":", 1)[0]].append(n)
     position = {
-        n: (160 * KINDS.index(kind), 34 * row)
+        n: (300 * KINDS.index(kind), 30 * row)
         for kind, members in columns.items()
         for row, n in enumerate(members)
     }
