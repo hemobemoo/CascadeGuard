@@ -7,6 +7,7 @@ absent provision is reported as "not found in the loaded clause set", never as a
 from collections.abc import Iterable
 
 from cascadeguard.domain.findings import CoordinationFailure, FailureCategory, LogEntry
+from cascadeguard.domain.repairs import is_owner_rule
 from cascadeguard.engine.constraints import Authority, Reason, RuleBook
 from cascadeguard.engine.graph import DependencyGraph, node
 from cascadeguard.simulation.state import SimulationState
@@ -173,7 +174,7 @@ def diagnose(
         # A missed owner obligation is the finding obligation_overdue, and the repair's
         # comparison keeps the duty it targets as a remaining blocker (ADR 0002 option A); it is
         # not a new temporal-infeasibility conflict.
-        if ob.missed and ob.clause_id not in state.scenario.owner_obligations:
+        if ob.missed and not is_owner_rule(ob.clause_id, state.scenario.owner_obligations):
             out.add(
                 FailureCategory.TEMPORAL_INFEASIBILITY,
                 ob.action,

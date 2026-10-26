@@ -415,3 +415,71 @@ def test_overdue_blocker_is_explained_in_markdown_cli_and_ui(world: World) -> No
 
     assert f"{OVERDUE_LABEL}: {orphan}" in search_text(late)
     assert OVERDUE_LABEL not in search_text(on_time)
+
+
+# --- Test-breaker round 1 (MINORs) -------------------------------------------------------------
+
+
+def test_scenario_yaml_may_not_set_owner_obligations(tmp_path: Any) -> None:
+    import shutil
+
+    from cascadeguard.simulation.loader import SCENARIOS_DIR, ScenarioLoadError, load_scenario
+
+    target = tmp_path / "uae_health_access"
+    shutil.copytree(SCENARIOS_DIR / "uae_health_access", target)
+    yaml_file = target / "scenario.yaml"
+    yaml_file.write_text(
+        yaml_file.read_text(encoding="utf-8") + "owner_obligations: [repair.x]\n", encoding="utf-8"
+    )
+    with pytest.raises(ScenarioLoadError, match="owner_obligations"):
+        load_scenario("uae_health_access", set(), tmp_path)
+
+
+def test_only_owner_rules_get_the_owner_treatment(world: World) -> None:
+    """A non-owner rule listed in owner_obligations is still a temporal-infeasibility conflict
+    when missed, and is never opened by the owner condition."""
+    requester = RepairEdit(
+        operation=RepairOperationType.DESIGNATE_DECISION_REQUESTER,
+        role=HEALTH,
+        action="activate_fallback_channel",
+        counterpart="health_data_oversight",
+        trigger_event="t60_public_access_affected",
+        deadline_minutes=15,
+    )
+    p = proposal(requester, SHARE)
+    from cascadeguard.simulation.replay import apply_repair
+
+    s, r, c = apply_repair(world.scenario, world.roles, world.clauses, p)
+    forged = s.model_copy(update={"owner_obligations": (repair_clause_id(requester),)})
+    result = run(forged, r, c, world.corpus_ids, world.agents, world.label)
+    missed = [o for o in result.obligations if o.clause_id == repair_clause_id(requester)]
+    assert missed and missed[0].missed
+    assert "temporal_infeasibility:request_determination" in {f.id for f in result.failures}
+    assert not [f for f in result.findings if f.kind == OBLIGATION_OVERDUE]
+
+
+def test_an_overdue_blocker_is_never_counted_as_masked(world: World) -> None:
+    from dataclasses import replace
+
+    late, _ = comparisons(world)
+    orphan = next(f for f in late.baseline.failures if f.id == f"orphan_duty:{REVERSE}")
+    # Its cause still present while it no longer blocks: would read as masked without the rule.
+    forced = replace(late, replay=replace(late.replay, causes=(*late.replay.causes, orphan)))
+    assert orphan.id not in forced.masked
+    assert orphan.id in forced.remaining
+
+
+def test_owner_condition_categories_must_be_scenario_categories(world: World) -> None:
+    from cascadeguard.domain.scenario import RoleSet
+
+    data = world.roles.model_dump(mode="python")
+    for action in data["actions"]:
+        if action["id"] == REVERSE:
+            action["owner_obligation_opens_when"]["in_place"] = ["no_such_category"]
+    with pytest.raises(ValueError, match="unknown condition categories"):
+        RoleSet.model_validate(data)
+    for action in data["actions"]:
+        if action["id"] == REVERSE:
+            action["owner_obligation_opens_when"]["in_place"] = []
+    with pytest.raises(ValueError):
+        RoleSet.model_validate(data)
