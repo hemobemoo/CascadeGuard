@@ -6,12 +6,15 @@ boundary. Inject title and description go only to the inject's recipients and ho
 recipients may know (organisation-specific information is in facts). Each decision point goes
 only to the role it names. Clause titles are public law, not scenario data, so recipients see
 the inject's relevant clauses with their status labels. Everyone else sees that time advanced.
+Each role also sees its own open obligations (ADR 0002 option A); only the engine opens, fulfils
+or marks them overdue.
 """
 
 from dataclasses import dataclass
 from datetime import datetime
 
 from cascadeguard.domain.policies import PolicyClause
+from cascadeguard.domain.repairs import REPAIR_LABEL, REPAIR_PREFIX
 from cascadeguard.domain.scenario import Fact, TimelineEvent
 from cascadeguard.knowledge.retrieval import RoleClause, clauses_for_role
 from cascadeguard.simulation.state import SimulationState
@@ -22,6 +25,19 @@ class ClauseSummary:
     id: str
     title: str
     status_label: str  # e.g. "illustrative" or "reviewed (interpreted)"; shown wherever cited
+
+
+@dataclass(frozen=True, slots=True)
+class OpenObligation:
+    """An obligation the engine opened for this role and that is not yet fulfilled."""
+
+    id: str  # "<source>@T+<opened_at>", stable across runs
+    action: str
+    source: str  # the clause or repair rule that opened it
+    source_label: str  # its status label; repair rules: REPAIR_LABEL
+    opened_at: int
+    due_at: int | None  # None: deadline undetermined from the loaded clauses
+    status: str  # "open" or "overdue" (deadline passed, still unfulfilled)
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +58,34 @@ class RoleView:
     # Loaded clauses that concern the role or its allowed actions (knowledge/retrieval.py), with
     # text and labels; repair rules in a replay appear marked not citable.
     role_clauses: tuple[RoleClause, ...]
+    open_obligations: tuple[OpenObligation, ...] = ()  # this role's (or "any") unfulfilled ones
+
+
+def open_obligations(
+    state: SimulationState,
+    role_id: str,
+    clauses: dict[str, PolicyClause],
+    corpus_ids: frozenset[str],
+) -> tuple[OpenObligation, ...]:
+    def label(cid: str) -> str:
+        if cid.startswith(REPAIR_PREFIX) and cid not in corpus_ids:
+            return REPAIR_LABEL
+        clause = clauses.get(cid)
+        return clause.status_label if clause is not None else "not loaded"
+
+    return tuple(
+        OpenObligation(
+            id=f"{ob.clause_id}@T+{ob.opened_at:02d}",
+            action=ob.action,
+            source=ob.clause_id,
+            source_label=label(ob.clause_id),
+            opened_at=ob.opened_at,
+            due_at=ob.due_at,
+            status="overdue" if ob.missed else "open",
+        )
+        for ob in state.obligations
+        if ob.role in (role_id, "any") and ob.fulfilled_at is None
+    )
 
 
 def view_for(
@@ -77,4 +121,5 @@ def view_for(
         clauses=relevant,
         own_history=tuple(f"T+{m:02d} {a}" for m, a in state.actions_done(role_id)),
         role_clauses=clauses_for_role(clauses, corpus_ids, role.id, role.allowed_actions),
+        open_obligations=open_obligations(state, role.id, clauses, corpus_ids),
     )

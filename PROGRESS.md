@@ -8,9 +8,16 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 `docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
 
+**ADR 0002 option A in progress on `adr-0002-option-a` (human decision 2026-10-26, six points).
+Stopped at the golden check (human instruction):** engine, view and prompt v4 are in place; the
+scripted goldens change only in repair ids (`owner.<action>.<role>` gains `.30m`) and in the
+successful replay's edit (`deadline_minutes: 30`); ranks, outcomes and both baselines are
+unchanged. Waiting on the human to approve regenerating `expected_repairs.yaml` and updating the
+tests that pin the old id and `phase5-v3`. Not done yet: new tests, mutation check, docs (ADR,
+spec 003, architecture), LLM runs, review loop, PR.
+
 **Open items:**
-- **ADR 0002 option A** (the owner repair opens an obligation; role views list open
-  obligations): waiting for the human's decision on when the obligation opens and its deadline.
+- **ADR 0002 option A:** see above.
 - **`uae.fl2-2019.art16-exceptions`** (draft; FL 2/2019 PDF, page 5): awaiting the human's review.
 - **Deferred MINORs** (round 4, see "Known limitations"): cache file check does not re-check
   `prompt_version`/`model_sha256` inside the file; `Usage.calls` counts agent attempts, not

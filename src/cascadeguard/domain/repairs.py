@@ -6,7 +6,7 @@ parameters; there is no free-text repair. Replay turns each edit into a hypothet
 """
 
 from enum import StrEnum
-from typing import Self
+from typing import Any, Self
 
 from pydantic import Field, model_validator
 
@@ -15,6 +15,10 @@ from cascadeguard.domain.decisions import Citation
 
 FALLBACK_ACTION = "activate_fallback_channel"
 DETERMINATION_ACTION = "request_determination"
+# Default deadline of an owner's obligation, in minutes after it opens (ADR 0002 option A).
+OWNER_DEADLINE_MINUTES = 30
+REPAIR_PREFIX = "repair."
+REPAIR_LABEL = "hypothetical repair rule (not a source clause)"
 
 
 class RepairOperationType(StrEnum):
@@ -27,8 +31,9 @@ class RepairOperationType(StrEnum):
 
 # Parameters each operation needs (beyond `role`) and what it may not carry.
 _REQUIRED: dict[RepairOperationType, frozenset[str]] = {
-    # role is made responsible for action (gives authority; opens no obligation by itself)
-    RepairOperationType.ASSIGN_OWNER: frozenset({"action"}),
+    # role is made responsible for action (gives authority); its obligation opens when the
+    # action's owner_obligation_opens_when first holds, due deadline_minutes later (ADR 0002 A)
+    RepairOperationType.ASSIGN_OWNER: frozenset({"action", "deadline_minutes"}),
     # role must take action when trigger_event occurs, within deadline_minutes
     RepairOperationType.ADD_ESCALATION_TRIGGER: frozenset(
         {"action", "trigger_event", "deadline_minutes"}
@@ -58,6 +63,17 @@ class RepairEdit(DomainModel):
     trigger_event: str | None = None  # scenario event id that opens the new obligation
     deadline_minutes: int | None = Field(default=None, ge=0, strict=True)  # no coercion
 
+    @model_validator(mode="before")
+    @classmethod
+    def _owner_default_deadline(cls, data: Any) -> Any:
+        if (
+            isinstance(data, dict)
+            and data.get("operation") in (RepairOperationType.ASSIGN_OWNER, "assign_owner")  # pyright: ignore[reportUnknownMemberType]
+            and data.get("deadline_minutes") is None  # pyright: ignore[reportUnknownMemberType]
+        ):
+            return {**data, "deadline_minutes": OWNER_DEADLINE_MINUTES}  # pyright: ignore[reportUnknownVariableType]
+        return data  # pyright: ignore[reportUnknownVariableType]
+
     @model_validator(mode="after")
     def _check_parameters(self) -> Self:
         required = _REQUIRED[self.operation]
@@ -83,8 +99,9 @@ class RepairEdit(DomainModel):
             return f"share.{self.data_category}.{self.role}.{self.counterpart}"
         if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
             return f"requester.{self.action}.{self.role}.{self.counterpart}{when}"
+        if op is RepairOperationType.ASSIGN_OWNER:
+            return f"owner.{self.action}.{self.role}.{self.deadline_minutes}m"
         prefix = {
-            RepairOperationType.ASSIGN_OWNER: "owner",
             RepairOperationType.ADD_ESCALATION_TRIGGER: "trigger",
             RepairOperationType.ADD_FALLBACK_CHANNEL: "fallback",
         }[op]

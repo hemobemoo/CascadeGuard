@@ -105,6 +105,7 @@ class RoleViewRows:
     clauses: tuple[str, ...]
     role_clauses: tuple[str, ...]  # with labels; repair rules marked not citable
     own_history: tuple[str, ...]
+    open_obligations: tuple[str, ...]  # with the source's status label and deadline
     inside: tuple[str, ...]  # data categories inside the role's boundary
     outside: tuple[str, ...]
     agent_statements: tuple[str, ...]  # always under the AGENT_STATEMENT label
@@ -138,6 +139,12 @@ def role_view(result: RunResult, role: str, minute: int, categories: Iterable[st
         clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.clauses),
         role_clauses=tuple(f"{c.id} [{c.status_label}]: {c.title}" for c in view.role_clauses),
         own_history=view.own_history,
+        open_obligations=tuple(
+            f"{o.action} ({o.status}): opened T+{o.opened_at:02d}, due "
+            + ("undetermined" if o.due_at is None else f"T+{o.due_at:02d}")
+            + f"; {o.source} [{o.source_label}]"
+            for o in view.open_obligations
+        ),
         inside=inside,
         outside=tuple(c for c in sorted(set(categories)) if c not in inside),
         agent_statements=statements,

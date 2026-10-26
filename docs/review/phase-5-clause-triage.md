@@ -45,3 +45,11 @@ evidence-auditor verdict: **FAIL** (on code findings; all clauses verbatim). New
 All other clauses re-confirmed CLEAN, or NEEDS-HUMAN-JUDGMENT as before (dha.pp11.applicability,
 dha.pp11.4-18-5, mocai.ethics.fallback-plan); uae.telecom-law.art14-5 carried forward from round 1.
 
+**Human review note, `uae.fl2-2019.art16-exceptions` (2026-10-26, recorded verbatim from the
+human's message):** "Reviewed against PDF p.5: verbatim, complete (items 1–5). Lists the cases
+in which Art 16’s confidentiality duty does not apply. Whether a given share meets any item is a
+condition the engine cannot evaluate: authority uncertain, requires determination. No normalized
+reading. Working note (not a legal conclusion): where an item applies, its own conditions, such
+as de-identification or a formal request, must be documented." The clause stays `status: draft`
+until the human lists it for a "Reviewed by human: <ids>" commit (gate 1).
+
