@@ -8,7 +8,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 `docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
 
-**ADR 0002 option A: done on `adr-0002-option-a`, PR open, not merged (human instruction).**
+**ADR 0002 option A: done on `adr-0002-option-a`, PR #7 open, not merged (human instruction).**
 See "Done" below. LLM results: see "ADR 0002 option A" under Done.
 
 **Open items:**
