@@ -478,11 +478,12 @@ def index() -> None:
                     .props("data-testid=graph")
                 )
         chart = charts[0]
-        failure_picker.options = {"": "all diagnosed failures"} | {
-            f.id: f.id for f in d.baseline.failures
-        }
-        failure_picker.value = s.failure or ""
-        failure_picker.update()
+        choices = {"": "all diagnosed failures"} | {f.id: f.id for f in d.baseline.failures}
+        if failure_picker.options != choices:  # pyright: ignore[reportUnknownMemberType]
+            failure_picker.options = choices
+            failure_picker.update()
+        if failure_picker.value != (s.failure or ""):
+            failure_picker.value = s.failure or ""  # its change handler sees nothing new
         options = cast(dict[str, Any], chart.options)  # pyright: ignore[reportUnknownMemberType]
         options.clear()
         options.update(vm.graph_option(d.baseline, s.failure))
@@ -839,6 +840,8 @@ def index() -> None:
         role_panel_view.refresh()
 
     def pick_failure(failure: str | None) -> None:
+        if failure == s.failure and charts:  # e.g. the picker echoing a highlight just made
+            return
         s.failure = failure
         refresh_graph()
 

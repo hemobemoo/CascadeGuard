@@ -12,7 +12,8 @@ tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report:
 `docs/review/adr-0002-option-a-report.md`.
 
-**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR open, not merged (human instruction).**
+**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR #8 opened for the human's review, not merged
+(human instruction).**
 Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
@@ -28,7 +29,7 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
 ## Done
 
-### Phase 6 — Demo UI v2 (branch `phase-6-ui`, PR open)
+### Phase 6 — Demo UI v2 (branch `phase-6-ui`, PR #8)
 - Scope decision (human, 2026-10-26): Phase 6 = Demo UI v2, tracing moves to Phase 7; recorded
   in `START_PROMPT.md` (c529306), `AGENTS.md` (Phoenix is Phase 7, 4fb2515, approved by the
   human in chat) and the structure file.
@@ -62,6 +63,20 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
   no scripted results under the LLM toggle when no model is configured, swimlane budget
   tested; MINORs fixed: prompt match, baseline caveat with nothing ranked, bundle lock, engine
   labels, changed actions in both modes, export without selection).
+- Review round 2: test-breaker FAIL (MAJOR: the verdict strip did not say the top repair
+  requires authorization, fixed with unit and e2e checks; MINORs fixed: "n/a" counts with
+  nothing ranked, remaining and new shown apart, incomplete banner in timeline and diagnosis,
+  findings file shape and outcome checks, in-browser check that a highlight changes the
+  chart). phase-auditor FAIL (BLOCKER: the factor-1 budget test is flaky under machine load;
+  MAJOR: same authorization finding, fixed; MINORs fixed: spec wording on the LLM precompute,
+  separate counts, PROGRESS PR state; MINOR not done: move the badge rule into `engine/`,
+  because the human's spec says "no engine change" — disagreement recorded for the human).
+  A real inefficiency found while checking the flaky graph click was fixed: a highlight from a
+  diagnosis card updated the chart twice (the picker echoed it).
+- Budget test on this machine after the fixes: the same code gives every click at 73-91 ms in
+  a quiet run and up to 201-227 ms in loaded runs; the full check command failed once on the
+  graph highlight (227 ms) and the agents switch (210 ms) in separate runs. Not loosened (human
+  gate; see "Waiting on human"). Round 3 not run: the remaining item needs the human.
 
 Verify:
 
@@ -749,8 +764,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 **Phase 6 (2026-10-26):**
 - Badge rule: is a run with `invalid_output` steps "complete" for the "smallest safe repair"
   badge? Today only infrastructure failures (inconclusive) block it (test-breaker question).
-- Performance: the e2e budget passes (500 ms between clicks); a back-to-back script shows the
-  two-click dropdown highlight and the first agents switch at 217 / 221 ms. Accept, or tighten?
+- **Performance budget (BLOCKER from the phase-auditor):** at factor 1 the local budget test is
+  flaky on this machine (same code: 73-91 ms quiet, 201-227 ms under load; the full check
+  failed once). Options: keep 200 ms and accept local flakiness, set a local factor (e.g. 1.5),
+  or measure more runs. Not changed without your decision (AGENTS.md review rule 4).
+- Badge rule location: the phase-auditor suggests moving the "smallest safe repair" rule into
+  `engine/`; spec 006 says no engine change. Keep it in the view model?
 - Gate 6: confirm the `START_PROMPT.md` and `AGENTS.md` edits (Phase 6/7) recorded as approved
   in chat; `START_PROMPT.md` Phase 6 has no "Done when" sentence yet.
 - Merge PR (not merged, by instruction).
