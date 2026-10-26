@@ -1,0 +1,15 @@
+# Recorded evaluation findings shown in the demo UI's "scripted vs LLM" row (spec 006).
+# A finding is shown only when its repair and prompt version match the LLM run in use and the
+# scripted and LLM outcomes computed now equal the ones recorded here; otherwise nothing is
+# shown. Wording from docs/evaluation/adr-0002-golden-llm-replay.md (human decision 2026-10-26;
+# "acknowledged" replaced by "was in the agent's view", because the stored statements do not
+# acknowledge it in words).
+findings:
+  - repair: owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator
+    prompt_version: phase5-v4
+    scripted: resolved
+    llm: partial
+    text: >-
+      The repair resolves the scripted replay; on the free LLM the owner obligation was in the
+      agent's view with its deadline, but the agent did not act within it.
+    source: docs/evaluation/adr-0002-golden-llm-replay.md
