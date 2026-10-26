@@ -79,10 +79,22 @@ of leaving it implicit.
   with tests, 2 recorded as known limitations / a question for the human).
 - Round 2: phase-auditor FAIL (MAJOR: PR not yet opened when the hand-off said so, fixed by opening it; MINORs fixed: overdue count in the outcome text, label wording "acted late or not at all"; triage file name kept, as this task is not a numbered phase).
 
+## Diagnosis of the LLM replay (cache and logs only; `docs/evaluation/adr-0002-golden-llm-replay.md`)
+
+**Finding (model behaviour):** the repair resolves the scripted replay; on the free LLM the
+owner obligation was in the agent's view with its deadline, but the agent did not act within
+it. Mechanical causes ruled out at T+30, T+45 and T+60: the reversal was an allowed action, its
+preconditions were met (status held from T+30, review accepted from T+15, authority from the
+owner rule), and a counterfactual from the cache shows the engine would have accepted it at
+T+30. The agent's statements do not mention the obligation (so not "acknowledged" in words);
+it kept reviewing because the alert was "suspected, not proven". No prompt change.
+
+## Human decisions after the PR (2026-10-26)
+
+- An owner obligation still open at incident end keeps its orphan duty as remaining, labelled
+  "owner obligation open at incident end" (not `obligation_overdue`). Implemented with tests.
+
 ## Open for the human
 
-- An owner obligation still open (deadline not passed) at the end of the incident window does
-  not keep its orphan duty as remaining (it counts as removed, like an owner-only repair).
-  Unreachable with today's 30m edits. Change it?
 - Two owners for one action: a co-owner's obligation would go overdue after the other acted
   (unreachable today; known limitation).

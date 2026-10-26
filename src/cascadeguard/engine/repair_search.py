@@ -42,6 +42,7 @@ from cascadeguard.domain.scenario import RoleSet, Scenario
 from cascadeguard.engine.constraints import SHARE, Authority, Reason, RuleBook
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.simulation.replay import REPAIR_PREFIX
+from cascadeguard.simulation.state import ObligationStatus
 
 MAX_EDITS = 2
 SCRIPTED_LIMIT = "scripted_agent_limit"
@@ -88,6 +89,8 @@ def outcome_text(c: "ReplayComparison") -> str:
         text += f"; {len(c.masked)} masked failures: cause still present"
     if c.overdue_blockers and not c.failed_steps:
         text += f"; {len(c.overdue_blockers)} remaining: owner obligation overdue"
+    if c.open_at_end_blockers and not c.failed_steps:
+        text += f"; {len(c.open_at_end_blockers)} remaining: owner obligation open at incident end"
     if caveat := invalid_output_caveat(c):
         text += f". Caveat: {caveat}"
     return text
@@ -99,6 +102,10 @@ REMOVED_LABEL = "removed (cause gone)"
 OVERDUE_LABEL = (
     "owner obligation overdue (finding obligation_overdue): the assigned owner did not act by "
     "its deadline (acted late or not at all), so this blocker remains"
+)
+OPEN_AT_END_LABEL = (
+    "owner obligation open at incident end: its deadline had not passed, but the assigned owner "
+    "had not acted, so this blocker remains"
 )
 REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
 SCRIPTED_LIMIT_NOTE = (
@@ -119,39 +126,60 @@ class ReplayComparison:
     replay: RunResult
     critical_goals: tuple[str, ...]
 
-    @property
-    def overdue(self) -> tuple[str, ...]:
-        """Actions whose owner obligation (from this repair's assign_owner edits) passed its
-        deadline unfulfilled, or was fulfilled late, in the replay (finding obligation_overdue)."""
+    def _owner_obligations(self) -> list[ObligationStatus]:
         owner_rules = {
             REPAIR_PREFIX + e.edit_id
             for e in self.proposal.edits
             if e.operation is RepairOperationType.ASSIGN_OWNER
         }
+        return [o for o in self.replay.obligations if o.clause_id in owner_rules]
+
+    @property
+    def overdue(self) -> tuple[str, ...]:
+        """Actions whose owner obligation (from this repair's assign_owner edits) passed its
+        deadline unfulfilled, or was fulfilled late, in the replay (finding obligation_overdue)."""
+        return tuple(dict.fromkeys(o.action for o in self._owner_obligations() if o.missed))
+
+    @property
+    def open_at_end(self) -> tuple[str, ...]:
+        """Actions whose owner obligation was still open when the incident ended: unfulfilled,
+        its deadline not yet passed (not obligation_overdue; human decision 2026-10-26)."""
         return tuple(
             dict.fromkeys(
-                o.action for o in self.replay.obligations if o.missed and o.clause_id in owner_rules
+                o.action
+                for o in self._owner_obligations()
+                if o.fulfilled_at is None and not o.missed
             )
+        )
+
+    def _orphans(self, actions: tuple[str, ...]) -> tuple[str, ...]:
+        wanted = set(actions)
+        return tuple(
+            f.id
+            for f in self.baseline.failures
+            if f.category is FailureCategory.ORPHAN_DUTY and f.subject in wanted
         )
 
     @property
     def overdue_blockers(self) -> tuple[str, ...]:
         """Baseline orphan duties whose owner obligation was overdue: they count as remaining
         blockers, never as removed or masked (ADR 0002 option A, human decision 2026-10-26)."""
-        late = set(self.overdue)
-        return tuple(
-            f.id
-            for f in self.baseline.failures
-            if f.category is FailureCategory.ORPHAN_DUTY and f.subject in late
-        )
+        return self._orphans(self.overdue)
+
+    @property
+    def open_at_end_blockers(self) -> tuple[str, ...]:
+        """Baseline orphan duties whose owner obligation was open at incident end: remaining
+        blockers too, never removed or masked."""
+        return self._orphans(self.open_at_end)
 
     def _held(self) -> set[str]:
-        return set(self.overdue_blockers)
+        return {*self.overdue_blockers, *self.open_at_end_blockers}
 
     @property
     def removed(self) -> tuple[str, ...]:
         """Baseline failures whose cause the repair removed: the replay's diagnosis, examining
-        met goals too, no longer finds them, and no owner obligation for them was overdue."""
+        met goals too, no longer finds them, and no owner obligation for them was overdue or
+        open at incident end."""
         present = {f.id for f in self.replay.causes} | self._held()
         return tuple(f.id for f in self.baseline.failures if f.id not in present)
 
@@ -168,7 +196,7 @@ class ReplayComparison:
     @property
     def remaining(self) -> tuple[str, ...]:
         """Baseline failures still blocking in the replay, including orphan duties whose owner
-        obligation was overdue."""
+        obligation was overdue or open at incident end."""
         blocking = {f.id for f in self.replay.failures} | self._held()
         return tuple(f.id for f in self.baseline.failures if f.id in blocking)
 
@@ -310,6 +338,7 @@ class ReplayComparison:
             "failures_masked": list(self.masked),
             "failures_remaining": list(self.remaining),
             **({"obligations_overdue": list(self.overdue)} if self.overdue else {}),
+            **({"obligations_open_at_end": list(self.open_at_end)} if self.open_at_end else {}),
             "new_conflicts": list(self.new_conflicts),
             "new_conflict_tags": self.conflict_tags(),
             "changed_actions": self.changed_actions(),

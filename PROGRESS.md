@@ -8,11 +8,13 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 `docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
 
-**ADR 0002 option A: done on `adr-0002-option-a`, PR #7 open, not merged (human instruction).**
-See "Done" below. LLM results: see "ADR 0002 option A" under Done.
+**ADR 0002 option A: merged to main via PR #7 (merge commit, branch `adr-0002-option-a` kept),
+tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report:
+`docs/review/adr-0002-option-a-report.md`. Next: Phase 6 — Demo UI v2.
 
 **Open items:**
-- **ADR 0002 option A:** PR open; the human decides on merging. Questions in "Waiting on human".
+- **ADR 0002 option A:** merged (PR #7, tag `adr-0002-a`). Known limitation: two owners for
+  one action (see "Known limitations").
 - **`uae.fl2-2019.art16-exceptions`**: reviewed by the human (2026-10-26, commit 98cbd85).
 - **Deferred MINORs** (round 4, see "Known limitations"): cache file check does not re-check
   `prompt_version`/`model_sha256` inside the file; `Usage.calls` counts agent attempts, not
@@ -22,7 +24,7 @@ See "Done" below. LLM results: see "ADR 0002 option A" under Done.
 
 ## Done
 
-### ADR 0002 option A (branch `adr-0002-option-a`, human decision 2026-10-26)
+### ADR 0002 option A (merged via PR #7, tag `adr-0002-a`; human decision 2026-10-26)
 - An owner edit carries `deadline_minutes` (default 30, in the id: `owner.<action>.<role>.30m`).
   `replay.apply_repair` lists owner rules in `Scenario.owner_obligations` (never from YAML).
   The engine opens the owner's obligation at the first step where the action's
@@ -53,6 +55,13 @@ See "Done" below. LLM results: see "ADR 0002 option A" under Done.
   obligation opened at T+30 (due T+60) and was in the operator's view, but it never proposed
   reverse_automated_lockouts; `obligation_overdue` at T+60, orphan duty remaining. Exports:
   `data/llm_baseline_v4/`, `data/llm_replay_v4.log` (ignored).
+- **Human decisions after the PR (2026-10-26):** an owner obligation still open at incident
+  end keeps its orphan duty as remaining, labelled "owner obligation open at incident end" (not
+  `obligation_overdue`; spec 003; tests, 3 mutants killed). LLM replay diagnosis from the cache
+  only: **model behaviour** (reversal allowed, preconditions met, the engine would have accepted
+  it at T+30; the obligation was in view but the agent never mentioned or acted on it);
+  `docs/evaluation/adr-0002-golden-llm-replay.md`. No prompt change. Phase-auditor round 3 not
+  run (human decision).
 - Playwright MCP demo flow (2026-10-26): baseline, role view T+30 with the open notify
   obligation, repair search (owner .30m + share rank 1, resolved), replay comparison, exports.
 - Review round 1: evidence-auditor PASS (MINORs fixed: stale lines, approval recorded; repair
@@ -689,12 +698,6 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**ADR 0002 option A (2026-10-26):**
-- Should an owner obligation still open (deadline not yet passed) at the end of the incident
-  window keep its orphan duty as a remaining blocker? Today it counts as removed, the same as
-  an owner-only repair whose obligation never opens.
-- Merge the PR (not merged, by instruction).
-
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
 
@@ -757,9 +760,6 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 - **Two owners for one action** (test-breaker, unreachable today: needs 3 edits and a changed
   roles file): the opening condition is global ("no role has reversed"), fulfilment is per
   role, so a co-owner's obligation stays open after the other owner acts and goes overdue.
-- **Owner obligation still open when the incident window ends** (test-breaker, unreachable
-  today: the search only makes 30m edits, which fall due at T+60): it is not marked overdue and
-  its orphan duty counts as removed. See "Waiting on human".
 
 - **Deferred MINORs (round 4):** `DecisionCache._read` checks only the key, not
   `prompt_version`/`model_sha256` inside the file (safe in normal use: both are hashed into the
@@ -791,9 +791,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-The human reviews the ADR 0002 option A PR (branch `adr-0002-option-a`) and decides on merging
-and on the end-of-window question in "Waiting on human". Still open: the deferred MINORs and the
-gap-wording known limitation.
+Phase 6 — Demo UI v2 (the human's wording, 2026-10-26), on a new branch. **Question for the
+human first:** `START_PROMPT.md` defines Phase 6 as "Tracing (optional)"; confirm the scope of
+"Demo UI v2" (and whether it replaces or precedes tracing) before starting. Still open: the deferred MINORs,
+the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
 

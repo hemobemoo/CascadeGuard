@@ -14,6 +14,7 @@ from cascadeguard.domain.decisions import GAP_QUALIFICATION
 from cascadeguard.domain.findings import CoordinationFailure
 from cascadeguard.engine.constraints import CANDIDATE_GAP_CLAIM
 from cascadeguard.engine.repair_search import (
+    OPEN_AT_END_LABEL,
     OVERDUE_LABEL,
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
@@ -199,6 +200,8 @@ def comparison_markdown(c: ReplayComparison) -> str:
             lines.append(f"- `{fid}`: {f.description} Clauses: {cite(f.clause_ids)}.")
             if title == "Remaining" and fid in c.overdue_blockers:
                 lines.append(f"  {OVERDUE_LABEL}.")
+            if title == "Remaining" and fid in c.open_at_end_blockers:
+                lines.append(f"  {OPEN_AT_END_LABEL}.")
             if fid in tags:
                 lines.append(f"  Tag `{tags[fid]}`: {SCRIPTED_LIMIT_NOTE}.")
             lines.append(f"  _{f.qualification}_")
