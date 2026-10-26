@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = ROOT / "scenarios" / "uae_health_access" / "expected_repairs.yaml"
 BASELINE = ROOT / "scenarios" / "uae_health_access" / "expected_baseline.yaml"
 SHARE = "share.network_incident_status.telecom_operator.health_service_operator"
-OWNER = "owner.reverse_automated_lockouts.health_service_operator"
+OWNER = "owner.reverse_automated_lockouts.health_service_operator.30m"
 SUCCESS = f"{OWNER}+{SHARE}"
 PATIENT_SHARE = "share.patient_account_records.health_service_operator.telecom_operator"
 
@@ -138,8 +138,8 @@ def test_a_repair_that_adds_an_unfulfilled_duty_is_recorded_as_a_new_conflict(
 @pytest.mark.parametrize("repair_id", [SHARE, SUCCESS])
 def test_replay_is_the_identical_incident_except_for_the_repair(repair_id: str) -> None:
     """Same injects and decisions; fact releases differ (in both directions) only by the status
-    now reaching the health operator; agent views differ only in that role's facts and its own
-    accepted actions."""
+    now reaching the health operator; agent views differ only in that role's facts, its own
+    accepted actions, the repair's rules and the obligations those rules open (ADR 0002 A)."""
     w = load_world("uae_health_access")
     seen: dict[str, list[RoleView]] = {"baseline": [], "replay": []}
 
@@ -177,8 +177,20 @@ def test_replay_is_the_identical_incident_except_for_the_repair(repair_id: str) 
     }
     for b, r in zip(seen["baseline"], seen["replay"], strict=True):
         assert (
-            replace(b, facts=r.facts, own_history=r.own_history, role_clauses=r.role_clauses) == r
+            replace(
+                b,
+                facts=r.facts,
+                own_history=r.own_history,
+                role_clauses=r.role_clauses,
+                open_obligations=r.open_obligations,
+            )
+            == r
         )
+        # The only obligation difference: obligations the repair's own rules opened.
+        assert [o for o in r.open_obligations if not o.source.startswith("repair.")] == list(
+            b.open_obligations
+        )
+        assert not any(o.source.startswith("repair.") for o in b.open_obligations)
         # The only clause difference: the repair's own rules, shown as not citable (Phase 5).
         assert set(b.role_clauses) <= set(r.role_clauses)
         added = set(r.role_clauses) - set(b.role_clauses)

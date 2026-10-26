@@ -33,7 +33,7 @@ from cascadeguard.simulation.boundaries import RoleView
 
 SCENARIO = "uae_health_access"
 GOLDEN = (
-    "owner.reverse_automated_lockouts.health_service_operator"
+    "owner.reverse_automated_lockouts.health_service_operator.30m"
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
 STEPS = 36  # 6 injects x 6 roles
