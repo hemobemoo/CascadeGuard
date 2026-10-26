@@ -6,7 +6,7 @@
 # acknowledge it in words).
 findings:
   - repair: owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator
-    prompt_version: phase5-v4
+    prompt_version: phase5-v4+json_object  # exact: version + output mode (+ options)
     scripted: resolved
     llm: partial
     text: >-

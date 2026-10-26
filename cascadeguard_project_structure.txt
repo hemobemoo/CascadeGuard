@@ -32,13 +32,17 @@ cascadeguard/
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
 │   ├── policy-inventory.md           [P1] table of the 19 PDFs (pages, text, issuer, date)
 │   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor
+│   │                                 (also phase reports; [P6] phase-6-ui/ before/after report
+│   │                                 and screenshots)
 │   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
 │
 ├── specs/                            one short spec per phase (max ~1 page each)
 │   ├── 001-domain-and-scenario.md    [P1]
 │   ├── 002-engine-and-diagnosis.md   [P2]
 │   ├── 003-repair-and-replay.md      [P3]
-│   └── 004-demo-ui.md                [P4]
+│   ├── 004-demo-ui.md                [P4]
+│   ├── 005-llm-agents.md             [P5]
+│   └── 006-demo-ui-v2.md             [P6]
 │
 ├── src/cascadeguard/
 │   ├── __init__.py                   [P0]

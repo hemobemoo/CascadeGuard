@@ -62,7 +62,7 @@ content after "Run baseline" 1,276 ms, find repairs 883 ms, compare 284 ms, inje
 
 ## Tests
 
-`test_view_model.py`: swimlane rows, obligation bars and states, verdict strip, ladder badge,
+`tests/unit/test_view_model_v2.py`: swimlane rows, obligation bars and states, verdict strip, ladder badge,
 category cards, every label from engine constants. `tests/e2e/test_ui_flow.py`: guided flow
 a → f, expert mode, exports equal to the CLI's, LLM (cached only) scripted-vs-LLM row, budgets.
 

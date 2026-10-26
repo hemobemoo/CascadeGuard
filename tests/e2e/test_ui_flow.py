@@ -44,17 +44,27 @@ def _free_port() -> int:
         return int(s.getsockname()[1])
 
 
-@pytest.fixture(scope="module")
-def server() -> Iterator[str]:
+# Starts the UI with no CASCADEGUARD_MODEL anywhere: not in the environment, and .env pointed at
+# a file that does not exist.
+NO_MODEL_LAUNCHER = (
+    "from pathlib import Path; import cascadeguard.agents.llm as llm; "
+    "llm.ENV_FILE = Path('no-such-dir') / '.env'; "
+    "from cascadeguard.ui import app; app.main()"
+)
+
+
+def _serve(model: str | None) -> Iterator[str]:
     port = _free_port()
     # Without pytest's variables: NiceGUI switches to its own test mode when it sees them.
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
     env["CASCADEGUARD_UI_PORT"] = str(port)
-    # LLM mode is only exercised from the cache, under a model id that has no cache entries.
-    env["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
     env["CASCADEGUARD_OUTPUT_MODE"] = "json_schema"
+    env.pop("CASCADEGUARD_MODEL", None)
+    if model is not None:
+        env["CASCADEGUARD_MODEL"] = model
+    command = ["-m", "cascadeguard.ui.app"] if model is not None else ["-c", NO_MODEL_LAUNCHER]
     process = subprocess.Popen(
-        [sys.executable, "-m", "cascadeguard.ui.app"],
+        [sys.executable, *command],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -77,6 +87,17 @@ def server() -> Iterator[str]:
 
 
 @pytest.fixture(scope="module")
+def server() -> Iterator[str]:
+    # LLM mode is only exercised from the cache, under a model id that has no cache entries.
+    yield from _serve("test/e2e-no-such-model")
+
+
+@pytest.fixture(scope="module")
+def server_without_model() -> Iterator[str]:
+    yield from _serve(None)
+
+
+@pytest.fixture(scope="module")
 def browser() -> Iterator[Browser]:
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -91,7 +112,7 @@ def page(server: str, browser: Browser) -> Iterator[Page]:
     pg.set_default_timeout(TIMEOUT_MS)
     pg.goto(server)
     pg.locator(".cg-verdict").wait_for()
-    pg.locator(".cg-lanes").wait_for(state="attached")  # the other sections have streamed in
+    pg.locator(".cg-lanes").first.wait_for(state="attached")  # the other sections have streamed in
     yield pg
     context.close()
 
@@ -128,10 +149,12 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     expect(b.get_by_text("locked_account_records").first).to_be_visible()
     expect(b.get_by_text("dha.pp11.4-18-4").first).to_be_visible()
     expect(b.get_by_text("reviewed (interpreted)").first).to_be_visible()
-    page.locator('[data-testid="cell-health_service_operator-30"]').click()
+    page.locator('[data-testid="cell-baseline-health_service_operator-30"]').click()
     view = page.locator('[data-testid="role-view"]')
     expect(view).to_contain_text("Role view: health_service_operator at T+30")
     expect(view).to_contain_text("Data categories outside its boundary")
+    # In the baseline the network status is outside the health operator's boundary.
+    expect(view.get_by_text("network_incident_status", exact=True)).to_be_visible()
     page.get_by_text("Replay (selected repair)").click()
     expect(b.get_by_text(REPAIR_LABEL).first).to_be_visible()
     expect(b.get_by_text("fulfilled at T+60").first).to_be_visible()
@@ -242,7 +265,7 @@ def test_performance_budget(server: str, browser: Browser) -> None:
     pg = context.new_page()
     pg.set_default_timeout(TIMEOUT_MS)
     pg.goto(server)
-    pg.locator(".cg-lanes").wait_for(state="attached")
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
 
     def measure(label: str, action: Callable[[], object], reset: Callable[[], object]) -> None:
         runs: list[float] = []
@@ -265,15 +288,27 @@ def test_performance_budget(server: str, browser: Browser) -> None:
     measure(
         "swimlane cell -> role view",
         lambda: (
-            pg.locator('[data-testid="cell-telecom_operator-30"]').click(),
+            pg.locator('[data-testid="cell-baseline-telecom_operator-30"]').click(),
             pg.get_by_text("Role view: telecom_operator at T+30").wait_for(),
         ),
         lambda: (
             to("b")(),
-            pg.locator('[data-testid="cell-telecom_operator-30"]').click()
+            pg.locator('[data-testid="cell-baseline-telecom_operator-30"]').click()
             if pg.locator('[data-testid="role-view"]').count()
             else None,
             pg.locator('[data-testid="role-view"]').wait_for(state="detached"),
+        ),
+    )
+    measure(
+        "swimlane switch: baseline -> replay",
+        lambda: (
+            pg.locator('[data-testid="lanes-run"]').get_by_text("Replay (selected repair)").click(),
+            pg.locator('[data-testid="lanes-replay"]').wait_for(state="visible"),
+        ),
+        lambda: (
+            to("b")(),
+            pg.locator('[data-testid="lanes-run"]').get_by_text("Baseline").click(),
+            pg.locator('[data-testid="lanes-replay"]').wait_for(state="hidden"),
         ),
     )
     pg.get_by_text("Expert", exact=True).click()
@@ -321,4 +356,30 @@ def test_performance_budget(server: str, browser: Browser) -> None:
             pg.locator('[data-testid="verdict-outcome"]', has_text="resolved").wait_for(),
         ),
     )
+    context.close()
+
+
+def test_llm_mode_without_a_model_shows_no_result(
+    server_without_model: str, browser: Browser
+) -> None:
+    """Never a silent fallback: with no model configured, the LLM toggle shows the error and no
+    verdict, ladder or scripted-vs-LLM row (spec 005: every result says which agents made it)."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_without_model)
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.get_by_text("LLM (cached only)", exact=True).click()
+    error = pg.locator('[data-testid="verdict-error"]')
+    expect(error).to_contain_text("CASCADEGUARD_MODEL")
+    expect(error).to_contain_text("no default model is used")
+    expect(pg.locator('[data-testid="agents-label"]')).to_contain_text("CASCADEGUARD_MODEL")
+    for gone in ("verdict-outcome", "verdict-badge", "rung-1", "agents-row", "comparison-id"):
+        expect(pg.locator(f'[data-testid="{gone}"]')).to_have_count(0)
+    expect(pg.locator(".cg-lanes")).to_have_count(0)
+    # Back to scripted: its results return.
+    pg.get_by_text("Scripted", exact=True).click()
+    expect(pg.locator('[data-testid="verdict-badge"]')).to_have_text(SMALLEST_SAFE)
+    expect(pg.locator('[data-testid="verdict-error"]')).to_have_count(0)
     context.close()
