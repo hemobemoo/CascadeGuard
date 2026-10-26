@@ -8,16 +8,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 `docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
 
-**ADR 0002 option A in progress on `adr-0002-option-a` (human decision 2026-10-26, six points).
-Stopped at the golden check (human instruction):** engine, view and prompt v4 are in place; the
-scripted goldens change only in repair ids (`owner.<action>.<role>` gains `.30m`) and in the
-successful replay's edit (`deadline_minutes: 30`); ranks, outcomes and both baselines are
-unchanged. Waiting on the human to approve regenerating `expected_repairs.yaml` and updating the
-tests that pin the old id and `phase5-v3`. Not done yet: new tests, mutation check, docs (ADR,
-spec 003, architecture), LLM runs, review loop, PR.
+**ADR 0002 option A: done on `adr-0002-option-a`, PR open, not merged (human instruction).**
+See "Done" below. LLM results: see "ADR 0002 option A" under Done.
 
 **Open items:**
-- **ADR 0002 option A:** see above.
+- **ADR 0002 option A:** PR open; the human decides on merging. Questions in "Waiting on human".
 - **`uae.fl2-2019.art16-exceptions`**: reviewed by the human (2026-10-26, commit 98cbd85).
 - **Deferred MINORs** (round 4, see "Known limitations"): cache file check does not re-check
   `prompt_version`/`model_sha256` inside the file; `Usage.calls` counts agent attempts, not
@@ -26,6 +21,53 @@ spec 003, architecture), LLM runs, review loop, PR.
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
+
+### ADR 0002 option A (branch `adr-0002-option-a`, human decision 2026-10-26)
+- An owner edit carries `deadline_minutes` (default 30, in the id: `owner.<action>.<role>.30m`).
+  `replay.apply_repair` lists owner rules in `Scenario.owner_obligations` (never from YAML).
+  The engine opens the owner's obligation at the first step where the action's
+  `owner_obligation_opens_when` (roles.yaml) holds, checked after every inject and accepted
+  action: for `reverse_automated_lockouts`, the owner holds `network_incident_status` and
+  `patient_account_records` (the lock records; the human asked to use the lockouts' own
+  category if one exists, instead of the alert's `fraud_model_alerts`) has been released, and no
+  role has reversed the locks. A missed deadline is the finding `obligation_overdue` dated at
+  the deadline; the targeted orphan duty stays a remaining blocker (never removed or masked,
+  not a new conflict), shown with `OVERDUE_LABEL` in CLI, Markdown and UI.
+- `RoleView.open_obligations` (own role and `any`; source label; open/overdue); UI role view
+  row; LLM prompt `phase5-v4` adds `your_open_obligations` only.
+- Goldens regenerated (human approval): only the owner ids (`.30m`) and the successful replay's
+  `deadline_minutes: 30` changed. Tests updated to the new id and prompt pin: test_repairs
+  (OWNER constant; replay-identity test also allows the repair's own obligations),
+  test_llm_agents (SUCCESS id, OWNER_RULE, PROMPT_VERSION pin), test_retrieval, test_view_model,
+  e2e test_ui_flow, scripts/llm_replay.py.
+- New tests: `tests/unit/test_owner_obligation.py` (27). Mutation check: 16 mutants of the
+  opening condition, overdue finding, diagnosis, remaining/masked rule, YAML and owner-rule
+  checks, view filter, prompt and Markdown label; all killed.
+- `uae.fl2-2019.art16-exceptions` reviewed by the human (commit 98cbd85, approvals.yaml).
+- **LLM runs (approved; free model; json_object from .env; report
+  `docs/review/adr-0002-option-a-report.md`):** dry run 36/36 baseline steps uncached (v4).
+  Baseline (cap 72): 36/36 decided, 0 no_decision/invalid_output, 39 agent attempts, 90.8k/13.3k
+  tokens, cost 0; same 4 failures and unmet critical goals as scripted. Golden replay owner +
+  share (cap 50): 24 of 36 steps changed; 28 requests (1 retry after HTTP 502), 75.1k/10.9k
+  tokens, cost 0; 0 no_decision/invalid_output. **LLM partial vs scripted resolved:** the owner
+  obligation opened at T+30 (due T+60) and was in the operator's view, but it never proposed
+  reverse_automated_lockouts; `obligation_overdue` at T+60, orphan duty remaining. Exports:
+  `data/llm_baseline_v4/`, `data/llm_replay_v4.log` (ignored).
+- Playwright MCP demo flow (2026-10-26): baseline, role view T+30 with the open notify
+  obligation, repair search (owner .30m + share rank 1, resolved), replay comparison, exports.
+- Review round 1: evidence-auditor PASS (MINORs fixed: stale lines, approval recorded; repair
+  rule label kept per the human's wording, reason noted in code); phase-auditor FAIL (MAJORs:
+  stale PROGRESS, no Playwright run/UI test, both fixed; MINORs fixed: overdue shown in
+  Markdown/CLI/UI, ADR sections marked superseded, scripted note); test-breaker PASS (MINORs:
+  YAML/owner-rule check and tests fixed; two left as questions/limitations below).
+
+Verify:
+
+```bash
+uv run pytest tests/unit/test_owner_obligation.py
+uv run cascadeguard run uae_health_access --repair owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 5 — LLM agents (merged via PR #6, tag `phase-5`)
 - Review round 1 on the Phase 4 tail (a0b6342, 2f0ddc8, 9f27e4d): phase-auditor PASS,
@@ -647,6 +689,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**ADR 0002 option A (2026-10-26):**
+- Should an owner obligation still open (deadline not yet passed) at the end of the incident
+  window keep its orphan duty as a remaining blocker? Today it counts as removed, the same as
+  an owner-only repair whose obligation never opens.
+- Merge the PR (not merged, by instruction).
+
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
 
@@ -704,6 +752,15 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Known limitations
 
+- **`obligation_overdue` applies to owner obligations only** (human decision 2026-10-26). Other
+  missed obligations stay `obligation_missed` / `temporal_infeasibility` (spec 003).
+- **Two owners for one action** (test-breaker, unreachable today: needs 3 edits and a changed
+  roles file): the opening condition is global ("no role has reversed"), fulfilment is per
+  role, so a co-owner's obligation stays open after the other owner acts and goes overdue.
+- **Owner obligation still open when the incident window ends** (test-breaker, unreachable
+  today: the search only makes 30m edits, which fall due at T+60): it is not marked overdue and
+  its orphan duty counts as removed. See "Waiting on human".
+
 - **Deferred MINORs (round 4):** `DecisionCache._read` checks only the key, not
   `prompt_version`/`model_sha256` inside the file (safe in normal use: both are hashed into the
   key); `Usage.calls` counts agent attempts, not request retries (the clients' own counters are
@@ -734,10 +791,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-ADR 0002 option A, after the human decides when an owner obligation opens and its deadline
-(work on a new branch; do not start before that decision). Still open: the human's review of
-`uae.fl2-2019.art16-exceptions`, the deferred MINORs, and the gap-wording known limitation. The
-review of the real-model runs was done in round 4 (2026-10-26).
+The human reviews the ADR 0002 option A PR (branch `adr-0002-option-a`) and decides on merging
+and on the end-of-window question in "Waiting on human". Still open: the deferred MINORs and the
+gap-wording known limitation.
 
 Earlier (done):
 
