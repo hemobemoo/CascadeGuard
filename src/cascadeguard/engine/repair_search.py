@@ -114,17 +114,42 @@ class ReplayComparison:
     critical_goals: tuple[str, ...]
 
     @property
+    def overdue(self) -> tuple[str, ...]:
+        """Actions whose owner obligation (from this repair's assign_owner edits) passed its
+        deadline unfulfilled, or was fulfilled late, in the replay (finding obligation_overdue)."""
+        owner_rules = {
+            REPAIR_PREFIX + e.edit_id
+            for e in self.proposal.edits
+            if e.operation is RepairOperationType.ASSIGN_OWNER
+        }
+        return tuple(
+            dict.fromkeys(
+                o.action for o in self.replay.obligations if o.missed and o.clause_id in owner_rules
+            )
+        )
+
+    def _held(self) -> set[str]:
+        """Baseline orphan duties whose owner obligation was overdue: they count as remaining
+        blockers, never as removed or masked (ADR 0002 option A, human decision 2026-10-26)."""
+        late = set(self.overdue)
+        return {
+            f.id
+            for f in self.baseline.failures
+            if f.category is FailureCategory.ORPHAN_DUTY and f.subject in late
+        }
+
+    @property
     def removed(self) -> tuple[str, ...]:
         """Baseline failures whose cause the repair removed: the replay's diagnosis, examining
-        met goals too, no longer finds them."""
-        present = {f.id for f in self.replay.causes}
+        met goals too, no longer finds them, and no owner obligation for them was overdue."""
+        present = {f.id for f in self.replay.causes} | self._held()
         return tuple(f.id for f in self.baseline.failures if f.id not in present)
 
     @property
     def masked(self) -> tuple[str, ...]:
         """Baseline failures that no longer block only because their goal was met another way
         ("masked (goal met another way)"): the cause is still present, so they are not removed."""
-        blocking = {f.id for f in self.replay.failures}
+        blocking = {f.id for f in self.replay.failures} | self._held()
         present = {f.id for f in self.replay.causes}
         return tuple(
             f.id for f in self.baseline.failures if f.id in present and f.id not in blocking
@@ -132,8 +157,10 @@ class ReplayComparison:
 
     @property
     def remaining(self) -> tuple[str, ...]:
-        before = {f.id for f in self.baseline.failures}
-        return tuple(f.id for f in self.replay.failures if f.id in before)
+        """Baseline failures still blocking in the replay, including orphan duties whose owner
+        obligation was overdue."""
+        blocking = {f.id for f in self.replay.failures} | self._held()
+        return tuple(f.id for f in self.baseline.failures if f.id in blocking)
 
     @property
     def new_conflicts(self) -> tuple[str, ...]:
@@ -272,6 +299,7 @@ class ReplayComparison:
             "failures_removed": list(self.removed),
             "failures_masked": list(self.masked),
             "failures_remaining": list(self.remaining),
+            **({"obligations_overdue": list(self.overdue)} if self.overdue else {}),
             "new_conflicts": list(self.new_conflicts),
             "new_conflict_tags": self.conflict_tags(),
             "changed_actions": self.changed_actions(),

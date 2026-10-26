@@ -68,6 +68,10 @@ class SimulationState:
         """Roles that know at least one fact in this category, in role order."""
         return tuple(r.id for r in self.roles.roles if self.has_seen_category(r.id, category))
 
+    def category_released(self, category: str) -> bool:
+        """Has the inject carrying any fact in this category happened?"""
+        return any(self._facts[f].data_category == category for f in self._released)
+
     def has_done(self, role: str, action: str) -> bool:
         return any(a == action for _, a in self._done[role])
 

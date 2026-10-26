@@ -76,6 +76,9 @@ class Scenario(DomainModel):
     start_time: AwareDatetime
     events: tuple[TimelineEvent, ...] = Field(min_length=1)
     recovery_goals: tuple[RecoveryGoal, ...] = ()
+    # Owner repair rules (clause ids) in a replay: each opens one obligation when its action's
+    # `owner_obligation_opens_when` first holds. Set by simulation/replay.py, never in the YAML.
+    owner_obligations: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _check_timeline(self) -> Self:
@@ -99,6 +102,17 @@ class InformationBoundary(DomainModel):
     notes: str | None = None
 
 
+class OwnerObligationCondition(DomainModel):
+    """When an owner repair for this action opens the owner's obligation (ADR 0002 option A,
+    human decision 2026-10-26): at the first step where the owner holds a fact in each
+    `owner_holds` category, a fact in each `in_place` category has been released (the condition
+    the action addresses exists), and no role has yet had the action accepted (it is still in
+    place). If that never holds, the obligation never opens."""
+
+    owner_holds: tuple[str, ...] = Field(min_length=1)
+    in_place: tuple[str, ...] = Field(min_length=1)
+
+
 class Action(DomainModel):
     id: str = Field(pattern=ID_PATTERN)
     description: str
@@ -111,6 +125,8 @@ class Action(DomainModel):
     # An obligation to one of these actions gives only uncertain authority for this one (e.g. a
     # duty to keep a fallback plan, but no clause on who may activate it: decision h2).
     uncertain_authority_from: tuple[str, ...] = ()
+    # Without it, an owner repair for this action gives authority only and opens no obligation.
+    owner_obligation_opens_when: OwnerObligationCondition | None = None
 
 
 class Role(DomainModel):
@@ -141,6 +157,12 @@ class RoleSet(DomainModel):
             unknown = sorted({*action.requires_prior, *action.uncertain_authority_from} - known)
             if unknown:
                 raise ValueError(f"action {action.id} requires unknown actions: {unknown}")
+        categories = self.known_categories()
+        for action in self.actions:
+            cond = action.owner_obligation_opens_when
+            unknown = sorted({*cond.owner_holds, *cond.in_place} - categories) if cond else []
+            if unknown:
+                raise ValueError(f"action {action.id}: unknown condition categories {unknown}")
         return self
 
     def known_categories(self) -> frozenset[str]:

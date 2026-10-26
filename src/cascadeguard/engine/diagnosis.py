@@ -170,7 +170,10 @@ def diagnose(
                     )
 
     for ob in state.obligations:
-        if ob.missed:
+        # A missed owner obligation is the finding obligation_overdue, and the repair's
+        # comparison keeps the duty it targets as a remaining blocker (ADR 0002 option A); it is
+        # not a new temporal-infeasibility conflict.
+        if ob.missed and ob.clause_id not in state.scenario.owner_obligations:
             out.add(
                 FailureCategory.TEMPORAL_INFEASIBILITY,
                 ob.action,
