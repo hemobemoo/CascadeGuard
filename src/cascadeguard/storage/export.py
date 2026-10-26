@@ -14,6 +14,7 @@ from cascadeguard.domain.decisions import GAP_QUALIFICATION
 from cascadeguard.domain.findings import CoordinationFailure
 from cascadeguard.engine.constraints import CANDIDATE_GAP_CLAIM
 from cascadeguard.engine.repair_search import (
+    OVERDUE_LABEL,
     SCRIPTED_LIMIT_NOTE,
     ReplayComparison,
     SearchResult,
@@ -24,7 +25,8 @@ from cascadeguard.simulation.orchestrator import RunResult
 
 SCRIPTED_NOTE = (
     "Scripted agents replay the same decisions; they do not adapt to the repair. A new "
-    "obligation that no scripted decision fulfils shows up as a missed obligation."
+    "obligation that no scripted decision fulfils shows up as a missed obligation (for an "
+    "owner obligation: the finding obligation_overdue, and its orphan duty remains)."
 )
 DISCLAIMER = (
     "Hypothetical scenario with synthetic data only. CascadeGuard is decision support, not legal "
@@ -195,6 +197,8 @@ def comparison_markdown(c: ReplayComparison) -> str:
         for fid in ids:
             f = by_id[fid]
             lines.append(f"- `{fid}`: {f.description} Clauses: {cite(f.clause_ids)}.")
+            if title == "Remaining" and fid in c.overdue_blockers:
+                lines.append(f"  {OVERDUE_LABEL}.")
             if fid in tags:
                 lines.append(f"  Tag `{tags[fid]}`: {SCRIPTED_LIMIT_NOTE}.")
             lines.append(f"  _{f.qualification}_")
