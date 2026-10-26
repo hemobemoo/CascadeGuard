@@ -34,7 +34,10 @@ class OpenObligation:
     id: str  # "<source>@T+<opened_at>", stable across runs
     action: str
     source: str  # the clause or repair rule that opened it
-    source_label: str  # its status label; repair rules: REPAIR_LABEL
+    # Its status label; repair rules: REPAIR_LABEL (human decision 2026-10-26), not the
+    # "; not citable" variant used in role_clauses: this field labels where the obligation came
+    # from, and citations are still checked by the engine (a repair rule is unknown_citation).
+    source_label: str
     opened_at: int
     due_at: int | None  # None: deadline undetermined from the loaded clauses
     status: str  # "open" or "overdue" (deadline passed, still unfulfilled)
