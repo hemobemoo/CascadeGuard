@@ -94,6 +94,10 @@ def outcome_text(c: "ReplayComparison") -> str:
 # Labels shown wherever a comparison is printed (CLI, exports, UI).
 MASKED_LABEL = "masked (goal met another way; cause still present)"
 REMOVED_LABEL = "removed (cause gone)"
+OVERDUE_LABEL = (
+    "owner obligation overdue (finding obligation_overdue): the assigned owner did not act by "
+    "its deadline, so this blocker remains"
+)
 REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
 SCRIPTED_LIMIT_NOTE = (
     "scripted-agent limit: a duty the repair adds was never attempted because scripted agents do "
@@ -128,15 +132,19 @@ class ReplayComparison:
             )
         )
 
-    def _held(self) -> set[str]:
+    @property
+    def overdue_blockers(self) -> tuple[str, ...]:
         """Baseline orphan duties whose owner obligation was overdue: they count as remaining
         blockers, never as removed or masked (ADR 0002 option A, human decision 2026-10-26)."""
         late = set(self.overdue)
-        return {
+        return tuple(
             f.id
             for f in self.baseline.failures
             if f.category is FailureCategory.ORPHAN_DUTY and f.subject in late
-        }
+        )
+
+    def _held(self) -> set[str]:
+        return set(self.overdue_blockers)
 
     @property
     def removed(self) -> tuple[str, ...]:

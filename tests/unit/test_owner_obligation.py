@@ -361,3 +361,57 @@ def test_run_without_repair_has_no_owner_obligations(world: World) -> None:
     )
     assert world.scenario.owner_obligations == ()
     assert owner_obligations(result) == []
+
+
+# --- Display: UI role view, comparison rows, Markdown and CLI ---------------------------------
+
+
+def comparisons(world: World) -> tuple[ReplayComparison, ReplayComparison]:
+    baseline = world.baseline()
+    late, on_time = proposal(owner(10), SHARE), proposal(owner(), SHARE)
+    return (
+        ReplayComparison(late, baseline, replayed(world, late), CRITICAL),
+        ReplayComparison(on_time, baseline, replayed(world, on_time), CRITICAL),
+    )
+
+
+def test_ui_role_view_lists_open_obligations_with_labels_and_deadlines(world: World) -> None:
+    from cascadeguard.ui import view_model as vm
+
+    result = replayed(world, proposal(owner(10), SHARE))
+    categories = world.roles.known_categories()
+    rule = repair_clause_id(owner(10))
+    at30 = vm.role_view(result, HEALTH, 30, categories).open_obligations
+    assert f"{REVERSE} (open): opened T+30, due T+40; {rule} [{REPAIR_LABEL}]" in at30
+    label = world.clauses["dha.pp11.4-18-4"].status_label
+    assert (
+        f"notify_health_data_oversight (open): opened T+15, due undetermined; "
+        f"dha.pp11.4-18-4 [{label}]"
+    ) in at30
+    at45 = vm.role_view(result, HEALTH, 45, categories).open_obligations
+    assert f"{REVERSE} (overdue): opened T+30, due T+40; {rule} [{REPAIR_LABEL}]" in at45
+    telecom = vm.role_view(result, TELECOM, 30, categories).open_obligations
+    assert not [row for row in telecom if REVERSE in row]
+
+
+def test_overdue_blocker_is_explained_in_markdown_cli_and_ui(world: World) -> None:
+    from cascadeguard.cli import format_search
+    from cascadeguard.engine.repair_search import OVERDUE_LABEL, SearchResult
+    from cascadeguard.storage.export import comparison_markdown
+    from cascadeguard.ui import view_model as vm
+
+    late, on_time = comparisons(world)
+    orphan = f"orphan_duty:{REVERSE}"
+    assert late.overdue_blockers == (orphan,) and on_time.overdue_blockers == ()
+    assert OVERDUE_LABEL in comparison_markdown(late)
+    assert OVERDUE_LABEL not in comparison_markdown(on_time)
+    assert f"{orphan}: remaining [{OVERDUE_LABEL}]" in vm.comparison(late).replay_failures
+    assert not [r for r in vm.comparison(on_time).replay_failures if OVERDUE_LABEL in r]
+
+    def search_text(c: ReplayComparison) -> str:
+        return format_search(
+            SearchResult(c.baseline.clause_set, c.baseline.loaded_clauses, (c,), ())
+        )
+
+    assert f"{OVERDUE_LABEL}: {orphan}" in search_text(late)
+    assert OVERDUE_LABEL not in search_text(on_time)

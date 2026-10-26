@@ -35,7 +35,8 @@ listed "who owns reviewing and reversing automated lockouts within my remit" as 
 although the repair rule naming it the owner was in its view. Result: LLM **partial**, scripted
 **resolved**.
 
-What the engine does today (checked in code and on the golden replay):
+What the engine did before option A (checked in code and on the golden replay; superseded by
+the decision above):
 
 - `assign_owner` becomes a hypothetical rule `repair.<edit>` of kind *obligation*. That gives
   the owner **authority** (`RuleBook.authority`), but **no obligation is opened**. The engine
@@ -48,6 +49,9 @@ What the engine does today (checked in code and on the golden replay):
 ## Options
 
 ### A. The owner repair opens an obligation; views list open obligations
+
+_Options as written before the decision; where they differ (e.g. an unfulfilled owner obligation
+is not a new conflict, decision point 3), the decision above applies._
 
 The engine opens an obligation for the new owner when the owner repair applies, and `view_for`
 adds the role's open obligations (action, clause/rule id with label, due or "undetermined").
