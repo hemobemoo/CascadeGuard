@@ -12,6 +12,7 @@ from enum import StrEnum
 from cascadeguard.domain.decisions import AgentDecision, ProposedAction
 from cascadeguard.domain.findings import Finding
 from cascadeguard.domain.policies import ClauseStatus, PolicyClause, RuleKind
+from cascadeguard.domain.repairs import is_owner_rule
 from cascadeguard.domain.scenario import Role, TimelineEvent
 from cascadeguard.simulation.state import SimulationState
 
@@ -272,7 +273,7 @@ class ConstraintEngine:
             state.record(
                 "obligation_missed", role=ob.role, action=ob.action, clause_ids=(ob.clause_id,)
             )
-            if ob.clause_id in state.scenario.owner_obligations:
+            if is_owner_rule(ob.clause_id, state.scenario.owner_obligations):
                 assert ob.due_at is not None  # owner obligations always have a deadline
                 state.add_finding(
                     Finding(
@@ -297,7 +298,12 @@ class ConstraintEngine:
         opened = {ob.clause_id for ob in state.obligations}
         for clause_id in state.scenario.owner_obligations:
             clause = self.rules.clauses.get(clause_id)
-            if clause_id in opened or clause is None or clause.normalized is None:
+            if (
+                clause_id in opened
+                or not is_owner_rule(clause_id, state.scenario.owner_obligations)
+                or clause is None
+                or clause.normalized is None
+            ):
                 continue
             n = clause.normalized
             cond = state.roles.action(n.action).owner_obligation_opens_when

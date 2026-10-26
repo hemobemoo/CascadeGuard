@@ -19,6 +19,12 @@ DETERMINATION_ACTION = "request_determination"
 OWNER_DEADLINE_MINUTES = 30
 REPAIR_PREFIX = "repair."
 REPAIR_LABEL = "hypothetical repair rule (not a source clause)"
+OWNER_RULE_PREFIX = REPAIR_PREFIX + "owner."  # clause id prefix of an assign_owner repair rule
+
+
+def is_owner_rule(clause_id: str, owner_rules: tuple[str, ...]) -> bool:
+    """An owner obligation: listed by the replay and named as an assign_owner repair rule."""
+    return clause_id in owner_rules and clause_id.startswith(OWNER_RULE_PREFIX)
 
 
 class RepairOperationType(StrEnum):
