@@ -31,6 +31,7 @@ from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     MASKED_LABEL,
+    OPEN_AT_END_LABEL,
     OVERDUE_LABEL,
     RANKING,
     SCRIPTED_LIMIT_NOTE,
@@ -454,6 +455,8 @@ def format_search(result: SearchResult) -> str:
             lines.append(f"     {MASKED_LABEL}: {', '.join(c.masked)}")
         if c.overdue_blockers:
             lines.append(f"     {OVERDUE_LABEL}: {', '.join(c.overdue_blockers)}")
+        if c.open_at_end_blockers:
+            lines.append(f"     {OPEN_AT_END_LABEL}: {', '.join(c.open_at_end_blockers)}")
         tags = c.conflict_tags()
         for fid in c.new_conflicts:
             tag = f"  [{tags[fid]}: {SCRIPTED_LIMIT_NOTE}]" if fid in tags else ""

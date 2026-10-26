@@ -487,3 +487,76 @@ def test_owner_condition_categories_must_be_scenario_categories(world: World) ->
             action["owner_obligation_opens_when"]["in_place"] = []
     with pytest.raises(ValueError):
         RoleSet.model_validate(data)
+
+
+# --- Open at incident end (human decision 2026-10-26) ---------------------------------------
+
+
+def without_reversal(world: World) -> dict[str, Any]:
+    """The scripted agents, except that the health operator never proposes the reversal."""
+    inner = world.agents[HEALTH]
+
+    class NoReversal:
+        def observe(self, view: RoleView) -> Any:
+            d = inner.observe(view)
+            kept = tuple(a for a in d.proposed_actions if a.action_type != REVERSE)
+            return d.model_copy(update={"proposed_actions": kept})
+
+    return {**world.agents, HEALTH: NoReversal()}
+
+
+def test_obligation_open_at_incident_end_keeps_its_orphan_duty_remaining(world: World) -> None:
+    from cascadeguard.cli import format_search
+    from cascadeguard.engine.repair_search import (
+        OPEN_AT_END_LABEL,
+        OVERDUE_LABEL,
+        SearchResult,
+        outcome_text,
+    )
+    from cascadeguard.storage.export import comparison_markdown
+    from cascadeguard.ui import view_model as vm
+
+    p = proposal(owner(46), SHARE)  # opens T+30, due T+76: after the last inject (T+75)
+    rep = replay(
+        world.scenario,
+        world.roles,
+        world.clauses,
+        world.corpus_ids,
+        without_reversal(world),
+        world.label,
+        p,
+    )
+    (ob,) = owner_obligations(rep)
+    assert (ob.opened_at, ob.due_at, ob.fulfilled_at, ob.missed) == (30, 76, None, False)
+    assert not [f for f in rep.findings if f.kind == OBLIGATION_OVERDUE]  # deadline not passed
+    c = ReplayComparison(p, world.baseline(), rep, CRITICAL)
+    orphan = f"orphan_duty:{REVERSE}"
+    assert c.open_at_end == (REVERSE,) and c.overdue == ()
+    assert c.open_at_end_blockers == (orphan,)
+    assert orphan in c.remaining and orphan not in c.removed and orphan not in c.masked
+    assert c.summary()["obligations_open_at_end"] == [REVERSE]
+    assert "obligations_overdue" not in c.summary()
+    assert "1 remaining: owner obligation open at incident end" in outcome_text(c)
+    md = comparison_markdown(c)
+    assert OPEN_AT_END_LABEL in md and OVERDUE_LABEL not in md
+    assert f"{orphan}: remaining [{OPEN_AT_END_LABEL}]" in vm.comparison(c).replay_failures
+    text = format_search(SearchResult(c.baseline.clause_set, c.baseline.loaded_clauses, (c,), ()))
+    assert f"{OPEN_AT_END_LABEL}: {orphan}" in text
+    # Same deadline, but the owner acts: fulfilled, so nothing is open at the end.
+    acted = ReplayComparison(p, world.baseline(), replayed(world, p), CRITICAL)
+    assert acted.open_at_end == () and orphan in acted.removed
+
+
+def test_overdue_and_open_at_end_are_distinct(world: World) -> None:
+    p = proposal(owner(10), SHARE)
+    rep = replay(
+        world.scenario,
+        world.roles,
+        world.clauses,
+        world.corpus_ids,
+        without_reversal(world),
+        world.label,
+        p,
+    )
+    c = ReplayComparison(p, world.baseline(), rep, CRITICAL)
+    assert c.overdue == (REVERSE,) and c.open_at_end == ()  # missed, so overdue only

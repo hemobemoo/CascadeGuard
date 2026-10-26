@@ -16,6 +16,7 @@ from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     MASKED_LABEL,
+    OPEN_AT_END_LABEL,
     OVERDUE_LABEL,
     REMOVED_LABEL,
     REQUIRES_AUTHORIZATION_LABEL,
@@ -363,7 +364,9 @@ def comparison(c: ReplayComparison) -> Comparison:
     tags = c.conflict_tags()
     p = c.proposal
     replay_rows = [
-        f"{f}: remaining" + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
+        f"{f}: remaining"
+        + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
+        + (f" [{OPEN_AT_END_LABEL}]" if f in c.open_at_end_blockers else "")
         for f in c.remaining
     ]
     replay_rows += [f"{f}: {MASKED}" for f in c.masked]

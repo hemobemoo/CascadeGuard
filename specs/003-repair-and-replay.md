@@ -51,7 +51,10 @@ never holds, the obligation never opens (owner-only repairs do not resolve). It 
 deadline is on time), the engine records the finding `obligation_overdue`, dated exactly at the
 deadline. That does not discard the repair: the orphan duty the owner edit targets counts as a
 remaining blocker (never removed or masked), and the missed obligation is not a new
-`temporal_infeasibility` conflict. Comparisons with one list `obligations_overdue`. An action
+`temporal_infeasibility` conflict. Comparisons with one list `obligations_overdue`. An owner obligation still open when the
+incident ends (unfulfilled, deadline not yet passed) is not `obligation_overdue`; its orphan
+duty also counts as remaining, never removed or masked, labelled "owner obligation open at
+incident end" (`obligations_open_at_end`; human decision 2026-10-26). An action
 without `owner_obligation_opens_when` gets authority only from an owner edit, as before.
 
 Every role view lists the role's unfulfilled obligations (`RoleView.open_obligations`, including
