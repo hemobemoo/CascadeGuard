@@ -18,7 +18,7 @@ spec 003, architecture), LLM runs, review loop, PR.
 
 **Open items:**
 - **ADR 0002 option A:** see above.
-- **`uae.fl2-2019.art16-exceptions`** (draft; FL 2/2019 PDF, page 5): awaiting the human's review.
+- **`uae.fl2-2019.art16-exceptions`**: reviewed by the human (2026-10-26, commit 98cbd85).
 - **Deferred MINORs** (round 4, see "Known limitations"): cache file check does not re-check
   `prompt_version`/`model_sha256` inside the file; `Usage.calls` counts agent attempts, not
   request retries.
