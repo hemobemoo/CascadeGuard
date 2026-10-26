@@ -52,7 +52,7 @@ Roboto and Material icons from NiceGUI's own package; no CDN, works offline.
 ## Performance (enforced in `tests/e2e`)
 
 Scripted baseline and search computed once at startup and held in memory (0.25 s today); LLM
-(cached only) world, baseline and search computed on first switch, held in memory, never live.
+(cached only) world, baseline and search computed in a background thread at startup (or on first switch if not ready), held in memory, never live.
 Budgets on localhost (CI multiplies them by `CASCADEGUARD_PERF_FACTOR`, default 1, set to 3
 in the workflow; reports give both the measured number and the budget applied): first meaningful paint (verdict strip visible) < 1.5 s; click-to-update
 (stepper, graph highlight, compare, swimlane switch, role-view cell) < 200 ms, median of 5

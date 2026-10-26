@@ -82,14 +82,27 @@ def findings_for(scenario_id: str) -> tuple[vm.EvaluationFinding, ...]:
     path = SCENARIOS_DIR / scenario_id / "evaluation_findings.yaml"
     if not path.is_file():
         return ()
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    data = cast(dict[str, list[dict[str, object]]], raw or {})
+    raw: object = yaml.safe_load(path.read_text(encoding="utf-8"))
     fields = set(vm.EvaluationFinding.__dataclass_fields__)
+    wrong = ValueError(
+        f"{path}: expected 'findings:', a list of entries with exactly the text fields "
+        f"{sorted(fields)}; scripted and llm one of {list(vm.FINDING_OUTCOMES)}"
+    )
+    if not isinstance(raw, dict) or set(cast(dict[object, object], raw)) != {"findings"}:
+        raise wrong
+    entries = cast(dict[str, object], raw)["findings"]
+    if not isinstance(entries, list):
+        raise wrong
     out: list[vm.EvaluationFinding] = []
-    for f in data.get("findings", []):
-        text = {k: v for k, v in f.items() if isinstance(v, str)}
+    for entry in cast(list[object], entries):
+        if not isinstance(entry, dict):
+            raise wrong
+        f = cast(dict[object, object], entry)
+        text = {str(k): v for k, v in f.items() if isinstance(k, str) and isinstance(v, str)}
         if set(f) != fields or set(text) != fields:
-            raise ValueError(f"{path}: each finding needs exactly the text fields {sorted(fields)}")
+            raise wrong
+        if text["scripted"] not in vm.FINDING_OUTCOMES or text["llm"] not in vm.FINDING_OUTCOMES:
+            raise wrong
         out.append(vm.EvaluationFinding(**text))
     return tuple(out)
 
@@ -279,13 +292,18 @@ def index() -> None:
                 good = v.replay_met == v.critical
                 stat(replay, "critical goals met: best replay", "cg-good" if good else "cg-warn")
                 stat(str(v.baseline_failures), "diagnosed failures (baseline)", "cg-bad")
-                stat(str(v.removed), REMOVED_LABEL, "cg-good")
-                stat(str(v.masked), MASKED_LABEL, "cg-warn")
-                stat(str(v.remaining + v.new_conflicts), "remaining or new", "")
+                stat(count(v.removed), REMOVED_LABEL, "cg-good")
+                stat(count(v.masked), MASKED_LABEL, "cg-warn")
+                stat(count(v.remaining), "remaining", "")
+                stat(count(v.new_conflicts), "new conflicts", "")
             if v.repair_id:
                 with ui.row().classes("items-center gap-2 w-full"):
                     css = "cg-badge-safe" if v.badge == vm.SMALLEST_SAFE else "cg-badge-top"
                     ui.label(v.badge).classes(f"cg-badge {css}").props("data-testid=verdict-badge")
+                    if v.authorization:
+                        ui.label(v.authorization).classes("cg-badge cg-badge-auth").props(
+                            "data-testid=verdict-authorization"
+                        )
                     ui.label(v.repair_id).classes("cg-mono")
             ui.label(f"Outcome: {v.outcome}").classes("cg-wrap").props(
                 "data-testid=verdict-outcome"
@@ -296,6 +314,15 @@ def index() -> None:
                 ui.label(b).classes("cg-bad cg-wrap").props("data-testid=incomplete")
 
         verdict_view()
+
+    def count(n: int | None) -> str:
+        return "n/a" if n is None else str(n)
+
+    def incomplete_note() -> None:
+        """The incomplete-run banner, repeated in every section built on the baseline."""
+        d = s.data
+        if d is not None and (b := vm.incomplete_banner(d.baseline.failed_steps)):
+            ui.label(b).classes("cg-bad cg-wrap").props("data-testid=incomplete-note")
 
     def stat(value: str, label: str, css: str) -> None:
         with ui.element("div").classes("cg-stat"):
@@ -345,6 +372,7 @@ def index() -> None:
 
         @ui.refreshable
         def baseline_lanes() -> None:
+            incomplete_note()
             lanes("baseline")
 
         @ui.refreshable
@@ -468,6 +496,7 @@ def index() -> None:
             d = s.data
             if d is None:
                 return
+            incomplete_note()
             with ui.element("div").classes("cg-cards"):
                 for card in vm.diagnosis_cards(d.baseline):
                     with (
