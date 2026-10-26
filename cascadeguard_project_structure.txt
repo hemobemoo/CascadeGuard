@@ -80,14 +80,14 @@ cascadeguard/
 │   │   ├── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
 │   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
 │   │
-│   ├── ui/                           [P4] NiceGUI (no separate frontend)
+│   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006)
 │   │   ├── app.py                    one page: renders only (port 8765, CASCADEGUARD_UI_PORT)
 │   │   └── view_model.py             formats engine results into labelled rows (no decisions);
 │   │                                 replaces the planned timeline/graph_view/replay_view
 │   │                                 modules (spec 004)
 │   │
 │   └── observability/
-│       └── tracing.py                [P6] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
+│       └── tracing.py                [P7] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
 │
 ├── policies/
 │   ├── sources/                      [P0] the 19 original PDFs — never modified; engine never reads them
