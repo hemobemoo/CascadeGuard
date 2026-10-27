@@ -109,6 +109,21 @@ def findings_for(scenario_id: str) -> tuple[vm.EvaluationFinding, ...]:
 
 DISPLAY_FILE = "display.yaml"  # UI-only display labels (spec 006b); nothing else reads it
 DISPLAY_SECTIONS = ("categories", "actions", "goals")
+NOT_PLAIN = set("<>[]{}`*_#|\n")  # markup or formatting: labels are plain one-line text
+
+
+class _UniqueKeys(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate keys (PyYAML would keep the last one silently)."""
+
+
+def _unique_mapping(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict[Any, Any]:
+    keys: list[Any] = [loader.construct_object(k) for k, _ in node.value]  # pyright: ignore[reportUnknownMemberType]
+    if duplicates := sorted({str(k) for k in keys if keys.count(k) > 1}):
+        raise ValueError(f"duplicate keys {duplicates}")
+    return dict(loader.construct_pairs(node))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+
+
+_UniqueKeys.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _unique_mapping)
 
 
 def labels_for(world: World) -> vm.Labels:
@@ -125,7 +140,10 @@ def labels_for(world: World) -> vm.Labels:
     }
     if not path.is_file():
         raise ValueError(f"{path}: missing; the UI needs display labels for this scenario")
-    raw: object = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        raw: object = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeys)
+    except ValueError as exc:
+        raise ValueError(f"{path}: {exc}") from None
     shape = (
         f"{path}: expected incident_summary (one sentence, one line) and {list(DISPLAY_SECTIONS)}, "
         "each mapping exactly the scenario's ids to one-line text labels"
@@ -145,17 +163,20 @@ def labels_for(world: World) -> vm.Labels:
         text = {
             str(k): v
             for k, v in m.items()
-            if isinstance(k, str) and isinstance(v, str) and v.strip() and "\n" not in v
+            if isinstance(k, str) and isinstance(v, str) and v.strip() and not NOT_PLAIN & set(v)
         }
         if set(m) != ids or set(text) != ids:
             extra, missing = sorted(map(str, set(m) - ids)), sorted(ids - set(text))
             raise ValueError(f"{shape}; {key}: unknown {extra}, missing or invalid {missing}")
+        values = list(text.values())
+        if shared := sorted({v for v in values if values.count(v) > 1}):
+            raise ValueError(f"{shape}; {key}: one label for several ids {shared} (not a rename)")
         maps[key] = text
     summary = data["incident_summary"]
     one_sentence = (
         isinstance(summary, str)
         and summary.endswith(".")
-        and "\n" not in summary
+        and not NOT_PLAIN & set(summary)
         and ". " not in summary
     )
     if not one_sentence:
@@ -268,6 +289,18 @@ def chips(items: tuple[vm.Chip, ...]) -> None:
             ui.label(c.label)
 
 
+def named(names: tuple[str, ...], raw: tuple[str, ...]) -> None:
+    """Lines by name, each with its raw-id wording in small print (shown in Expert mode)."""
+    if not names:
+        ui.label("none").classes("cg-muted")
+    ui.html(
+        "".join(
+            f'<div class="cg-wrap" title="{esc(r)}">{esc(n)}</div>{raw_id(r)}'
+            for n, r in zip(names, raw, strict=True)
+        )
+    ).classes("w-full")
+
+
 def lines(items: tuple[str, ...] | list[str], empty: str = "none") -> None:
     with ui.column().classes("gap-0 w-full"):
         if not items and empty:
@@ -298,7 +331,7 @@ def index() -> None:
     def use(data: Bundle) -> None:
         s.data = data
         s.selected = (data.search.ranked or data.search.inconclusive or (None,))[0]
-        s.failure, s.cell = None, None
+        s.failure, s.cell = vm.default_failure(data.baseline), None
 
     with ui.header().classes("cg-header column gap-0 p-0"):
         with ui.row().classes("w-full items-center gap-4 px-6 py-2 no-wrap"):
@@ -621,7 +654,7 @@ def index() -> None:
         rungs: dict[str, ui.element] = {}  # repair id -> its rung, to highlight in place
         # Rungs below the top TOP_RUNGS and the "Show all N" button: built once per refresh and
         # shown or hidden in place (spec 006b; click budget).
-        extra_rungs: list[ui.element] = []
+        extra_rungs: dict[str, ui.element] = {}  # repair id -> rung or inconclusive row
         ladder_button: list[ui.button] = []
 
         @ui.refreshable
@@ -643,7 +676,7 @@ def index() -> None:
                 ):
                     rungs[r.repair_id] = rung
                     if r.rank > vm.TOP_RUNGS:
-                        extra_rungs.append(rung)
+                        extra_rungs[r.repair_id] = rung
                         rung.set_visibility(s.ladder_all)
                     css = "cg-badge-safe" if r.badge == vm.SMALLEST_SAFE else "cg-badge-top"
                     badges = (
@@ -671,26 +704,40 @@ def index() -> None:
                     ui.button("Compare", on_click=lambda _, rid=r.repair_id: compare(rid)).props(
                         "outline dense no-caps"
                     )
-            if len(all_rungs) > vm.TOP_RUNGS:
-                ladder_button.append(
-                    ui.button(ladder_text(len(all_rungs)), on_click=lambda: toggle_ladder()).props(
-                        "flat no-caps data-testid=ladder-toggle"
-                    )
-                )
             unranked = vm.inconclusive(d.search)
             if unranked:
                 with ui.column().classes("w-full gap-0 mt-2").props("data-testid=inconclusive"):
                     ui.label(
                         f"inconclusive ({outcome_definition('inconclusive')}): unranked"
                     ).classes("font-semibold")
-                    for repair_id, label in unranked:
-                        with ui.row().classes("items-center gap-2 w-full no-wrap"):
+                    for i, (repair_id, label) in enumerate(unranked, 1):
+                        with (
+                            ui.row()
+                            .classes("items-center gap-2 w-full no-wrap")
+                            .props(f"data-testid=inconclusive-{i}") as row
+                        ):
                             ui.button(
                                 "Compare", on_click=lambda _, rid=repair_id: compare(rid)
                             ).props("flat dense no-caps")
                             ui.label(f"{repair_id}: {label}").classes("cg-mono")
+                        if i > vm.TOP_RUNGS:  # collapsed the same way as the ranked rungs
+                            extra_rungs[repair_id] = row
+                            row.set_visibility(s.ladder_all)
             ui.label("Discarded by the hard filter").classes("font-semibold mt-2")
-            lines(vm.discarded(d.search))
+            dropped = vm.discarded(d.search)
+            if not dropped:
+                ui.label("none").classes("cg-muted")
+            for i, line in enumerate(dropped, 1):
+                item = ui.label(line).classes("cg-mono whitespace-pre-wrap")
+                if i > vm.TOP_RUNGS:  # collapsed the same way as the ranked rungs
+                    extra_rungs[f"discarded-{i}"] = item
+                    item.set_visibility(s.ladder_all)
+            if extra_rungs:
+                ladder_button.append(
+                    ui.button(ladder_text(ladder_total()), on_click=lambda: toggle_ladder()).props(
+                        "flat no-caps data-testid=ladder-toggle"
+                    )
+                )
 
         ladder_view()
 
@@ -724,12 +771,12 @@ def index() -> None:
                     ui.label("Baseline").classes("cg-h2")
                     lines([f"{g}: {base}" for g, base, _ in v.goals])
                     ui.label("Diagnosed failures").classes("font-semibold")
-                    lines(v.baseline_failures)
+                    named(v.baseline_named, v.baseline_failures)
                 with ui.column().classes("cg-pane gap-1"):
                     ui.label("Replay").classes("cg-h2")
                     lines([f"{g}: {rep}" for g, _, rep in v.goals])
                     ui.label("Diagnosed failures").classes("font-semibold")
-                    lines((*v.removed, *v.replay_failures))
+                    named(v.replay_named, (*v.removed, *v.replay_failures))
             agents_row(c)
             ui.label("Actions whose verdict changed").classes("font-semibold")
             lines(v.changed_actions)
@@ -963,19 +1010,28 @@ def index() -> None:
         s.fade = fade
         refresh_graph()
 
+    def ladder_total() -> int:
+        """Rows behind "Show all N": ranked, inconclusive and discarded repairs."""
+        d = s.data
+        if d is None:
+            return 0
+        return len(d.search.ranked) + len(d.search.inconclusive) + len(d.search.discarded)
+
     def ladder_text(n: int) -> str:
         return f"Show top {vm.TOP_RUNGS}" if s.ladder_all else f"Show all {n}"
 
     def toggle_ladder() -> None:
         s.ladder_all = not s.ladder_all
-        for rung in extra_rungs:
+        for rung in extra_rungs.values():
             rung.set_visibility(s.ladder_all)
         if ladder_button:
-            ladder_button[0].set_text(ladder_text(len(extra_rungs) + vm.TOP_RUNGS))
+            ladder_button[0].set_text(ladder_text(ladder_total()))
 
     def compare(repair_id: str) -> None:
         if s.data is None:
             return
+        if repair_id in extra_rungs and not s.ladder_all:  # never select a hidden rung
+            toggle_ladder()
         s.selected = s.data.search.comparison(repair_id)
         for rid, rung in rungs.items():  # highlight in place; the ladder is not rebuilt
             rung.classes(add="cg-rung-selected") if rid == repair_id else rung.classes(

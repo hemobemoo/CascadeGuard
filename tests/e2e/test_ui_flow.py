@@ -8,6 +8,7 @@ test is also marked `perf`: CI always runs it; locally it runs in the full check
 `-m "not perf"` skips it.
 """
 
+import json
 import os
 import re
 import socket
@@ -17,12 +18,18 @@ import sys
 import time
 import urllib.request
 from collections.abc import Callable, Iterator
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from playwright.sync_api import Browser, Locator, Page, expect, sync_playwright
 
-from cascadeguard.cli import main
+from cascadeguard.agents.cache import DecisionCache
+from cascadeguard.agents.llm import LLMAgent
+from cascadeguard.cli import load_world, main, search_repairs
+from cascadeguard.domain.decisions import AgentDecision
 from cascadeguard.engine.repair_search import MASKED_LABEL
 from cascadeguard.simulation.replay import REPAIR_LABEL
 from cascadeguard.storage.export import DISCLAIMER
@@ -56,7 +63,67 @@ NO_MODEL_LAUNCHER = (
 )
 
 
-def _serve(model: str | None) -> Iterator[str]:
+# Starts the UI with LLM (cached only) reading the decision cache in sys.argv[1] (a recorded
+# test cache), never data/llm_cache.
+RECORDED_LAUNCHER = (
+    "import sys; from pathlib import Path; from cascadeguard import cli; "
+    "from cascadeguard.ui import app; d = Path(sys.argv[1]); "
+    "app.agent_choice = lambda m: cli.AgentChoice(cli.SCRIPTED) if m == 'scripted' "
+    "else cli.AgentChoice(cli.LLM, offline=True, cache_dir=d); app.main()"
+)
+RECORDED_MODEL = "test/e2e-recorded-scripted"  # never a real model id; no call is ever made
+
+
+def _payload(decision: AgentDecision) -> str:
+    """A decision as the model would send it (json_schema shape)."""
+    return json.dumps(
+        {
+            "proposed_actions": [
+                {
+                    "action_type": a.action_type,
+                    "target": a.target,
+                    "parameters": [{"name": k, "value": v} for k, v in a.parameters.items()],
+                }
+                for a in decision.proposed_actions
+            ],
+            "rationale": decision.rationale,
+            "citations": [c.model_dump() for c in decision.citations],
+            "uncertainty": list(decision.uncertainty),
+            "gap_claims": [g.model_dump() for g in decision.gap_claims],
+        }
+    )
+
+
+def _record_cache(directory: Path, model: str = "", baseline_only: bool = False) -> None:
+    """Fill a decision cache with the scripted decisions, through a stand-in client (no API
+    call), for the baseline and every replay of the repair search (or the baseline only)."""
+    world = load_world(SCENARIO)
+    base_views = world.baseline().views
+
+    def create(**request: Any) -> Any:
+        v = json.loads(request["messages"][1]["content"])
+        view = next(x for x in base_views if x.role_id == v["role_id"] and x.minute == v["minute"])
+        message = SimpleNamespace(content=_payload(world.agents[v["role_id"]].observe(view)))
+        usage = SimpleNamespace(prompt_tokens=0, completion_tokens=0, model_extra={})
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=usage)
+
+    client = cast(
+        Any, SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    )
+    cache = DecisionCache(directory)
+    roles = tuple(r.id for r in world.roles.roles)
+    agents = {
+        r: LLMAgent(r, model or RECORDED_MODEL, client, cache, roles, output_mode="json_schema")
+        for r in roles
+    }
+    recorded = replace(world, agents=dict(agents), cache=cache)
+    if baseline_only:
+        recorded.baseline()
+    else:
+        search_repairs(SCENARIO, world=recorded)
+
+
+def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str]:
     port = _free_port()
     # Without pytest's variables: NiceGUI switches to its own test mode when it sees them.
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
@@ -66,6 +133,7 @@ def _serve(model: str | None) -> Iterator[str]:
     if model is not None:
         env["CASCADEGUARD_MODEL"] = model
     command = ["-m", "cascadeguard.ui.app"] if model is not None else ["-c", NO_MODEL_LAUNCHER]
+    command = launcher or command
     process = subprocess.Popen(
         [sys.executable, *command],
         env=env,
@@ -98,6 +166,21 @@ def server() -> Iterator[str]:
 @pytest.fixture(scope="module")
 def server_without_model() -> Iterator[str]:
     yield from _serve(None)
+
+
+@pytest.fixture(scope="module")
+def server_recorded(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+    cache = tmp_path_factory.mktemp("recorded_cache")
+    _record_cache(cache)
+    yield from _serve(RECORDED_MODEL, ["-c", RECORDED_LAUNCHER, str(cache)])
+
+
+@pytest.fixture(scope="module")
+def server_baseline_cached(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
+    """Only the baseline is cached: every replay whose views change misses (inconclusive)."""
+    cache = tmp_path_factory.mktemp("baseline_cache")
+    _record_cache(cache, "test/e2e-recorded-baseline-only", baseline_only=True)
+    yield from _serve("test/e2e-recorded-baseline-only", ["-c", RECORDED_LAUNCHER, str(cache)])
 
 
 @pytest.fixture(scope="module")
@@ -149,7 +232,8 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
         "Hypothetical scenario with synthetic data"
     )
     expect(page.locator('[data-testid="verdict-edit"]').first).to_have_text(
-        "Assign reverse automated lockouts to Health Service Operator, 30-minute deadline"
+        "Assign reverse automated lockouts to Health Service Operator, 30-minute deadline "
+        f"[{REPAIR_LABEL}]"
     )
     expect(a.get_by_text(TOP, exact=True)).to_be_visible()
     for key in "bcdef":
@@ -195,22 +279,32 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
         "e => Object.fromEntries(getElement(e).chart.getOption().series[0].data"
         ".map(n => [n.id, n.name]))"
     )
-    before = handle.evaluate(sizes)
     assert handle.evaluate(names)["action:reverse_automated_lockouts"] == (
         "Reverse automated lockouts"
     )
-    c.locator(".q-field", has_text="Highlight").click()
+    # Spec 006b: the graph opens on one failure (the first diagnosis card's), the rest faded.
+    picker = c.locator(".q-field", has_text="Highlight")
+    expect(picker).to_contain_text("orphan duty: Activate fallback channel")
+    opened, opened_opacity = handle.evaluate(sizes), handle.evaluate(opacity)
+    assert opened["action:activate_fallback_channel"] == 26
+    assert opened["category:network_incident_status"] == 12
+    assert opened_opacity["category:network_incident_status"] == 0.15
+    # "All diagnosed failures": every failure highlighted, nothing faded.
+    picker.click()
+    page.get_by_role("option", name="all diagnosed failures").click()
+    page.wait_for_function(f"() => {GRAPH_FADED} === false")
+    before = handle.evaluate(sizes)
+    assert before["category:network_incident_status"] == 26
+    assert all(v == 1 for v in handle.evaluate(opacity).values())
+    picker.click()
     page.get_by_role("option", name="orphan duty: Reverse automated lockouts").click()
-    expect(c.locator(".q-field", has_text="Highlight")).to_contain_text(
-        "Reverse automated lockouts"
-    )
+    expect(picker).to_contain_text("Reverse automated lockouts")
     page.wait_for_function(
         "() => getElement(document.querySelector('[data-testid=graph]')).chart.getOption()"
         ".series[0].data"
         ".find(n => n.id === 'category:network_incident_status').symbolSize === 12"
     )
     after = handle.evaluate(sizes)
-    assert before["category:network_incident_status"] == 26  # every failure highlighted
     assert after["category:network_incident_status"] == 12  # not part of this failure
     assert after["action:reverse_automated_lockouts"] == 26
     # Everything outside the selected failure's subgraph is faded; the toggle shows it all.
@@ -503,4 +597,72 @@ def test_llm_mode_without_a_model_shows_no_result(
     pg.get_by_text("Scripted", exact=True).click()
     expect(pg.locator('[data-testid="verdict-badge"]')).to_have_text(SMALLEST_SAFE)
     expect(pg.locator('[data-testid="verdict-error"]')).to_have_count(0)
+    context.close()
+
+
+def test_guided_flow_with_cached_llm_agents(server_recorded: str, browser: Browser) -> None:
+    """Spec 006b "Done when": the guided flow with cached LLM agents (a cache recorded from the
+    scripted decisions, read offline) shows names, sentences, the top-3 ladder, the faded
+    subgraph and the summary."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_recorded)
+    pg.get_by_text("LLM (cached only)", exact=True).click()
+    agents = pg.locator('[data-testid="agents-label"]')
+    expect(agents).to_contain_text("offline: decision cache only", timeout=TIMEOUT_MS)
+    expect(agents).to_contain_text(", 0 not cached")  # every step came from the cache
+    expect(pg.locator('[data-testid="incident-summary"]')).to_contain_text("Hypothetical scenario")
+    expect(pg.locator('[data-testid="verdict-badge"]')).to_have_text(SMALLEST_SAFE)
+    expect(pg.locator('[data-testid="verdict-edit"]').first).to_have_text(
+        "Assign reverse automated lockouts to Health Service Operator, 30-minute deadline "
+        f"[{REPAIR_LABEL}]"
+    )
+    pg.locator('[data-testid="step-b"]').click()
+    expect(section(pg, "b").get_by_text("Telecom Operator", exact=True).first).to_be_visible()
+    pg.locator('[data-testid="step-c"]').click()
+    expect(section(pg, "c").locator(".q-field", has_text="Highlight")).to_contain_text(
+        "orphan duty: Activate fallback channel"
+    )
+    pg.wait_for_function(f"() => {GRAPH_FADED} === true")
+    pg.locator('[data-testid="step-d"]').click()
+    expect(
+        pg.locator('[data-testid="failure-orphan_duty:reverse_automated_lockouts"]')
+    ).to_have_text("Reverse automated lockouts")
+    pg.locator('[data-testid="step-e"]').click()
+    expect(pg.locator('[data-testid="rung-1"]')).to_contain_text(
+        "roles touched: Health Service Operator, Telecom Operator"
+    )
+    expect(pg.locator('[data-testid="rung-4"]')).to_be_hidden()
+    expect(pg.locator('[data-testid="ladder-toggle"]')).to_have_text(re.compile(r"Show all \d+"))
+    pg.locator('[data-testid="rung-1"]').get_by_role("button", name="Compare").click()
+    f = section(pg, "f")
+    expect(f.locator('[data-testid="comparison-edit"]').first).to_contain_text(
+        "Assign reverse automated lockouts"
+    )
+    expect(f.get_by_text("Patient access restored: met at T+60")).to_be_visible()
+    row = pg.locator('[data-testid="agents-row"]')
+    expect(row).to_contain_text("Scripted: resolved")
+    expect(row).to_contain_text("LLM (cached): resolved")
+    context.close()
+
+
+def test_inconclusive_rows_collapse_with_the_ladder(
+    server_baseline_cached: str, browser: Browser
+) -> None:
+    """Spec 006b c: inconclusive repairs are collapsed the same way as ranked rungs."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_baseline_cached)
+    pg.get_by_text("Expert", exact=True).click()
+    pg.get_by_text("LLM (cached only)", exact=True).click()
+    expect(pg.locator('[data-testid="inconclusive"]')).to_be_visible(timeout=TIMEOUT_MS)
+    expect(pg.locator('[data-testid="inconclusive-3"]')).to_be_visible()
+    expect(pg.locator('[data-testid="inconclusive-4"]')).to_be_hidden()
+    toggle = pg.locator('[data-testid="ladder-toggle"]')
+    expect(toggle).to_have_text(re.compile(r"Show all \d+"))
+    toggle.click()
+    expect(pg.locator('[data-testid="inconclusive-4"]')).to_be_visible()
+    expect(toggle).to_have_text("Show top 3")
     context.close()

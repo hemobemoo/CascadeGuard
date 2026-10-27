@@ -95,3 +95,18 @@ and all checks pass.
 2. Role names: the existing `name` field, unchanged (e.g. "Health Service Operator").
 3. Incident summary: drafted by the agent within the gate-7 constraints; the human approves
    the final wording before merge.
+
+## Implementation notes (review round 1, 2026-10-27)
+
+- d: the graph opens on one failure (the first in the diagnosis cards' order), the rest faded;
+  "all diagnosed failures" shows every node at full opacity, as written above.
+- c: ranked rungs, inconclusive rows and discarded repairs beyond three are all behind the one
+  "Show all N" toggle (N counts all three lists). No control can select a hidden rung today;
+  `compare` still expands the list first if it ever is asked to.
+- b: every plain-language sentence carries the hypothetical repair-rule label (verdict strip,
+  ladder, split screen).
+- a: the split screen's failure lines are shown by name ("orphan duty: Reverse automated
+  lockouts: masked ..."), each with its raw-id wording in small print. Engine-written text
+  (failure descriptions, outcome wording, reason codes) keeps its ids.
+- `display.yaml` labels must be unique within a section, plain text (no markup or brackets),
+  and the file may not repeat a key.
