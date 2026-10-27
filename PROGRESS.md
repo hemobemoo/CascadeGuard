@@ -12,8 +12,11 @@ tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report:
 `docs/review/adr-0002-option-a-report.md`.
 
-**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR #8; human decisions 2026-10-27 implemented,
-phase-auditor round 3 PASS, CI green; merge on the human's instruction of 2026-10-27.**
+**Phase 6 — Demo UI v2: merged to main via PR #8 (merge commit `883fb43`), tagged `phase-6`**
+(2026-10-27, on the human's instruction, after phase-auditor round 3 PASS and green CI).
+
+**Phase 6b — Demo UI polish: spec addendum `specs/006b-demo-ui-polish.md` on `phase-6b-polish`,
+waiting for the human's approval before any code.**
 Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
@@ -29,7 +32,7 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
 ## Done
 
-### Phase 6 — Demo UI v2 (branch `phase-6-ui`, PR #8)
+### Phase 6 — Demo UI v2 (PR #8, merged `883fb43`, tag `phase-6`)
 - Scope decision (human, 2026-10-26): Phase 6 = Demo UI v2, tracing moves to Phase 7; recorded
   in `START_PROMPT.md` (c529306), `AGENTS.md` (Phoenix is Phase 7, 4fb2515, approved by the
   human in chat) and the structure file.
@@ -772,8 +775,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6:** the human answered every item on 2026-10-27 (see Done, "Human decisions
-2026-10-27"); merge after phase-auditor round 3 passes and CI is green.
+**Phase 6b (2026-10-27):** approve `specs/006b-demo-ui-polish.md`, and answer its three
+questions (labels in a UI-only `display.yaml`; the existing role `name`; who writes the incident
+summary).
 
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
@@ -868,9 +872,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase-auditor round 3 on the 2026-10-27 changes; when it passes and CI is green, merge PR #8,
-tag `phase-6`. Then the Phase 6b polish spec addendum (branch `phase-6b-polish`), stop for the
-human's approval before code. Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
+The human approves `specs/006b-demo-ui-polish.md` (branch `phase-6b-polish`) and answers its
+questions; then build it, with before/after screenshots in `docs/review/phase-6b-polish/`.
+Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
