@@ -1,7 +1,9 @@
 """Web transcriptions in policies/sources/web/: the manifest table and the extracted records."""
 
+import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 from types import ModuleType
 
@@ -63,6 +65,12 @@ A = "https://e.org/a"
         ([row("a.pdf", "http://e.org/a")], ["a.pdf"], "https"),
         ([row("a.pdf", "")], ["a.pdf"], "https"),
         ([row("a.pdf", f"{A} https://e.org/b")], ["a.pdf"], "https"),
+        ([row("a.pdf", "https://")], ["a.pdf"], "https"),
+        (
+            [row("a.pdf", A, "2026-13-45 | Issuer | 2024 | policy | unverified")],
+            ["a.pdf"],
+            "retrieval",
+        ),
         ([row("a.pdf", A, "2026-10-27 | Issuer | 2024 | policy")], ["a.pdf"], "columns"),
         (
             [row("a.pdf", A, "27 Oct 2026 | Issuer | 2024 | policy | unverified")],
@@ -117,3 +125,21 @@ def test_every_web_pdf_is_extracted_with_its_url_and_marked_web() -> None:
             )
     # Originals and OCR copies are not marked web.
     assert all("web" not in e for k, e in inventory.items() if not k.startswith("web/"))
+
+
+def test_web_pdfs_are_byte_identical_to_the_hashes_recorded_at_placement() -> None:
+    """MANIFEST.md records each file's SHA-256 at placement; the files are never modified."""
+    recorded = dict(
+        (name, digest)
+        for digest, name in re.findall(
+            r"^`([0-9a-f]{64})`\s+`([^`]+\.pdf)`$", (WEB / "MANIFEST.md").read_text("utf-8"), re.M
+        )
+    )
+    pdfs = sorted(p.name for p in WEB.glob("*.pdf"))
+    assert sorted(recorded) == pdfs
+    for name in pdfs:
+        assert hashlib.sha256((WEB / name).read_bytes()).hexdigest() == recorded[name], name
+
+
+def test_repository_root_holds_no_web_transcription() -> None:
+    assert not [p.name for p in ROOT.glob("0[0-7]_*")]

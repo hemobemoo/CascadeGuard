@@ -65,7 +65,10 @@ triage `docs/review/phase-6c-clause-triage.md`. See "Waiting on human".
   BLOCKER: `./web/`, `Web/`, `./ocr/` spellings skipped the web and OCR flag rules. Fixed in code
   (`_in_dir` in `domain/policies.py`), tests added. MINORs fixed: quote check matches the record's
   `source_file`; extractor refuses duplicate stems; manifest parser checks all seven columns;
-  structure file; UNESCO quotes without headings; report wording. evidence-auditor BLOCKER is a
+  structure file; UNESCO quotes without headings; report wording. Round 2: evidence-auditor FAIL
+  (same human-only BLOCKER; no clause FIX), test-breaker PASS (MINORs fixed: case-insensitive stem
+  clash, URL host and real retrieval date, tests select web clauses like the model, real
+  draft-count comparison incl. Markdown, SHA-256 of the seven files in MANIFEST.md and tested). evidence-auditor BLOCKER is a
   human item (above). Triage `docs/review/phase-6c-clause-triage.md`.
 
 Verify:
@@ -868,6 +871,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   the transcriber's wording, not the Cabinet's; check against the Cabinet page or re-quote from
   the strategy PDF.
 - **OECD:** record whether the UAE adheres to OECD/LEGAL/0449 when the instrument is placed.
+- **Tests after gate 1 (test-breaker question):** `test_web_sources_impact.py` and
+  `test_repository_web_clauses_are_flagged_and_never_binding` pin the web clauses as drafts with
+  unchanged views. When you review any of them these tests will fail by design; approve rewriting
+  them then as "reviewed web clauses reach only `policy_legal_adviser`; baseline, search and
+  goldens unchanged" (so the edit is not a review-loop rule 4 violation).
+- **Illustrative clause with a `source_file` (test-breaker, pre-existing):** an `illustrative`
+  clause may still name a source file and skip the verbatim check; refuse that in the model?
+- **binding for 01 (evidence-auditor round 2):** `false` per your instructions, or `unknown`
+  ("national public policy; legal effect not verified")?
 - **Gate 1, draft clauses for review** (all in `policies/reviewed/web_sources.yaml`):
   `uae.mohap-smart-health.p2-coordination`, `uae.mohap-smart-health.p6-cybersecurity`,
   `uae.mohap-smart-health.p7-liability`, `uae.cyber-strategy-2025.governance-aim`,

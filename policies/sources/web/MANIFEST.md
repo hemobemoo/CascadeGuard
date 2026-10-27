@@ -34,6 +34,18 @@ Notes on the rows:
 - Document type for 01, 02 and 05 is "policy" (public policy, not legislation); none of the seven
   is a law.
 
+## SHA-256 at placement (2026-10-28)
+
+Computed in the repository root before the move and again after it (equal).
+
+`d37fd71d5cfc16817146d32c10fd52e13c94ffe1e2fdffec2e18d39a95182ac9`  `01_uae_smart_health_ai_policy.pdf`
+`327f4c13475eb1e8d8519469b546c45b4b8816809c54eca38528cfa0d2642abf`  `02_uae_international_ai_policy.pdf`
+`e4d417ed1190f557cebd01e1fd53db7bd19d1f5bb9cfac227f416aa851b1cacb`  `03_uae_national_cybersecurity_strategy.pdf`
+`f9a8e43f628b87235fee4ed7870dde5a9d42d98039c0749580e47765eebe1b24`  `04_uae_digital_government_strategy_2025.pdf`
+`30f40edf830b5877280b92643b618e5a48e61d60522871eb04ae3a1df5587264`  `05_uae_ai_government_policies.pdf`
+`da0561e19e82b2c54d091b1f52cf96bb49b100af26a03216f84df251b362b090`  `06_unesco_ai_ethics_recommendation.pdf`
+`f0d87ceb371561d9659610ceca4ca55c83603f929da9be43820ef59330d4fc67`  `07_oecd_ai_principles.pdf`
+
 ## The human's original note (`00_manifest.md`, unchanged below this line)
 
 # CascadeGuard — new official sources to add

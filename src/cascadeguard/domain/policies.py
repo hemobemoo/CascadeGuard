@@ -18,7 +18,7 @@ CLAUSE_ID_PATTERN = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
 DOCUMENT_DATE_PATTERN = r"^(\d{4}(-\d{2}(-\d{2})?)?|unknown)$"
 
 
-def _in_dir(source_file: str | None, directory: str) -> bool:
+def in_source_dir(source_file: str | None, directory: str) -> bool:
     """Does a plain source path lie in this sources subdirectory ("ocr/", "web/")? Ignores "."
     parts and case (Windows and macOS file systems ignore case). A path with ".." or a backslash
     is left to the loader, which refuses it for its path."""
@@ -110,9 +110,9 @@ class PolicyClause(DomainModel):
             raise ValueError(f"a {self.status} clause must record source_file and page")
         if self.source_file is not None and not self.source_file.lower().endswith(".pdf"):
             raise ValueError("source_file must be a PDF filename")
-        if _in_dir(self.source_file, OCR_DIR) and OCR_FLAG not in (self.notes or ""):
+        if in_source_dir(self.source_file, OCR_DIR) and OCR_FLAG not in (self.notes or ""):
             raise ValueError(f"a clause quoted from an OCR'd copy must say {OCR_FLAG!r} in notes")
-        if _in_dir(self.source_file, WEB_DIR):
+        if in_source_dir(self.source_file, WEB_DIR):
             if WEB_FLAG not in (self.notes or ""):
                 raise ValueError(f"a clause quoted from a web transcription must say {WEB_FLAG!r}")
             if self.binding is True:  # an unverified transcription is never shown as binding text

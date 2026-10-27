@@ -6,7 +6,14 @@ from typing import Any
 import pytest
 import yaml
 
-from cascadeguard.domain.policies import ELISION, WEB_FLAG, ClauseStatus, PolicyClause
+from cascadeguard.domain.policies import (
+    ELISION,
+    WEB_DIR,
+    WEB_FLAG,
+    ClauseStatus,
+    PolicyClause,
+    in_source_dir,
+)
 from cascadeguard.knowledge.loader import (
     ClauseLoadError,
     load_clauses,
@@ -161,6 +168,7 @@ def test_engine_loads_only_reviewed_and_illustrative(dirs: tuple[Path, Path]) ->
         ({"source_file": "./web/page.pdf", "binding": False}, "dotted web path, no flag"),
         ({"source_file": "WEB/page.pdf", "binding": False}, "upper-case web path, no flag"),
         ({"source_file": "./ocr/doc.ocr.pdf"}, "dotted OCR path, no flag"),
+        ({"source_file": "Web/page.pdf", "binding": False}, "mixed-case web path, no flag"),
         ({"normalized": {k: v for k, v in STATED.items() if k != "basis"}}, "no basis"),
         ({"normalized": {**STATED, "basis": "assumed"}}, "unknown basis"),
         ({"normalized": {**STATED, "basis": "interpreted"}}, "interpreted, no mapping_note"),
@@ -254,7 +262,7 @@ def test_web_transcription_clause_loads_and_its_quote_is_checked(
 
 
 def test_repository_web_clauses_are_flagged_and_never_binding() -> None:
-    web = [c for c in load_clauses() if (c.source_file or "").startswith("web/")]
+    web = [c for c in load_clauses() if in_source_dir(c.source_file, WEB_DIR)]
     assert web
     for clause in web:
         assert WEB_FLAG in (clause.notes or ""), clause.id
