@@ -61,7 +61,10 @@ The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use ano
 
 The browser smoke test (`tests/e2e`, marker `e2e`) needs Chromium once:
 `uv run playwright install chromium`. Skip it locally with `uv run pytest -m "not e2e"`;
-CI always runs it.
+CI always runs it. The UI timing budgets (spec 006: paint < 1.5 s, clicks < 200 ms; median of 5
+after one warm-up, a click over budget re-measured once and failing only if both medians are
+over) are marked `perf`: they run in the full check, CI applies
+`CASCADEGUARD_PERF_FACTOR=3`, and `uv run pytest -m "not perf"` skips them locally.
 
 ## Checks
 

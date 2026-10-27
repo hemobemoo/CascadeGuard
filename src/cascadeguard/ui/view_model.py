@@ -23,8 +23,11 @@ from cascadeguard.engine.repair_search import (
     REMOVED_LABEL,
     REQUIRES_AUTHORIZATION_LABEL,
     SCRIPTED_LIMIT_NOTE,
+    SMALLEST_SAFE_LABEL,
+    TOP_RANKED_LABEL,
     ReplayComparison,
     SearchResult,
+    is_smallest_safe,
     outcome_text,
 )
 from cascadeguard.simulation.orchestrator import RunResult
@@ -465,8 +468,8 @@ def export_files(
 # --- Demo UI v2 (spec 006): verdict strip, swimlanes, diagnosis cards, ladder, scripted vs LLM --
 
 OPEN_AT_END_STATE = OPEN_AT_END_LABEL.split(": ", 1)[0].removeprefix("owner obligation ")
-SMALLEST_SAFE = "smallest safe repair"
-TOP_RANKED = "top-ranked repair"
+SMALLEST_SAFE = SMALLEST_SAFE_LABEL
+TOP_RANKED = TOP_RANKED_LABEL
 STATUS_CLASSES = (  # (label prefix, CSS class); the label text is always shown next to the colour
     (REPAIR_LABEL, "cg-status-repair"),
     ("reviewed (interpreted)", "cg-status-reviewed-interpreted"),
@@ -521,13 +524,11 @@ def _goals_met(result: RunResult, critical: tuple[str, ...]) -> int:
 
 
 def badge(c: ReplayComparison, rank: int) -> str:
-    """Rank 1 is "smallest safe repair" only if clean, complete and resolved (human decision
-    2026-10-26); otherwise "top-ranked repair" with its outcome. Other ranks get no badge."""
+    """Display of the engine's `is_smallest_safe`: rank 1 gets SMALLEST_SAFE or "top-ranked
+    repair (<outcome>)" (the outcome text beside it carries the caveat); other ranks no badge."""
     if rank != 1:
         return ""
-    if not c.new_conflicts and not c.failed_steps and c.outcome == "resolved":
-        return SMALLEST_SAFE
-    return f"{TOP_RANKED} ({c.outcome})"
+    return SMALLEST_SAFE if is_smallest_safe(c, rank) else f"{TOP_RANKED} ({c.outcome})"
 
 
 def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario) -> Verdict:

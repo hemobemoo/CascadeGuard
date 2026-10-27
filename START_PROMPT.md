@@ -177,6 +177,9 @@ professional, clearly CascadeGuard, and fast (NiceGUI only, no separate JS front
 dependency without asking). Spec `specs/006-demo-ui-v2.md`, approved by the human before any
 code. (Human decision 2026-10-26: Demo UI v2 is Phase 6; tracing moves to Phase 7.)
 
+Phase 6 is done when the guided flow passes in the browser with scripted and cached LLM agents,
+the perf budgets pass in CI, and all checks pass.
+
 **Phase 7 — Tracing (optional).** OpenTelemetry/OpenInference to Phoenix for retrieval,
 agent decisions, constraint checks, and replay. Off by default; enabled by an env flag.
 
