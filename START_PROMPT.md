@@ -180,6 +180,14 @@ code. (Human decision 2026-10-26: Demo UI v2 is Phase 6; tracing moves to Phase 
 Phase 6 is done when the guided flow passes in the browser with scripted and cached LLM agents,
 the perf budgets pass in CI, and all checks pass.
 
+**Phase 6c — Policy source expansion.** Place the seven web transcriptions of official pages
+in `policies/sources/web/` with a complete `MANIFEST.md`, extract them, and draft (never
+review) only the clauses the scenario uses. Spec `specs/006c-policy-sources.md`.
+
+Phase 6c is done when the seven files are placed and extracted, `MANIFEST.md` is complete,
+draft clauses pass all checks, the impact report shows no change to baseline, views or
+goldens, and all checks pass.
+
 **Phase 7 — Tracing (optional).** OpenTelemetry/OpenInference to Phoenix for retrieval,
 agent decisions, constraint checks, and replay. Off by default; enabled by an env flag.
 
