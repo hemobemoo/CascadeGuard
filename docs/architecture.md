@@ -27,7 +27,8 @@ simulation/orchestrator  (deterministic code, not an agent)
   needs_prior and achieves. Diagnosis reads it, and the UI draws it.
 - **Repairs (Phase 3).** `engine/repair_search.py` builds candidate edits from the diagnosed
   failures (closed grammar, `domain/repairs.py`), discards any that would lift a restriction,
-  and ranks the rest by replay. `simulation/replay.py` applies a repair as hypothetical rules
+  and ranks the rest by replay; `is_smallest_safe` (read-only) decides the "smallest safe
+  repair" badge the UI shows (Phase 6). `simulation/replay.py` applies a repair as hypothetical rules
   (`repair.<edit id>`, illustrative), trigger events and one boundary widening, then reruns the
   identical incident through the same orchestrator. `storage/audit.py` (DuckDB) records runs
   and comparisons; `storage/export.py` writes JSON and Markdown.
@@ -47,6 +48,15 @@ baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ─�
 ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResult, ReplayComparison
           ──> ui/view_model.py (labels: status, hypothetical rule, masked, tags, agent statement)
 ```
+
+- **Demo UI v2 (Phase 6, spec 006).** At startup `ui/app.py` computes each scenario's scripted
+  baseline and repair search once (and, in the background, the LLM cache-only ones) and holds
+  them in memory; the page opens with the verdict and streams the other sections (swimlanes,
+  cascade graph, diagnosis cards, repair ladder, split screen, exports) over the websocket.
+  Guided mode shows one section at a time; Expert shows all. Clicks refresh what is on screen
+  first. `ui/theme.css` holds the design tokens; `scenarios/<id>/evaluation_findings.yaml`
+  holds human-worded findings shown only when the computed verdicts match. The UI never makes
+  live LLM calls.
 
 - **LLM agents (Phase 5).** `agents/llm.py` plays a role with the model in `.env` (OpenRouter,
   `openai` SDK, temperature 0, strict `json_schema` built from `AgentDecision`,

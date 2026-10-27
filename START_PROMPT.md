@@ -172,7 +172,15 @@ labels visible. Done when the full flow works in the browser using scripted agen
 Done when an LLM run completes, unknown citations are rejected as findings, and a replay
 reuses cached decisions for unchanged steps.
 
-**Phase 6 — Tracing (optional).** OpenTelemetry/OpenInference to Phoenix for retrieval,
+**Phase 6 — Demo UI v2.** The NiceGUI demo becomes the primary, judge-facing product:
+professional, clearly CascadeGuard, and fast (NiceGUI only, no separate JS frontend, no new
+dependency without asking). Spec `specs/006-demo-ui-v2.md`, approved by the human before any
+code. (Human decision 2026-10-26: Demo UI v2 is Phase 6; tracing moves to Phase 7.)
+
+Phase 6 is done when the guided flow passes in the browser with scripted and cached LLM agents,
+the perf budgets pass in CI, and all checks pass.
+
+**Phase 7 — Tracing (optional).** OpenTelemetry/OpenInference to Phoenix for retrieval,
 agent decisions, constraint checks, and replay. Off by default; enabled by an env flag.
 
 ## Definition of done for the slice

@@ -11,8 +11,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
+from cascadeguard.domain.findings import FailureCategory
+from cascadeguard.domain.repairs import OWNER_RULE_PREFIX
 from cascadeguard.domain.scenario import Scenario
-from cascadeguard.engine.constraints import AGENT_STATEMENT
+from cascadeguard.engine.constraints import AGENT_STATEMENT, OBLIGATION_OVERDUE
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     MASKED_LABEL,
@@ -21,12 +23,16 @@ from cascadeguard.engine.repair_search import (
     REMOVED_LABEL,
     REQUIRES_AUTHORIZATION_LABEL,
     SCRIPTED_LIMIT_NOTE,
+    SMALLEST_SAFE_LABEL,
+    TOP_RANKED_LABEL,
     ReplayComparison,
     SearchResult,
+    is_smallest_safe,
     outcome_text,
 )
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.simulation.replay import REPAIR_LABEL
+from cascadeguard.simulation.state import ObligationStatus
 from cascadeguard.storage.export import (
     DISCLAIMER as DISCLAIMER,
 )
@@ -225,14 +231,31 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
         kind, ident = n.split(":", 1)
         return f"{ident} [{labels.get(ident, 'not loaded')}]" if kind == "clause" else ident
 
+    # Fixed layered layout, one column per kind (roles -> actions -> categories -> clauses ->
+    # goals): the same positions for every highlight, so an update only restyles (no force
+    # simulation in the browser; spec 006 click budget).
+    columns: dict[str, list[str]] = {k: [] for k in KINDS}
+    for n in names:
+        columns[n.split(":", 1)[0]].append(n)
+    position = {
+        n: (300 * KINDS.index(kind), 30 * row)
+        for kind, members in columns.items()
+        for row, n in enumerate(members)
+    }
     nodes = [
         {
             "id": n,
             "name": label(n),
+            "x": position[n][0],
+            "y": position[n][1],
             "category": KINDS.index(n.split(":", 1)[0]),
             "symbolSize": 26 if n in hot else 12,
             "itemStyle": {"borderColor": "#c62828", "borderWidth": 4} if n in hot else {},
-            "label": {"show": n in hot or n.startswith("role:"), "color": "#1f2937"},
+            "label": {
+                "show": n in hot or n.startswith("role:"),
+                "color": "#1f2937",
+                "position": "right",
+            },
         }
         for n in names
     ]
@@ -253,10 +276,9 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
         "series": [
             {
                 "type": "graph",
-                "layout": "force",
+                "layout": "none",
                 "roam": True,
-                "draggable": True,
-                "force": {"repulsion": 160, "edgeLength": 70},
+                "lineStyle": {"curveness": 0.15},
                 "categories": [{"name": k} for k in KINDS],
                 "edgeSymbol": ["none", "arrow"],
                 "data": nodes,
@@ -441,3 +463,335 @@ def export_files(
             ExportFile("Replay Markdown", f"{name}.md", comparison_markdown(selected)),
         ]
     return files
+
+
+# --- Demo UI v2 (spec 006): verdict strip, swimlanes, diagnosis cards, ladder, scripted vs LLM --
+
+OPEN_AT_END_STATE = OPEN_AT_END_LABEL.split(": ", 1)[0].removeprefix("owner obligation ")
+SMALLEST_SAFE = SMALLEST_SAFE_LABEL
+TOP_RANKED = TOP_RANKED_LABEL
+STATUS_CLASSES = (  # (label prefix, CSS class); the label text is always shown next to the colour
+    (REPAIR_LABEL, "cg-status-repair"),
+    ("reviewed (interpreted)", "cg-status-reviewed-interpreted"),
+    ("reviewed", "cg-status-reviewed"),
+    ("draft", "cg-status-draft"),
+    ("illustrative", "cg-status-illustrative"),
+)
+
+
+def status_class(label: str) -> str:
+    """The fixed CSS class for a clause status label (colour only; the label is still shown)."""
+    return next((c for prefix, c in STATUS_CLASSES if label.startswith(prefix)), "cg-status-none")
+
+
+@dataclass(frozen=True, slots=True)
+class Chip:
+    text: str  # clause id, or a fact id
+    label: str  # the status label (clauses) or the data category (facts)
+    css: str
+
+
+def clause_chips(ids: Iterable[str], labels: dict[str, str]) -> tuple[Chip, ...]:
+    return tuple(
+        Chip(c, labels.get(c, "not loaded"), status_class(labels.get(c, "not loaded"))) for c in ids
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class Verdict:
+    critical: int  # number of critical goals
+    baseline_met: int  # critical goals met in the baseline
+    baseline_failures: int
+    repair_id: str  # "" when no complete replay ranked
+    badge: str  # SMALLEST_SAFE, or "top-ranked repair (partial)"
+    outcome: str  # engine wording: outcome, definition, masked count, caveats
+    replay_met: int | None  # critical goals met in the best replay; None: no complete replay
+    removed: int | None  # None (shown "n/a") when no complete replay is ranked
+    masked: int | None
+    remaining: int | None
+    new_conflicts: int | None
+    caveat: str = ""  # the baseline's invalid_output caveat, shown even with nothing ranked
+    authorization: str = ""  # REQUIRES_AUTHORIZATION when the best repair needs approval
+
+
+def critical_goals(scenario: Scenario) -> tuple[str, ...]:
+    return tuple(g.id for g in scenario.recovery_goals if g.critical)
+
+
+def _goals_met(result: RunResult, critical: tuple[str, ...]) -> int:
+    met = dict(result.goals)
+    return sum(1 for g in critical if met.get(g) is not None)
+
+
+def badge(c: ReplayComparison, rank: int) -> str:
+    """Display of the engine's `is_smallest_safe`: rank 1 gets SMALLEST_SAFE or "top-ranked
+    repair (<outcome>)" (the outcome text beside it carries the caveat); other ranks no badge."""
+    if rank != 1:
+        return ""
+    return SMALLEST_SAFE if is_smallest_safe(c, rank) else f"{TOP_RANKED} ({c.outcome})"
+
+
+def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario) -> Verdict:
+    critical = critical_goals(scenario)
+    head = (len(critical), _goals_met(baseline, critical), len(baseline.failures))
+    caveat = baseline_caveat(baseline)
+    if not search_result.ranked:
+        return Verdict(
+            *head, "", "", "no complete replay to rank", None, None, None, None, None, caveat
+        )
+    c = search_result.ranked[0]
+    return Verdict(
+        *head,
+        repair_id=c.proposal.repair_id,
+        badge=badge(c, 1),
+        outcome=outcome_text(c),
+        replay_met=_goals_met(c.replay, critical),
+        removed=len(c.removed),
+        masked=len(c.masked),
+        remaining=len(c.remaining),
+        new_conflicts=len(c.new_conflicts),
+        caveat=caveat,
+        authorization=REQUIRES_AUTHORIZATION if c.proposal.requires_authorization else "",
+    )
+
+
+def baseline_caveat(baseline: RunResult) -> str:
+    """The engine's invalid_output caveat for the baseline alone (the same wording as
+    `invalid_output_caveat`, which needs a comparison)."""
+    steps = baseline.invalid_steps
+    if not steps:
+        return ""
+    where = ", ".join(f"{role} at T+{m:02d} (baseline)" for m, role in steps)
+    return (
+        f"{len(steps)} steps with no decision (model returned invalid output): {where}; "
+        "the result may depend on them"
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class Cell:
+    minute: int
+    recipient: bool  # the role received this inject
+    facts: tuple[Chip, ...]  # facts that reached the role at this minute (inside its boundary)
+    accepted: tuple[str, ...]
+    rejected: tuple[str, ...]  # with reason codes
+    statements: tuple[str, ...]  # always under the AGENT_STATEMENT label
+
+
+@dataclass(frozen=True, slots=True)
+class Bar:
+    action: str
+    source: Chip  # the clause or repair rule, with its status label
+    start: int  # column index of opened_at
+    end: int  # column index of the due minute (or the last column), inclusive
+    opened: str  # "T+30"
+    due: str  # "T+60" or "undetermined"
+    state: str  # fulfilled at T+x | obligation_overdue (...) | obligation_missed (...) | open ...
+
+
+@dataclass(frozen=True, slots=True)
+class Lane:
+    role: str
+    cells: tuple[Cell, ...]
+    bars: tuple[Bar, ...]
+
+
+def _column(minutes: list[int], minute: int) -> int:
+    """The last inject column at or before this minute."""
+    return max((i for i, m in enumerate(minutes) if m <= minute), default=0)
+
+
+def _bar_state(ob: ObligationStatus) -> str:
+    owner = ob.clause_id.startswith(OWNER_RULE_PREFIX)
+    if ob.missed:
+        late = f"; fulfilled late at T+{ob.fulfilled_at:02d}" if ob.fulfilled_at is not None else ""
+        kind = OBLIGATION_OVERDUE if owner else "obligation_missed"
+        return f"{kind} (due T+{ob.due_at or 0:02d}){late}"
+    if ob.fulfilled_at is not None:
+        return f"fulfilled at T+{ob.fulfilled_at:02d}"
+    return OPEN_AT_END_LABEL.split(": ", 1)[0] if owner else OPEN_AT_END_STATE
+
+
+def swimlanes(result: RunResult, scenario: Scenario) -> list[Lane]:
+    """One lane per role: the facts that reached it at each inject (only facts inside its
+    boundary are ever released to it), what it did, and its obligations."""
+    labels = dict(result.loaded_clauses)
+    category = {f.id: f.data_category for e in scenario.events for f in e.facts}
+    minutes = [e.at_minute for e in scenario.events]
+    recipients = {e.at_minute: set(e.recipients) for e in scenario.events}
+    lanes: list[Lane] = []
+    for role in dict(result.boundaries):
+        cells: list[Cell] = []
+        for m in minutes:
+            here = [e for e in result.log if e.minute == m and e.role == role]
+            cells.append(
+                Cell(
+                    minute=m,
+                    recipient=role in recipients[m],
+                    facts=tuple(
+                        Chip(e.detail, category.get(e.detail, ""), "cg-fact")
+                        for e in here
+                        if e.kind == "fact_released"
+                    ),
+                    accepted=tuple(
+                        e.action + (f" -> {e.target}" if e.target else "")
+                        for e in here
+                        if e.kind == "accepted" and e.action
+                    ),
+                    rejected=tuple(
+                        (e.action or "whole decision")
+                        + (f" -> {e.target}" if e.target else "")
+                        + (f" ({', '.join(e.reasons)})" if e.reasons else "")
+                        for e in here
+                        if e.kind == "rejected"
+                    ),
+                    statements=tuple(
+                        e.detail if e.detail.startswith(AGENT_STATEMENT) else UNLABELLED
+                        for e in here
+                        if e.kind == "decision"
+                    ),
+                )
+            )
+        bars = tuple(
+            Bar(
+                action=ob.action,
+                source=clause_chips((ob.clause_id,), labels)[0],
+                start=_column(minutes, ob.opened_at),
+                end=len(minutes) - 1 if ob.due_at is None else _column(minutes, ob.due_at),
+                opened=f"T+{ob.opened_at:02d}",
+                due="undetermined" if ob.due_at is None else f"T+{ob.due_at:02d}",
+                state=_bar_state(ob),
+            )
+            for ob in result.obligations
+            if ob.role in (role, "any")
+        )
+        lanes.append(Lane(role, tuple(cells), bars))
+    return lanes
+
+
+@dataclass(frozen=True, slots=True)
+class DiagnosisItem:
+    id: str
+    description: str
+    blocks: str
+    qualification: str
+    evidence: tuple[Chip, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CategoryCard:
+    category: str
+    items: tuple[DiagnosisItem, ...]  # empty: none found
+
+
+def diagnosis_cards(result: RunResult) -> list[CategoryCard]:
+    """One card per failure category (all five, in the taxonomy's order)."""
+    labels = dict(result.loaded_clauses)
+    return [
+        CategoryCard(
+            cat.value,
+            tuple(
+                DiagnosisItem(
+                    f.id,
+                    f.description,
+                    ", ".join(f.goals),
+                    f.qualification,
+                    clause_chips(f.clause_ids, labels),
+                )
+                for f in result.failures
+                if f.category is cat
+            ),
+        )
+        for cat in FailureCategory
+    ]
+
+
+@dataclass(frozen=True, slots=True)
+class Rung:
+    rank: int
+    repair_id: str
+    badge: str
+    outcome: str
+    edits: int
+    roles: tuple[str, ...]  # roles the edits touch
+    removed: int
+    masked: tuple[str, ...]
+    new_conflicts: tuple[str, ...]
+    authorization: str
+
+
+def ladder(result: SearchResult) -> list[Rung]:
+    out: list[Rung] = []
+    for row, c in zip(repairs(result), result.ranked, strict=True):
+        roles = sorted({r for e in c.proposal.edits for r in (e.role, e.counterpart) if r})
+        out.append(
+            Rung(
+                rank=row.rank,
+                repair_id=row.repair_id,
+                badge=badge(c, row.rank),
+                outcome=row.outcome,
+                edits=row.edits,
+                roles=tuple(roles),
+                removed=row.removed,
+                masked=row.masked,
+                new_conflicts=row.new_conflicts,
+                authorization=row.authorization,
+            )
+        )
+    return out
+
+
+FINDING_OUTCOMES = ("resolved", "partial", "no effect", "introduces new conflict")
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationFinding:
+    """A recorded, human-worded finding about one repair under one prompt version
+    (`scenarios/<id>/evaluation_findings.yaml`)."""
+
+    repair: str
+    prompt_version: str
+    scripted: str  # the scripted replay's outcome when the finding was recorded
+    llm: str  # the LLM replay's outcome
+    text: str
+    source: str  # the document that records it
+
+
+@dataclass(frozen=True, slots=True)
+class AgentsRow:
+    repair_id: str
+    scripted: str  # outcome with its definition (engine wording)
+    llm: str
+    finding: str  # "" unless a recorded finding matches the repair and both computed verdicts
+    source: str
+
+
+def scripted_vs_llm(
+    scripted: ReplayComparison,
+    llm: ReplayComparison,
+    prompt_version: str,
+    recorded: Iterable[EvaluationFinding],
+) -> AgentsRow:
+    """The same repair under scripted and LLM agents. A recorded finding is shown only when it
+    names this repair and exactly this prompt version (output mode and options included) and
+    both verdicts match what was computed now."""
+    if llm.proposal.repair_id != scripted.proposal.repair_id:
+        raise ValueError("scripted and LLM comparisons must be for the same repair")
+    match = next(
+        (
+            f
+            for f in recorded
+            if f.repair == scripted.proposal.repair_id
+            and prompt_version == f.prompt_version
+            and f.scripted == scripted.outcome
+            and f.llm == llm.outcome
+        ),
+        None,
+    )
+    return AgentsRow(
+        repair_id=scripted.proposal.repair_id,
+        scripted=outcome_text(scripted),
+        llm=outcome_text(llm),
+        finding=match.text if match else "",
+        source=match.source if match else "",
+    )

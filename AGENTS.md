@@ -240,7 +240,7 @@ other file.
   before calling the task done.
 - Do not use the Firecrawl MCP unless the human asks. Never send the local PDFs or any
   `.env` value to an external service.
-- Phoenix (Phase 6, optional): when enabled, cite trace IDs when reporting LLM-quality findings.
+- Phoenix (Phase 7, optional): when enabled, cite trace IDs when reporting LLM-quality findings.
 - Do not edit `.mcp.json`, and never write a key or token into any file.
 - Optional tools in `REFERENCE_LINKS.md` stay unused unless they are clearly useful;
   ask before adding any of them as a dependency.

@@ -68,8 +68,8 @@ request failures are counted per command (the baseline and any replays). A live 
 ## CLI and UI
 
 `--agents scripted|llm` (default scripted) and `--offline` on `run` and `repairs`. The UI has a
-Scripted / LLM (cached only) / LLM (live) toggle; scripted is the default and a live repair
-  search is refused in the UI until approved; every result
+Scripted / LLM (cached only) toggle (Phase 6, human decision 2026-10-26: no live calls from the
+  UI; the CLI keeps live runs); every result
 shows which agents produced it. LLM text stays under the agent-statement label.
 
 ## Tests (no live calls)
