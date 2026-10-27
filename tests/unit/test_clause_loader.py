@@ -158,6 +158,9 @@ def test_engine_loads_only_reviewed_and_illustrative(dirs: tuple[Path, Path]) ->
         ({"source_file": "ocr/doc.ocr.pdf"}, "OCR source without the OCR flag"),
         ({"source_file": "web/page.pdf", "binding": False}, "web source without the web flag"),
         ({"source_file": "web/page.pdf", "notes": WEB_NOTE}, "web source marked binding"),
+        ({"source_file": "./web/page.pdf", "binding": False}, "dotted web path, no flag"),
+        ({"source_file": "WEB/page.pdf", "binding": False}, "upper-case web path, no flag"),
+        ({"source_file": "./ocr/doc.ocr.pdf"}, "dotted OCR path, no flag"),
         ({"normalized": {k: v for k, v in STATED.items() if k != "basis"}}, "no basis"),
         ({"normalized": {**STATED, "basis": "assumed"}}, "unknown basis"),
         ({"normalized": {**STATED, "basis": "interpreted"}}, "interpreted, no mapping_note"),
@@ -258,3 +261,18 @@ def test_repository_web_clauses_are_flagged_and_never_binding() -> None:
         assert clause.binding is not True, clause.id
         assert clause.normalized is None, clause.id  # policy aims and principles: no duty read
         assert clause.status is ClauseStatus.DRAFT, clause.id
+
+
+def test_quote_is_never_checked_against_another_document_with_the_same_stem(
+    tmp_path: Path,
+) -> None:
+    """An original and a web copy named alike share an extracted name: the record must belong
+    to the clause's own source_file."""
+    page = {"source_file": "doc.pdf", "page": 3, "text": "Some verbatim text."}
+    (tmp_path / "doc.jsonl").write_text(json.dumps(page) + "\n", "utf-8")
+    original = PolicyClause.model_validate(VALID)
+    assert quote_found_on_page(original, tmp_path)
+    web = PolicyClause.model_validate(
+        {**VALID, "source_file": "web/doc.pdf", "binding": False, "notes": WEB_NOTE}
+    )
+    assert not quote_found_on_page(web, tmp_path)

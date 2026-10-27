@@ -43,7 +43,8 @@ cascadeguard/
 │   ├── 004-demo-ui.md                [P4]
 │   ├── 005-llm-agents.md             [P5]
 │   ├── 006-demo-ui-v2.md             [P6]
-│   └── 006b-demo-ui-polish.md        [P6b] display names, plain-language repairs (display only)
+│   ├── 006b-demo-ui-polish.md        [P6b] display names, plain-language repairs (display only)
+│   └── 006c-policy-sources.md        [P6c] web transcriptions, draft clauses, impact check
 │
 ├── src/cascadeguard/
 │   ├── __init__.py                   [P0]
@@ -99,7 +100,7 @@ cascadeguard/
 │
 ├── policies/
 │   ├── sources/                      [P0] the 19 original PDFs — never modified; engine never reads them
-│   │   └── web/                      [later] Firecrawl/web material — unverified, with URL + retrieval date
+│   │   └── web/                      [P6c] web transcriptions of official pages (unverified), MANIFEST.md
 │   ├── approvals.yaml                [P3] digests of human-approved reviewed clauses (gate 1)
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these

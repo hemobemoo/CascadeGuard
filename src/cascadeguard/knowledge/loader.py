@@ -144,7 +144,8 @@ def _page_text(clause: PolicyClause, extracted_dir: Path) -> str | None:
     with jsonl.open(encoding="utf-8") as lines:
         for line in lines:
             record = json.loads(line)
-            if record["page"] == clause.page:
+            # Same stem, other document (an original and a web or OCR copy): never a match.
+            if record["page"] == clause.page and record["source_file"] == clause.source_file:
                 return str(record["text"])
     return None
 

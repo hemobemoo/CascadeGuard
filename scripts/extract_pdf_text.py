@@ -35,8 +35,13 @@ INVENTORY = EXTRACTED / "_inventory.json"
 
 # A page with fewer non-whitespace characters than this is reported as having no usable text.
 MIN_TEXT_CHARS = 20
-# A manifest table row: | `<file>.pdf` | <url> | ... (other columns are for the human).
-MANIFEST_ROW = re.compile(r"^\|\s*`([^`]+\.pdf)`\s*\|\s*([^|]*?)\s*\|")
+# A manifest table row: | `<file>.pdf` | URL | Retrieved | Issuer | Document date | Type | Status |
+MANIFEST_ROW = re.compile(r"^\|\s*`([^`]+\.pdf)`\s*\|")
+MANIFEST_COLUMNS = 7
+DOCUMENT_TYPES = frozenset(
+    {"law", "policy", "strategy", "ethical principle", "international precedent"}
+)
+RETRIEVED = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class ManifestError(ValueError):
@@ -51,11 +56,21 @@ def manifest_urls(manifest: Path, pdf_names: list[str]) -> dict[str, str]:
         match = MANIFEST_ROW.match(line)
         if match is None:
             continue
-        name, url = match.groups()
+        name = match.group(1)
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if name in urls:
             raise ManifestError(f"{manifest.name}: two rows for {name}")
+        if len(cells) != MANIFEST_COLUMNS:
+            raise ManifestError(f"{manifest.name}: {name} needs {MANIFEST_COLUMNS} columns")
+        _, url, retrieved, issuer, document_date, kind, status = cells
         if not url.startswith("https://") or any(ch.isspace() for ch in url):
             raise ManifestError(f"{manifest.name}: {name} has no single https:// URL")
+        if not RETRIEVED.match(retrieved) or not issuer or not document_date:
+            raise ManifestError(f"{manifest.name}: {name} needs retrieval date, issuer and date")
+        if kind not in DOCUMENT_TYPES:
+            raise ManifestError(f"{manifest.name}: {name} has unknown document type {kind!r}")
+        if status != "unverified":
+            raise ManifestError(f"{manifest.name}: {name} status must be 'unverified'")
         urls[name] = url
     if missing := sorted(set(pdf_names) - set(urls)):
         raise ManifestError(f"{manifest.name}: no row for {missing}")
@@ -121,6 +136,10 @@ def main() -> int:
     web_pdfs = sorted(WEB_SOURCES.glob("*.pdf"))
     urls = manifest_urls(MANIFEST, [p.name for p in web_pdfs]) if web_pdfs else {}
     pdfs = sorted(SOURCES.glob("*.pdf")) + sorted(OCR_SOURCES.glob("*.ocr.pdf")) + web_pdfs
+    # Output files are named by stem, so two sources with one stem would overwrite each other.
+    stems = [p.stem for p in pdfs]
+    if clashes := sorted({s for s in stems if stems.count(s) > 1}):
+        raise SystemExit(f"two source PDFs share an extracted name: {clashes}")
     if args.only:
         pdfs = [p for p in pdfs if args.only in p.name]
     for pdf_path in pdfs:
