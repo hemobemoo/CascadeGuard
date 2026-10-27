@@ -68,7 +68,11 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   structure file; UNESCO quotes without headings; report wording. Round 2: evidence-auditor FAIL
   (same human-only BLOCKER; no clause FIX), test-breaker PASS (MINORs fixed: case-insensitive stem
   clash, URL host and real retrieval date, tests select web clauses like the model, real
-  draft-count comparison incl. Markdown, SHA-256 of the seven files in MANIFEST.md and tested). evidence-auditor BLOCKER is a
+  draft-count comparison incl. Markdown, SHA-256 of the seven files in MANIFEST.md and tested).
+  Round 3 (final): phase-auditor FAIL only on "PR open" before the PR existed (resolved by
+  opening it; spec wording MINOR fixed); test-breaker PASS (MINOR fixed: names Windows trims,
+  `web./`, `web /`, `ocr./`, refused by the loader). Evidence-auditor not re-run in round 3:
+  its open BLOCKER is human-only. evidence-auditor BLOCKER is a
   human item (above). Triage `docs/review/phase-6c-clause-triage.md`.
 
 Verify:

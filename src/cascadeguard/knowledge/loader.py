@@ -179,6 +179,10 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
     relative = Path(source_file)
     if relative.is_absolute() or ".." in relative.parts or "\\" in source_file:
         raise ClauseLoadError(f"{where}: source_file must be a plain path inside policies/sources")
+    # Windows drops a trailing dot or space from a name, so "web./x.pdf" would open web/x.pdf
+    # while escaping the web/OCR rules, which read the spelling: refuse such names.
+    if any(part != part.strip() or part.endswith(".") for part in relative.parts):
+        raise ClauseLoadError(f"{where}: source_file must be a plain path inside policies/sources")
     resolved = (sources_dir / relative).resolve()
     if not resolved.is_relative_to(sources_dir.resolve()) or not resolved.exists():
         raise ClauseLoadError(f"{where}: unknown source_file")
