@@ -43,8 +43,8 @@ The 01 and 03 quotes are single list items; the heading of each priority is in `
 - 02 (International AI policy): about the UAE's international AI stance; nothing in the scenario's
   incident handling needs it.
 - 04 (Digital Government Strategy 2025): government service design dimensions (inclusive by
-  default, resilient); the fallback-channel duty already has a closer source
-  (`mocai.ethics.fallback-plan`, draft).
+  default, resilient); the fallback-channel rule already has a closer (non-binding, draft)
+  source, `mocai.ethics.fallback-plan`.
 - 05 (AI in government policies): AI CEOs, councils and programmes for ministries and federal
   entities; the scenario's portal operator is non-governmental (scenario assumption 3c).
 

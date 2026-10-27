@@ -102,11 +102,11 @@ clauses:
   - id: unesco.ai-ethics.human-oversight
     title: "UNESCO Recommendation: AI must not displace ultimate human responsibility"
     text: >-
-      7. Human oversight and determination Member States should ensure that AI systems do not
-      displace ultimate human responsibility and accountability.
+      Member States should ensure that AI systems do not displace ultimate human
+      responsibility and accountability.
     source_file: web/06_unesco_ai_ethics_recommendation.pdf
     page: 4
-    article: "Core principles, 7 (web page summary)"
+    article: "Core principles, 7 (Human oversight and determination; web page summary)"
     issuer: UNESCO
     jurisdiction: International (UNESCO Member States; non-binding recommendation)
     document_date: "2021-11"
@@ -121,12 +121,11 @@ clauses:
   - id: unesco.ai-ethics.responsibility-accountability
     title: "UNESCO Recommendation: AI systems auditable and traceable, with oversight mechanisms"
     text: >-
-      5. Responsibility and accountability AI systems should be auditable and traceable. There
-      should be oversight, impact assessment, audit and due diligence mechanisms in place to
-      avoid conflicts with human rights norms and threats to environmental wellbeing.
+      AI systems should be auditable and traceable. There should be oversight, impact
+      assessment, audit and due diligence mechanisms in place to avoid conflicts with human rights norms and threats to environmental wellbeing.
     source_file: web/06_unesco_ai_ethics_recommendation.pdf
     page: 4
-    article: "Core principles, 5 (web page summary)"
+    article: "Core principles, 5 (Responsibility and accountability; web page summary)"
     issuer: UNESCO
     jurisdiction: International (UNESCO Member States; non-binding recommendation)
     document_date: "2021-11"
