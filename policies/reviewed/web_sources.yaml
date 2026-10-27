@@ -1,0 +1,180 @@
+# Clauses quoted from the web transcriptions in policies/sources/web/ (Phase 6c, spec 006c).
+# Each file is an official web page printed to PDF by the human: unverified, and not the original
+# document (see policies/sources/web/MANIFEST.md). Every clause here is a policy aim, strategy
+# aim or international principle: binding false, no normalized reading. A power or aim to
+# regulate is never read as a duty.
+clauses:
+  - id: uae.mohap-smart-health.p2-coordination
+    title: "Smart health AI policy: coordination through national partnerships"
+    text: >-
+      Strengthening coordination through national partnerships.
+    source_file: web/01_uae_smart_health_ai_policy.pdf
+    page: 3
+    article: "Priorities and Key Components, 2 (Building partnerships at all levels and achieving integration), first item"
+    issuer: Ministry of Health and Prevention (lead entity, as printed)
+    jurisdiction: UAE (federal public policy, health sector)
+    document_date: "2026-05-18"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
+      Public policy priority, not legislation: it names no actor, counterpart, data category or
+      deadline, so it carries no normalized reading and authorises no share. Cascade: context
+      for the information deadlock between the telecom operator and the health service operator
+      (network_incident_status); it does not permit the telecom-to-health status share.
+
+  - id: uae.mohap-smart-health.p6-cybersecurity
+    title: "Smart health AI policy: integrated cybersecurity system for the healthcare sector"
+    text: >-
+      Strengthening an integrated cybersecurity system for the healthcare sector.
+    source_file: web/01_uae_smart_health_ai_policy.pdf
+    page: 4
+    article: "Priorities and Key Components, 6 (Ensuring the security and ethics of smart health services), first item"
+    issuer: Ministry of Health and Prevention (lead entity, as printed)
+    jurisdiction: UAE (federal public policy, health sector)
+    document_date: "2026-05-18"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
+      Public policy priority, not legislation: no reporting duty, regulator or deadline is read
+      from it. Cascade: context for the health service operator's security incident at T+15,
+      raised on a suspected (unconfirmed) credential-stuffing alert from its own AI fraud model.
+
+  - id: uae.mohap-smart-health.p7-liability
+    title: "Smart health AI policy: clear medical liability frameworks for AI in health"
+    text: >-
+      Establishing clear medical liability frameworks for the delivery of smart health services
+      and the use of artificial intelligence applications across the healthcare sector.
+    source_file: web/01_uae_smart_health_ai_policy.pdf
+    page: 4
+    article: "Priorities and Key Components, 7 (Ensuring the ethical use of smart health services and AI), second item"
+    issuer: Ministry of Health and Prevention (lead entity, as printed)
+    jurisdiction: UAE (federal public policy, health sector)
+    document_date: "2026-05-18"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
+      An aim to establish liability frameworks, not a framework and not a duty: it assigns no
+      owner. Cascade: context for the orphan duty to review and reverse the AI fraud model's
+      automated lockouts (no owner found in the reviewed corpus). Whether the portal's
+      fraud-risk model is an "artificial intelligence application" in the policy's sense is not
+      decided.
+
+  - id: uae.cyber-strategy-2025.governance-aim
+    title: "National Cybersecurity Strategy 2025: cohesive cybersecurity governance framework (aim)"
+    text: >-
+      Establish a cohesive and highly effective governance framework for cybersecurity.
+    source_file: web/03_uae_national_cybersecurity_strategy.pdf
+    page: 2
+    article: "Cabinet approval announcement, 'The strategy seeks to', first item"
+    issuer: UAE Cabinet (approval announcement, as transcribed)
+    jurisdiction: UAE (national strategy)
+    document_date: "2025-02-03"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified (summary of the Cabinet approval announcement; MANIFEST.md
+      row 03). Not the strategy text: the Cyber Security Council strategy document is not in the
+      repository. Strategy-level context only: no deadline, regulator or reporting duty is
+      inferred. Cascade: context for the two security incidents (telecom and health) handled
+      without a shared escalation path.
+
+  - id: uae.cyber-strategy-2025.partnership-aim
+    title: "National Cybersecurity Strategy 2025: national and international partnerships (aim)"
+    text: >-
+      Bolster partnerships and collaborative relations at national and international levels.
+    source_file: web/03_uae_national_cybersecurity_strategy.pdf
+    page: 2
+    article: "Cabinet approval announcement, 'The strategy seeks to', fifth item"
+    issuer: UAE Cabinet (approval announcement, as transcribed)
+    jurisdiction: UAE (national strategy)
+    document_date: "2025-02-03"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified (summary of the Cabinet approval announcement; MANIFEST.md
+      row 03). Not the strategy text. Strategy-level context only: it authorises no data share
+      and sets no duty. Cascade: context for the cross-sector information deadlock between the
+      telecom and health operators.
+
+  - id: unesco.ai-ethics.human-oversight
+    title: "UNESCO Recommendation: AI must not displace ultimate human responsibility"
+    text: >-
+      7. Human oversight and determination Member States should ensure that AI systems do not
+      displace ultimate human responsibility and accountability.
+    source_file: web/06_unesco_ai_ethics_recommendation.pdf
+    page: 4
+    article: "Core principles, 7 (web page summary)"
+    issuer: UNESCO
+    jurisdiction: International (UNESCO Member States; non-binding recommendation)
+    document_date: "2021-11"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified. The transcription is UNESCO's web page summary of the
+      principle, not the Recommendation's text; replace with SHS/BIO/PI/2021/1 before review.
+      International precedent, not UAE law. Cascade: precedent for a human owner of the review
+      and reversal of the automated lockouts (orphan duty).
+
+  - id: unesco.ai-ethics.responsibility-accountability
+    title: "UNESCO Recommendation: AI systems auditable and traceable, with oversight mechanisms"
+    text: >-
+      5. Responsibility and accountability AI systems should be auditable and traceable. There
+      should be oversight, impact assessment, audit and due diligence mechanisms in place to
+      avoid conflicts with human rights norms and threats to environmental wellbeing.
+    source_file: web/06_unesco_ai_ethics_recommendation.pdf
+    page: 4
+    article: "Core principles, 5 (web page summary)"
+    issuer: UNESCO
+    jurisdiction: International (UNESCO Member States; non-binding recommendation)
+    document_date: "2021-11"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified. Web page summary, not the Recommendation's text; replace
+      with SHS/BIO/PI/2021/1 before review. International precedent, not UAE law. Cascade:
+      precedent for tracing the lockouts back to the telecom traffic model's update.
+
+  - id: oecd.ai-principles.robustness-override
+    title: "OECD AI Principles: harmful AI can be overridden, repaired or decommissioned"
+    text: >-
+      Mechanisms should be in place, as appropriate, to ensure that if AI systems risk causing
+      undue harm or exhibit undesired behaviour, they can be overridden, repaired, and/or
+      decommissioned safely as needed.
+    source_file: web/07_oecd_ai_principles.pdf
+    page: 3
+    article: "Values-based principles: Robustness, security and safety (web page summary)"
+    issuer: OECD
+    jurisdiction: International (OECD adherents; non-binding recommendation; UAE adherence not checked)
+    document_date: "2024"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified. OECD web page text, not the Council Recommendation;
+      replace with OECD/LEGAL/0449 before review. International precedent, not UAE law.
+      Cascade: precedent for suspending the telecom traffic-management model and reversing the
+      fraud model's automated lockouts.
+
+  - id: oecd.ai-principles.accountability-cooperation
+    title: "OECD AI Principles: risk management via co-operation between AI actors"
+    text: >-
+      AI actors, should, based on their roles, the context, and their ability to act, apply a
+      systematic risk management approach to each phase of the AI system lifecycle on an
+      ongoing basis and adopt responsible business conduct to address risks related to AI
+      systems, including, as appropriate, via co-operation between different AI actors,
+      suppliers of AI knowledge and AI resources, AI system users, and other stakeholders.
+    source_file: web/07_oecd_ai_principles.pdf
+    page: 4
+    article: "Values-based principles: Accountability (web page summary)"
+    issuer: OECD
+    jurisdiction: International (OECD adherents; non-binding recommendation; UAE adherence not checked)
+    document_date: "2024"
+    status: draft
+    binding: false
+    notes: >-
+      web transcription — unverified. OECD web page text, not the Council Recommendation;
+      replace with OECD/LEGAL/0449 before review. International precedent, not UAE law.
+      Cascade: precedent for co-operation between the two AI actors (telecom traffic model,
+      health fraud model) whose interaction caused the lockouts.
