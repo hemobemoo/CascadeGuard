@@ -10,6 +10,7 @@ cache only (no live calls in the UI; the CLI keeps live runs).
 import asyncio
 import html
 import os
+import re
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -109,7 +110,24 @@ def findings_for(scenario_id: str) -> tuple[vm.EvaluationFinding, ...]:
 
 DISPLAY_FILE = "display.yaml"  # UI-only display labels (spec 006b); nothing else reads it
 DISPLAY_SECTIONS = ("categories", "actions", "goals")
-NOT_PLAIN = set("<>[]{}`*_#|\n")  # markup or formatting: labels are plain one-line text
+NOT_PLAIN = set("<>[]{}`*_#|")  # markup or formatting: labels are plain text
+
+
+def _plain(text: object) -> bool:
+    """Plain one-line text: printable (no line breaks, tabs or control characters), no markup,
+    no surrounding spaces, and something visible."""
+    return (
+        isinstance(text, str)
+        and text.isprintable()
+        and text == text.strip()
+        and any(c.isalnum() for c in text)
+        and not NOT_PLAIN & set(text)
+    )
+
+
+def _one_sentence(text: object) -> bool:
+    """One sentence: plain, ends with a full stop, no other sentence end inside."""
+    return _plain(text) and str(text).endswith(".") and not re.search(r"[.?!]\s*\S", str(text))
 
 
 class _UniqueKeys(yaml.SafeLoader):
@@ -163,23 +181,17 @@ def labels_for(world: World) -> vm.Labels:
         text = {
             str(k): v
             for k, v in m.items()
-            if isinstance(k, str) and isinstance(v, str) and v.strip() and not NOT_PLAIN & set(v)
+            if isinstance(k, str) and isinstance(v, str) and _plain(v)
         }
         if set(m) != ids or set(text) != ids:
             extra, missing = sorted(map(str, set(m) - ids)), sorted(ids - set(text))
             raise ValueError(f"{shape}; {key}: unknown {extra}, missing or invalid {missing}")
-        values = list(text.values())
+        values = [v.casefold() for v in text.values()]  # "Monitor" and "monitor" are one label
         if shared := sorted({v for v in values if values.count(v) > 1}):
             raise ValueError(f"{shape}; {key}: one label for several ids {shared} (not a rename)")
         maps[key] = text
     summary = data["incident_summary"]
-    one_sentence = (
-        isinstance(summary, str)
-        and summary.endswith(".")
-        and not NOT_PLAIN & set(summary)
-        and ". " not in summary
-    )
-    if not one_sentence:
+    if not _one_sentence(summary):
         raise ValueError(f"{shape}; incident_summary is not one sentence on one line")
     return vm.Labels(
         roles={r.id: r.name for r in roles.roles},

@@ -42,7 +42,8 @@ cascadeguard/
 │   ├── 003-repair-and-replay.md      [P3]
 │   ├── 004-demo-ui.md                [P4]
 │   ├── 005-llm-agents.md             [P5]
-│   └── 006-demo-ui-v2.md             [P6]
+│   ├── 006-demo-ui-v2.md             [P6]
+│   └── 006b-demo-ui-polish.md        [P6b] display names, plain-language repairs (display only)
 │
 ├── src/cascadeguard/
 │   ├── __init__.py                   [P0]
@@ -84,7 +85,8 @@ cascadeguard/
 │   │   ├── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
 │   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
 │   │
-│   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006)
+│   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006);
+│   │                                 [P6b] display names from scenarios/<id>/display.yaml (spec 006b)
 │   │   ├── app.py                    one page: renders only (port 8765, CASCADEGUARD_UI_PORT);
 │   │   │                             [P6] precomputed results, guided/expert, sections a-g
 │   │   ├── theme.css                 [P6] design tokens (light/dark, clause status colours)

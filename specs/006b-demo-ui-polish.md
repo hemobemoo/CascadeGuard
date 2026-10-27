@@ -101,12 +101,16 @@ and all checks pass.
 - d: the graph opens on one failure (the first in the diagnosis cards' order), the rest faded;
   "all diagnosed failures" shows every node at full opacity, as written above.
 - c: ranked rungs, inconclusive rows and discarded repairs beyond three are all behind the one
-  "Show all N" toggle (N counts all three lists). No control can select a hidden rung today;
-  `compare` still expands the list first if it ever is asked to.
+  "Show all N" toggle. **Open for the human:** the approved text says N = ranked count; the
+  code counts all three lists, because the toggle reveals all three (with the real LLM cache:
+  1 ranked, 20 inconclusive, so "Show all 1" would hide 17 rows behind a count of 1). Keep the
+  total, or show the ranked count? No control can select a hidden rung today; `compare` still
+  expands the list first if it ever is asked to (defensive, untested: unreachable from the UI).
 - b: every plain-language sentence carries the hypothetical repair-rule label (verdict strip,
   ladder, split screen).
 - a: the split screen's failure lines are shown by name ("orphan duty: Reverse automated
   lockouts: masked ..."), each with its raw-id wording in small print. Engine-written text
   (failure descriptions, outcome wording, reason codes) keeps its ids.
-- `display.yaml` labels must be unique within a section, plain text (no markup or brackets),
-  and the file may not repeat a key.
+- `display.yaml` labels must be unique within a section (ignoring case), printable plain text
+  on one line (no markup, brackets, control characters or surrounding spaces), and the file
+  may not repeat a key; the summary must be one sentence (no other sentence end inside).

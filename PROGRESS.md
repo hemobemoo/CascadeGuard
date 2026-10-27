@@ -18,8 +18,8 @@ Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). 
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
 **Phase 6b — Demo UI polish: built on `phase-6b-polish` (spec approved with conditions,
-2026-10-27); review round 2 next, then the PR; merge waits for the human's approval of the
-incident summary wording.**
+2026-10-27); review round 2 PASS (all three reviewers); PR open, not merged: waits for the
+human's approval of the incident summary wording and the "Show all N" question.**
 Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshots:
 `docs/review/phase-6b-polish/README.md`.
 
@@ -45,10 +45,10 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   comparison, graph (faded outside the highlight; `fade=False` for "Show all at full
   opacity"). Ladder top 3 + "Show all N" (in place). Raw ids: tooltips and small print, all in
   Expert mode (body class `cg-expert`). No engine, agent, simulation or export change.
-- Tests: `tests/unit/test_display_labels.py` (24: 1.1 static and dynamic, 1.2, validation, one
+- Tests: `tests/unit/test_display_labels.py` (42: 1.1 static and dynamic, 1.2, validation, one
   sentence per operation naming every parameter, names in rows, graph fading); e2e guided flow,
   expert and perf test updated for names (intended display change) and two new timed clicks.
-- Full check at factor 1: 434 passed; every median under budget (see
+- Full check at factor 1 after review round 2: 454 passed; every median under budget (see
   `docs/review/phase-6b-polish/README.md`, before/after screenshots there).
 - Review round 1 (details in the 6b report): evidence-auditor PASS; phase-auditor FAIL and
   test-breaker FAIL, every MAJOR and MINOR fixed: graph opens on one failure and "all
@@ -813,8 +813,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6b (2026-10-27):** approve the final wording of the incident summary in
-`scenarios/uae_health_access/display.yaml` before merge (human decision 3).
+**Phase 6b (2026-10-27):**
+- Approve the final wording of the incident summary in
+  `scenarios/uae_health_access/display.yaml` before merge (human decision 3).
+- "Show all N": the approved spec says N = ranked count; the code counts ranked, inconclusive
+  and discarded rows, since the toggle reveals all three. Keep the total, or show the ranked
+  count (spec 006b implementation notes)?
 
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.

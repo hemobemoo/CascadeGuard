@@ -123,6 +123,18 @@ DROP = object()  # remove the key
         ("", "incident_summary", "One. Two.", "one sentence"),
         ("", "incident_summary", "No full stop", "one sentence"),
         ("", "incident_summary", ["x."], "one sentence"),
+        # review round 2 (test-breaker): every one of these was accepted before
+        ("", "incident_summary", "Hypothetical.Second.", "one sentence"),
+        ("", "incident_summary", "Is it a gap? Yes, it is.", "one sentence"),
+        ("", "incident_summary", "Line one\rline two.", "one sentence"),
+        ("", "incident_summary", "Line one\nline two.", "one sentence"),
+        ("", "incident_summary", ".", "one sentence"),
+        ("actions", "monitor", "Mon\ritor", "monitor"),
+        ("actions", "monitor", "Mon\titor", "monitor"),
+        ("actions", "monitor", "\u200b", "monitor"),  # invisible
+        ("actions", "monitor", "  Monitor", "monitor"),
+        ("actions", "monitor", "Monitor ", "monitor"),
+        ("actions", "monitor", "suspend AI traffic model", "one label for several ids"),
     ],
 )
 def test_invalid_display_files_are_rejected(
