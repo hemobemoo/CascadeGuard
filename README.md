@@ -50,8 +50,8 @@ uv run python -m cascadeguard.ui.app                             # demo UI (from
 uv run cascadeguard run uae_health_access --agents llm --offline # LLM agents, cache only (Phase 5)
 ```
 
-Scripted agents are the default and need no key. LLM agents (`--agents llm`, or the agents
-toggle in the UI) read `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` and `CASCADEGUARD_MODEL`
+Scripted agents are the default and need no key. LLM agents (`--agents llm`; in the UI only
+"LLM (cached only)", which reads the decision cache and never calls the API) read `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` and `CASCADEGUARD_MODEL`
 from `.env` (see `.env.example`); there is no default model, and the model must support
 structured outputs (`response_format` with `json_schema`). Live calls cost money; decisions are
 cached in `data/llm_cache/` and replays reuse them. `scripts/llm_smoke_test.py` makes exactly
@@ -61,7 +61,10 @@ The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use ano
 
 The browser smoke test (`tests/e2e`, marker `e2e`) needs Chromium once:
 `uv run playwright install chromium`. Skip it locally with `uv run pytest -m "not e2e"`;
-CI always runs it.
+CI always runs it. The UI timing budgets (spec 006: paint < 1.5 s, clicks < 200 ms; median of 5
+after one warm-up, a click over budget re-measured once and failing only if both medians are
+over) are marked `perf`: they run in the full check, CI applies
+`CASCADEGUARD_PERF_FACTOR=3`, and `uv run pytest -m "not perf"` skips them locally.
 
 ## Checks
 

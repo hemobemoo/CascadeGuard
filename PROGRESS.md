@@ -10,7 +10,12 @@ tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 
 **ADR 0002 option A: merged to main via PR #7 (merge commit, branch `adr-0002-option-a` kept),
 tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report:
-`docs/review/adr-0002-option-a-report.md`. Next: Phase 6 — Demo UI v2.
+`docs/review/adr-0002-option-a-report.md`.
+
+**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR #8; human decisions 2026-10-27 implemented,
+phase-auditor round 3 PASS, CI green; merge on the human's instruction of 2026-10-27.**
+Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
+before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
 **Open items:**
 - **ADR 0002 option A:** merged (PR #7, tag `adr-0002-a`). Known limitation: two owners for
@@ -23,6 +28,75 @@ tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
+
+### Phase 6 — Demo UI v2 (branch `phase-6-ui`, PR #8)
+- Scope decision (human, 2026-10-26): Phase 6 = Demo UI v2, tracing moves to Phase 7; recorded
+  in `START_PROMPT.md` (c529306), `AGENTS.md` (Phoenix is Phase 7, 4fb2515, approved by the
+  human in chat) and the structure file.
+- `ui/app.py` rewritten: page opens precomputed (scripted baseline and search at startup; LLM
+  cache-only in the background, per-key locks); header with scenario, agents (Scripted | LLM
+  (cached only), no live mode), Guided | Expert, light/dark; sections a verdict strip, b
+  timeline swimlanes with obligation bars and role views, c cascade graph (created once, fixed
+  layered layout, options updated in place), d diagnosis cards per category, e repair ladder
+  (badge rule below), f split screen with the scripted vs LLM row, g exports (unchanged
+  builders, built on click) and the disclaimer; Expert adds clause set and findings.
+  `ui/theme.css`: design tokens, light/dark, fixed clause-status colours; local assets only;
+  Tailwind runtime off. `ui/view_model.py` gains formatting-only builders (verdict, swimlanes,
+  bars, diagnosis cards, ladder, scripted vs LLM). No engine change.
+- `scenarios/uae_health_access/evaluation_findings.yaml`: the human-worded ADR 0002 finding,
+  shown only for the exact prompt version (`phase5-v4+json_object`), the same repair and
+  matching computed verdicts; validated on load.
+- Tests: `tests/unit/test_view_model_v2.py` (21), `tests/e2e/test_ui_flow.py` (5: guided flow
+  a-f, expert, LLM cache-only row, no model configured, performance budget). CI sets
+  `CASCADEGUARD_PERF_FACTOR=3`.
+- Performance (details and both methods in the report): first meaningful paint 588 ms with no
+  click (before: 1,276 ms after a "Run baseline" click); budget test (median of 5, factor 1):
+  paint 700 ms, every click 91-140 ms. Back-to-back script: two clicks over 200 ms while hidden
+  sections stream (see "Waiting on human").
+- Playwright MCP demo flow run (2026-10-26): verdict on open, timeline with obligations and
+  labels, replay split screen, exports, LLM (cached only) with the real local cache showing
+  "resolved vs partial" and the recorded finding (`after-f-llm.png`).
+- Review round 1: evidence-auditor PASS (triage `docs/review/phase-6-clause-triage.md`);
+  phase-auditor FAIL (MAJOR: stale PROGRESS, fixed here; MINORs fixed: swimlane switch
+  measured, bundle lock, exact prompt match, findings validation, mode-aware rerun text, spec
+  test name, structure file, role-view boundary assertion); test-breaker FAIL (MAJORs fixed:
+  no scripted results under the LLM toggle when no model is configured, swimlane budget
+  tested; MINORs fixed: prompt match, baseline caveat with nothing ranked, bundle lock, engine
+  labels, changed actions in both modes, export without selection).
+- Review round 2: test-breaker FAIL (MAJOR: the verdict strip did not say the top repair
+  requires authorization, fixed with unit and e2e checks; MINORs fixed: "n/a" counts with
+  nothing ranked, remaining and new shown apart, incomplete banner in timeline and diagnosis,
+  findings file shape and outcome checks, in-browser check that a highlight changes the
+  chart). phase-auditor FAIL (BLOCKER: the factor-1 budget test is flaky under machine load;
+  MAJOR: same authorization finding, fixed; MINORs fixed: spec wording on the LLM precompute,
+  separate counts, PROGRESS PR state; MINOR not done: move the badge rule into `engine/`,
+  because the human's spec says "no engine change" — disagreement recorded for the human).
+  A real inefficiency found while checking the flaky graph click was fixed: a highlight from a
+  diagnosis card updated the chart twice (the picker echoed it).
+- Budget test on this machine after the fixes: the same code gives every click at 73-91 ms in
+  a quiet run and up to 201-227 ms in loaded runs; the full check command failed once on the
+  graph highlight (227 ms) and the agents switch (210 ms) in separate runs. Not loosened (human
+  gate; see "Waiting on human"). Round 3 not run: the remaining item needs the human.
+- Review round 3 (phase-auditor, commit 2d462cd): PASS. Its two QUESTION-FOR-HUMAN items (the
+  engine exception, the Done-when wording) are the human's decisions 3 and 4 below; MINORs fixed
+  (this header, `docs/architecture.md` line on `is_smallest_safe`).
+- Human decisions 2026-10-27, implemented: (1) click budget stays 200 ms; one warm-up, median
+  of 5, one re-measure if over, fail only if both medians are over; the timing test is marked
+  `perf` (CI always runs it at factor 3; `-m "not perf"` skips it locally); (2) no "smallest
+  safe repair" badge when the baseline or replay has any invalid_output step; (3) approved
+  narrow engine exception: `is_smallest_safe`, `SMALLEST_SAFE_LABEL`, `TOP_RANKED_LABEL` in
+  `engine/repair_search.py` (read-only; `tests/unit/test_badge_rule.py`, invalid-step mutant
+  killed), the view model only displays it; (4) gate-6 edits confirmed; Phase 6 "Done when"
+  added to spec 006 and `START_PROMPT.md`.
+
+Verify:
+
+```bash
+uv run python -m cascadeguard.ui.app      # http://localhost:8765, opens precomputed
+uv run pytest tests/unit/test_view_model_v2.py
+uv run pytest tests/e2e -s                # guided flow, budgets (prints every number)
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### ADR 0002 option A (merged via PR #7, tag `adr-0002-a`; human decision 2026-10-26)
 - An owner edit carries `deadline_minutes` (default 30, in the id: `owner.<action>.<role>.30m`).
@@ -698,6 +772,9 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Phase 6:** the human answered every item on 2026-10-27 (see Done, "Human decisions
+2026-10-27"); merge after phase-auditor round 3 passes and CI is green.
+
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
 
@@ -791,9 +868,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6 — Demo UI v2 (the human's wording, 2026-10-26), on a new branch. **Question for the
-human first:** `START_PROMPT.md` defines Phase 6 as "Tracing (optional)"; confirm the scope of
-"Demo UI v2" (and whether it replaces or precedes tracing) before starting. Still open: the deferred MINORs,
+Phase-auditor round 3 on the 2026-10-27 changes; when it passes and CI is green, merge PR #8,
+tag `phase-6`. Then the Phase 6b polish spec addendum (branch `phase-6b-polish`), stop for the
+human's approval before code. Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):

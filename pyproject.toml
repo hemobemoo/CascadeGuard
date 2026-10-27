@@ -51,4 +51,5 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = [
     "e2e: browser smoke test of the demo UI (Playwright, Chromium); skip locally with -m 'not e2e'",
+    "perf: demo UI timing budgets (spec 006); CI always runs them; skip locally with -m 'not perf'",
 ]

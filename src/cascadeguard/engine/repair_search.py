@@ -108,6 +108,24 @@ OPEN_AT_END_LABEL = (
     "had not acted, so this blocker remains"
 )
 REQUIRES_AUTHORIZATION_LABEL = "requires authorization (needs human and institutional approval)"
+SMALLEST_SAFE_LABEL = "smallest safe repair"
+TOP_RANKED_LABEL = "top-ranked repair"
+
+
+def is_smallest_safe(c: "ReplayComparison", rank: int) -> bool:
+    """Whether a ranked repair earns the "smallest safe repair" label: rank 1, clean (no new
+    conflict), complete (no failed step), resolved, and no invalid_output step in the baseline
+    or the replay (human decisions 2026-10-26 and 2026-10-27). Read-only: changes no state and
+    no ranking; displays show TOP_RANKED_LABEL with the outcome otherwise."""
+    return (
+        rank == 1
+        and not c.new_conflicts
+        and not c.failed_steps
+        and not c.invalid_steps
+        and c.outcome == "resolved"
+    )
+
+
 SCRIPTED_LIMIT_NOTE = (
     "scripted-agent limit: a duty the repair adds was never attempted because scripted agents do "
     "not adapt to a repair; revisit with LLM agents (Phase 5)"
