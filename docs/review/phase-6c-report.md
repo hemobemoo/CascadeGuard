@@ -87,7 +87,7 @@ Visible differences, none in a golden:
   announcements, and only the strategy text could support anything beyond context. The National
   Cyber Security Policy for AI (also linked) would help the scenario more directly, since the
   cascade starts with two AI models (its summary lists AI monitoring and response); a summary of
-  it is already in `UAE Policy Foundation.pdf` pp. 5-7, which is not a clause source either.
+  it is already in `UAE Policy Foundation.pdf` pp. 5-7; no clause is drafted from those pages.
 - **`--extracted-context` and web files:** keep them searchable as context, or exclude
   `web/` transcriptions from the snippet search? Either way the cache-key gap above stays a
   known limitation unless snippets are added to the key.
