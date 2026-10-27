@@ -12,8 +12,8 @@ tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report:
 `docs/review/adr-0002-option-a-report.md`.
 
-**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR #8 opened for the human's review, not merged
-(human instruction).**
+**Phase 6 — Demo UI v2: built on `phase-6-ui`, PR #8; human decisions 2026-10-27 implemented,
+phase-auditor round 3 PASS, CI green; merge on the human's instruction of 2026-10-27.**
 Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
@@ -77,6 +77,9 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
   a quiet run and up to 201-227 ms in loaded runs; the full check command failed once on the
   graph highlight (227 ms) and the agents switch (210 ms) in separate runs. Not loosened (human
   gate; see "Waiting on human"). Round 3 not run: the remaining item needs the human.
+- Review round 3 (phase-auditor, commit 2d462cd): PASS. Its two QUESTION-FOR-HUMAN items (the
+  engine exception, the Done-when wording) are the human's decisions 3 and 4 below; MINORs fixed
+  (this header, `docs/architecture.md` line on `is_smallest_safe`).
 - Human decisions 2026-10-27, implemented: (1) click budget stays 200 ms; one warm-up, median
   of 5, one re-measure if over, fail only if both medians are over; the timing test is marked
   `perf` (CI always runs it at factor 3; `-m "not perf"` skips it locally); (2) no "smallest
