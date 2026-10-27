@@ -20,8 +20,10 @@ Usage: uv run python scripts/extract_pdf_text.py [--only <substring>]
 import argparse
 import json
 import re
+from datetime import date
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlsplit
 
 import pdfplumber
 
@@ -44,6 +46,17 @@ DOCUMENT_TYPES = frozenset(
 RETRIEVED = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def _real_date(text: str) -> bool:
+    """A YYYY-MM-DD calendar date ("2026-13-45" is refused)."""
+    if not RETRIEVED.match(text):
+        return False
+    try:
+        date.fromisoformat(text)
+    except ValueError:
+        return False
+    return True
+
+
 class ManifestError(ValueError):
     """MANIFEST.md does not list every web PDF exactly once with an https URL."""
 
@@ -63,9 +76,9 @@ def manifest_urls(manifest: Path, pdf_names: list[str]) -> dict[str, str]:
         if len(cells) != MANIFEST_COLUMNS:
             raise ManifestError(f"{manifest.name}: {name} needs {MANIFEST_COLUMNS} columns")
         _, url, retrieved, issuer, document_date, kind, status = cells
-        if not url.startswith("https://") or any(ch.isspace() for ch in url):
+        if urlsplit(url).scheme != "https" or not urlsplit(url).netloc or " " in url:
             raise ManifestError(f"{manifest.name}: {name} has no single https:// URL")
-        if not RETRIEVED.match(retrieved) or not issuer or not document_date:
+        if not _real_date(retrieved) or not issuer or not document_date:
             raise ManifestError(f"{manifest.name}: {name} needs retrieval date, issuer and date")
         if kind not in DOCUMENT_TYPES:
             raise ManifestError(f"{manifest.name}: {name} has unknown document type {kind!r}")
@@ -137,7 +150,7 @@ def main() -> int:
     urls = manifest_urls(MANIFEST, [p.name for p in web_pdfs]) if web_pdfs else {}
     pdfs = sorted(SOURCES.glob("*.pdf")) + sorted(OCR_SOURCES.glob("*.ocr.pdf")) + web_pdfs
     # Output files are named by stem, so two sources with one stem would overwrite each other.
-    stems = [p.stem for p in pdfs]
+    stems = [p.stem.casefold() for p in pdfs]  # Windows and macOS ignore case
     if clashes := sorted({s for s in stems if stems.count(s) > 1}):
         raise SystemExit(f"two source PDFs share an extracted name: {clashes}")
     if args.only:

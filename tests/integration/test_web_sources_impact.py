@@ -7,7 +7,6 @@ byte-identical. The last test records what would change once the human reviews t
 """
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +16,7 @@ import yaml
 from cascadeguard import cli
 from cascadeguard.agents.cache import cache_key, canonical_view
 from cascadeguard.agents.llm import PROMPT_VERSION, response_schema
-from cascadeguard.domain.policies import WEB_DIR, ClauseStatus
+from cascadeguard.domain.policies import WEB_DIR, ClauseStatus, in_source_dir
 from cascadeguard.engine.constraints import ANALYSIS
 from cascadeguard.engine.repair_search import SearchResult
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
@@ -32,7 +31,7 @@ FAKE_MODEL = "test/model-id-for-cache-keys"  # never sent anywhere; only hashed 
 
 
 def web_ids() -> set[str]:
-    return {c.id for c in load_clauses() if (c.source_file or "").startswith(WEB_DIR)}
+    return {c.id for c in load_clauses() if in_source_dir(c.source_file, WEB_DIR)}
 
 
 def copy_reviewed(target: Path, *, drop_web: bool, review_web: bool = False) -> Path:
@@ -44,7 +43,7 @@ def copy_reviewed(target: Path, *, drop_web: bool, review_web: bool = False) -> 
         data: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8"))
         kept: list[dict[str, Any]] = []
         for clause in data["clauses"]:
-            web = str(clause.get("source_file") or "").startswith(WEB_DIR)
+            web = in_source_dir(clause.get("source_file"), WEB_DIR)
             if web and drop_web:
                 continue
             if web and review_web:
@@ -52,12 +51,6 @@ def copy_reviewed(target: Path, *, drop_web: bool, review_web: bool = False) -> 
             kept.append(clause)
         (target / path.name).write_text(yaml.safe_dump({"clauses": kept}), encoding="utf-8")
     return target
-
-
-@pytest.fixture
-def without_web(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setattr(cli, "REVIEWED_DIR", copy_reviewed(tmp_path / "reviewed", drop_web=True))
-    yield
 
 
 def dump(data: Any) -> bytes:
@@ -113,14 +106,27 @@ def test_goldens_still_match_with_the_web_drafts_present() -> None:
     assert cli.search_repairs(SCENARIO).summary() == golden["search"]
 
 
-def test_only_the_draft_count_line_differs_in_the_cli_output(without_web: None) -> None:
+def test_only_the_draft_count_line_differs_in_the_cli_and_markdown_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The CLI and Markdown export print how many drafts are not loaded; that count is the one
     visible difference (a display line, not part of the baseline result or any golden)."""
-    result = cli.run_scenario(SCENARIO)
-    fewer = cli.excluded_drafts(result)
-    assert cli.format_result(result, fewer + len(web_ids())).replace(
-        f"{fewer + len(web_ids())} draft", f"{fewer} draft"
-    ) == cli.format_result(result, fewer)
+
+    def outputs() -> tuple[int, str, str]:
+        result = cli.run_scenario(SCENARIO)
+        drafts = cli.excluded_drafts(result)
+        markdown = cli.baseline_markdown(SCENARIO, result, drafts)
+        return drafts, cli.format_result(result, drafts), markdown
+
+    with_count, with_text, with_md = outputs()
+    monkeypatch.setattr(cli, "REVIEWED_DIR", copy_reviewed(tmp_path / "rev", drop_web=True))
+    count, text, md = outputs()
+    assert with_count == count + len(web_ids())
+    assert with_text != text and with_md != md  # the count line is printed
+    line = f"{with_count} draft clauses not loaded"
+    fewer = f"{count} draft clauses not loaded"
+    assert with_text.replace(line, fewer) == text
+    assert with_md.replace(line, fewer) == md
 
 
 def test_once_reviewed_the_web_clauses_enter_only_the_analysis_roles_views(
