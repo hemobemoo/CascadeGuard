@@ -301,5 +301,96 @@
     },
     "ocr": true,
     "derived_from": "887026278-TDRA-Telecom-Law-Final-English-o.pdf"
+  },
+  {
+    "source_file": "web/01_uae_smart_health_ai_policy.pdf",
+    "output": "01_uae_smart_health_ai_policy.jsonl",
+    "page_count": 5,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027204429+00'00'"
+    },
+    "web": true,
+    "source_url": "https://uaelegislation.gov.ae/en/policy/details/national-policy-for-the-promotion-of-smart-health-services-and-artificial-intelligence-in-the-uae-health-sector",
+    "manifest": "web/MANIFEST.md"
+  },
+  {
+    "source_file": "web/02_uae_international_ai_policy.pdf",
+    "output": "02_uae_international_ai_policy.jsonl",
+    "page_count": 8,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027204527+00'00'"
+    },
+    "web": true,
+    "source_url": "https://uaelegislation.gov.ae/en/policy/details/uae-s-international-stance-on-artificial-intelligence-policy",
+    "manifest": "web/MANIFEST.md"
+  },
+  {
+    "source_file": "web/03_uae_national_cybersecurity_strategy.pdf",
+    "output": "03_uae_national_cybersecurity_strategy.jsonl",
+    "page_count": 3,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027220809+00'00'"
+    },
+    "web": true,
+    "source_url": "https://uaecabinet.ae/en/news/uae-cabinet-approves-national-cybersecurity-strategy-api-first-policy",
+    "manifest": "web/MANIFEST.md"
+  },
+  {
+    "source_file": "web/04_uae_digital_government_strategy_2025.pdf",
+    "output": "04_uae_digital_government_strategy_2025.jsonl",
+    "page_count": 14,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027204608+00'00'"
+    },
+    "web": true,
+    "source_url": "https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/strategies-plans-and-visions/government-services-and-digital-transformation/uae-national-digital-government-strategy",
+    "manifest": "web/MANIFEST.md"
+  },
+  {
+    "source_file": "web/05_uae_ai_government_policies.pdf",
+    "output": "05_uae_ai_government_policies.jsonl",
+    "page_count": 7,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027205137+00'00'"
+    },
+    "web": true,
+    "source_url": "https://u.ae/en/about-the-uae/digital-uae/digital-technology/artificial-intelligence/artificial-intelligence-in-government-policies",
+    "manifest": "web/MANIFEST.md"
+  },
+  {
+    "source_file": "web/06_unesco_ai_ethics_recommendation.pdf",
+    "output": "06_unesco_ai_ethics_recommendation.jsonl",
+    "page_count": 6,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027204711+00'00'"
+    },
+    "web": true,
+    "source_url": "https://www.unesco.org/en/artificial-intelligence/recommendation-ethics",
+    "manifest": "web/MANIFEST.md"
+  },
+  {
+    "source_file": "web/07_oecd_ai_principles.pdf",
+    "output": "07_oecd_ai_principles.jsonl",
+    "page_count": 10,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20261027204732+00'00'"
+    },
+    "web": true,
+    "source_url": "https://www.oecd.org/en/topics/sub-issues/ai-principles.html",
+    "manifest": "web/MANIFEST.md"
   }
 ]

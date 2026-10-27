@@ -9,11 +9,17 @@ OCR'd copies in policies/sources/ocr/ are derived sources: each record also carr
 "ocr": true, source_file is "ocr/<name>", and the inventory entry names the original it was
 derived from. OCR text must be corrected against the page image before it is quoted.
 
+Web transcriptions in policies/sources/web/ (official web pages printed to PDF, unverified) are
+marked the same way: each record carries "web": true and the page's "source_url", taken from
+the table in policies/sources/web/MANIFEST.md, and source_file is "web/<name>". A web PDF with
+no manifest row (or a malformed row) stops the extraction.
+
 Usage: uv run python scripts/extract_pdf_text.py [--only <substring>]
 """
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -22,17 +28,47 @@ import pdfplumber
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ROOT / "policies" / "sources"
 OCR_SOURCES = SOURCES / "ocr"  # OCR'd copies of originals, named <original-stem>.ocr.pdf
+WEB_SOURCES = SOURCES / "web"  # web-page transcriptions, listed in MANIFEST.md
+MANIFEST = WEB_SOURCES / "MANIFEST.md"
 EXTRACTED = ROOT / "policies" / "extracted"
 INVENTORY = EXTRACTED / "_inventory.json"
 
 # A page with fewer non-whitespace characters than this is reported as having no usable text.
 MIN_TEXT_CHARS = 20
+# A manifest table row: | `<file>.pdf` | <url> | ... (other columns are for the human).
+MANIFEST_ROW = re.compile(r"^\|\s*`([^`]+\.pdf)`\s*\|\s*([^|]*?)\s*\|")
 
 
-def extract_pdf(pdf_path: Path) -> dict[str, Any]:
+class ManifestError(ValueError):
+    """MANIFEST.md does not list every web PDF exactly once with an https URL."""
+
+
+def manifest_urls(manifest: Path, pdf_names: list[str]) -> dict[str, str]:
+    """The official URL of each web PDF, from the manifest table. Strict: every PDF has exactly
+    one row, every row names a PDF that exists, and every URL starts with https://."""
+    urls: dict[str, str] = {}
+    for line in manifest.read_text(encoding="utf-8").splitlines():
+        match = MANIFEST_ROW.match(line)
+        if match is None:
+            continue
+        name, url = match.groups()
+        if name in urls:
+            raise ManifestError(f"{manifest.name}: two rows for {name}")
+        if not url.startswith("https://") or any(ch.isspace() for ch in url):
+            raise ManifestError(f"{manifest.name}: {name} has no single https:// URL")
+        urls[name] = url
+    if missing := sorted(set(pdf_names) - set(urls)):
+        raise ManifestError(f"{manifest.name}: no row for {missing}")
+    if unknown := sorted(set(urls) - set(pdf_names)):
+        raise ManifestError(f"{manifest.name}: rows for files not in web/: {unknown}")
+    return urls
+
+
+def extract_pdf(pdf_path: Path, source_url: str | None = None) -> dict[str, Any]:
     out_path = EXTRACTED / f"{pdf_path.stem}.jsonl"
     source_file = pdf_path.relative_to(SOURCES).as_posix()
     ocr = pdf_path.parent == OCR_SOURCES
+    web = source_url is not None
     empty_pages: list[int] = []
     image_only_pages: list[int] = []
     with pdfplumber.open(pdf_path) as pdf, out_path.open("w", encoding="utf-8") as out:
@@ -49,6 +85,9 @@ def extract_pdf(pdf_path: Path) -> dict[str, Any]:
             record: dict[str, Any] = {"source_file": source_file, "page": number, "text": text}
             if ocr:
                 record["ocr"] = True
+            if web:
+                record["web"] = True
+                record["source_url"] = source_url
             out.write(json.dumps(record, ensure_ascii=False) + "\n")
             page.close()
     entry: dict[str, Any] = {
@@ -62,6 +101,10 @@ def extract_pdf(pdf_path: Path) -> dict[str, Any]:
     if ocr:
         entry["ocr"] = True
         entry["derived_from"] = pdf_path.name.removesuffix(".ocr.pdf") + ".pdf"
+    if web:
+        entry["web"] = True
+        entry["source_url"] = source_url
+        entry["manifest"] = MANIFEST.relative_to(SOURCES).as_posix()
     return entry
 
 
@@ -75,11 +118,14 @@ def main() -> int:
     if INVENTORY.exists():
         existing = {e["source_file"]: e for e in json.loads(INVENTORY.read_text("utf-8"))}
 
-    pdfs = sorted(SOURCES.glob("*.pdf")) + sorted(OCR_SOURCES.glob("*.ocr.pdf"))
+    web_pdfs = sorted(WEB_SOURCES.glob("*.pdf"))
+    urls = manifest_urls(MANIFEST, [p.name for p in web_pdfs]) if web_pdfs else {}
+    pdfs = sorted(SOURCES.glob("*.pdf")) + sorted(OCR_SOURCES.glob("*.ocr.pdf")) + web_pdfs
     if args.only:
         pdfs = [p for p in pdfs if args.only in p.name]
     for pdf_path in pdfs:
-        entry = extract_pdf(pdf_path)
+        url = urls.get(pdf_path.name) if pdf_path.parent == WEB_SOURCES else None
+        entry = extract_pdf(pdf_path, url)
         existing[entry["source_file"]] = entry
         print(
             f"{entry['page_count']:5d} pages, {len(entry['pages_without_text']):4d} without text"

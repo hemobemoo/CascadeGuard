@@ -11,6 +11,8 @@ from cascadeguard.domain.base import DomainModel
 ELISION = "[...]"  # marks an omission inside a verbatim quote
 OCR_DIR = "ocr/"  # source_file prefix of OCR'd copies in policies/sources/ocr/ (derived sources)
 OCR_FLAG = "OCR — check against image"  # must appear in notes of a clause quoted from OCR text
+WEB_DIR = "web/"  # source_file prefix of web-page transcriptions in policies/sources/web/
+WEB_FLAG = "web transcription — unverified"  # must appear in notes of a clause quoted from one
 CLAUSE_ID_PATTERN = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
 # Year, year-month, full ISO date, or "unknown" when the PDF prints no date (never guessed).
 DOCUMENT_DATE_PATTERN = r"^(\d{4}(-\d{2}(-\d{2})?)?|unknown)$"
@@ -100,6 +102,11 @@ class PolicyClause(DomainModel):
             raise ValueError("source_file must be a PDF filename")
         if (self.source_file or "").startswith(OCR_DIR) and OCR_FLAG not in (self.notes or ""):
             raise ValueError(f"a clause quoted from an OCR'd copy must say {OCR_FLAG!r} in notes")
+        if (self.source_file or "").startswith(WEB_DIR):
+            if WEB_FLAG not in (self.notes or ""):
+                raise ValueError(f"a clause quoted from a web transcription must say {WEB_FLAG!r}")
+            if self.binding is True:  # an unverified transcription is never shown as binding text
+                raise ValueError("a clause quoted from a web transcription cannot be binding")
         stripped = self.text.strip()
         if not stripped:
             raise ValueError("text must not be blank")
