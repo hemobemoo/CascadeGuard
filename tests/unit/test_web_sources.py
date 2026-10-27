@@ -10,7 +10,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "policies" / "sources" / "web"
 EXTRACTED = ROOT / "policies" / "extracted"
-HEADER = "| File | Official URL | Retrieved |\n|---|---|---|\n"
+HEADER = (
+    "| File | URL | Retrieved | Issuer | Date | Type | Status |\n|---|---|---|---|---|---|---|\n"
+)
+REST = "2026-10-27 | Issuer | 2024 | policy | unverified"
+
+
+def row(name: str, url: str, rest: str = REST) -> str:
+    return f"| `{name}` | {url} | {rest} |"
 
 
 def extract_script() -> ModuleType:
@@ -33,30 +40,43 @@ def test_manifest_rows_give_each_pdf_its_url(tmp_path: Path) -> None:
     script = extract_script()
     manifest = write_manifest(
         tmp_path,
-        "| `a.pdf` | https://example.org/a | 2026-10-27 |",
-        "| `b.pdf` | https://example.org/b?x=1 | 2026-10-27 |",
+        row("a.pdf", "https://example.org/a"),
+        row(
+            "b.pdf",
+            "https://example.org/b?x=1",
+            "2026-10-27 | OECD | 2024 | international precedent | unverified",
+        ),
     )
     urls = script.manifest_urls(manifest, ["a.pdf", "b.pdf"])
     assert urls == {"a.pdf": "https://example.org/a", "b.pdf": "https://example.org/b?x=1"}
 
 
+A = "https://e.org/a"
+
+
 @pytest.mark.parametrize(
     ("rows", "pdfs", "reason"),
     [
-        (["| `a.pdf` | https://example.org/a | x |"], ["a.pdf", "b.pdf"], "no row"),
+        ([row("a.pdf", A)], ["a.pdf", "b.pdf"], "no row"),
+        ([row("a.pdf", A), row("c.pdf", "https://e.org/c")], ["a.pdf"], "rows for files"),
+        ([row("a.pdf", A), row("a.pdf", "https://e.org/b")], ["a.pdf"], "two rows"),
+        ([row("a.pdf", "http://e.org/a")], ["a.pdf"], "https"),
+        ([row("a.pdf", "")], ["a.pdf"], "https"),
+        ([row("a.pdf", f"{A} https://e.org/b")], ["a.pdf"], "https"),
+        ([row("a.pdf", A, "2026-10-27 | Issuer | 2024 | policy")], ["a.pdf"], "columns"),
         (
-            ["| `a.pdf` | https://e.org/a | x |", "| `c.pdf` | https://e.org/c | x |"],
+            [row("a.pdf", A, "27 Oct 2026 | Issuer | 2024 | policy | unverified")],
             ["a.pdf"],
-            "rows for files",
+            "retrieval",
         ),
+        ([row("a.pdf", A, "2026-10-27 |  | 2024 | policy | unverified")], ["a.pdf"], "issuer"),
+        ([row("a.pdf", A, "2026-10-27 | Issuer |  | policy | unverified")], ["a.pdf"], "date"),
         (
-            ["| `a.pdf` | https://e.org/a | x |", "| `a.pdf` | https://e.org/b | x |"],
+            [row("a.pdf", A, "2026-10-27 | Issuer | 2024 | guidance | unverified")],
             ["a.pdf"],
-            "two rows",
+            "type",
         ),
-        (["| `a.pdf` | http://example.org/a | x |"], ["a.pdf"], "https"),
-        (["| `a.pdf` |  | x |"], ["a.pdf"], "https"),
-        (["| `a.pdf` | https://e.org/a https://e.org/b | x |"], ["a.pdf"], "https"),
+        ([row("a.pdf", A, "2026-10-27 | Issuer | 2024 | law | reviewed")], ["a.pdf"], "unverified"),
     ],
 )
 def test_malformed_manifest_stops_the_extraction(
