@@ -4,6 +4,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
+**Phase 6c — Policy source expansion: built on `phase-6c-policy-sources` (human instructions
+2026-10-28); not merged: gates 1 (clause review) and 6 (rule edits) are open.** Spec
+`specs/006c-policy-sources.md`; report and impact check `docs/review/phase-6c-report.md`;
+triage `docs/review/phase-6c-clause-triage.md`. See "Waiting on human".
+
 **Phase 5 — LLM agents: merged to main via PR #6 (merge commit, branch `phase-5-llm` kept),
 tagged `phase-5`** (2026-10-26, on the human's instruction). Report:
 `docs/review/phase-5-report.md`. Next: ADR 0002 option A, after the human's decision.
@@ -23,11 +28,6 @@ approved as drafted; "Show all N" keeps the total; merge PR #9 and tag `phase-6b
 passes on the latest push.**
 Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshots:
 `docs/review/phase-6b-polish/README.md`.
-
-**Phase 6c — Policy source expansion: built on `phase-6c-policy-sources` (human instructions
-2026-10-28); not merged: gates 1 (clause review) and 6 (rule edits) are open.** Spec
-`specs/006c-policy-sources.md`; report and impact check `docs/review/phase-6c-report.md`;
-triage `docs/review/phase-6c-clause-triage.md`. See "Waiting on human".
 
 **Open items:**
 - **ADR 0002 option A:** merged (PR #7, tag `adr-0002-a`). Known limitation: two owners for
