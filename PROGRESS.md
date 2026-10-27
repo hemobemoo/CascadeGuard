@@ -60,6 +60,13 @@ triage `docs/review/phase-6c-clause-triage.md`. See "Waiting on human".
 - Gate-6 edits approved by the human in the phase instructions: `AGENTS.md` knowledge-base
   sentence; `START_PROMPT.md` Phase 6c with its Done when.
 - Deferred 6b MINOR fixed: `uae.telecom-law.art6` notes say what each `[...]` skips (draft).
+- Review round 1: all three FAIL. phase-auditor and test-breaker BLOCKER (same): the web-flag
+  rule ran before the loader's path check (`test_loader_paths[web/../doc.pdf]` failed); test-breaker
+  BLOCKER: `./web/`, `Web/`, `./ocr/` spellings skipped the web and OCR flag rules. Fixed in code
+  (`_in_dir` in `domain/policies.py`), tests added. MINORs fixed: quote check matches the record's
+  `source_file`; extractor refuses duplicate stems; manifest parser checks all seven columns;
+  structure file; UNESCO quotes without headings; report wording. evidence-auditor BLOCKER is a
+  human item (above). Triage `docs/review/phase-6c-clause-triage.md`.
 
 Verify:
 
@@ -852,6 +859,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 ## Waiting on human
 
 **Phase 6c (2026-10-28), PR open, not merged:**
+- **Embedded instructions in the web PDFs (evidence-auditor BLOCKER, human item):** p.1 of each
+  file ("verify clauses before marking them reviewed") and 03 pp.2-3 ("Knowledge-base ingestion
+  guidance", "For CascadeGuard, represent…", "also ingest … the National Cyber Security Policy for
+  AI"). Treated as data; nothing was fetched or acted on. Confirm they are your own authoring and
+  accept them as data, or replace the files with clean transcriptions or the originals.
+- **03 attribution (NEEDS-HUMAN-JUDGMENT):** the two `uae.cyber-strategy-2025.*` bullets may be
+  the transcriber's wording, not the Cabinet's; check against the Cabinet page or re-quote from
+  the strategy PDF.
+- **OECD:** record whether the UAE adheres to OECD/LEGAL/0449 when the instrument is placed.
 - **Gate 1, draft clauses for review** (all in `policies/reviewed/web_sources.yaml`):
   `uae.mohap-smart-health.p2-coordination`, `uae.mohap-smart-health.p6-cybersecurity`,
   `uae.mohap-smart-health.p7-liability`, `uae.cyber-strategy-2025.governance-aim`,
