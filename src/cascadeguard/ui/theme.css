@@ -166,3 +166,11 @@ body { background: var(--cg-bg); color: var(--cg-text); font-family: var(--cg-fo
 .cg-picker { width: 32rem; max-width: 100%; }
 .cg-graph { height: 34rem; }
 .cg-brand-icon { color: var(--cg-brand); }
+
+/* Phase 6b: names first, raw ids in small print (Expert mode shows them; spec 006b) */
+.cg-summary { font-size: var(--cg-fs-md); max-width: 90ch; margin-bottom: 4px; }
+.cg-sentence { font-weight: 500; overflow-wrap: anywhere; }
+.cg-idline { font-family: var(--cg-mono); font-size: 11px; color: var(--cg-muted); overflow-wrap: anywhere; }
+.cg-rawid { display: none; font-family: var(--cg-mono); font-size: 11px; color: var(--cg-muted); overflow-wrap: anywhere; }
+body.cg-expert .cg-rawid { display: block; }
+.cg-card .q-btn__content { justify-content: flex-start; text-align: left; }
