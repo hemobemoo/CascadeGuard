@@ -1,0 +1,43 @@
+# Display labels for the demo UI only (spec 006b). Read by src/cascadeguard/ui/ and nothing
+# else: never by the engine, the agents, the simulation or the exports, and not part of any
+# cache key. Labels are pure renames of the ids (no added meaning, status or legal claim).
+# Role names come from roles.yaml `name`, unchanged. Everything here is synthetic.
+
+incident_summary: >-
+  Hypothetical scenario with synthetic data: a telecom AI model delays one-time-password SMS, a
+  health portal's AI fraud model reads the patients' retries as an attack and locks their
+  accounts, and the information that would explain the locks sits with another organisation.
+
+categories:
+  network_telemetry: Network telemetry
+  network_incident_status: Network incident status
+  auth_service_metrics: Authentication service metrics
+  fraud_model_alerts: Fraud model alerts
+  patient_account_records: Patient account records
+  aggregate_access_impact: Aggregate access impact
+  public_channel_status: Public channel status
+  regulatory_reports: Regulatory reports
+
+actions:
+  investigate_network_fault: Investigate network fault
+  suspend_ai_traffic_model: Suspend AI traffic model
+  report_to_telecom_regulator: Report to telecom regulator
+  share_incident_status: Share incident status
+  request_information: Request information
+  raise_security_incident: Raise security incident
+  notify_health_data_oversight: Notify health-data oversight
+  review_automated_lockouts: Review automated lockouts
+  reverse_automated_lockouts: Reverse automated lockouts
+  activate_fallback_channel: Activate fallback channel
+  maintain_fallback_plan: Maintain fallback plan
+  assess_access_impact: Assess access impact
+  recommend_measure: Recommend measure
+  request_determination: Request determination
+  issue_determination: Issue determination
+  provide_policy_analysis: Provide policy analysis
+  monitor: Monitor
+
+goals:
+  patient_access_restored: Patient access restored
+  alert_cause_known_to_health: Alert cause known to health
+  network_incident_reported: Network incident reported

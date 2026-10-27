@@ -9,6 +9,7 @@ test is also marked `perf`: CI always runs it; locally it runs in the full check
 """
 
 import os
+import re
 import socket
 import statistics
 import subprocess
@@ -143,6 +144,14 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     expect(page.locator('[data-testid="verdict-outcome"]')).to_contain_text(
         "resolved (all critical goals met; masked failures may remain)"
     )
+    # Spec 006b: the incident in one sentence; the best repair in plain language, id below.
+    expect(page.locator('[data-testid="incident-summary"]')).to_contain_text(
+        "Hypothetical scenario with synthetic data"
+    )
+    expect(page.locator('[data-testid="verdict-edit"]').first).to_have_text(
+        "Assign reverse automated lockouts to Health Service Operator, 30-minute deadline"
+    )
+    expect(a.get_by_text(TOP, exact=True)).to_be_visible()
     for key in "bcdef":
         expect(section(page, key)).to_be_hidden()
 
@@ -151,12 +160,16 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     b = section(page, "b")
     expect(b).to_be_visible()
     expect(a).to_be_hidden()
-    expect(b.get_by_text("locked_account_records").first).to_be_visible()
+    # Names first; the raw fact id is only in the tooltip and in Expert mode (spec 006b).
+    expect(b.get_by_text("Health Service Operator", exact=True).first).to_be_visible()
+    expect(b.get_by_text("Patient account records").first).to_be_visible()
+    expect(b.get_by_text("locked_account_records").first).to_be_hidden()
+    # Clause ids and status labels stay verbatim.
     expect(b.get_by_text("dha.pp11.4-18-4").first).to_be_visible()
     expect(b.get_by_text("reviewed (interpreted)").first).to_be_visible()
     page.locator('[data-testid="cell-baseline-health_service_operator-30"]').click()
     view = page.locator('[data-testid="role-view"]')
-    expect(view).to_contain_text("Role view: health_service_operator at T+30")
+    expect(view).to_contain_text("Role view: Health Service Operator at T+30")
     expect(view).to_contain_text("Data categories outside its boundary")
     # In the baseline the network status is outside the health operator's boundary.
     expect(view.get_by_text("network_incident_status", exact=True)).to_be_visible()
@@ -174,10 +187,23 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
         "e => Object.fromEntries(getElement(e).chart.getOption().series[0].data"
         ".map(n => [n.id, n.symbolSize]))"
     )
+    opacity = (
+        "e => Object.fromEntries(getElement(e).chart.getOption().series[0].data"
+        ".map(n => [n.id, (n.itemStyle || {}).opacity ?? 1]))"
+    )
+    names = (
+        "e => Object.fromEntries(getElement(e).chart.getOption().series[0].data"
+        ".map(n => [n.id, n.name]))"
+    )
     before = handle.evaluate(sizes)
+    assert handle.evaluate(names)["action:reverse_automated_lockouts"] == (
+        "Reverse automated lockouts"
+    )
     c.locator(".q-field", has_text="Highlight").click()
-    page.get_by_role("option", name="orphan_duty:reverse_automated_lockouts").click()
-    expect(c.locator(".q-field", has_text="Highlight")).to_contain_text("reverse_automated")
+    page.get_by_role("option", name="orphan duty: Reverse automated lockouts").click()
+    expect(c.locator(".q-field", has_text="Highlight")).to_contain_text(
+        "Reverse automated lockouts"
+    )
     page.wait_for_function(
         "() => getElement(document.querySelector('[data-testid=graph]')).chart.getOption()"
         ".series[0].data"
@@ -187,6 +213,17 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     assert before["category:network_incident_status"] == 26  # every failure highlighted
     assert after["category:network_incident_status"] == 12  # not part of this failure
     assert after["action:reverse_automated_lockouts"] == 26
+    # Everything outside the selected failure's subgraph is faded; the toggle shows it all.
+    faded = handle.evaluate(opacity)
+    assert faded["category:network_incident_status"] == 0.15
+    assert faded["action:reverse_automated_lockouts"] == 1
+    c.locator('[data-testid="graph-show-all"]').click()
+    page.wait_for_function(
+        "() => (getElement(document.querySelector('[data-testid=graph]')).chart.getOption()"
+        ".series[0].data.find(n => n.id === 'category:network_incident_status').itemStyle"
+        " || {}).opacity === undefined"
+    )
+    assert handle.evaluate(sizes)["action:reverse_automated_lockouts"] == 26  # still highlighted
     assert handle.evaluate("e => e.isConnected")  # the same chart, updated in place
 
     # d. Diagnosis: one card per category, evidence chips with status labels.
@@ -201,6 +238,9 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     ):
         expect(d.locator(f'[data-testid="category-{category}"]')).to_be_visible()
     expect(d.get_by_text("dha.pp11.4-18-1").first).to_be_visible()
+    expect(
+        d.locator('[data-testid="failure-orphan_duty:reverse_automated_lockouts"]')
+    ).to_have_text("Reverse automated lockouts")
     expect(d.locator('[data-testid="category-mandate_overlap"]')).to_contain_text("none found")
 
     # e. Repair ladder: rank 1 badged, requires authorization, roles touched.
@@ -208,16 +248,34 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
     rung = page.locator('[data-testid="rung-1"]')
     expect(rung).to_contain_text(SMALLEST_SAFE)
     expect(rung).to_contain_text("requires authorization")
-    expect(rung).to_contain_text("roles touched: health_service_operator, telecom_operator")
+    expect(rung).to_contain_text("roles touched: Health Service Operator, Telecom Operator")
+    expect(rung).to_contain_text(
+        "Allow Telecom Operator to share network incident status with Health Service Operator "
+        "(minimum data share)"
+    )
+    expect(rung.get_by_text(TOP, exact=True)).to_be_visible()  # the id, in small print
     expect(page.locator('[data-testid="rung-2"]')).not_to_contain_text(SMALLEST_SAFE)
+    # Top 3 only; the rest behind "Show all N".
+    expect(page.locator('[data-testid="rung-3"]')).to_be_visible()
+    expect(page.locator('[data-testid="rung-4"]')).to_be_hidden()
+    toggle = page.locator('[data-testid="ladder-toggle"]')
+    expect(toggle).to_have_text(re.compile(r"Show all \d+"))
+    toggle.click()
+    expect(page.locator('[data-testid="rung-4"]')).to_be_visible()
+    expect(toggle).to_have_text("Show top 3")
+    toggle.click()
+    expect(page.locator('[data-testid="rung-4"]')).to_be_hidden()
 
     # f. Split screen for the top repair.
     page.get_by_role("button", name="Next").click()
     f = section(page, "f")
     expect(f.locator('[data-testid="comparison-id"]')).to_have_text(TOP)
-    expect(f.get_by_text("patient_access_restored: met at T+60")).to_be_visible()
+    expect(f.get_by_text("Patient access restored: met at T+60")).to_be_visible()
     expect(f.get_by_text(MASKED_LABEL).first).to_be_visible()
-    expect(f.get_by_text(f"[{REPAIR_LABEL}]").first).to_be_visible()
+    expect(f.locator('[data-testid="comparison-edit"]').first).to_have_text(
+        "Assign reverse automated lockouts to Health Service Operator, 30-minute deadline "
+        f"[{REPAIR_LABEL}]"
+    )
 
     # g. Exports equal the CLI's (unchanged builders).
     cli = tmp_path / "cli"
@@ -234,6 +292,12 @@ def test_expert_mode_shows_every_section(page: Page) -> None:
         expect(section(page, key)).to_be_visible()
     expect(section(page, "x")).to_contain_text("draft clauses not loaded")
     expect(section(page, "x")).to_contain_text("[reviewed (interpreted)]")
+    # Expert mode shows the raw ids next to the names (spec 006b).
+    expect(section(page, "b").get_by_text("locked_account_records").first).to_be_visible()
+    expect(section(page, "d").get_by_text("orphan_duty:reverse_automated_lockouts")).to_be_visible()
+    page.get_by_text("Guided", exact=True).click()
+    page.get_by_text("Expert", exact=True).click()
+    expect(section(page, "b").get_by_text("locked_account_records").first).to_be_visible()
     # Compare another repair: the ladder highlights it in place; the split screen follows.
     page.locator('[data-testid="rung-2"]').get_by_role("button", name="Compare").click()
     expect(page.locator('[data-testid="rung-2"]')).to_have_class("cg-rung cg-rung-selected")
@@ -260,6 +324,13 @@ def test_llm_cached_mode_never_calls_and_shows_the_agents_row(page: Page) -> Non
     expect(page.get_by_text("LLM (live", exact=False)).to_have_count(0)  # no live mode in the UI
     page.get_by_text("Scripted", exact=True).click()
     expect(agents).to_contain_text("scripted agents")
+
+
+# Whether the graph fades what is outside the highlighted subgraph (any node at opacity 0.15).
+GRAPH_FADED = (
+    "getElement(document.querySelector('[data-testid=graph]')).chart.getOption().series[0].data"
+    ".some(n => (n.itemStyle || {}).opacity === 0.15)"
+)
 
 
 def _median_ms(label: str, budget: float, runs: list[float]) -> float:
@@ -318,7 +389,7 @@ def test_performance_budget(server: str, browser: Browser) -> None:
         "swimlane cell -> role view",
         lambda: (
             pg.locator('[data-testid="cell-baseline-telecom_operator-30"]').click(),
-            pg.get_by_text("Role view: telecom_operator at T+30").wait_for(),
+            pg.get_by_text("Role view: Telecom Operator at T+30").wait_for(),
         ),
         lambda: (
             to("b")(),
@@ -346,13 +417,34 @@ def test_performance_budget(server: str, browser: Browser) -> None:
     measure(
         "graph highlight (in place)",
         lambda: (
-            pg.locator('[data-testid="section-d"] button', has_text="orphan_duty:activate").click(),
-            picker.filter(has_text="activate_fallback").wait_for(),
+            pg.locator('[data-testid="failure-orphan_duty:activate_fallback_channel"]').click(),
+            picker.filter(has_text="Activate fallback channel").wait_for(),
         ),
         lambda: (
             picker.click(),
             pg.get_by_role("option", name="all diagnosed failures").click(),
             picker.filter(has_text="all diagnosed failures").wait_for(),
+        ),
+    )
+    show_all = section(pg, "c").locator('[data-testid="graph-show-all"]')
+    measure(
+        "graph: show all at full opacity",
+        lambda: (
+            show_all.click(),
+            pg.wait_for_function(f"() => {GRAPH_FADED} === false"),
+        ),
+        lambda: (
+            show_all.click() if pg.evaluate(f"() => {GRAPH_FADED}") is False else None,
+            pg.wait_for_function(f"() => {GRAPH_FADED} === true"),
+        ),
+    )
+    toggle = pg.locator('[data-testid="ladder-toggle"]')
+    measure(
+        "ladder: Show all N",
+        lambda: (toggle.click(), pg.locator('[data-testid="rung-4"]').wait_for(state="visible")),
+        lambda: (
+            toggle.click() if pg.locator('[data-testid="rung-4"]').is_visible() else None,
+            pg.locator('[data-testid="rung-4"]').wait_for(state="hidden"),
         ),
     )
     pg.get_by_text("Guided", exact=True).click()

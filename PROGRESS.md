@@ -15,8 +15,8 @@ tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report
 **Phase 6 — Demo UI v2: merged to main via PR #8 (merge commit `883fb43`), tagged `phase-6`**
 (2026-10-27, on the human's instruction, after phase-auditor round 3 PASS and green CI).
 
-**Phase 6b — Demo UI polish: spec addendum `specs/006b-demo-ui-polish.md` on `phase-6b-polish`,
-waiting for the human's approval before any code.**
+**Phase 6b — Demo UI polish: built on `phase-6b-polish` (spec approved with conditions,
+2026-10-27); PR open; merge waits for the human's approval of the incident summary wording.**
 Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
@@ -31,6 +31,30 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
+
+### Phase 6b — Demo UI polish (branch `phase-6b-polish`)
+- Spec `specs/006b-demo-ui-polish.md` with the human's decisions (display.yaml conditions 1.1-1.3,
+  role `name` unchanged, summary drafted by the agent for approval).
+- `scenarios/uae_health_access/display.yaml` (UI-only labels, incident summary); `ui/app.py`
+  `labels_for` validates it (every id labelled, no unknown id, one-line labels, one-sentence
+  summary; missing file is an error). `ui/view_model.py`: `Labels`, `edit_sentence` (one
+  template per operation), `failure_title`, names in verdict, swimlanes, diagnosis, ladder,
+  comparison, graph (faded outside the highlight; `fade=False` for "Show all at full
+  opacity"). Ladder top 3 + "Show all N" (in place). Raw ids: tooltips and small print, all in
+  Expert mode (body class `cg-expert`). No engine, agent, simulation or export change.
+- Tests: `tests/unit/test_display_labels.py` (24: 1.1 static and dynamic, 1.2, validation, one
+  sentence per operation naming every parameter, names in rows, graph fading); e2e guided flow,
+  expert and perf test updated for names (intended display change) and two new timed clicks.
+- Full check at factor 1: 434 passed; every median under budget (see
+  `docs/review/phase-6b-polish/README.md`, before/after screenshots there).
+
+Verify:
+
+```bash
+uv run python -m cascadeguard.ui.app
+uv run pytest tests/unit/test_display_labels.py
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
+```
 
 ### Phase 6 — Demo UI v2 (PR #8, merged `883fb43`, tag `phase-6`)
 - Scope decision (human, 2026-10-26): Phase 6 = Demo UI v2, tracing moves to Phase 7; recorded
@@ -775,9 +799,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6b (2026-10-27):** approve `specs/006b-demo-ui-polish.md`, and answer its three
-questions (labels in a UI-only `display.yaml`; the existing role `name`; who writes the incident
-summary).
+**Phase 6b (2026-10-27):** approve the final wording of the incident summary in
+`scenarios/uae_health_access/display.yaml` before merge (human decision 3).
 
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
@@ -872,9 +895,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-The human approves `specs/006b-demo-ui-polish.md` (branch `phase-6b-polish`) and answers its
-questions; then build it, with before/after screenshots in `docs/review/phase-6b-polish/`.
-Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
+The human approves the Phase 6b incident summary wording; then merge the Phase 6b PR. Then
+Phase 7 (tracing, optional). Still open: the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
