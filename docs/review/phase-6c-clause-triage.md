@@ -40,4 +40,12 @@ Unchanged clauses still NEEDS-HUMAN-JUDGMENT (as in 6b): `dha.pp11.applicability
 - **MINOR (fixed)** — report called the fallback-channel source a "duty"; now "rule (non-binding,
   draft source)".
 
-Round 2 verdict: see the PR body.
+## Round 2
+
+Verdict **FAIL** on the same human-only BLOCKER (embedded instructions in the web PDFs). No clause
+FIX; every quote verbatim (JSONL matched on page and `source_file`, and the PDF page). The three
+`uae.mohap-smart-health.*` clauses move to NEEDS-HUMAN-JUDGMENT on `binding: false` vs `unknown`
+(the human's phase instructions set "binding: false (or unknown with a note)" for policy
+priorities; the human may still prefer `unknown`). The two `uae.cyber-strategy-2025.*` clauses stay
+NEEDS-HUMAN-JUDGMENT (attribution). UNESCO and OECD clauses CLEAN. MINOR fixed: the report no
+longer calls `UAE Policy Foundation.pdf` a non-clause source.
