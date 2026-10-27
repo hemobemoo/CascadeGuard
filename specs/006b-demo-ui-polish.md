@@ -49,7 +49,8 @@ checks one sentence per operation and that every parameter appears in it.
 
 ## c. Repair ladder
 
-Show the top 3 rungs; the rest behind "Show all N" (N = ranked count). Discarded and
+Show the top 3 rungs; the rest behind "Show all N" (N = the total rows the button reveals:
+ranked + inconclusive + discarded; human decision 2026-10-27). Discarded and
 inconclusive repairs stay listed as today, collapsed in the same way. Selecting a rung beyond
 the third (e.g. from the graph or an export) expands the list first.
 
@@ -94,17 +95,15 @@ and all checks pass.
       evidence-auditor checks `display.yaml` under gate 7, the same as the incident summary.
 2. Role names: the existing `name` field, unchanged (e.g. "Health Service Operator").
 3. Incident summary: drafted by the agent within the gate-7 constraints; the human approves
-   the final wording before merge.
+   the final wording before merge. Approved as drafted (2026-10-27).
 
 ## Implementation notes (review round 1, 2026-10-27)
 
 - d: the graph opens on one failure (the first in the diagnosis cards' order), the rest faded;
   "all diagnosed failures" shows every node at full opacity, as written above.
 - c: ranked rungs, inconclusive rows and discarded repairs beyond three are all behind the one
-  "Show all N" toggle. **Open for the human:** the approved text says N = ranked count; the
-  code counts all three lists, because the toggle reveals all three (with the real LLM cache:
-  1 ranked, 20 inconclusive, so "Show all 1" would hide 17 rows behind a count of 1). Keep the
-  total, or show the ranked count? No control can select a hidden rung today; `compare` still
+  "Show all N" toggle; N is the total of all three lists (human decision 2026-10-27, replacing
+  "N = ranked count"; with the real LLM cache: "Show all 21"). No control can select a hidden rung today; `compare` still
   expands the list first if it ever is asked to (defensive, untested: unreachable from the UI).
 - b: every plain-language sentence carries the hypothetical repair-rule label (verdict strip,
   ladder, split screen).

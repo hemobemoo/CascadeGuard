@@ -18,8 +18,9 @@ Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). 
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
 
 **Phase 6b — Demo UI polish: built on `phase-6b-polish` (spec approved with conditions,
-2026-10-27); review round 2 PASS (all three reviewers); PR open, not merged: waits for the
-human's approval of the incident summary wording and the "Show all N" question.**
+2026-10-27); review round 2 PASS (all three reviewers); PR #9. Human 2026-10-27: summary
+approved as drafted; "Show all N" keeps the total; merge PR #9 and tag `phase-6b` once CI
+passes on the latest push.**
 Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshots:
 `docs/review/phase-6b-polish/README.md`.
 
@@ -59,8 +60,12 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   (2026-10-27, guided flow, graph, ladder, compare rung 6) and LLM (cached only) on the real
   local cache (`after-e-llm.png`, `after-f-llm.png`).
 - Deferred MINOR (evidence-auditor): `uae.telecom-law.art6` notes say one footnote marker is
-  skipped, but the second `[...]` skips a stray "1" extraction artifact; fix the notes in a
-  clause pass (outside this display-only phase).
+  skipped, but the second `[...]` skips a stray "1" extraction artifact. Human 2026-10-27:
+  deferred to the next phase. The clause is `status: draft` today; if it is reviewed before the
+  fix, the edit returns it to draft and it goes on `reapproval_needed` for the human.
+- Human decisions 2026-10-27: incident summary approved as drafted; "Show all N" keeps the
+  total (N = ranked + inconclusive + discarded rows the button reveals), spec 006b updated
+  from "N = ranked count".
 
 Verify:
 
@@ -813,12 +818,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6b (2026-10-27):**
-- Approve the final wording of the incident summary in
-  `scenarios/uae_health_access/display.yaml` before merge (human decision 3).
-- "Show all N": the approved spec says N = ranked count; the code counts ranked, inconclusive
-  and discarded rows, since the toggle reveals all three. Keep the total, or show the ranked
-  count (spec 006b implementation notes)?
+**Phase 6b (2026-10-27):** answered (summary approved; "Show all N" total); merge on green CI.
 
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
@@ -913,8 +913,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-The human approves the Phase 6b incident summary wording; then merge the Phase 6b PR. Then
-Phase 7 (tracing, optional). Still open: the deferred MINORs,
+After PR #9 is merged and tagged `phase-6b` (human instruction, on green CI): the next phase,
+with the deferred `uae.telecom-law.art6` notes fix; Phase 7 (tracing, optional). Still open:
+the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
