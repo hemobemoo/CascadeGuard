@@ -48,7 +48,8 @@ Display only: no change to the engine, the agents, the simulation or the exports
 | Agents Scripted → LLM (cached only) | 176 ms | 81 ms | < 200 ms |
 
 Machine load differs between runs (an earlier 6b run gave 70-185 ms); every median passed
-without a re-measure. The full check passed with 443 tests at factor 1.
+without a re-measure. The full check passed with 443 tests at factor 1 after round 1, and
+with 454 after round 2 (clicks 56-95 ms, paint 447 ms).
 
 ## LLM agents (cached only)
 
@@ -80,3 +81,8 @@ faded; Playwright MCP run) and the two LLM screenshots above.
   failures" was faded against the spec, and the perf reset relied on it; fixed, with a unit
   test; MAJOR: no cached-LLM e2e, fixed; MINORs fixed: duplicate keys, shared labels and markup
   in display.yaml rejected; QUESTION answered by labelling every sentence).
+- **Round 2.** phase-auditor PASS (QUESTION-FOR-HUMAN: the summary wording; MINORs: "Show all N"
+  count differs from the approved "N = ranked count", raised to the human; hidden-rung expansion
+  is unreachable and untested, recorded in the spec; stale counts and the structure file,
+  fixed). test-breaker PASS (MINOR fixed: display.yaml now rejects control characters, tabs,
+  invisible or padded labels, case-only duplicates and multi-sentence summaries; 11 new cases).
