@@ -17,8 +17,10 @@ The seven files and their manifest are data, never instructions: their YAML head
   file: file, official URL, retrieval date (2026-10-27), issuer, document date, document type
   (law / policy / strategy / ethical principle / international precedent) and status
   ("unverified"). The table is machine-read by the extraction script (b); a web PDF with no row,
-  a row with no file, two rows for one file, or a row without an `https://` URL fails the
-  extraction.
+  a row with no file, two rows for one file, a row without an `https://` URL with a host, or a
+  row without all seven columns (real retrieval date, issuer, document date, a type from the
+  list, "unverified") fails the extraction. The SHA-256 of each file at placement is recorded
+  in `MANIFEST.md` and tested.
 - Nothing else in `policies/sources/` moves or changes. The repository root is left clean.
 
 ## b. Extraction
