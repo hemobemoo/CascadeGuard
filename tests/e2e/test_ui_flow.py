@@ -3,7 +3,9 @@ only), and the performance budget (Playwright, Chromium).
 
 CI always runs it. Locally: `uv run pytest -m "not e2e"` skips it; running it needs
 `uv run playwright install chromium` once. Budgets are multiplied by CASCADEGUARD_PERF_FACTOR
-(default 1; CI sets 3); every measured number and the budget applied are printed.
+(default 1; CI sets 3); every measured number and the budget applied are printed. The timing
+test is also marked `perf`: CI always runs it; locally it runs in the full check and
+`-m "not perf"` skips it.
 """
 
 import os
@@ -260,15 +262,16 @@ def test_llm_cached_mode_never_calls_and_shows_the_agents_row(page: Page) -> Non
     expect(agents).to_contain_text("scripted agents")
 
 
-def _median_ms(label: str, budget: float, runs: list[float]) -> None:
+def _median_ms(label: str, budget: float, runs: list[float]) -> float:
     median = statistics.median(runs)
     print(
         f"{label}: median {median:.0f} ms (runs {', '.join(f'{r:.0f}' for r in runs)}); "
         f"budget {budget:.0f} ms (factor {FACTOR:g})"
     )
-    assert median < budget, label
+    return median
 
 
+@pytest.mark.perf
 def test_performance_budget(server: str, browser: Browser) -> None:
     paints: list[float] = []
     for _ in range(6):  # one warm-up, then five measured
@@ -279,7 +282,8 @@ def test_performance_budget(server: str, browser: Browser) -> None:
         pg.locator(".cg-verdict").wait_for()
         paints.append((time.perf_counter() - start) * 1000)
         context.close()
-    _median_ms("first meaningful paint (verdict, no click)", PAINT_BUDGET_MS, paints[1:])
+    label = "first meaningful paint (verdict, no click)"
+    assert _median_ms(label, PAINT_BUDGET_MS, paints[1:]) < PAINT_BUDGET_MS, label
 
     context = browser.new_context(viewport={"width": 1400, "height": 1000})
     pg = context.new_page()
@@ -288,14 +292,19 @@ def test_performance_budget(server: str, browser: Browser) -> None:
     pg.locator(".cg-lanes").first.wait_for(state="attached")
 
     def measure(label: str, action: Callable[[], object], reset: Callable[[], object]) -> None:
-        runs: list[float] = []
-        for _ in range(6):  # one warm-up, then five measured
-            reset()
-            pg.wait_for_timeout(500)  # sections streamed by the reset click finish first
-            start = time.perf_counter()
-            action()
-            runs.append((time.perf_counter() - start) * 1000)
-        _median_ms(label, CLICK_BUDGET_MS, runs[1:])
+        """One warm-up click (ignored), then the median of five. If that median is over budget,
+        re-measure once; fail only if both medians are over (human decision 2026-10-27)."""
+        for attempt in ("", " (re-measured)"):
+            runs: list[float] = []
+            for _ in range(6):
+                reset()
+                pg.wait_for_timeout(500)  # sections streamed by the reset click finish first
+                start = time.perf_counter()
+                action()
+                runs.append((time.perf_counter() - start) * 1000)
+            if _median_ms(label + attempt, CLICK_BUDGET_MS, runs[1:]) < CLICK_BUDGET_MS:
+                return
+        pytest.fail(f"{label}: both medians over the {CLICK_BUDGET_MS:.0f} ms budget")
 
     def to(key: str) -> Callable[[], object]:
         return lambda: pg.locator(f'[data-testid="step-{key}"]').click()

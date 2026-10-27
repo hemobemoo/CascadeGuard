@@ -5,9 +5,11 @@ Spec: `specs/006-demo-ui-v2.md` (approved 2026-10-26). Localhost, Chromium (Play
 
 - **Back-to-back script** (same as "before"): median of 3 runs, each run a new browser context;
   clicks follow each other with no pause. "Before" is the Phase 4 UI on `main` (`425ad8b`).
-- **Budget test** (`tests/e2e/test_ui_flow.py::test_performance_budget`): median of 5 after one
-  warm-up, 500 ms after the previous click; budget × `CASCADEGUARD_PERF_FACTOR` (default 1,
-  CI 3). This is the check that enforces spec 006.
+- **Budget test** (`tests/e2e/test_ui_flow.py::test_performance_budget`, markers `e2e` and
+  `perf`): median of 5 after one warm-up, 500 ms after the previous click; budget ×
+  `CASCADEGUARD_PERF_FACTOR` (default 1, CI 3). A click whose median is over budget is
+  re-measured once and fails only if both medians are over (human decision 2026-10-27). This
+  is the check that enforces spec 006.
 
 Machine load differed: the server started in 2.3 s for the "before" run and in 4.2 s for the
 final "after" run (other applications busy), so the after numbers are, if anything, pessimistic.
@@ -80,6 +82,8 @@ Also: `after-header.png`, `after-expert.png`, `after-viewport.png`, `after-full-
     gate), and the same authorization MAJOR, fixed.
   - Disagreement: it asked to move the badge rule into `engine/`. Not done, because spec 006
     says no engine change.
-- Round 3 was not run: the open item (the local budget) is the human's decision.
+- Human decisions 2026-10-27: keep 200 ms with one re-measure and the `perf` marker; no badge
+  with any invalid_output step; the badge predicate moved to `engine/repair_search.py`
+  (approved narrow exception); Phase 6 "Done when" added.
 - **Budget test after the fixes:** with the same code, every click took 73–91 ms in a quiet run
   and up to 201–227 ms under load. CI uses factor 3.

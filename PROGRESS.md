@@ -77,6 +77,14 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
   a quiet run and up to 201-227 ms in loaded runs; the full check command failed once on the
   graph highlight (227 ms) and the agents switch (210 ms) in separate runs. Not loosened (human
   gate; see "Waiting on human"). Round 3 not run: the remaining item needs the human.
+- Human decisions 2026-10-27, implemented: (1) click budget stays 200 ms; one warm-up, median
+  of 5, one re-measure if over, fail only if both medians are over; the timing test is marked
+  `perf` (CI always runs it at factor 3; `-m "not perf"` skips it locally); (2) no "smallest
+  safe repair" badge when the baseline or replay has any invalid_output step; (3) approved
+  narrow engine exception: `is_smallest_safe`, `SMALLEST_SAFE_LABEL`, `TOP_RANKED_LABEL` in
+  `engine/repair_search.py` (read-only; `tests/unit/test_badge_rule.py`, invalid-step mutant
+  killed), the view model only displays it; (4) gate-6 edits confirmed; Phase 6 "Done when"
+  added to spec 006 and `START_PROMPT.md`.
 
 Verify:
 
@@ -761,18 +769,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6 (2026-10-26):**
-- Badge rule: is a run with `invalid_output` steps "complete" for the "smallest safe repair"
-  badge? Today only infrastructure failures (inconclusive) block it (test-breaker question).
-- **Performance budget (BLOCKER from the phase-auditor):** at factor 1 the local budget test is
-  flaky on this machine (same code: 73-91 ms quiet, 201-227 ms under load; the full check
-  failed once). Options: keep 200 ms and accept local flakiness, set a local factor (e.g. 1.5),
-  or measure more runs. Not changed without your decision (AGENTS.md review rule 4).
-- Badge rule location: the phase-auditor suggests moving the "smallest safe repair" rule into
-  `engine/`; spec 006 says no engine change. Keep it in the view model?
-- Gate 6: confirm the `START_PROMPT.md` and `AGENTS.md` edits (Phase 6/7) recorded as approved
-  in chat; `START_PROMPT.md` Phase 6 has no "Done when" sentence yet.
-- Merge PR (not merged, by instruction).
+**Phase 6:** the human answered every item on 2026-10-27 (see Done, "Human decisions
+2026-10-27"); merge after phase-auditor round 3 passes and CI is green.
 
 **Phase 5 (2026-10-24):** the human answered P5-1 to P5-6 (see Decisions); remaining:
 none blocking until the LLM baseline report.
@@ -867,8 +865,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-The human reviews the Phase 6 PR (branch `phase-6-ui`) and answers the Phase 6 items in
-"Waiting on human". Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
+Phase-auditor round 3 on the 2026-10-27 changes; when it passes and CI is green, merge PR #8,
+tag `phase-6`. Then the Phase 6b polish spec addendum (branch `phase-6b-polish`), stop for the
+human's approval before code. Then Phase 7 (tracing, optional). Still open: the deferred MINORs,
 the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
