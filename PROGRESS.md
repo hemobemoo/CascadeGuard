@@ -14,11 +14,14 @@ tagged `adr-0002-a`** (2026-10-26, on the human's instruction, CI green). Report
 
 **Phase 6 — Demo UI v2: merged to main via PR #8 (merge commit `883fb43`), tagged `phase-6`**
 (2026-10-27, on the human's instruction, after phase-auditor round 3 PASS and green CI).
-
-**Phase 6b — Demo UI polish: built on `phase-6b-polish` (spec approved with conditions,
-2026-10-27); PR open; merge waits for the human's approval of the incident summary wording.**
 Spec `specs/006-demo-ui-v2.md` (approved with the human's answers, 2026-10-26). Report and
 before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
+
+**Phase 6b — Demo UI polish: built on `phase-6b-polish` (spec approved with conditions,
+2026-10-27); review round 2 next, then the PR; merge waits for the human's approval of the
+incident summary wording.**
+Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshots:
+`docs/review/phase-6b-polish/README.md`.
 
 **Open items:**
 - **ADR 0002 option A:** merged (PR #7, tag `adr-0002-a`). Known limitation: two owners for
@@ -47,6 +50,17 @@ before/after numbers and screenshots: `docs/review/phase-6-ui/README.md`.
   expert and perf test updated for names (intended display change) and two new timed clicks.
 - Full check at factor 1: 434 passed; every median under budget (see
   `docs/review/phase-6b-polish/README.md`, before/after screenshots there).
+- Review round 1 (details in the 6b report): evidence-auditor PASS; phase-auditor FAIL and
+  test-breaker FAIL, every MAJOR and MINOR fixed: graph opens on one failure and "all
+  diagnosed failures" fades nothing; e2e with a recorded LLM cache (guided flow) and a
+  baseline-only cache (inconclusive rows collapse); ladder collapse covers inconclusive and
+  discarded; hidden-rung expansion; split-screen failure names; labelled sentences;
+  display.yaml rejects duplicate keys, shared labels and markup. Playwright MCP runs: scripted
+  (2026-10-27, guided flow, graph, ladder, compare rung 6) and LLM (cached only) on the real
+  local cache (`after-e-llm.png`, `after-f-llm.png`).
+- Deferred MINOR (evidence-auditor): `uae.telecom-law.art6` notes say one footnote marker is
+  skipped, but the second `[...]` skips a stray "1" extraction artifact; fix the notes in a
+  clause pass (outside this display-only phase).
 
 Verify:
 

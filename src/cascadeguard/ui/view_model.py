@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
-from cascadeguard.domain.findings import FailureCategory
+from cascadeguard.domain.findings import CoordinationFailure, FailureCategory
 from cascadeguard.domain.repairs import OWNER_RULE_PREFIX, RepairEdit, RepairOperationType
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT, OBLIGATION_OVERDUE
@@ -117,6 +117,20 @@ def failure_title(subject: str, labels: Labels = IDS) -> str:
         category, role = subject.split("->")
         return f"{labels.category(category)} \u2192 {labels.role(role)}"
     return labels.action(subject)
+
+
+def failure_name(f: CoordinationFailure, labels: Labels = IDS) -> str:
+    """ "orphan duty: Reverse automated lockouts": the category and the subject by name."""
+    return f"{f.category.value.replace('_', ' ')}: {failure_title(f.subject, labels)}"
+
+
+def default_failure(result: RunResult) -> str | None:
+    """The failure the graph opens on: the first one in the diagnosis cards' order."""
+    for cat in FailureCategory:
+        for f in result.failures:
+            if f.category is cat:
+                return f.id
+    return None
 
 
 def cite(ids: Iterable[str], labels: dict[str, str]) -> str:
@@ -289,8 +303,9 @@ def graph_option(
 ) -> dict[str, Any]:
     """ECharts option for the dependency graph. Nodes named by the selected diagnosed failure (or
     by every failure when none is selected) are highlighted, and so are the edges between them
-    that touch the failure's subject. With `fade` (the default, spec 006b) everything outside
-    that subgraph is faded. Nodes show display names; the raw id is the tooltip value."""
+    that touch the failure's subject. With one failure selected and `fade` (the default,
+    spec 006b), everything outside its subgraph is faded; with every failure ("all diagnosed
+    failures") nothing is. Nodes show display names; the raw id is the tooltip value."""
     edges = result.graph.edges()
     names = sorted({n for s, _, t in edges for n in (s, t)})
     ids = [failure_id] if failure_id else [f.id for f in result.failures]
@@ -314,8 +329,10 @@ def graph_option(
         }
         return named[kind](ident) if kind in named else ident
 
+    focus = fade and failure_id is not None  # "all diagnosed failures": nothing faded
+
     def faded(n: str) -> bool:
-        return fade and n not in hot
+        return focus and n not in hot
 
     # Fixed layered layout, one column per kind (roles -> actions -> categories -> clauses ->
     # goals): the same positions for every highlight, so an update only restyles (no force
@@ -357,7 +374,7 @@ def graph_option(
             "value": rel,
             "lineStyle": {"color": "#c62828", "width": 3, "opacity": 0.9}
             if (s, t) in hot_edges
-            else {"opacity": 0.06 if fade else 0.25},
+            else {"opacity": 0.06 if focus else 0.25},
         }
         for s, rel, t in edges
     ]
@@ -453,6 +470,10 @@ class Comparison:
     incomplete: str = ""  # an "Incomplete run" banner when steps had no decision
     withheld: str = ""  # set when the replay is not comparable (verdicts withheld)
     edit_ids: tuple[str, ...] = ()  # each edit's operation and id (small print)
+    # The failure lines by name, parallel to baseline_failures and to removed + replay_failures
+    # (whose raw-id wording is shown in small print).
+    baseline_named: tuple[str, ...] = ()
+    replay_named: tuple[str, ...] = ()
 
 
 def comparison(c: ReplayComparison, names: Labels = IDS) -> Comparison:
@@ -482,6 +503,22 @@ def comparison(c: ReplayComparison, names: Labels = IDS) -> Comparison:
         )
     tags = c.conflict_tags()
     p = c.proposal
+    by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
+
+    def name(fid: str) -> str:
+        return failure_name(by_id[fid], names) if fid in by_id else fid
+
+    replay_named = [
+        f"{name(f)}: remaining"
+        + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
+        + (f" [{OPEN_AT_END_LABEL}]" if f in c.open_at_end_blockers else "")
+        for f in c.remaining
+    ]
+    replay_named += [f"{name(f)}: {MASKED}" for f in c.masked]
+    replay_named += [
+        f"{name(f)}: NEW conflict" + (f" [{tags[f]}: {SCRIPTED_LIMIT_NOTE}]" if f in tags else "")
+        for f in c.new_conflicts
+    ]
     replay_rows = [
         f"{f}: remaining"
         + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
@@ -514,6 +551,8 @@ def comparison(c: ReplayComparison, names: Labels = IDS) -> Comparison:
             tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
         ),
         edit_ids=edit_ids,
+        baseline_named=tuple(name(f.id) for f in c.baseline.failures),
+        replay_named=(*(f"{name(f)}: {REMOVED_LABEL}" for f in c.removed), *replay_named),
     )
 
 
@@ -610,7 +649,7 @@ class Verdict:
     new_conflicts: int | None
     caveat: str = ""  # the baseline's invalid_output caveat, shown even with nothing ranked
     authorization: str = ""  # REQUIRES_AUTHORIZATION when the best repair needs approval
-    sentences: tuple[str, ...] = ()  # the best repair's edits in plain language
+    sentences: tuple[str, ...] = ()  # the best repair's edits in plain language, labelled
 
 
 def critical_goals(scenario: Scenario) -> tuple[str, ...]:
@@ -653,7 +692,7 @@ def verdict(
         new_conflicts=len(c.new_conflicts),
         caveat=caveat,
         authorization=REQUIRES_AUTHORIZATION if c.proposal.requires_authorization else "",
-        sentences=tuple(edit_sentence(e, names) for e in c.proposal.edits),
+        sentences=tuple(f"{edit_sentence(e, names)} [{REPAIR_LABEL}]" for e in c.proposal.edits),
     )
 
 
@@ -833,7 +872,7 @@ class Rung:
     masked: tuple[str, ...]
     new_conflicts: tuple[str, ...]
     authorization: str
-    sentences: tuple[str, ...] = ()  # each edit in plain language
+    sentences: tuple[str, ...] = ()  # each edit in plain language, labelled
 
 
 TOP_RUNGS = 3  # rungs shown before "Show all N" (spec 006b)
@@ -855,7 +894,9 @@ def ladder(result: SearchResult, names: Labels = IDS) -> list[Rung]:
                 masked=row.masked,
                 new_conflicts=row.new_conflicts,
                 authorization=row.authorization,
-                sentences=tuple(edit_sentence(e, names) for e in c.proposal.edits),
+                sentences=tuple(
+                    f"{edit_sentence(e, names)} [{REPAIR_LABEL}]" for e in c.proposal.edits
+                ),
             )
         )
     return out

@@ -285,3 +285,58 @@ def test_graph_names_tooltips_and_fading(world: World, labels: vm.Labels) -> Non
     flat = {n["id"]: n for n in shown["series"][0]["data"]}
     assert all(flat[i]["itemStyle"] == {} for i in cold)
     assert {i for i, n in flat.items() if n["symbolSize"] > 12} == hot  # same highlight
+
+
+# --- review round 1 (Phase 6b) -----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "match"),
+    [
+        ("monitor: Monitor\n", r"duplicate keys \['monitor'\]"),  # PyYAML would keep the last
+        ("monitor: Suspend AI traffic model\n", "one label for several ids"),  # not a rename
+        ("monitor: <b>Monitor</b>\n", r"missing or invalid \['monitor'\]"),  # markup
+        ("monitor: Monitor [binding]\n", r"missing or invalid \['monitor'\]"),
+    ],
+)
+def test_labels_are_unique_plain_renames(
+    world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str, match: str
+) -> None:
+    raw = (SCENARIOS_DIR / SCENARIO / app.DISPLAY_FILE).read_text(encoding="utf-8")
+    raw = raw.replace("  monitor: Monitor\n", "  monitor: Monitor\n  " + text, 1)
+    if not text.startswith("monitor: Monitor\n"):  # replace the label instead of adding a key
+        raw = raw.replace("  monitor: Monitor\n  " + text, "  " + text, 1)
+    _write(tmp_path, raw, monkeypatch)
+    with pytest.raises(ValueError, match=match):
+        app.labels_for(world)
+
+
+def test_all_diagnosed_failures_fades_nothing(world: World, labels: vm.Labels) -> None:
+    base = world.baseline()
+    option = vm.graph_option(base, None, labels)
+    assert not [n for n in option["series"][0]["data"] if n["itemStyle"].get("opacity")]
+    assert all(x["lineStyle"].get("opacity") != 0.06 for x in option["series"][0]["links"])
+
+
+def test_graph_opens_on_the_first_diagnosis_card(world: World) -> None:
+    base = world.baseline()
+    first = next(i for c in vm.diagnosis_cards(base) for i in c.items)
+    assert vm.default_failure(base) == first.id == "orphan_duty:activate_fallback_channel"
+
+
+def test_split_screen_and_ladder_name_failures_and_label_every_sentence(
+    world: World, labels: vm.Labels
+) -> None:
+    found = search_repairs(SCENARIO, world=world)
+    v = vm.comparison(found.ranked[0], labels)
+    assert len(v.baseline_named) == len(v.baseline_failures)
+    assert len(v.replay_named) == len(v.removed) + len(v.replay_failures)
+    assert "information deadlock: Network incident status → Health Service Operator" in (
+        v.baseline_named
+    )
+    assert any(n.endswith(f": {vm.MASKED}") for n in v.replay_named)
+    assert all(":" in n and "_" not in n.split(":", 1)[1] for n in v.baseline_named)
+    verdict = vm.verdict(world.baseline(), found, world.scenario, labels)
+    rungs = vm.ladder(found, labels)
+    for sentence in (*verdict.sentences, *(x for r in rungs for x in r.sentences)):
+        assert sentence.endswith(f"[{REPAIR_LABEL}]"), sentence
