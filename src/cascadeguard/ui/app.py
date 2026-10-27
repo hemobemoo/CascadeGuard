@@ -10,6 +10,7 @@ cache only (no live calls in the UI; the CLI keeps live runs).
 import asyncio
 import html
 import os
+import re
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -107,6 +108,101 @@ def findings_for(scenario_id: str) -> tuple[vm.EvaluationFinding, ...]:
     return tuple(out)
 
 
+DISPLAY_FILE = "display.yaml"  # UI-only display labels (spec 006b); nothing else reads it
+DISPLAY_SECTIONS = ("categories", "actions", "goals")
+NOT_PLAIN = set("<>[]{}`*_#|")  # markup or formatting: labels are plain text
+
+
+def _plain(text: object) -> bool:
+    """Plain one-line text: printable (no line breaks, tabs or control characters), no markup,
+    no surrounding spaces, and something visible."""
+    return (
+        isinstance(text, str)
+        and text.isprintable()
+        and text == text.strip()
+        and any(c.isalnum() for c in text)
+        and not NOT_PLAIN & set(text)
+    )
+
+
+def _one_sentence(text: object) -> bool:
+    """One sentence: plain, ends with a full stop, no other sentence end inside."""
+    return _plain(text) and str(text).endswith(".") and not re.search(r"[.?!]\s*\S", str(text))
+
+
+class _UniqueKeys(yaml.SafeLoader):
+    """SafeLoader that rejects duplicate keys (PyYAML would keep the last one silently)."""
+
+
+def _unique_mapping(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict[Any, Any]:
+    keys: list[Any] = [loader.construct_object(k) for k, _ in node.value]  # pyright: ignore[reportUnknownMemberType]
+    if duplicates := sorted({str(k) for k in keys if keys.count(k) > 1}):
+        raise ValueError(f"duplicate keys {duplicates}")
+    return dict(loader.construct_pairs(node))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+
+
+_UniqueKeys.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _unique_mapping)
+
+
+def labels_for(world: World) -> vm.Labels:
+    """The scenario's display names: role names from roles.yaml, the rest from display.yaml.
+    Every category, action and goal the scenario defines needs exactly one one-line label; a
+    missing or malformed file is an error, never a silent fallback to ids."""
+    sc, roles = world.scenario, world.roles
+    path = SCENARIOS_DIR / sc.id / DISPLAY_FILE
+    need = {
+        "categories": set(roles.known_categories())
+        | {f.data_category for e in sc.events for f in e.facts},
+        "actions": {a.id for a in roles.actions},
+        "goals": {g.id for g in sc.recovery_goals},
+    }
+    if not path.is_file():
+        raise ValueError(f"{path}: missing; the UI needs display labels for this scenario")
+    try:
+        raw: object = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeys)
+    except ValueError as exc:
+        raise ValueError(f"{path}: {exc}") from None
+    shape = (
+        f"{path}: expected incident_summary (one sentence, one line) and {list(DISPLAY_SECTIONS)}, "
+        "each mapping exactly the scenario's ids to one-line text labels"
+    )
+    if not isinstance(raw, dict) or set(cast(dict[object, object], raw)) != {
+        "incident_summary",
+        *DISPLAY_SECTIONS,
+    }:
+        raise ValueError(shape)
+    data = cast(dict[str, object], raw)
+    maps: dict[str, dict[str, str]] = {}
+    for key, ids in need.items():
+        entry = data[key]
+        if not isinstance(entry, dict):
+            raise ValueError(f"{shape}; {key} is not a mapping")
+        m = cast(dict[object, object], entry)
+        text = {
+            str(k): v
+            for k, v in m.items()
+            if isinstance(k, str) and isinstance(v, str) and _plain(v)
+        }
+        if set(m) != ids or set(text) != ids:
+            extra, missing = sorted(map(str, set(m) - ids)), sorted(ids - set(text))
+            raise ValueError(f"{shape}; {key}: unknown {extra}, missing or invalid {missing}")
+        values = [v.casefold() for v in text.values()]  # "Monitor" and "monitor" are one label
+        if shared := sorted({v for v in values if values.count(v) > 1}):
+            raise ValueError(f"{shape}; {key}: one label for several ids {shared} (not a rename)")
+        maps[key] = text
+    summary = data["incident_summary"]
+    if not _one_sentence(summary):
+        raise ValueError(f"{shape}; incident_summary is not one sentence on one line")
+    return vm.Labels(
+        roles={r.id: r.name for r in roles.roles},
+        categories=maps["categories"],
+        actions=maps["actions"],
+        goals=maps["goals"],
+        events={e.id: (e.at_minute, e.title) for e in sc.events},
+        summary=cast(str, summary),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class Bundle:
     """Everything one scenario and agent mode shows: computed once, held in memory."""
@@ -115,15 +211,17 @@ class Bundle:
     baseline: RunResult
     search: SearchResult
     prompt_version: str  # "" for scripted agents
+    labels: vm.Labels = vm.IDS
 
 
 def compute(scenario_id: str, mode: str) -> Bundle:
     world = load_world(scenario_id, None, SCENARIOS_DIR, agent_choice(mode))
+    labels = labels_for(world)
     baseline = world.baseline()
     found = search_repairs(scenario_id, world=world)
     agent = next(iter(world.agents.values()))
     version = agent.prompt_version if isinstance(agent, LLMAgent) else ""
-    return Bundle(world, baseline, found, version)
+    return Bundle(world, baseline, found, version, labels)
 
 
 _CACHE: dict[tuple[str, str], Bundle | str] = {}  # a str is the reason it could not be computed
@@ -175,11 +273,18 @@ class Session:
     step: int = 0
     guided: bool = True
     error: str = ""  # why the selected agents have no result (shown instead of one)
+    fade: bool = True  # graph: everything outside the highlighted subgraph faded (spec 006b)
+    ladder_all: bool = False  # ladder: every rung, not only the top TOP_RUNGS
     sections: dict[str, ui.element] = field(default_factory=dict[str, ui.element])
 
 
 def esc(text: str) -> str:
     return html.escape(text, quote=True)
+
+
+def raw_id(text: str) -> str:
+    """A raw id in small print: hidden in Guided mode (the tooltip has it), shown in Expert."""
+    return f'<div class="cg-rawid">{esc(text)}</div>'
 
 
 def chip_html(c: vm.Chip) -> str:
@@ -194,6 +299,18 @@ def chips(items: tuple[vm.Chip, ...]) -> None:
         with ui.element("span").classes(f"cg-chip {c.css}"):
             ui.label(c.text).classes("cg-chip-id")
             ui.label(c.label)
+
+
+def named(names: tuple[str, ...], raw: tuple[str, ...]) -> None:
+    """Lines by name, each with its raw-id wording in small print (shown in Expert mode)."""
+    if not names:
+        ui.label("none").classes("cg-muted")
+    ui.html(
+        "".join(
+            f'<div class="cg-wrap" title="{esc(r)}">{esc(n)}</div>{raw_id(r)}'
+            for n, r in zip(names, raw, strict=True)
+        )
+    ).classes("w-full")
 
 
 def lines(items: tuple[str, ...] | list[str], empty: str = "none") -> None:
@@ -226,7 +343,7 @@ def index() -> None:
     def use(data: Bundle) -> None:
         s.data = data
         s.selected = (data.search.ranked or data.search.inconclusive or (None,))[0]
-        s.failure, s.cell = None, None
+        s.failure, s.cell = vm.default_failure(data.baseline), None
 
     with ui.header().classes("cg-header column gap-0 p-0"):
         with ui.row().classes("w-full items-center gap-4 px-6 py-2 no-wrap"):
@@ -285,7 +402,8 @@ def index() -> None:
                 if s.error:  # e.g. LLM agents without a configured model: no result is shown
                     ui.label(s.error).classes("cg-bad cg-wrap").props("data-testid=verdict-error")
                 return
-            v = vm.verdict(d.baseline, d.search, d.world.scenario)
+            v = vm.verdict(d.baseline, d.search, d.world.scenario, d.labels)
+            ui.label(d.labels.summary).classes("cg-summary").props("data-testid=incident-summary")
             with ui.element("div").classes("cg-verdict"):
                 stat(f"{v.baseline_met} / {v.critical}", "critical goals met: baseline", "cg-bad")
                 replay = "n/a" if v.replay_met is None else f"{v.replay_met} / {v.critical}"
@@ -304,7 +422,9 @@ def index() -> None:
                         ui.label(v.authorization).classes("cg-badge cg-badge-auth").props(
                             "data-testid=verdict-authorization"
                         )
-                    ui.label(v.repair_id).classes("cg-mono")
+                for sentence in v.sentences:
+                    ui.label(sentence).classes("cg-sentence").props("data-testid=verdict-edit")
+                ui.label(v.repair_id).classes("cg-idline")
             ui.label(f"Outcome: {v.outcome}").classes("cg-wrap").props(
                 "data-testid=verdict-outcome"
             )
@@ -360,8 +480,10 @@ def index() -> None:
                 ui.label("role").classes("cg-lane-head")
                 for e in events:
                     ui.label(f"T+{e.at_minute:02d} {e.title}").classes("cg-lane-head")
-                for lane in vm.swimlanes(result, d.world.scenario):
-                    ui.label(lane.role).classes("cg-lane-role")
+                for lane in vm.swimlanes(result, d.world.scenario, d.labels):
+                    ui.html(
+                        f'<div title="{esc(lane.role)}">{esc(lane.name)}</div>{raw_id(lane.role)}'
+                    ).classes("cg-lane-role")
                     for c in lane.cells:
                         cell(run, lane.role, c)
                     if lane.bars:
@@ -405,12 +527,14 @@ def index() -> None:
             # One escaped HTML block per cell (DOMPurify on top): far fewer components, so
             # the lanes render within the click budget. Agent text only in the labelled title.
             parts = [
-                f'<div class="cg-factline"><div class="cg-chip-id">{esc(f.text)}</div>'
-                f'<div class="cg-fact-cat">{esc(f.label)}</div></div>'
+                f'<div class="cg-factline" title="{esc(f.text)}">'
+                f'<div class="cg-fact-cat">{esc(f.label)}</div>{raw_id(f.text)}</div>'
                 for f in c.facts
             ]
-            parts += [f'<div class="cg-act-ok cg-wrap">✓ {esc(a)}</div>' for a in c.accepted]
-            parts += [f'<div class="cg-act-no cg-wrap">✗ {esc(a)}</div>' for a in c.rejected]
+            tip = f' title="{esc(c.raw)}"' if c.raw else ""
+            parts += [f'<div class="cg-act-ok cg-wrap"{tip}>✓ {esc(a)}</div>' for a in c.accepted]
+            parts += [f'<div class="cg-act-no cg-wrap"{tip}>✗ {esc(a)}</div>' for a in c.rejected]
+            parts += [raw_id(c.raw)] if c.raw else []
             parts += [
                 f'<div class="cg-muted underline" title="{esc(st)}">{esc(STATEMENT)}</div>'
                 for st in c.statements
@@ -439,8 +563,10 @@ def index() -> None:
         v = vm.role_view(result, role, minute, d.world.roles.known_categories())
         with ui.column().classes("cg-pane w-full gap-1 mt-2").props("data-testid=role-view"):
             ui.label(
-                f"Role view: {role} at T+{minute:02d} (exactly what its agent received)"
+                f"Role view: {d.labels.role(role)} at T+{minute:02d} "
+                "(exactly what its agent received)"
             ).classes("font-semibold")
+            ui.label(role).classes("cg-idline")
             ui.label(v.title if v.recipient else f"{v.title} (not a recipient of this inject)")
             ui.label(f"Simulation time: {v.at}").classes("cg-muted")
             for title, items in (
@@ -463,6 +589,9 @@ def index() -> None:
             label="Highlight",
             on_change=lambda e: pick_failure(str(e.value) or None),
         ).classes("cg-picker")
+        ui.switch(
+            "Show all at full opacity", value=not s.fade, on_change=lambda e: set_fade(not e.value)
+        ).props("data-testid=graph-show-all")
         graph_box = ui.element("div").classes("w-full")
     charts: list[ui.echart] = []  # the one chart, created after the first paint, never rebuilt
 
@@ -473,12 +602,15 @@ def index() -> None:
         if not charts:
             with graph_box:
                 charts.append(
-                    ui.echart(vm.graph_option(d.baseline, s.failure))
+                    ui.echart(vm.graph_option(d.baseline, s.failure, d.labels, s.fade))
                     .classes("w-full cg-graph")
                     .props("data-testid=graph")
                 )
         chart = charts[0]
-        choices = {"": "all diagnosed failures"} | {f.id: f.id for f in d.baseline.failures}
+        choices = {"": "all diagnosed failures"} | {
+            f.id: f"{f.category.value.replace('_', ' ')}: {vm.failure_title(f.subject, d.labels)}"
+            for f in d.baseline.failures
+        }
         if failure_picker.options != choices:  # pyright: ignore[reportUnknownMemberType]
             failure_picker.options = choices
             failure_picker.update()
@@ -486,7 +618,7 @@ def index() -> None:
             failure_picker.value = s.failure or ""  # its change handler sees nothing new
         options = cast(dict[str, Any], chart.options)  # pyright: ignore[reportUnknownMemberType]
         options.clear()
-        options.update(vm.graph_option(d.baseline, s.failure))
+        options.update(vm.graph_option(d.baseline, s.failure, d.labels, s.fade))
         chart.update()
 
     # ----- d. diagnosis -----
@@ -499,21 +631,24 @@ def index() -> None:
                 return
             incomplete_note()
             with ui.element("div").classes("cg-cards"):
-                for card in vm.diagnosis_cards(d.baseline):
+                for card in vm.diagnosis_cards(d.baseline, d.labels):
                     with (
                         ui.column()
                         .classes("cg-card gap-1" + ("" if card.items else " cg-card-empty"))
                         .props(f"data-testid=category-{card.category}")
                     ):
-                        ui.label(card.category).classes("cg-kicker")
+                        ui.label(card.title).classes("cg-kicker").tooltip(card.category)
                         if not card.items:
                             ui.label("none found").classes("cg-muted")
                         for item in card.items:
                             ui.button(
-                                item.id, on_click=lambda _, fid=item.id: pick_failure(fid)
-                            ).props("flat dense no-caps align=left").classes(
-                                "cg-wrap font-semibold p-0"
-                            ).tooltip("Highlight in the cascade graph")
+                                item.title, on_click=lambda _, fid=item.id: pick_failure(fid)
+                            ).props(
+                                f"flat dense no-caps align=left data-testid=failure-{item.id}"
+                            ).classes("cg-wrap font-semibold p-0").tooltip(
+                                f"Highlight in the cascade graph ({item.id})"
+                            )
+                            ui.html(raw_id(item.id))
                             ui.label(item.description).classes("cg-wrap")
                             ui.label(f"blocks: {item.blocks}").classes("cg-muted")
                             with ui.row().classes("gap-0"):
@@ -529,6 +664,10 @@ def index() -> None:
     # ----- e. repair ladder -----
     with section(s, "e", "e · repairs", "Repair ladder (every repair rule is hypothetical)"):
         rungs: dict[str, ui.element] = {}  # repair id -> its rung, to highlight in place
+        # Rungs below the top TOP_RUNGS and the "Show all N" button: built once per refresh and
+        # shown or hidden in place (spec 006b; click budget).
+        extra_rungs: dict[str, ui.element] = {}  # repair id -> rung or inconclusive row
+        ladder_button: list[ui.button] = []
 
         @ui.refreshable
         def ladder_view() -> None:
@@ -536,15 +675,21 @@ def index() -> None:
             if d is None:
                 return
             rungs.clear()
+            extra_rungs.clear()
+            ladder_button.clear()
             ui.label(d.search.summary()["ranking"]).classes("cg-muted")
             chosen = s.selected.proposal.repair_id if s.selected else ""
-            for r in vm.ladder(d.search):
+            all_rungs = vm.ladder(d.search, d.labels)
+            for r in all_rungs:
                 with (
                     ui.element("div")
                     .classes("cg-rung" + (" cg-rung-selected" if r.repair_id == chosen else ""))
                     .props(f"data-testid=rung-{r.rank}") as rung
                 ):
                     rungs[r.repair_id] = rung
+                    if r.rank > vm.TOP_RUNGS:
+                        extra_rungs[r.repair_id] = rung
+                        rung.set_visibility(s.ladder_all)
                     css = "cg-badge-safe" if r.badge == vm.SMALLEST_SAFE else "cg-badge-top"
                     badges = (
                         f'<span class="cg-badge {css}">{esc(r.badge)}</span> ' if r.badge else ""
@@ -555,7 +700,8 @@ def index() -> None:
                     )
                     body = [
                         f"<div>{badges}</div>" if badges else "",
-                        f'<div class="cg-mono">{esc(r.repair_id)}</div>',
+                        *(f'<div class="cg-sentence">{esc(x)}</div>' for x in r.sentences),
+                        f'<div class="cg-idline">{esc(r.repair_id)}</div>',
                         f'<div class="cg-wrap text-sm">{esc(r.outcome)}; {r.edits} edit(s); '
                         f"roles touched: {esc(', '.join(r.roles))}; critical blockers removed "
                         f"{r.removed}</div>",
@@ -576,14 +722,34 @@ def index() -> None:
                     ui.label(
                         f"inconclusive ({outcome_definition('inconclusive')}): unranked"
                     ).classes("font-semibold")
-                    for repair_id, label in unranked:
-                        with ui.row().classes("items-center gap-2 w-full no-wrap"):
+                    for i, (repair_id, label) in enumerate(unranked, 1):
+                        with (
+                            ui.row()
+                            .classes("items-center gap-2 w-full no-wrap")
+                            .props(f"data-testid=inconclusive-{i}") as row
+                        ):
                             ui.button(
                                 "Compare", on_click=lambda _, rid=repair_id: compare(rid)
                             ).props("flat dense no-caps")
                             ui.label(f"{repair_id}: {label}").classes("cg-mono")
+                        if i > vm.TOP_RUNGS:  # collapsed the same way as the ranked rungs
+                            extra_rungs[repair_id] = row
+                            row.set_visibility(s.ladder_all)
             ui.label("Discarded by the hard filter").classes("font-semibold mt-2")
-            lines(vm.discarded(d.search))
+            dropped = vm.discarded(d.search)
+            if not dropped:
+                ui.label("none").classes("cg-muted")
+            for i, line in enumerate(dropped, 1):
+                item = ui.label(line).classes("cg-mono whitespace-pre-wrap")
+                if i > vm.TOP_RUNGS:  # collapsed the same way as the ranked rungs
+                    extra_rungs[f"discarded-{i}"] = item
+                    item.set_visibility(s.ladder_all)
+            if extra_rungs:
+                ladder_button.append(
+                    ui.button(ladder_text(ladder_total()), on_click=lambda: toggle_ladder()).props(
+                        "flat no-caps data-testid=ladder-toggle"
+                    )
+                )
 
         ladder_view()
 
@@ -596,8 +762,12 @@ def index() -> None:
             if d is None or c is None:
                 ui.label("No repair selected.").classes("cg-muted")
                 return
-            v = vm.comparison(c)
-            ui.label(v.repair_id).classes("cg-mono").props("data-testid=comparison-id")
+            v = vm.comparison(c, d.labels)
+            for sentence in v.edits:
+                ui.label(sentence).classes("cg-sentence").props("data-testid=comparison-edit")
+            ui.label(v.repair_id).classes("cg-idline").props("data-testid=comparison-id")
+            for edit_id in v.edit_ids:
+                ui.label(edit_id).classes("cg-rawid")
             if v.incomplete:
                 ui.label(v.incomplete).classes("cg-bad cg-wrap")
             if v.withheld:
@@ -607,19 +777,18 @@ def index() -> None:
             ui.label(
                 f"Outcome: {v.outcome}" + (f"; {v.authorization}" if v.authorization else "")
             ).classes("cg-wrap font-medium").props("data-testid=comparison-outcome")
-            lines(v.edits)
             ui.label(f"Clauses the repair targets: {v.targets}").classes("cg-muted")
             with ui.element("div").classes("cg-split").props("data-testid=comparison"):
                 with ui.column().classes("cg-pane gap-1"):
                     ui.label("Baseline").classes("cg-h2")
                     lines([f"{g}: {base}" for g, base, _ in v.goals])
                     ui.label("Diagnosed failures").classes("font-semibold")
-                    lines(v.baseline_failures)
+                    named(v.baseline_named, v.baseline_failures)
                 with ui.column().classes("cg-pane gap-1"):
                     ui.label("Replay").classes("cg-h2")
                     lines([f"{g}: {rep}" for g, _, rep in v.goals])
                     ui.label("Diagnosed failures").classes("font-semibold")
-                    lines((*v.removed, *v.replay_failures))
+                    named(v.replay_named, (*v.removed, *v.replay_failures))
             agents_row(c)
             ui.label("Actions whose verdict changed").classes("font-semibold")
             lines(v.changed_actions)
@@ -730,6 +899,10 @@ def index() -> None:
 
     def set_guided(guided: bool) -> None:
         s.guided = guided
+        # Raw ids (class cg-rawid) are shown in Expert mode by one class on the page body.
+        ui.query("body").classes(remove="cg-expert") if guided else ui.query("body").classes(
+            add="cg-expert"
+        )
         show_sections()
         split_view.refresh()
 
@@ -845,9 +1018,32 @@ def index() -> None:
         s.failure = failure
         refresh_graph()
 
+    def set_fade(fade: bool) -> None:
+        s.fade = fade
+        refresh_graph()
+
+    def ladder_total() -> int:
+        """Rows behind "Show all N": ranked, inconclusive and discarded repairs."""
+        d = s.data
+        if d is None:
+            return 0
+        return len(d.search.ranked) + len(d.search.inconclusive) + len(d.search.discarded)
+
+    def ladder_text(n: int) -> str:
+        return f"Show top {vm.TOP_RUNGS}" if s.ladder_all else f"Show all {n}"
+
+    def toggle_ladder() -> None:
+        s.ladder_all = not s.ladder_all
+        for rung in extra_rungs.values():
+            rung.set_visibility(s.ladder_all)
+        if ladder_button:
+            ladder_button[0].set_text(ladder_text(ladder_total()))
+
     def compare(repair_id: str) -> None:
         if s.data is None:
             return
+        if repair_id in extra_rungs and not s.ladder_all:  # never select a hidden rung
+            toggle_ladder()
         s.selected = s.data.search.comparison(repair_id)
         for rid, rung in rungs.items():  # highlight in place; the ladder is not rebuilt
             rung.classes(add="cg-rung-selected") if rid == repair_id else rung.classes(

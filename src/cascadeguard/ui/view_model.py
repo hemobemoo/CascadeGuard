@@ -6,13 +6,13 @@ repair-rule label, masked blockers, `scripted_agent_limit` tags and the agent-st
 """
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
 from cascadeguard.cli import baseline_markdown, excluded_drafts, search_markdown
-from cascadeguard.domain.findings import FailureCategory
-from cascadeguard.domain.repairs import OWNER_RULE_PREFIX
+from cascadeguard.domain.findings import CoordinationFailure, FailureCategory
+from cascadeguard.domain.repairs import OWNER_RULE_PREFIX, RepairEdit, RepairOperationType
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT, OBLIGATION_OVERDUE
 from cascadeguard.engine.repair_search import (
@@ -48,6 +48,89 @@ from cascadeguard.storage.export import (
 MASKED = MASKED_LABEL
 REQUIRES_AUTHORIZATION = REQUIRES_AUTHORIZATION_LABEL
 UNLABELLED = "<unlabelled agent text withheld>"
+
+
+@dataclass(frozen=True, slots=True)
+class Labels:
+    """Display names: roles from roles.yaml `name`, categories, actions and goals from the UI-only
+    `scenarios/<id>/display.yaml` (pure renames), event titles from scenario.yaml. An id with no
+    entry is shown as itself (the default, empty Labels shows ids everywhere)."""
+
+    roles: Mapping[str, str] = field(default_factory=dict[str, str])
+    categories: Mapping[str, str] = field(default_factory=dict[str, str])
+    actions: Mapping[str, str] = field(default_factory=dict[str, str])
+    goals: Mapping[str, str] = field(default_factory=dict[str, str])
+    events: Mapping[str, tuple[int, str]] = field(default_factory=dict[str, tuple[int, str]])
+    summary: str = ""
+
+    def role(self, i: str) -> str:
+        return self.roles.get(i, i)
+
+    def category(self, i: str) -> str:
+        return self.categories.get(i, i)
+
+    def action(self, i: str) -> str:
+        return self.actions.get(i, i)
+
+    def goal(self, i: str) -> str:
+        return self.goals.get(i, i)
+
+
+IDS = Labels()  # no display names: every id shown as itself
+
+
+def lower_first(text: str) -> str:
+    """A label inside a sentence: "Reverse automated lockouts" -> "reverse automated lockouts";
+    a leading acronym ("AI ...") is kept."""
+    return text if text[1:2].isupper() else text[:1].lower() + text[1:]
+
+
+def edit_sentence(e: RepairEdit, labels: Labels = IDS) -> str:
+    """One repair edit in plain language, built only from its typed parameters (spec 006b); the
+    wording follows the hypothetical rule it creates (simulation/replay.py), never more."""
+    op = e.operation
+    role = labels.role(e.role)
+    act = lower_first(labels.action(e.action)) if e.action else ""
+    if (event := e.trigger_event or "") in labels.events:
+        minute, title = labels.events[event]
+        when = f"when \u201c{title}\u201d (T+{minute:02d})"
+    else:
+        when = f"when {e.trigger_event}"
+    if op is RepairOperationType.ASSIGN_OWNER:
+        return f"Assign {act} to {role}, {e.deadline_minutes}-minute deadline"
+    if op is RepairOperationType.DEFINE_MINIMUM_DATA_SHARE:
+        category = lower_first(labels.category(e.data_category or ""))
+        counterpart = labels.role(e.counterpart or "")
+        return f"Allow {role} to share {category} with {counterpart} (minimum data share)"
+    if op is RepairOperationType.DESIGNATE_DECISION_REQUESTER:
+        counterpart = labels.role(e.counterpart or "")
+        return (
+            f"{role} requests a determination on {act} from {counterpart} {when}, "
+            f"within {e.deadline_minutes} minutes"
+        )
+    return f"{role} must {act} {when}, within {e.deadline_minutes} minutes"
+
+
+def failure_title(subject: str, labels: Labels = IDS) -> str:
+    """A diagnosed failure's subject by name: an action, or "<category> -> <role>"."""
+    if "->" in subject:
+        category, role = subject.split("->")
+        return f"{labels.category(category)} \u2192 {labels.role(role)}"
+    return labels.action(subject)
+
+
+def failure_name(f: CoordinationFailure, labels: Labels = IDS) -> str:
+    """ "orphan duty: Reverse automated lockouts": the category and the subject by name."""
+    return f"{f.category.value.replace('_', ' ')}: {failure_title(f.subject, labels)}"
+
+
+def default_failure(result: RunResult) -> str | None:
+    """The failure the graph opens on: the first one in the diagnosis cards' order."""
+    for cat in FailureCategory:
+        for f in result.failures:
+            if f.category is cat:
+                return f.id
+    return None
 
 
 def cite(ids: Iterable[str], labels: dict[str, str]) -> str:
@@ -212,10 +295,17 @@ def _failure_nodes(result: RunResult, failure_id: str) -> tuple[set[str], set[st
 KINDS = ("role", "action", "category", "clause", "goal")
 
 
-def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, Any]:
+def graph_option(
+    result: RunResult,
+    failure_id: str | None = None,
+    names_for: Labels = IDS,
+    fade: bool = True,
+) -> dict[str, Any]:
     """ECharts option for the dependency graph. Nodes named by the selected diagnosed failure (or
     by every failure when none is selected) are highlighted, and so are the edges between them
-    that touch the failure's subject."""
+    that touch the failure's subject. With one failure selected and `fade` (the default,
+    spec 006b), everything outside its subgraph is faded; with every failure ("all diagnosed
+    failures") nothing is. Nodes show display names; the raw id is the tooltip value."""
     edges = result.graph.edges()
     names = sorted({n for s, _, t in edges for n in (s, t)})
     ids = [failure_id] if failure_id else [f.id for f in result.failures]
@@ -229,7 +319,20 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
 
     def label(n: str) -> str:
         kind, ident = n.split(":", 1)
-        return f"{ident} [{labels.get(ident, 'not loaded')}]" if kind == "clause" else ident
+        if kind == "clause":
+            return f"{ident} [{labels.get(ident, 'not loaded')}]"
+        named = {
+            "role": names_for.role,
+            "action": names_for.action,
+            "category": names_for.category,
+            "goal": names_for.goal,
+        }
+        return named[kind](ident) if kind in named else ident
+
+    focus = fade and failure_id is not None  # "all diagnosed failures": nothing faded
+
+    def faded(n: str) -> bool:
+        return focus and n not in hot
 
     # Fixed layered layout, one column per kind (roles -> actions -> categories -> clauses ->
     # goals): the same positions for every highlight, so an update only restyles (no force
@@ -246,13 +349,18 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
         {
             "id": n,
             "name": label(n),
+            "value": n.split(":", 1)[1],  # the raw id, in the tooltip
             "x": position[n][0],
             "y": position[n][1],
             "category": KINDS.index(n.split(":", 1)[0]),
             "symbolSize": 26 if n in hot else 12,
-            "itemStyle": {"borderColor": "#c62828", "borderWidth": 4} if n in hot else {},
+            "itemStyle": {"borderColor": "#c62828", "borderWidth": 4}
+            if n in hot
+            else {"opacity": 0.15}
+            if faded(n)
+            else {},
             "label": {
-                "show": n in hot or n.startswith("role:"),
+                "show": n in hot or (n.startswith("role:") and not faded(n)),
                 "color": "#1f2937",
                 "position": "right",
             },
@@ -266,7 +374,7 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
             "value": rel,
             "lineStyle": {"color": "#c62828", "width": 3, "opacity": 0.9}
             if (s, t) in hot_edges
-            else {"opacity": 0.25},
+            else {"opacity": 0.06 if focus else 0.25},
         }
         for s, rel, t in edges
     ]
@@ -277,6 +385,8 @@ def graph_option(result: RunResult, failure_id: str | None = None) -> dict[str, 
             {
                 "type": "graph",
                 "layout": "none",
+                "left": 20,
+                "right": 220,  # room for the goal names in the last column
                 "roam": True,
                 "lineStyle": {"curveness": 0.15},
                 "categories": [{"name": k} for k in KINDS],
@@ -349,7 +459,7 @@ class Comparison:
     repair_id: str
     outcome: str
     authorization: str
-    edits: tuple[str, ...]  # each labelled as a hypothetical repair rule
+    edits: tuple[str, ...]  # each a plain-language sentence, labelled as a hypothetical rule
     targets: str
     goals: tuple[tuple[str, str, str], ...]  # (goal, baseline, replay)
     baseline_failures: tuple[str, ...]
@@ -359,18 +469,25 @@ class Comparison:
     notes: tuple[str, ...] = field(default=(REPAIR_NOTE,))
     incomplete: str = ""  # an "Incomplete run" banner when steps had no decision
     withheld: str = ""  # set when the replay is not comparable (verdicts withheld)
+    edit_ids: tuple[str, ...] = ()  # each edit's operation and id (small print)
+    # The failure lines by name, parallel to baseline_failures and to removed + replay_failures
+    # (whose raw-id wording is shown in small print).
+    baseline_named: tuple[str, ...] = ()
+    replay_named: tuple[str, ...] = ()
 
 
-def comparison(c: ReplayComparison) -> Comparison:
+def comparison(c: ReplayComparison, names: Labels = IDS) -> Comparison:
     labels = dict(c.replay.loaded_clauses)
     s = c.summary()
+    edits = tuple(f"{edit_sentence(e, names)} [{REPAIR_LABEL}]" for e in c.proposal.edits)
+    edit_ids = tuple(f"{e.operation.value} ({e.edit_id})" for e in c.proposal.edits)
     if c.failed_steps:  # not comparable: no goals, failure attributions or changed actions
         p = c.proposal
         return Comparison(
             repair_id=p.repair_id,
             outcome=outcome_text(c),
             authorization=REQUIRES_AUTHORIZATION if p.requires_authorization else "",
-            edits=tuple(f"{e.operation.value} ({e.edit_id}) [{REPAIR_LABEL}]" for e in p.edits),
+            edits=edits,
             targets=cite((x.clause_id for x in p.citations), labels) or "none",
             goals=(),
             baseline_failures=(),
@@ -382,9 +499,26 @@ def comparison(c: ReplayComparison) -> Comparison:
                 tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
             ),
             withheld=str(s["withheld"]),
+            edit_ids=edit_ids,
         )
     tags = c.conflict_tags()
     p = c.proposal
+    by_id = {f.id: f for f in (*c.baseline.failures, *c.replay.failures)}
+
+    def name(fid: str) -> str:
+        return failure_name(by_id[fid], names) if fid in by_id else fid
+
+    replay_named = [
+        f"{name(f)}: remaining"
+        + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
+        + (f" [{OPEN_AT_END_LABEL}]" if f in c.open_at_end_blockers else "")
+        for f in c.remaining
+    ]
+    replay_named += [f"{name(f)}: {MASKED}" for f in c.masked]
+    replay_named += [
+        f"{name(f)}: NEW conflict" + (f" [{tags[f]}: {SCRIPTED_LIMIT_NOTE}]" if f in tags else "")
+        for f in c.new_conflicts
+    ]
     replay_rows = [
         f"{f}: remaining"
         + (f" [{OVERDUE_LABEL}]" if f in c.overdue_blockers else "")
@@ -400,15 +534,15 @@ def comparison(c: ReplayComparison) -> Comparison:
         repair_id=p.repair_id,
         outcome=outcome_text(c),
         authorization=REQUIRES_AUTHORIZATION if p.requires_authorization else "",
-        edits=tuple(f"{e.operation.value} ({e.edit_id}) [{REPAIR_LABEL}]" for e in p.edits),
+        edits=edits,
         targets=cite((x.clause_id for x in p.citations), labels) or "none",
-        goals=tuple((g, v["baseline"], v["replay"]) for g, v in s["goals"].items()),
+        goals=tuple((names.goal(g), v["baseline"], v["replay"]) for g, v in s["goals"].items()),
         baseline_failures=tuple(f.id for f in c.baseline.failures),
         replay_failures=tuple(replay_rows),
         removed=tuple(f"{f}: {REMOVED_LABEL}" for f in c.removed),
         changed_actions=tuple(
-            f"T+{a['minute']:02d} {a['role']}: {a['action']}"
-            + (f" -> {a['target']}" if "target" in a else "")
+            f"T+{a['minute']:02d} {names.role(a['role'])}: {names.action(a['action'])}"
+            + (f" -> {names.role(a['target'])}" if "target" in a else "")
             + f": {a['baseline']} -> {a['replay']}"
             for a in s["changed_actions"]
         ),
@@ -416,6 +550,9 @@ def comparison(c: ReplayComparison) -> Comparison:
         incomplete=incomplete_banner(
             tuple((m, f"{r} ({run})", why) for run, m, r, why in c.failed_steps), ""
         ),
+        edit_ids=edit_ids,
+        baseline_named=tuple(name(f.id) for f in c.baseline.failures),
+        replay_named=(*(f"{name(f)}: {REMOVED_LABEL}" for f in c.removed), *replay_named),
     )
 
 
@@ -512,6 +649,7 @@ class Verdict:
     new_conflicts: int | None
     caveat: str = ""  # the baseline's invalid_output caveat, shown even with nothing ranked
     authorization: str = ""  # REQUIRES_AUTHORIZATION when the best repair needs approval
+    sentences: tuple[str, ...] = ()  # the best repair's edits in plain language, labelled
 
 
 def critical_goals(scenario: Scenario) -> tuple[str, ...]:
@@ -531,7 +669,9 @@ def badge(c: ReplayComparison, rank: int) -> str:
     return SMALLEST_SAFE if is_smallest_safe(c, rank) else f"{TOP_RANKED} ({c.outcome})"
 
 
-def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario) -> Verdict:
+def verdict(
+    baseline: RunResult, search_result: SearchResult, scenario: Scenario, names: Labels = IDS
+) -> Verdict:
     critical = critical_goals(scenario)
     head = (len(critical), _goals_met(baseline, critical), len(baseline.failures))
     caveat = baseline_caveat(baseline)
@@ -552,6 +692,7 @@ def verdict(baseline: RunResult, search_result: SearchResult, scenario: Scenario
         new_conflicts=len(c.new_conflicts),
         caveat=caveat,
         authorization=REQUIRES_AUTHORIZATION if c.proposal.requires_authorization else "",
+        sentences=tuple(f"{edit_sentence(e, names)} [{REPAIR_LABEL}]" for e in c.proposal.edits),
     )
 
 
@@ -573,14 +714,15 @@ class Cell:
     minute: int
     recipient: bool  # the role received this inject
     facts: tuple[Chip, ...]  # facts that reached the role at this minute (inside its boundary)
-    accepted: tuple[str, ...]
-    rejected: tuple[str, ...]  # with reason codes
+    accepted: tuple[str, ...]  # display names
+    rejected: tuple[str, ...]  # display names, with reason codes
     statements: tuple[str, ...]  # always under the AGENT_STATEMENT label
+    raw: str = ""  # the accepted and rejected actions with raw ids (tooltip; Expert mode)
 
 
 @dataclass(frozen=True, slots=True)
 class Bar:
-    action: str
+    action: str  # display name
     source: Chip  # the clause or repair rule, with its status label
     start: int  # column index of opened_at
     end: int  # column index of the due minute (or the last column), inclusive
@@ -594,6 +736,7 @@ class Lane:
     role: str
     cells: tuple[Cell, ...]
     bars: tuple[Bar, ...]
+    name: str = ""  # the role's display name
 
 
 def _column(minutes: list[int], minute: int) -> int:
@@ -612,7 +755,13 @@ def _bar_state(ob: ObligationStatus) -> str:
     return OPEN_AT_END_LABEL.split(": ", 1)[0] if owner else OPEN_AT_END_STATE
 
 
-def swimlanes(result: RunResult, scenario: Scenario) -> list[Lane]:
+def _act(action: str | None, target: str | None, n: Labels) -> str:
+    return (n.action(action) if action else "whole decision") + (
+        f" -> {n.role(target)}" if target else ""
+    )
+
+
+def swimlanes(result: RunResult, scenario: Scenario, names: Labels = IDS) -> list[Lane]:
     """One lane per role: the facts that reached it at each inject (only facts inside its
     boundary are ever released to it), what it did, and its obligations."""
     labels = dict(result.loaded_clauses)
@@ -624,27 +773,28 @@ def swimlanes(result: RunResult, scenario: Scenario) -> list[Lane]:
         cells: list[Cell] = []
         for m in minutes:
             here = [e for e in result.log if e.minute == m and e.role == role]
+            acted = [e for e in here if e.kind == "rejected" or (e.kind == "accepted" and e.action)]
             cells.append(
                 Cell(
                     minute=m,
                     recipient=role in recipients[m],
                     facts=tuple(
-                        Chip(e.detail, category.get(e.detail, ""), "cg-fact")
+                        Chip(e.detail, names.category(category.get(e.detail, "")), "cg-fact")
                         for e in here
                         if e.kind == "fact_released"
                     ),
                     accepted=tuple(
-                        e.action + (f" -> {e.target}" if e.target else "")
+                        _act(e.action, e.target, names)
                         for e in here
                         if e.kind == "accepted" and e.action
                     ),
                     rejected=tuple(
-                        (e.action or "whole decision")
-                        + (f" -> {e.target}" if e.target else "")
+                        _act(e.action, e.target, names)
                         + (f" ({', '.join(e.reasons)})" if e.reasons else "")
                         for e in here
                         if e.kind == "rejected"
                     ),
+                    raw="; ".join(f"{e.kind} {_act(e.action, e.target, IDS)}" for e in acted),
                     statements=tuple(
                         e.detail if e.detail.startswith(AGENT_STATEMENT) else UNLABELLED
                         for e in here
@@ -654,7 +804,7 @@ def swimlanes(result: RunResult, scenario: Scenario) -> list[Lane]:
             )
         bars = tuple(
             Bar(
-                action=ob.action,
+                action=names.action(ob.action),
                 source=clause_chips((ob.clause_id,), labels)[0],
                 start=_column(minutes, ob.opened_at),
                 end=len(minutes) - 1 if ob.due_at is None else _column(minutes, ob.due_at),
@@ -665,7 +815,7 @@ def swimlanes(result: RunResult, scenario: Scenario) -> list[Lane]:
             for ob in result.obligations
             if ob.role in (role, "any")
         )
-        lanes.append(Lane(role, tuple(cells), bars))
+        lanes.append(Lane(role, tuple(cells), bars, names.role(role)))
     return lanes
 
 
@@ -673,18 +823,20 @@ def swimlanes(result: RunResult, scenario: Scenario) -> list[Lane]:
 class DiagnosisItem:
     id: str
     description: str
-    blocks: str
+    blocks: str  # goal display names
     qualification: str
     evidence: tuple[Chip, ...]
+    title: str = ""  # the failure's subject by name
 
 
 @dataclass(frozen=True, slots=True)
 class CategoryCard:
     category: str
     items: tuple[DiagnosisItem, ...]  # empty: none found
+    title: str = ""  # the category with spaces ("orphan duty")
 
 
-def diagnosis_cards(result: RunResult) -> list[CategoryCard]:
+def diagnosis_cards(result: RunResult, names: Labels = IDS) -> list[CategoryCard]:
     """One card per failure category (all five, in the taxonomy's order)."""
     labels = dict(result.loaded_clauses)
     return [
@@ -694,13 +846,15 @@ def diagnosis_cards(result: RunResult) -> list[CategoryCard]:
                 DiagnosisItem(
                     f.id,
                     f.description,
-                    ", ".join(f.goals),
+                    ", ".join(names.goal(g) for g in f.goals),
                     f.qualification,
                     clause_chips(f.clause_ids, labels),
+                    failure_title(f.subject, names),
                 )
                 for f in result.failures
                 if f.category is cat
             ),
+            cat.value.replace("_", " "),
         )
         for cat in FailureCategory
     ]
@@ -713,14 +867,18 @@ class Rung:
     badge: str
     outcome: str
     edits: int
-    roles: tuple[str, ...]  # roles the edits touch
+    roles: tuple[str, ...]  # roles the edits touch (display names)
     removed: int
     masked: tuple[str, ...]
     new_conflicts: tuple[str, ...]
     authorization: str
+    sentences: tuple[str, ...] = ()  # each edit in plain language, labelled
 
 
-def ladder(result: SearchResult) -> list[Rung]:
+TOP_RUNGS = 3  # rungs shown before "Show all N" (spec 006b)
+
+
+def ladder(result: SearchResult, names: Labels = IDS) -> list[Rung]:
     out: list[Rung] = []
     for row, c in zip(repairs(result), result.ranked, strict=True):
         roles = sorted({r for e in c.proposal.edits for r in (e.role, e.counterpart) if r})
@@ -731,11 +889,14 @@ def ladder(result: SearchResult) -> list[Rung]:
                 badge=badge(c, row.rank),
                 outcome=row.outcome,
                 edits=row.edits,
-                roles=tuple(roles),
+                roles=tuple(names.role(r) for r in roles),
                 removed=row.removed,
                 masked=row.masked,
                 new_conflicts=row.new_conflicts,
                 authorization=row.authorization,
+                sentences=tuple(
+                    f"{edit_sentence(e, names)} [{REPAIR_LABEL}]" for e in c.proposal.edits
+                ),
             )
         )
     return out

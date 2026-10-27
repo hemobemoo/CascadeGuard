@@ -57,6 +57,12 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   first. `ui/theme.css` holds the design tokens; `scenarios/<id>/evaluation_findings.yaml`
   holds human-worded findings shown only when the computed verdicts match. The UI never makes
   live LLM calls.
+- **Display names (Phase 6b, spec 006b).** `scenarios/<id>/display.yaml` holds the incident
+  summary and labels for data categories, actions and goals (pure renames); role names come
+  from `roles.yaml` `name`. Only `ui/app.py` reads it (validated: every id labelled, no unknown
+  id); the engine, agents, simulation and exports never do, so agent views and LLM cache keys
+  are unchanged (`tests/unit/test_display_labels.py`). Repair edits are shown as sentences
+  built from their typed parameters, with the raw ids in small print (all of them in Expert).
 
 - **LLM agents (Phase 5).** `agents/llm.py` plays a role with the model in `.env` (OpenRouter,
   `openai` SDK, temperature 0, strict `json_schema` built from `AgentDecision`,
