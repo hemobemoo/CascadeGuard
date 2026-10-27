@@ -1,6 +1,7 @@
 # Policy source inventory (Phase 1a)
 
-The 19 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table), from
+The 19 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table, and the
+seven web transcriptions in `policies/sources/web/`, listed at the end), from
 `policies/extracted/_inventory.json`
 (`uv run python scripts/extract_pdf_text.py`). "No-text pages" = fewer than 20 non-space
 characters extracted. Issuer and date are as printed in the document; "not printed" means the PDF
@@ -65,3 +66,18 @@ when a clause is drafted from it; only the Charter part has been decided by the 
   None is needed by the scenario.
 
 Not scanned in the OCR sense: no PDF is an image-only scan.
+
+## Web transcriptions (`policies/sources/web/`, Phase 6c)
+
+Official web pages printed to PDF by the human on 2026-10-27; unverified. Official URLs, issuers,
+dates and types are in `policies/sources/web/MANIFEST.md`. Every page has extractable text.
+
+| File | Pages | Clauses drafted |
+|---|---|---|
+| `01_uae_smart_health_ai_policy.pdf` | 5 | 3 (`uae.mohap-smart-health.*`) |
+| `02_uae_international_ai_policy.pdf` | 8 | none (source only) |
+| `03_uae_national_cybersecurity_strategy.pdf` | 3 | 2 (`uae.cyber-strategy-2025.*`; announcement summaries, not the strategy) |
+| `04_uae_digital_government_strategy_2025.pdf` | 14 | none (source only) |
+| `05_uae_ai_government_policies.pdf` | 7 | none (source only) |
+| `06_unesco_ai_ethics_recommendation.pdf` | 6 | 2 (`unesco.ai-ethics.*`; web page summary) |
+| `07_oecd_ai_principles.pdf` | 10 | 2 (`oecd.ai-principles.*`; web page text) |

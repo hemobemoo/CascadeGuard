@@ -2,8 +2,9 @@
 
 How CascadeGuard turns source documents into clauses the engine can check.
 
-1. **Sources.** The 19 PDFs in `policies/sources/` are the knowledge base. They are never
-   modified. The two published books (Abhivardhan; the Oxford Handbook) are context only: never
+1. **Sources.** The 19 original PDFs in `policies/sources/`, plus the web transcriptions in
+   `policies/sources/web/` (listed in its `MANIFEST.md`, see 5b), are the knowledge base. They
+   are never modified. The two published books (Abhivardhan; the Oxford Handbook) are context only: never
    a clause source and never committed.
 2. **Extraction.** `uv run python scripts/extract_pdf_text.py` writes page-by-page text to
    `policies/extracted/<pdf-stem>.jsonl` and an inventory to `policies/extracted/_inventory.json`.
@@ -22,6 +23,16 @@ How CascadeGuard turns source documents into clauses the engine can check.
    `source_file` is `ocr/<name>`, `page` is the PDF page index (the printed page goes in
    `notes`), and `notes` must contain "OCR — check against image" (the loader rejects the clause
    otherwise). The clause is flagged the same way in the review list.
+5b. **Web transcriptions.** Official web pages printed to PDF by the human go to
+   `policies/sources/web/`, each with one row in `MANIFEST.md` (official URL, retrieval date,
+   issuer, document date, document type, "unverified"). They are not the original documents.
+   The extraction script reads the URL from the manifest table (a missing or malformed row
+   stops it) and marks every page record and inventory entry `"web": true` with its
+   `source_url`. A clause quoting one has `source_file: web/<name>.pdf`, says "web
+   transcription — unverified" in `notes`, and is never `binding: true` (the loader rejects it
+   otherwise). Where the transcription is only a summary of a document (UNESCO, OECD, the
+   Cybersecurity Strategy announcements), the original document should replace it before the
+   clause is reviewed.
 6. **Illustrative rules.** A rule the scenario needs that no PDF supports is written as
    `status: illustrative`, `binding: false`, with a plain-language text and a note on why it is
    needed. It is listed separately in phase reports and shown with its label in the UI.
