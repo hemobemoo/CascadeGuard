@@ -81,10 +81,17 @@ The guided flow passes in the browser with scripted and cached LLM agents showin
 sentences, the top-3 ladder, the faded subgraph and the summary; the perf budgets pass in CI;
 and all checks pass.
 
-## Questions for the human
+## Human decisions (2026-10-27)
 
-1. Labels in a UI-only `display.yaml` (recommended: cached LLM decisions stay valid, and data
-   categories have no data entry today) rather than new `display_name` fields in `roles.yaml`
-   and the domain models?
-2. Role names: use the existing `name` field as is ("Health Service Operator")?
-3. The incident summary text: write a draft for your approval, or will you supply it?
+1. Labels go in a UI-only `scenarios/<id>/display.yaml`, as specified. Conditions:
+   1. A test fails if any engine, agent, simulation or export module reads `display.yaml`.
+   2. `display.yaml` is excluded from any scenario hash or manifest, and the scenario loader
+      tolerates it. Checked 2026-10-27: there is no scenario hash or manifest; the loader reads
+      `scenario.yaml`, `roles.yaml` and `scripted_decisions.yaml` by name; the LLM cache key
+      hashes the role's boundary-filtered view, and digests exist only for clauses. A test pins
+      both (the loader with `display.yaml` present, and runs unchanged by its contents).
+   3. Labels are pure renames only (no added meaning, status or legal claim). The
+      evidence-auditor checks `display.yaml` under gate 7, the same as the incident summary.
+2. Role names: the existing `name` field, unchanged (e.g. "Health Service Operator").
+3. Incident summary: drafted by the agent within the gate-7 constraints; the human approves
+   the final wording before merge.
