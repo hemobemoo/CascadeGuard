@@ -2,8 +2,8 @@
 
 Prepared 2026-10-28 on main after Phase 6d (`bf753c9`, tag `phase-6d`). It covers every item on
 the consolidated review list in `PROGRESS.md`: the 10 drafts from 6c and 6d and the four older
-items. **Every clause is `status: draft` and stays so until you decide.** Recommendations are
-mine; the decisions are yours.
+items. Every clause was `status: draft` when the packet was written; the human's decisions are
+recorded below. The recommendations further down are the ones made before the decisions.
 
 **How the impact columns were measured.** I set one clause at a time to `reviewed` in a temporary
 copy of `policies/reviewed/` and ran the baseline and the repair search. I compared them with
@@ -12,6 +12,36 @@ LLM cache key) with today's. "Reaches" means the roles that get the clause from
 `clauses_for_role` (the engine's scope rule). A changed view means a changed cache key: an LLM run
 asks that role again (a paid run, gate 4). The scripted default path and the goldens change only
 where the table says so.
+
+## Decisions (gate 1, reviewer Ibrahim Melhem, 2026-10-28)
+
+Each changed clause's notes record the decision, the reviewer and the date.
+
+| # | clause id | decision | reason |
+|---|---|---|---|
+| 3 | `uae.mohap-smart-health.p7-liability` | **reviewed** | Sentence checked against the uaelegislation.gov.ae page; it matches. Web flag and `binding: unknown` kept. |
+| 6 | `unesco.ai-ethics.human-oversight` | **reviewed** | As recommended. |
+| 7 | `unesco.ai-ethics.review-and-correct` | **reviewed** | As recommended. |
+| 8 | `unesco.ai-ethics.responsibility-accountability` | **reviewed** | As recommended. |
+| 9 | `oecd.ai-principles.robustness-override` | **reviewed** | "UAE adherence not checked" kept. |
+| 10 | `oecd.ai-principles.accountability-cooperation` | **reviewed** | "UAE adherence not checked" kept. |
+| 11 | `dha.pp11.applicability` | **reviewed** | `binding: unknown` kept. |
+| 14 | `eu.gdpr.art33-1` | **retitled, then reviewed** | Title now "GDPR: breach notification without undue delay and, where feasible, within 72 hours". `expected_baseline.yaml` updated in the same commit. |
+| 1 | `uae.mohap-smart-health.p2-coordination` | keep as draft, **closed** | No actor or duty. |
+| 2 | `uae.mohap-smart-health.p6-cybersecurity` | keep as draft, **closed** | No actor or duty. |
+| 12 | `dha.pp11.4-18-5` | keep as draft, **closed** | Duplicates the reviewed obligation in `dha.pp11.4-18-4`. |
+| 13 | `mocai.ethics.fallback-plan` | keep as draft, **closed** | Duplicates the reviewed obligation in `dha.pp11.4-18-1`. |
+| 4 | `uae.cyber-strategy-2025.governance-aim` | keep as draft, **open** | Only an announcement summary is in the repository. A future phase adds the official Cyber Security Council 2025 strategy PDF. |
+| 5 | `uae.cyber-strategy-2025.partnership-aim` | keep as draft, **open** | Same as item 4. |
+
+**Measured after the decisions** (all eight reviewed together, compared with the run before):
+- **Baseline:** changes only for item 14. The adviser's T+60 `provide_policy_analysis` is
+  accepted, and the `draft_citation` finding and rejected decision are gone. No goal changes.
+- **Repair search:** byte-identical. `expected_repairs.yaml` is unchanged (same SHA-256).
+- **Views:** `policy_legal_adviser`'s views change (6 of 36 baseline views, 126 replay views). No
+  other role's view changes.
+- **Loaded clauses:** 12 → 20.
+- **Draft citations:** the baseline no longer contains any rejected draft citation.
 
 ## Summary
 

@@ -12,11 +12,13 @@ clauses:
     issuer: Dubai Health Authority
     jurisdiction: Dubai, UAE
     document_date: "2022-08-10"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       Applies only because the scenario places the portal operator in Dubai. Whether the policy
       is binding (and on whom) is for the human to confirm.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28): the quote is confirmed; binding:
+      unknown kept.
 
   - id: dha.pp11.4-18-1
     title: Incident response and business continuity plans
