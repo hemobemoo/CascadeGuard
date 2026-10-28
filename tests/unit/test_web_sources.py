@@ -166,3 +166,28 @@ def test_superseded_web_files_are_06_and_07_and_no_clause_quotes_them() -> None:
     quoted = {c.source_file for c in load_clauses()}
     assert not {f"web/{name}" for name in superseded} & quoted
     assert all((WEB / name).exists() for name in superseded)
+
+
+def test_only_the_listed_two_column_original_is_read_by_column() -> None:
+    """Phase 6d: UNESCO pages with a clear gutter are read column by column, so a paragraph is
+    contiguous; no other extracted file carries "columns"."""
+    script = extract_script()
+    assert {
+        "UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf"
+    } == script.TWO_COLUMN
+    split: dict[str, list[int]] = {}
+    for path in sorted(EXTRACTED.glob("*.jsonl")):
+        for line in path.read_text("utf-8").splitlines():
+            record = json.loads(line)
+            if record.get("columns"):
+                split.setdefault(record["source_file"], []).append(record["page"])
+    assert set(split) == set(script.TWO_COLUMN)
+    unesco = EXTRACTED / "UNESCO Recommendation on the Ethics of Artificial Intelligence.jsonl"
+    page = json.loads(unesco.read_text("utf-8").splitlines()[21])
+    assert page["page"] == 22 and page["columns"] == 2
+    assert (
+        " ".join(page["text"].split()).count(
+            "35. Member States should ensure that it is always possible to attribute ethical"
+        )
+        == 1
+    )
