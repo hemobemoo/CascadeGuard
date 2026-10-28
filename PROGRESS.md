@@ -11,7 +11,7 @@ merge, a repo-wide search found no remaining false U+FFFD claims (see Waiting on
 packet for gate 1: `docs/review/draft-review-packet.md`; gate 1 decided 2026-10-28, PR from
 `review-packet-6d` (not merged; see Waiting on human). No new phase opened. Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
-`docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
+`docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the two clauses still open and the gate-1 questions.
 
 **Phase 6c — Policy source expansion: merged to main via PR #10 (merge commit b73421e, branch
 `phase-6c-policy-sources` kept), tagged `phase-6c`** (2026-10-28, on the human's instruction,
