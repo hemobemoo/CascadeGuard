@@ -15,9 +15,10 @@ clauses:
     jurisdiction: UAE (federal public policy, health sector)
     document_date: "2026-05-18"
     status: draft
-    binding: false
+    binding: unknown
     notes: >-
       web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
+      binding unknown: national public policy; legal effect not verified.
       Public policy priority, not legislation: it names no actor, counterpart, data category or
       deadline, so it carries no normalized reading and authorises no share. Cascade: context
       for the information deadlock between the telecom operator and the health service operator
@@ -34,9 +35,10 @@ clauses:
     jurisdiction: UAE (federal public policy, health sector)
     document_date: "2026-05-18"
     status: draft
-    binding: false
+    binding: unknown
     notes: >-
       web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
+      binding unknown: national public policy; legal effect not verified.
       Public policy priority, not legislation: no reporting duty, regulator or deadline is read
       from it. Cascade: context for the health service operator's security incident at T+15,
       raised on a suspected (unconfirmed) credential-stuffing alert from its own AI fraud model.
@@ -53,9 +55,10 @@ clauses:
     jurisdiction: UAE (federal public policy, health sector)
     document_date: "2026-05-18"
     status: draft
-    binding: false
+    binding: unknown
     notes: >-
       web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
+      binding unknown: national public policy; legal effect not verified.
       An aim to establish liability frameworks, not a framework and not a duty: it assigns no
       owner. Cascade: context for the orphan duty to review and reverse the AI fraud model's
       automated lockouts (no owner found in the reviewed corpus). Whether the portal's

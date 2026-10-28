@@ -162,6 +162,10 @@ def test_engine_loads_only_reviewed_and_illustrative(dirs: tuple[Path, Path]) ->
         ({"extra_field": "x"}, "unknown field"),
         ({"status": "illustrative", "binding": True, "notes": "n"}, "illustrative but binding"),
         ({"status": "illustrative", "binding": False}, "illustrative without notes"),
+        (
+            {"status": "illustrative", "binding": False, "notes": "n"},
+            "illustrative clause naming a source_file",
+        ),
         ({"source_file": "ocr/doc.ocr.pdf"}, "OCR source without the OCR flag"),
         ({"source_file": "web/page.pdf", "binding": False}, "web source without the web flag"),
         ({"source_file": "web/page.pdf", "notes": WEB_NOTE}, "web source marked binding"),

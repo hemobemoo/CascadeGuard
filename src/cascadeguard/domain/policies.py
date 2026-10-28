@@ -106,6 +106,10 @@ class PolicyClause(DomainModel):
                 raise ValueError("an illustrative clause cannot be binding")
             if not self.notes:
                 raise ValueError("an illustrative clause must explain in notes why it is needed")
+            if self.source_file is not None or self.page is not None:  # human decision 2026-10-28
+                raise ValueError(
+                    "an illustrative clause is not quoted from a source: no source_file"
+                )
         elif self.source_file is None or self.page is None:
             raise ValueError(f"a {self.status} clause must record source_file and page")
         if self.source_file is not None and not self.source_file.lower().endswith(".pdf"):

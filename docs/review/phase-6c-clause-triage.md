@@ -49,3 +49,11 @@ FIX; every quote verbatim (JSONL matched on page and `source_file`, and the PDF 
 priorities; the human may still prefer `unknown`). The two `uae.cyber-strategy-2025.*` clauses stay
 NEEDS-HUMAN-JUDGMENT (attribution). UNESCO and OECD clauses CLEAN. MINOR fixed: the report no
 longer calls `UAE Policy Foundation.pdf` a non-clause source.
+
+## Human decisions, 2026-10-28
+
+- BLOCKER **cleared by the human**: the YAML headers and the 03 "ingestion guidance" are the
+  human's own metadata; the seven files are confirmed as they are.
+- `uae.mohap-smart-health.*`: `binding: unknown`, notes "binding unknown: national public
+  policy; legal effect not verified". 03, 06, 07 stay `binding: false`.
+- No clause reviewed; all nine stay draft until re-quoted from the official documents.

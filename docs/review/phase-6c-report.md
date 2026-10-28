@@ -20,8 +20,9 @@ Spec `specs/006c-policy-sources.md`. Branch `phase-6c-policy-sources`. Not merge
   in `PolicyClause` (mirrors OCR): a web clause must say "web transcription — unverified" in
   `notes` and cannot be `binding: true`. Tests in `tests/unit/test_clause_loader.py` and
   `tests/unit/test_web_sources.py`.
-- **Clauses.** `policies/reviewed/web_sources.yaml`: nine drafts, all `binding: false`, none with
-  a `normalized` reading. Each quote is verbatim on its page (repository test).
+- **Clauses.** `policies/reviewed/web_sources.yaml`: nine drafts, none with a `normalized`
+  reading: the three 01 clauses `binding: unknown` ("national public policy; legal effect not
+  verified", human decision 2026-10-28), the other six `binding: false`. Each quote is verbatim on its page (repository test).
 
 ## Draft clauses and their link to the cascade
 
@@ -62,9 +63,10 @@ Visible differences, none in a golden:
 2. An LLM agent that cites one of the new ids now gets a `draft_citation` rejection instead of an
    unknown-citation rejection (the id is now in the corpus). No cached decision cites them.
 3. `--extracted-context` (opt-in, off by default) searches every non-book `policies/extracted/*.jsonl`,
-   so the seven web files can now appear as "context only; not citable" snippets. The snippets are
-   not part of the cache key, so a decision cached earlier with `--extracted-context` would be
-   reused although its prompt could now differ. Question for the human below.
+   so the seven web files can now appear as snippets. Human decision 2026-10-28: they stay
+   searchable, and each web snippet is labelled "web transcription — unverified; context only; not
+   citable". With the option on, the prompt version carries a digest of the searchable extracted
+   corpus, so a changed corpus never reuses a cached decision. With it off nothing changes.
 
 **Once reviewed (per clause; the same for all nine):**
 
@@ -88,6 +90,12 @@ Visible differences, none in a golden:
   Cyber Security Policy for AI (also linked) would help the scenario more directly, since the
   cascade starts with two AI models (its summary lists AI monitoring and response); a summary of
   it is already in `UAE Policy Foundation.pdf` pp. 5-7; no clause is drafted from those pages.
-- **`--extracted-context` and web files:** keep them searchable as context, or exclude
-  `web/` transcriptions from the snippet search? Either way the cache-key gap above stays a
-  known limitation unless snippets are added to the key.
+- **`--extracted-context` and web files:** answered 2026-10-28 (included, labelled; see above).
+
+## Human decisions, 2026-10-28
+
+Embedded YAML headers and 03 "ingestion guidance" are the human's own metadata: files confirmed
+as they are, evidence-auditor BLOCKER cleared by the human. No clause reviewed now (all nine
+stay draft until re-anchored to the originals). 01 `binding: unknown`. Web snippets included and
+labelled. Illustrative clauses may not name a `source_file` (no existing clause affected: none
+does). Impact-test rewrite after gate 1 approved in advance. Gate 6 wording approved.

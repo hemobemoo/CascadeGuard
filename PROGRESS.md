@@ -5,7 +5,8 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 ## Current phase
 
 **Phase 6c — Policy source expansion: built on `phase-6c-policy-sources` (human instructions
-2026-10-28); not merged: gates 1 (clause review) and 6 (rule edits) are open.** Spec
+2026-10-28), PR #10; human decisions 2026-10-28 applied; merge on reviewer PASS and green
+CI (gate 1 deferred until the official documents are placed).** Spec
 `specs/006c-policy-sources.md`; report and impact check `docs/review/phase-6c-report.md`;
 triage `docs/review/phase-6c-clause-triage.md`. See "Waiting on human".
 
@@ -51,8 +52,11 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   every record and inventory entry. Originals re-extracted byte-identical.
 - `PolicyClause`: a `web/` source needs "web transcription — unverified" in notes and is never
   `binding: true`.
-- `policies/reviewed/web_sources.yaml`: nine drafts (01: 3, 03: 2, 06: 2, 07: 2), all
-  `binding: false`, no `normalized`. 02, 04, 05 kept as sources only.
+- `policies/reviewed/web_sources.yaml`: nine drafts (01: 3, 03: 2, 06: 2, 07: 2), no
+  `normalized`; 01 `binding: unknown`, the rest `binding: false` (human decision 2026-10-28).
+- Human decisions 2026-10-28 applied: web snippets labelled "web transcription — unverified" and
+  corpus digest in the `--extracted-context` prompt version (`knowledge/retrieval.py`,
+  `agents/llm.py`); illustrative clauses may not name a `source_file` (`domain/policies.py`). 02, 04, 05 kept as sources only.
 - Impact: `tests/integration/test_web_sources_impact.py` (baseline, every view and LLM cache
   key, the repair search and both goldens byte-identical without the drafts; once reviewed they
   reach only `policy_legal_adviser`'s view). Only visible change today: "20" → "29 draft clauses
@@ -557,6 +561,24 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   was added in 392f162 after the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+- **Human decisions, 2026-10-28 (Phase 6c):**
+  1. The YAML headers and the 03 "ingestion guidance" in the web PDFs are the human's own
+     metadata; the seven files are confirmed as they are. Evidence-auditor BLOCKER cleared by the
+     human.
+  2. Gate 1: no clause reviewed now; all nine stay draft until re-anchored to the originals.
+  3. `uae.mohap-smart-health.*` are `binding: unknown` ("national public policy; legal effect not
+     verified"); 03, 06, 07 stay `binding: false`.
+  4. `--extracted-context` includes web pages; each web snippet is labelled "web transcription —
+     unverified" (`WEB_CONTEXT_LABEL`). The agent also put a digest of the searchable corpus into
+     the prompt version when the option is on, so a changed corpus never reuses a decision.
+  5. An illustrative clause may not name a `source_file` or `page` (model rule; no existing
+     clause affected).
+  6. Approved in advance: when web clauses are reviewed, rewrite the impact tests
+     (`test_web_sources_impact.py`, `test_repository_web_clauses_are_flagged_and_never_binding`)
+     as "reviewed web clauses reach only `policy_legal_adviser`; baseline, search and goldens
+     unchanged". This is not a review-loop rule 4 violation.
+  7. Gate 6: the `AGENTS.md` and `START_PROMPT.md` wording is approved as written.
+  8. Merge PR #10 and tag `phase-6c` once the reviewers that failed pass and CI is green.
 - **Human decisions, 2026-10-23 (answers to "Waiting on human"):**
   - Core set **reviewed** (`status: reviewed`, commit "Reviewed by human: ..."):
     `uae.fl2-2019.art2`, `uae.pdpl.art2-2`, `uae.fl2-2019.art4`, `uae.fl2-2019.art16`,
@@ -865,42 +887,15 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6c (2026-10-28), PR open, not merged:**
-- **Embedded instructions in the web PDFs (evidence-auditor BLOCKER, human item):** p.1 of each
-  file ("verify clauses before marking them reviewed") and 03 pp.2-3 ("Knowledge-base ingestion
-  guidance", "For CascadeGuard, represent…", "also ingest … the National Cyber Security Policy for
-  AI"). Treated as data; nothing was fetched or acted on. Confirm they are your own authoring and
-  accept them as data, or replace the files with clean transcriptions or the originals.
-- **03 attribution (NEEDS-HUMAN-JUDGMENT):** the two `uae.cyber-strategy-2025.*` bullets may be
-  the transcriber's wording, not the Cabinet's; check against the Cabinet page or re-quote from
-  the strategy PDF.
+**Phase 6c (2026-10-28), PR #10:** answered by the human on 2026-10-28 (see Decisions). Still
+open, none blocking the merge:
+- **Gate 1, later:** no clause reviewed now. After the official documents are placed and the
+  03/06/07 clauses re-quoted (see Next step), the agent gives the final list of ids to review.
+- **03 attribution:** settled by re-quoting from the Cyber Security Council strategy PDF.
 - **OECD:** record whether the UAE adheres to OECD/LEGAL/0449 when the instrument is placed.
-- **Tests after gate 1 (test-breaker question):** `test_web_sources_impact.py` and
-  `test_repository_web_clauses_are_flagged_and_never_binding` pin the web clauses as drafts with
-  unchanged views. When you review any of them these tests will fail by design; approve rewriting
-  them then as "reviewed web clauses reach only `policy_legal_adviser`; baseline, search and
-  goldens unchanged" (so the edit is not a review-loop rule 4 violation).
-- **Illustrative clause with a `source_file` (test-breaker, pre-existing):** an `illustrative`
-  clause may still name a source file and skip the verbatim check; refuse that in the model?
-- **binding for 01 (evidence-auditor round 2):** `false` per your instructions, or `unknown`
-  ("national public policy; legal effect not verified")?
-- **Gate 1, draft clauses for review** (all in `policies/reviewed/web_sources.yaml`):
-  `uae.mohap-smart-health.p2-coordination`, `uae.mohap-smart-health.p6-cybersecurity`,
-  `uae.mohap-smart-health.p7-liability`, `uae.cyber-strategy-2025.governance-aim`,
-  `uae.cyber-strategy-2025.partnership-aim`, `unesco.ai-ethics.human-oversight`,
-  `unesco.ai-ethics.responsibility-accountability`, `oecd.ai-principles.robustness-override`,
-  `oecd.ai-principles.accountability-cooperation`. Reviewing any of them changes
-  `policy_legal_adviser`'s view and LLM cache keys (new paid run of its steps, gate 4).
-- **Official documents to download** (the agent downloaded nothing):
-  06 UNESCO Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1; 07 OECD Recommendation of the
-  Council on AI, OECD/LEGAL/0449; 03 the Cyber Security Council National Cybersecurity Strategy
-  PDF (URL in `MANIFEST.md`), as an original in `policies/sources/`; the National Cyber Security
-  Policy for AI (u.ae page in `MANIFEST.md`). The 06/07/03 drafts would then be re-quoted from
-  the originals.
-- **Gate 6:** confirm the `AGENTS.md` and `START_PROMPT.md` wording as committed.
-- **Decision:** should `--extracted-context` snippets include the web transcriptions (today:
-  yes)? Known limitation either way: snippets are not in the LLM cache key.
-- **Decision:** the new web-source rule refuses `binding: true` for any `web/` clause; confirm.
+- **Official documents to download** (the agent downloads nothing): UNESCO SHS/BIO/PI/2021/1;
+  OECD/LEGAL/0449; the Cyber Security Council National Cybersecurity Strategy PDF; the National
+  Cyber Security Policy for AI (URLs in `MANIFEST.md`).
 
 **Phase 6b (2026-10-27):** answered (summary approved; "Show all N" total); merge on green CI.
 
@@ -997,10 +992,12 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6c PR open: the human reviews the nine drafts, places the official documents, answers the
-items under "Waiting on human", and decides the merge. Then Phase 7 (tracing, optional). Still open:
-the deferred MINORs,
-the gap-wording known limitation and the two-owners limitation.
+When the human adds the official UNESCO (SHS/BIO/PI/2021/1), OECD (OECD/LEGAL/0449), Cyber
+Security Council National Cybersecurity Strategy and National Cyber Security Policy for AI PDFs
+to `policies/sources/`: extract them, re-quote the 03, 06 and 07 clauses from the originals,
+mark the web versions as superseded in `policies/sources/web/MANIFEST.md`, and give the human
+the final list of clause ids to review (gate 1). Then Phase 7 (tracing, optional). Still open:
+the deferred MINORs, the gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
 
