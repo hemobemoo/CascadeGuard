@@ -64,8 +64,7 @@ def test_real_corpus_run_labels_its_clause_set_and_rejects_draft_citations(
     for path in REVIEWED_DIR.glob("*.yaml"):
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         data["clauses"] = [
-            {**c, "status": "draft"} if c["id"] == "eu.gdpr.art33-1" else c
-            for c in data["clauses"]
+            {**c, "status": "draft"} if c["id"] == "eu.gdpr.art33-1" else c for c in data["clauses"]
         ]
         (copy / path.name).write_text(yaml.safe_dump(data), encoding="utf-8")
     result = run_scenario("uae_health_access", copy)
