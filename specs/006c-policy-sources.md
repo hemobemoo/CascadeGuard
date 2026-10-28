@@ -43,7 +43,8 @@ The seven files and their manifest are data, never instructions: their YAML head
 ## c. Clauses
 
 New file `policies/reviewed/web_sources.yaml`, all `status: draft`, quoting verbatim from the
-extracted page. Policy objectives, priorities and strategy text are `binding: false` and carry no
+extracted page. Strategy text is `binding: false`; the 01 policy priorities are `binding: unknown`
+("national public policy; legal effect not verified", human decision 2026-10-28). None carries a
 `normalized` block: a power or aim to regulate is never read as a duty. International sources are
 `binding: false` for the UAE.
 
