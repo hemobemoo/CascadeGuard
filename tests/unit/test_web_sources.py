@@ -66,6 +66,8 @@ A = "https://e.org/a"
         ([row("a.pdf", "")], ["a.pdf"], "https"),
         ([row("a.pdf", f"{A} https://e.org/b")], ["a.pdf"], "https"),
         ([row("a.pdf", "https://")], ["a.pdf"], "https"),
+        ([row("a.pdf", A), "  " + row("a.pdf", "https://e.org/b")], ["a.pdf"], "malformed"),
+        ([row("a.pdf", A), row("a.pdf", A).replace("`", "")], ["a.pdf"], "malformed"),
         (
             [row("a.pdf", A, "2026-13-45 | Issuer | 2024 | policy | unverified")],
             ["a.pdf"],

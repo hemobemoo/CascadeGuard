@@ -40,6 +40,9 @@ MIN_TEXT_CHARS = 20
 # A manifest table row: | `<file>.pdf` | URL | Retrieved | Issuer | Document date | Type | Status |
 MANIFEST_ROW = re.compile(r"^\|\s*`([^`]+\.pdf)`\s*\|")
 MANIFEST_COLUMNS = 7
+TABLE_LINE = re.compile(r"^ {0,3}\|")
+TABLE_SEPARATOR = re.compile(r"^ {0,3}\|[\s|:-]*$")
+TABLE_HEADER = re.compile(r"^\|\s*File\s*\|")
 DOCUMENT_TYPES = frozenset(
     {"law", "policy", "strategy", "ethical principle", "international precedent"}
 )
@@ -66,9 +69,13 @@ def manifest_urls(manifest: Path, pdf_names: list[str]) -> dict[str, str]:
     one row, every row names a PDF that exists, and every URL starts with https://."""
     urls: dict[str, str] = {}
     for line in manifest.read_text(encoding="utf-8").splitlines():
+        # Any table line (Markdown allows up to 3 spaces of indent) is the header, the separator
+        # or a strict row: an indented or un-backticked row is refused, never skipped.
+        if not TABLE_LINE.match(line) or TABLE_SEPARATOR.match(line) or TABLE_HEADER.match(line):
+            continue
         match = MANIFEST_ROW.match(line)
         if match is None:
-            continue
+            raise ManifestError(f"{manifest.name}: malformed row: {line.strip()[:60]}")
         name = match.group(1)
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if name in urls:
