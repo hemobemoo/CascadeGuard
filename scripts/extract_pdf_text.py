@@ -98,7 +98,7 @@ def manifest_urls(manifest: Path, pdf_names: list[str]) -> dict[str, str]:
         if kind not in DOCUMENT_TYPES:
             raise ManifestError(f"{manifest.name}: {name} has unknown document type {kind!r}")
         if status not in STATUSES:
-            raise ManifestError(f"{manifest.name}: {name} status must be 'unverified'")
+            raise ManifestError(f"{manifest.name}: {name} status must be one of {sorted(STATUSES)}")
         urls[name] = url
     if missing := sorted(set(pdf_names) - set(urls)):
         raise ManifestError(f"{manifest.name}: no row for {missing}")

@@ -32,6 +32,30 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave. Some apostrophes extract as U+FFFD |
 | 22 | `UAE_National_Cybersecurity_Strategy.pdf` | National Cyber Security Strategy (TRA era) | Telecommunications Regulatory Authority (TRA) | **unknown** (not printed) | 16 | — | **No — see below** |
 
+**SHA-256 of the committed originals** (Phase 6d; the two books are not committed and not
+listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_sources.py` checks these.
+
+`ea092ad2929a8ace15adda9599306b3b6ac9c8bdcba94d2b8f7ad26b79b9d10f`  `5 AI RMF Core - Excerpt from the NIST AI Risk Management Framework 1.0 (2023)..pdf`
+`f6c6d4a90bcdc16bf9b564929189962c34fd130c23f171e619aa311fa84e1abb`  `887026278-TDRA-Telecom-Law-Final-English-o.pdf`
+`c5604dc6e9261146cb943490f4d234ecf4b24313724c9e65ef44752898aa2748`  `AI-Adoption-Guideline-in-Government-Services-Eng.pdf`
+`68ca40517e49d9e055c4885809ad297cd9b7d7d7429e91122d4cbc66e189cadb`  `AIGuide_EN_v1-online.pdf`
+`0050b8414ce6635cf3088556aef41c065cace091d28025821c157a2a3ffb39d8`  `Dubai Law No. (26) of 2015.pdf`
+`bba630444b3278e881066774002a1d7824308934f49ccfa203e65be43692f55e`  `EU AI Act, Regulation (EU) 2024-1689.pdf`
+`d5d5f9e93bd6c0dc2afe79776f3101bcd599e4400a67309bc0b378b2812bcf3a`  `Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf`
+`18e6c90c505143021c086d72fb93ac898ba2e078e2f1b8236e8ce2ff237c052c`  `GDPR-Regulation (EU) 2016-679.pdf`
+`2088229d1b29bdc44eec0f01d077afd4ea37eaf79fb48d9fc76ccbc0d3a43d7a`  `Health Data Protection and Confidentiality Policy_EN2022810559.pdf`
+`f761ec3b18915038f65265ae60a365164ee5674fee73041e973163895723f56d`  `MOCAI-AI-Ethics-EN-1.pdf`
+`e8c1a12dd0f69b56641a83c96a728e378732966b517cc48672b3f424de67f3d1`  `OCED-Towards a common reporting framework for AI incidents.pdf`
+`88227000e69be9aad5864155bd3e06ebead1e76c5b7cf662d63c1605408e5060`  `OECD_Recommendation_AI.pdf`
+`76424266be7fa8559271942d7fd8665113f234a9a805778f209952d82c4d6b44`  `Responsible-Metaverse-Self-governance-Framework-2023-EN.pdf`
+`71191768d46b60778c15f8d62b162aff73a319785cfc31ebf76bb944b0c68273`  `T-AI4G-AI4GOOD-2025-6-PDF-E.pdf`
+`e42f9a3be3f951d3e19b9007f876f0b389c81b4693f0d8576e18185a1acfe67b`  `T-REC-Y.3172-201906-I!!PDF-E.pdf`
+`ba81b0e36026c46569008ce83d00632dbc4bd8d185029862379c38a90b2c6296`  `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf`
+`849644db7579a2e8b9bcec8e8033d80e37bb6b0a70aa2a2f68a5d5b3546297f9`  `UAE Policy Foundation.pdf`
+`79e05c502d1fc1247165fc744205984675d6422a490a70201dc4c05bf9aed693`  `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf`
+`dd9767dcc6528d3982363ee75a85502641a8d19ad325baa39029444ac11fbbf7`  `UAE_National_Cybersecurity_Strategy.pdf`
+`faf8887e89c3b43aa373a1e95433f1322eae14fae4fe7db59373fe6a2ed6d675`  `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf`
+
 **#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
 and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.
 
