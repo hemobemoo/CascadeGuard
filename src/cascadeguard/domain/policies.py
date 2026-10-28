@@ -11,9 +11,21 @@ from cascadeguard.domain.base import DomainModel
 ELISION = "[...]"  # marks an omission inside a verbatim quote
 OCR_DIR = "ocr/"  # source_file prefix of OCR'd copies in policies/sources/ocr/ (derived sources)
 OCR_FLAG = "OCR — check against image"  # must appear in notes of a clause quoted from OCR text
+WEB_DIR = "web/"  # source_file prefix of web-page transcriptions in policies/sources/web/
+WEB_FLAG = "web transcription — unverified"  # must appear in notes of a clause quoted from one
 CLAUSE_ID_PATTERN = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
 # Year, year-month, full ISO date, or "unknown" when the PDF prints no date (never guessed).
 DOCUMENT_DATE_PATTERN = r"^(\d{4}(-\d{2}(-\d{2})?)?|unknown)$"
+
+
+def in_source_dir(source_file: str | None, directory: str) -> bool:
+    """Does a plain source path lie in this sources subdirectory ("ocr/", "web/")? Ignores "."
+    parts and case (Windows and macOS file systems ignore case). A path with ".." or a backslash
+    is left to the loader, which refuses it for its path."""
+    if source_file is None or "\\" in source_file:
+        return False
+    parts = [p for p in source_file.split("/") if p not in ("", ".")]
+    return len(parts) > 1 and ".." not in parts and parts[0].casefold() == directory.strip("/")
 
 
 class ClauseStatus(StrEnum):
@@ -94,12 +106,21 @@ class PolicyClause(DomainModel):
                 raise ValueError("an illustrative clause cannot be binding")
             if not self.notes:
                 raise ValueError("an illustrative clause must explain in notes why it is needed")
+            if self.source_file is not None or self.page is not None:  # human decision 2026-10-28
+                raise ValueError(
+                    "an illustrative clause is not quoted from a source: no source_file"
+                )
         elif self.source_file is None or self.page is None:
             raise ValueError(f"a {self.status} clause must record source_file and page")
         if self.source_file is not None and not self.source_file.lower().endswith(".pdf"):
             raise ValueError("source_file must be a PDF filename")
-        if (self.source_file or "").startswith(OCR_DIR) and OCR_FLAG not in (self.notes or ""):
+        if in_source_dir(self.source_file, OCR_DIR) and OCR_FLAG not in (self.notes or ""):
             raise ValueError(f"a clause quoted from an OCR'd copy must say {OCR_FLAG!r} in notes")
+        if in_source_dir(self.source_file, WEB_DIR):
+            if WEB_FLAG not in (self.notes or ""):
+                raise ValueError(f"a clause quoted from a web transcription must say {WEB_FLAG!r}")
+            if self.binding is True:  # an unverified transcription is never shown as binding text
+                raise ValueError("a clause quoted from a web transcription cannot be binding")
         stripped = self.text.strip()
         if not stripped:
             raise ValueError("text must not be blank")

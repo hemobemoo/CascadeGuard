@@ -734,7 +734,7 @@ def test_single_repair_offline_replays_only_that_repair(
 
 
 def test_extracted_context_snippets_are_labelled_and_never_from_the_books(scripted: World) -> None:
-    from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
+    from cascadeguard.knowledge.retrieval import CONTEXT_LABEL, WEB_CONTEXT_LABEL
 
     assert CONTEXT_LABEL == "context only; not citable"
     seen = 0
@@ -746,7 +746,8 @@ def test_extracted_context_snippets_are_labelled_and_never_from_the_books(script
         assert block["label"] == CONTEXT_LABEL
         for snip in block["snippets"]:
             seen += 1
-            assert snip["label"] == CONTEXT_LABEL
+            web = snip["source_file"].startswith("web/")  # labelled since 2026-10-28
+            assert snip["label"] == (WEB_CONTEXT_LABEL if web else CONTEXT_LABEL)
             name = snip["source_file"].casefold()
             assert "abhivardhan" not in name and "oxford handbook" not in name
         assert "extracted_context" not in json.loads(build_messages(v, ())[1]["content"])
@@ -762,6 +763,9 @@ def test_extracted_context_changes_the_prompt_version_and_label(
     plain = LLMAgent("r", MODEL, None, DecisionCache(tmp_path), ())
     extra = LLMAgent("r", MODEL, None, DecisionCache(tmp_path), (), extracted_context=True)
     assert plain.prompt_version != extra.prompt_version
+    from cascadeguard.knowledge.retrieval import extracted_digest
+
+    assert extra.prompt_version.endswith(f"+extracted:{extracted_digest()}")
     monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
     argv = ["run", SCENARIO, "--agents", "llm", "--offline", "--extracted-context"]
     assert main([*argv, "--cache", str(tmp_path)]) == 0

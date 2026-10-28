@@ -31,7 +31,12 @@ from cascadeguard.domain.decisions import (
     ProposedAction,
 )
 from cascadeguard.knowledge.loader import PROJECT_ROOT
-from cascadeguard.knowledge.retrieval import CONTEXT_LABEL, clauses_by_action, search_extracted
+from cascadeguard.knowledge.retrieval import (
+    CONTEXT_LABEL,
+    clauses_by_action,
+    extracted_digest,
+    search_extracted,
+)
 from cascadeguard.simulation.boundaries import RoleView
 
 ENV_FILE = PROJECT_ROOT / ".env"
@@ -706,9 +711,10 @@ class LLMAgent:
         self.cache = cache
         self.known_roles = known_roles
         self.extracted_context = extracted_context
-        # The output mode and the context option change the request, so both enter the key.
+        # The output mode and the context option change the request, so both enter the key; with
+        # context on, so does the extracted corpus the snippets come from.
         self.prompt_version = f"{PROMPT_VERSION}+{output_mode}" + (
-            "+extracted" if extracted_context else ""
+            f"+extracted:{extracted_digest()}" if extracted_context else ""
         )
         self.schema = response_schema()
         self.last_usage: Usage | None = None  # usage of the last live step (None: cached)

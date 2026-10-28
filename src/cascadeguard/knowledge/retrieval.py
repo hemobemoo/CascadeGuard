@@ -9,12 +9,14 @@ marked not citable. Extracted PDF text is unreviewed context: never a clause, ne
 and the two published books are always excluded.
 """
 
+import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 
-from cascadeguard.domain.policies import PolicyClause
+from cascadeguard.domain.policies import WEB_FLAG, PolicyClause
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.knowledge.loader import BOOK_MARKERS, EXTRACTED_DIR
 
@@ -22,6 +24,8 @@ NOT_CITABLE_LABEL = "hypothetical repair rule (not a source clause; not citable)
 ANY_ACTION = "any_proposed_action"
 # Human decision P5-3 (2026-10-24): this exact label on every snippet sent to an agent.
 CONTEXT_LABEL = "context only; not citable"
+# A snippet from a web transcription (policies/sources/web/) says so (human decision 2026-10-28).
+WEB_CONTEXT_LABEL = f"{WEB_FLAG}; {CONTEXT_LABEL}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +108,19 @@ def _is_book(name: str) -> bool:
     return any(marker in name.casefold() for marker in BOOK_MARKERS)
 
 
+@cache
+def extracted_digest(extracted_dir: Path = EXTRACTED_DIR) -> str:
+    """Digest of the searchable extracted text (books excluded). Snippets are not part of a
+    view, so this goes into the prompt version: a changed corpus never reuses a decision. Built
+    from the parsed records, so line endings (CRLF checkouts on Windows) do not change it."""
+    digest = hashlib.sha256()
+    for path in sorted(extracted_dir.glob("*.jsonl")):
+        if not _is_book(path.name):
+            records = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
+            digest.update(json.dumps([path.name, records], sort_keys=True).encode() + b"\n")
+    return digest.hexdigest()[:12]
+
+
 def search_extracted(
     query: str, limit: int = 5, extracted_dir: Path = EXTRACTED_DIR, width: int = 400
 ) -> tuple[Snippet, ...]:
@@ -112,7 +129,7 @@ def search_extracted(
     words = sorted({w for w in query.casefold().split() if len(w) > 2})
     if not words or limit <= 0:
         return ()
-    scored: list[tuple[int, str, int, str]] = []
+    scored: list[tuple[int, str, int, str, bool]] = []
     for path in sorted(extracted_dir.glob("*.jsonl")):
         if _is_book(path.name):
             continue
@@ -124,12 +141,14 @@ def search_extracted(
             folded = text.casefold()
             score = sum(folded.count(w) for w in words)
             if score:
-                scored.append((-score, source, number, text))
+                scored.append((-score, source, number, text, page.get("web") is True))
     scored.sort(key=lambda s: s[:3])
     snippets: list[Snippet] = []
-    for _, source, number, text in scored[:limit]:
+    for _, source, number, text, web in scored[:limit]:
         folded = text.casefold()
         first = min(i for w in words if (i := folded.find(w)) >= 0)
         start = max(0, first - width // 4)
-        snippets.append(Snippet(source, number, " ".join(text[start : start + width].split())))
+        label = WEB_CONTEXT_LABEL if web else CONTEXT_LABEL
+        excerpt = " ".join(text[start : start + width].split())
+        snippets.append(Snippet(source, number, excerpt, label))
     return tuple(snippets)
