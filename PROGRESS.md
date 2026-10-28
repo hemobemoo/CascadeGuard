@@ -5,7 +5,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 ## Current phase
 
 **Phase 6d — Official sources: built on `phase-6d-official-sources` (human instructions
-2026-10-28); PR open, not merged (gates 1 and 6).** Spec `specs/006d-official-sources.md`;
+2026-10-28); PR to be opened after the review loop; not merged (gates 1 and 6).** Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
 `docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
 
@@ -922,7 +922,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6d (2026-10-28), PR open, not merged.** One consolidated review list (gate 1).
+**Phase 6d (2026-10-28), not merged.** One consolidated review list (gate 1).
 
 a) Draft clauses from 6c and 6d (all `status: draft`; none is loaded by the engine):
 
@@ -954,7 +954,16 @@ b) Older open items:
 - **GDPR Art 33(1) title** (`eu.gdpr.art33-1`): the title drops "where feasible"; retitle at
   review.
 
-Also open: whether the UAE adheres to OECD/LEGAL/0449 (not named in the PDF's Adherents).
+Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked).
+
+c) Question from the 6d review (test-breaker): with `--extracted-context`, snippets from the
+TRA-era `UAE_National_Cybersecurity_Strategy.pdf` (undated, partly garbled, superseded) carry
+only "context only; not citable". Keep it searchable with a "historical; superseded" label,
+exclude it from the snippet search, or leave it as is? Nothing changes until you decide.
+
+Deferred MINORs from the 6d review (test-breaker): crafted-tie unit tests for ranking levels 3b,
+4 and 10 (they hold under probe; only the golden encodes them); a slow test that re-extracting
+every source is byte-identical (holds under probe; the command is under Done, Phase 6d).
 
 **Phase 6b (2026-10-27):** answered (summary approved; "Show all N" total); merge on green CI.
 
@@ -1051,7 +1060,7 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d PR open: the human reviews the list under "Waiting on human" (gate 1) and decides the
+Phase 6d PR (opened after the review loop): the human reviews the list under "Waiting on human" (gate 1) and decides the
 merge. Correction (human, 2026-10-28) to the earlier next step: the 2025 Cyber Security Council
 strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,

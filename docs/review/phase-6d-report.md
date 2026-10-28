@@ -28,9 +28,10 @@ Spec `specs/006d-official-sources.md`. Branch `phase-6d-official-sources`. Not m
   Gaps: `review-and-correct` skips only the page number "22" between the columns;
   `responsibility-accountability` skips one U+FFFD (the apostrophe in "whistle-blowers'").
   **Deviation:** para 42 runs from page 22 to 23 and a clause cites one page, so the clause quotes
-  para 43 and gives para 42's attribution sentence verbatim in notes. Para 38 links to the orphan
-  duty: a named person able to review and correct an AI decision is the role missing for the
-  locked-out patients.
+  para 43 and gives para 42's attribution sentence verbatim in notes. Para 38 is a precedent for the
+  candidate orphan duty (candidate finding: no owner for reviewing and reversing the lockouts was
+  found in the reviewed corpus; cf. `unesco.ai-ethics.review-and-correct`,
+  `uae.ai-charter.human-oversight`, `uae.pdpl.art18-1`).
 - **MANIFEST.md:** 06 and 07 marked "unverified; superseded by official original in
   policies/sources/" (the parser accepts that status; tested). Web files kept; no clause quotes them.
 

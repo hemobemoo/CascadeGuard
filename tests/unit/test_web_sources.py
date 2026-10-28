@@ -191,3 +191,22 @@ def test_only_the_listed_two_column_original_is_read_by_column() -> None:
         )
         == 1
     )
+
+
+def test_committed_originals_are_byte_identical_to_the_recorded_hashes() -> None:
+    """Originals in policies/sources/ are never modified, renamed or deleted (AGENTS.md). The
+    two books are not committed and are not recorded."""
+    inventory = (ROOT / "docs" / "policy-inventory.md").read_text("utf-8")
+    recorded = {
+        name: digest
+        for digest, name in re.findall(r"^`([0-9a-f]{64})`\s+`([^`]+\.pdf)`$", inventory, re.M)
+    }
+    sources = ROOT / "policies" / "sources"
+    on_disk = sorted(
+        p.name
+        for p in sources.glob("*.pdf")
+        if not any(m in p.name.casefold() for m in ("abhivardhan", "oxford handbook"))
+    )
+    assert len(recorded) == 20 and sorted(recorded) == on_disk
+    for name in on_disk:
+        assert hashlib.sha256((sources / name).read_bytes()).hexdigest() == recorded[name], name
