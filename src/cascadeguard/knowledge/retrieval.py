@@ -111,11 +111,13 @@ def _is_book(name: str) -> bool:
 @cache
 def extracted_digest(extracted_dir: Path = EXTRACTED_DIR) -> str:
     """Digest of the searchable extracted text (books excluded). Snippets are not part of a
-    view, so this goes into the prompt version: a changed corpus never reuses a decision."""
+    view, so this goes into the prompt version: a changed corpus never reuses a decision. Built
+    from the parsed records, so line endings (CRLF checkouts on Windows) do not change it."""
     digest = hashlib.sha256()
     for path in sorted(extracted_dir.glob("*.jsonl")):
         if not _is_book(path.name):
-            digest.update(path.name.encode() + b"\0" + path.read_bytes() + b"\0")
+            records = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
+            digest.update(json.dumps([path.name, records], sort_keys=True).encode() + b"\n")
     return digest.hexdigest()[:12]
 
 

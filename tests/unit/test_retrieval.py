@@ -107,7 +107,7 @@ def test_extracted_digest_follows_the_corpus_and_ignores_the_books(tmp_path: Pat
         d = tmp_path / name
         d.mkdir()
         for f, text in files.items():
-            (d / f).write_text(text, encoding="utf-8")
+            (d / f).write_text(json.dumps({"page": 1, "text": text}), encoding="utf-8")
         return d
 
     base = {"Law.jsonl": "a"}
@@ -116,3 +116,12 @@ def test_extracted_digest_follows_the_corpus_and_ignores_the_books(tmp_path: Pat
     assert same == extracted_digest(corpus("c", {**base, "Abhivardhan book.jsonl": "x"}))
     assert same != extracted_digest(corpus("d", {**base, "01_page.jsonl": "web"}))
     assert same != extracted_digest(corpus("e", {"Law.jsonl": "b"}))
+
+
+def test_extracted_digest_ignores_line_endings(tmp_path: Path) -> None:
+    rows = [json.dumps({"source_file": "Law.pdf", "page": n, "text": "t"}) for n in (1, 2)]
+    lf, crlf = tmp_path / "lf", tmp_path / "crlf"
+    for d, end in ((lf, b"\n"), (crlf, b"\r\n")):
+        d.mkdir()
+        (d / "Law.jsonl").write_bytes(end.join(r.encode() for r in rows) + end)
+    assert extracted_digest(lf) == extracted_digest(crlf)
