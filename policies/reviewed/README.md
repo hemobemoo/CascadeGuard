@@ -11,7 +11,7 @@ Each `*.yaml` file holds `clauses:`, a list of clauses extracted from one or mor
 | `id` | yes | Lower-case dotted id, e.g. `uae.fl2-2019.art16`. Unique across all files. |
 | `title` | yes | Short human title. |
 | `text` | yes | Verbatim quotation from the extracted page. `[...]` marks an omission (e.g. interleaved columns). Illustrative clauses carry a plain-language rule, starting "Illustrative rule, not a quotation". |
-| `source_file` | yes, unless illustrative | PDF filename in `policies/sources/`. |
+| `source_file` | yes, unless illustrative | PDF filename in `policies/sources/`; `ocr/<name>` for an OCR'd copy, `web/<name>` for a web transcription (notes must then say "web transcription — unverified"; never `binding: true`). |
 | `page` | yes, unless illustrative | PDF viewer page (1-based), the same index as `policies/extracted/`. Not the printed page number. |
 | `article` | no | Article or section as printed. |
 | `issuer` | yes | Issuing body. |

@@ -6,7 +6,14 @@ from typing import Any
 import pytest
 import yaml
 
-from cascadeguard.domain.policies import ELISION, ClauseStatus, PolicyClause
+from cascadeguard.domain.policies import (
+    ELISION,
+    WEB_DIR,
+    WEB_FLAG,
+    ClauseStatus,
+    PolicyClause,
+    in_source_dir,
+)
 from cascadeguard.knowledge.loader import (
     ClauseLoadError,
     load_clauses,
@@ -28,6 +35,8 @@ VALID: dict[str, Any] = {
     "status": "draft",
     "binding": True,
 }
+
+WEB_NOTE = f"{WEB_FLAG} (MANIFEST.md row 01)."
 
 STATED: dict[str, Any] = {
     "basis": "stated",
@@ -153,7 +162,17 @@ def test_engine_loads_only_reviewed_and_illustrative(dirs: tuple[Path, Path]) ->
         ({"extra_field": "x"}, "unknown field"),
         ({"status": "illustrative", "binding": True, "notes": "n"}, "illustrative but binding"),
         ({"status": "illustrative", "binding": False}, "illustrative without notes"),
+        (
+            {"status": "illustrative", "binding": False, "notes": "n"},
+            "illustrative clause naming a source_file",
+        ),
         ({"source_file": "ocr/doc.ocr.pdf"}, "OCR source without the OCR flag"),
+        ({"source_file": "web/page.pdf", "binding": False}, "web source without the web flag"),
+        ({"source_file": "web/page.pdf", "notes": WEB_NOTE}, "web source marked binding"),
+        ({"source_file": "./web/page.pdf", "binding": False}, "dotted web path, no flag"),
+        ({"source_file": "WEB/page.pdf", "binding": False}, "upper-case web path, no flag"),
+        ({"source_file": "./ocr/doc.ocr.pdf"}, "dotted OCR path, no flag"),
+        ({"source_file": "Web/page.pdf", "binding": False}, "mixed-case web path, no flag"),
         ({"normalized": {k: v for k, v in STATED.items() if k != "basis"}}, "no basis"),
         ({"normalized": {**STATED, "basis": "assumed"}}, "unknown basis"),
         ({"normalized": {**STATED, "basis": "interpreted"}}, "interpreted, no mapping_note"),
@@ -221,3 +240,51 @@ def test_ocr_clause_with_flag_loads(dirs: tuple[Path, Path]) -> None:
     write_clauses(reviewed, clause)
     (loaded,) = load_clauses(reviewed, sources)
     assert loaded.source_file == "ocr/doc.ocr.pdf"
+
+
+def test_web_transcription_clause_loads_and_its_quote_is_checked(
+    dirs: tuple[Path, Path], tmp_path: Path
+) -> None:
+    reviewed, sources = dirs
+    (sources / "web").mkdir()
+    (sources / "web" / "page.pdf").write_bytes(b"%PDF-")
+    clause = {
+        **VALID,
+        "source_file": "web/page.pdf",
+        "binding": "unknown",
+        "notes": WEB_NOTE,
+    }
+    write_clauses(reviewed, clause)
+    (loaded,) = load_clauses(reviewed, sources)
+    assert loaded.source_file == "web/page.pdf"
+    extracted = tmp_path / "extracted"
+    extracted.mkdir()
+    record = {"source_file": "web/page.pdf", "page": 3, "text": "x Some  verbatim\ntext. y"}
+    (extracted / "page.jsonl").write_text(json.dumps({**record, "web": True}) + "\n", "utf-8")
+    assert quote_found_on_page(loaded, extracted)
+    assert not quote_found_on_page(loaded.model_copy(update={"page": 4}), extracted)
+
+
+def test_repository_web_clauses_are_flagged_and_never_binding() -> None:
+    web = [c for c in load_clauses() if in_source_dir(c.source_file, WEB_DIR)]
+    assert web
+    for clause in web:
+        assert WEB_FLAG in (clause.notes or ""), clause.id
+        assert clause.binding is not True, clause.id
+        assert clause.normalized is None, clause.id  # policy aims and principles: no duty read
+        assert clause.status is ClauseStatus.DRAFT, clause.id
+
+
+def test_quote_is_never_checked_against_another_document_with_the_same_stem(
+    tmp_path: Path,
+) -> None:
+    """An original and a web copy named alike share an extracted name: the record must belong
+    to the clause's own source_file."""
+    page = {"source_file": "doc.pdf", "page": 3, "text": "Some verbatim text."}
+    (tmp_path / "doc.jsonl").write_text(json.dumps(page) + "\n", "utf-8")
+    original = PolicyClause.model_validate(VALID)
+    assert quote_found_on_page(original, tmp_path)
+    web = PolicyClause.model_validate(
+        {**VALID, "source_file": "web/doc.pdf", "binding": False, "notes": WEB_NOTE}
+    )
+    assert not quote_found_on_page(web, tmp_path)

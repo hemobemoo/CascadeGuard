@@ -144,7 +144,8 @@ def _page_text(clause: PolicyClause, extracted_dir: Path) -> str | None:
     with jsonl.open(encoding="utf-8") as lines:
         for line in lines:
             record = json.loads(line)
-            if record["page"] == clause.page:
+            # Same stem, other document (an original and a web or OCR copy): never a match.
+            if record["page"] == clause.page and record["source_file"] == clause.source_file:
                 return str(record["text"])
     return None
 
@@ -177,6 +178,10 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
         raise ClauseLoadError(f"{where}: a published book is never a source")
     relative = Path(source_file)
     if relative.is_absolute() or ".." in relative.parts or "\\" in source_file:
+        raise ClauseLoadError(f"{where}: source_file must be a plain path inside policies/sources")
+    # Windows drops a trailing dot or space from a name, so "web./x.pdf" would open web/x.pdf
+    # while escaping the web/OCR rules, which read the spelling: refuse such names.
+    if any(part != part.strip() or part.endswith(".") for part in relative.parts):
         raise ClauseLoadError(f"{where}: source_file must be a plain path inside policies/sources")
     resolved = (sources_dir / relative).resolve()
     if not resolved.is_relative_to(sources_dir.resolve()) or not resolved.exists():

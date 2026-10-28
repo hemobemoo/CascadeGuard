@@ -106,3 +106,16 @@ def test_repository_illustrative_clauses_are_binding_false() -> None:
     for clause in load_clauses():
         if clause.status is ClauseStatus.ILLUSTRATIVE:
             assert clause.binding is False, clause.id
+
+
+@pytest.mark.parametrize("source", ["web./doc.pdf", "web /doc.pdf", "ocr./doc.pdf", " doc.pdf"])
+def test_names_windows_would_trim_are_refused(dirs: tuple[Path, Path], source: str) -> None:
+    """Windows drops a trailing dot or space, so these would open web/ or ocr/ files while
+    escaping the web and OCR rules, which read the spelling."""
+    reviewed, sources = dirs
+    for folder in ("web", "ocr"):
+        (sources / folder).mkdir(exist_ok=True)
+        (sources / folder / "doc.pdf").write_bytes(b"%PDF-")
+    write(reviewed, source)
+    with pytest.raises(ClauseLoadError, match="source_file"):
+        load_clauses(reviewed, sources)
