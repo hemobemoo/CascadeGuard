@@ -1,7 +1,8 @@
 # Spec 006d — Official sources (OECD, UNESCO, TRA-era cyber strategy)
 
 Branch `phase-6d-official-sources`. Human instructions 2026-10-28. Re-anchor the 06 and 07
-clauses to the official originals the human placed, without changing anything the engine, the
+clauses to the official OECD and UNESCO originals the human placed (the third file is a TRA-era
+document, provenance unconfirmed), without changing anything the engine, the
 agents or the goldens see on the default path. All clauses stay `status: draft`; only the human
 reviews them. No new dependency, no paid call, no download, no web scraping.
 
@@ -9,7 +10,8 @@ reviews them. No new dependency, no paid call, no download, no web scraping.
 
 - `OECD_Recommendation_AI.pdf` (OECD/LEGAL/0449), `UNESCO Recommendation on the Ethics of
   Artificial Intelligence.pdf` (SHS/BIO/PI/2021/1) and `UAE_National_Cybersecurity_Strategy.pdf`
-  move from the repository root to `policies/sources/` (originals; names and bytes unchanged,
+  move from the repository root to `policies/sources/` (names and bytes unchanged; the TRA-era
+  document's official source is not located,
   SHA-256 checked before and after the move).
 - Inventory rows #20–22 in `docs/policy-inventory.md`, with garbled and no-text pages flagged.
 
