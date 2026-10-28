@@ -22,8 +22,8 @@ approved:
   oecd.ai-principles.accountability-cooperation: b026fab3f31cba4999c02fba0ad977155e61fbe035679f4fd25122a95e9fcec8
   oecd.ai-principles.robustness-override: 1fef039e634ec13e30c41e7299ca0dc5492caf2fa2d974b0ac71d70a02b95cae
   uae.ai-charter.human-oversight: 3bd03c80ed87614e9d0a2cbd87203b7067130db85b9043cc15492d3d1f082ea2
-  uae.fl2-2019.art16-exceptions: 33bdfc70faad8bfa39c8c610f1221b1a4a808b6a672a9ae926377c9a13545bdb
   uae.fl2-2019.art16: 2b67b0c9b6a6d3c91ab0af9f6c42deac3d6179739d37d8b8b497999d00ce4df9
+  uae.fl2-2019.art16-exceptions: 33bdfc70faad8bfa39c8c610f1221b1a4a808b6a672a9ae926377c9a13545bdb
   uae.fl2-2019.art2: 50f9627bea2946e89dbe78e8ad2144c6d49c0b03cd31fc9961df9050b9793714
   uae.fl2-2019.art4: b5b22ba382e365a4afbf30a10d4fdc6f422b43fab39ed5f555937397a4c613aa
   uae.fl2-2019.art6: 2629f26febb8f0392def11d95bfa0c5fe09004fe8c8234119d80a0f34c0d2f41
