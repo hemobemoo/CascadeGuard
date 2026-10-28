@@ -1,9 +1,9 @@
 # Clauses quoted from the web transcriptions in policies/sources/web/ (Phase 6c, spec 006c).
 # Each file is an official web page printed to PDF by the human: unverified, and not the original
-# document (see policies/sources/web/MANIFEST.md). Every clause here is a policy aim, strategy
-# aim or international principle: binding false (or unknown, with the reason in notes), no
-# normalized reading. A power or aim to
-# regulate is never read as a duty.
+# document (see policies/sources/web/MANIFEST.md). Every clause here is a policy or strategy aim:
+# binding false (or unknown, with the reason in notes), no normalized reading. A power or aim to
+# regulate is never read as a duty. The 06 UNESCO and 07 OECD clauses moved to
+# international_precedents.yaml in Phase 6d, re-quoted from the official originals.
 clauses:
   - id: uae.mohap-smart-health.p2-coordination
     title: "Smart health AI policy: coordination through national partnerships"
@@ -103,83 +103,3 @@ clauses:
       row 03). Not the strategy text. Strategy-level context only: it authorises no data share
       and sets no duty. Cascade: context for the cross-sector information deadlock between the
       telecom and health operators.
-
-  - id: unesco.ai-ethics.human-oversight
-    title: "UNESCO Recommendation: AI must not displace ultimate human responsibility"
-    text: >-
-      Member States should ensure that AI systems do not displace ultimate human
-      responsibility and accountability.
-    source_file: web/06_unesco_ai_ethics_recommendation.pdf
-    page: 4
-    article: "Core principles, 7 (Human oversight and determination; web page summary)"
-    issuer: UNESCO
-    jurisdiction: International (UNESCO Member States; non-binding recommendation)
-    document_date: "2021-11"
-    status: draft
-    binding: false
-    notes: >-
-      web transcription — unverified. The transcription is UNESCO's web page summary of the
-      principle, not the Recommendation's text; replace with SHS/BIO/PI/2021/1 before review.
-      International precedent, not UAE law. Cascade: precedent for a human owner of the review
-      and reversal of the automated lockouts (candidate orphan duty; cf.
-      uae.ai-charter.human-oversight, uae.pdpl.art18-1).
-
-  - id: unesco.ai-ethics.responsibility-accountability
-    title: "UNESCO Recommendation: AI systems auditable and traceable, with oversight mechanisms"
-    text: >-
-      AI systems should be auditable and traceable. There should be oversight, impact
-      assessment, audit and due diligence mechanisms in place to avoid conflicts with human rights norms and threats to environmental wellbeing.
-    source_file: web/06_unesco_ai_ethics_recommendation.pdf
-    page: 4
-    article: "Core principles, 5 (Responsibility and accountability; web page summary)"
-    issuer: UNESCO
-    jurisdiction: International (UNESCO Member States; non-binding recommendation)
-    document_date: "2021-11"
-    status: draft
-    binding: false
-    notes: >-
-      web transcription — unverified. Web page summary, not the Recommendation's text; replace
-      with SHS/BIO/PI/2021/1 before review. International precedent, not UAE law. Cascade:
-      precedent for tracing the lockouts back to the telecom traffic model's update.
-
-  - id: oecd.ai-principles.robustness-override
-    title: "OECD AI Principles: harmful AI can be overridden, repaired or decommissioned"
-    text: >-
-      Mechanisms should be in place, as appropriate, to ensure that if AI systems risk causing
-      undue harm or exhibit undesired behaviour, they can be overridden, repaired, and/or
-      decommissioned safely as needed.
-    source_file: web/07_oecd_ai_principles.pdf
-    page: 3
-    article: "Values-based principles: Robustness, security and safety (web page summary)"
-    issuer: OECD
-    jurisdiction: International (OECD adherents; non-binding recommendation; UAE adherence not checked)
-    document_date: "2024"
-    status: draft
-    binding: false
-    notes: >-
-      web transcription — unverified. OECD web page text, not the Council Recommendation;
-      replace with OECD/LEGAL/0449 before review. International precedent, not UAE law.
-      Cascade: precedent for suspending the telecom traffic-management model and reversing the
-      fraud model's automated lockouts.
-
-  - id: oecd.ai-principles.accountability-cooperation
-    title: "OECD AI Principles: risk management via co-operation between AI actors"
-    text: >-
-      AI actors, should, based on their roles, the context, and their ability to act, apply a
-      systematic risk management approach to each phase of the AI system lifecycle on an
-      ongoing basis and adopt responsible business conduct to address risks related to AI
-      systems, including, as appropriate, via co-operation between different AI actors,
-      suppliers of AI knowledge and AI resources, AI system users, and other stakeholders.
-    source_file: web/07_oecd_ai_principles.pdf
-    page: 4
-    article: "Values-based principles: Accountability (web page summary)"
-    issuer: OECD
-    jurisdiction: International (OECD adherents; non-binding recommendation; UAE adherence not checked)
-    document_date: "2024"
-    status: draft
-    binding: false
-    notes: >-
-      web transcription — unverified. OECD web page text, not the Council Recommendation;
-      replace with OECD/LEGAL/0449 before review. International precedent, not UAE law.
-      Cascade: precedent for co-operation between the two AI actors (telecom traffic model,
-      health fraud model) whose interaction caused the lockouts.

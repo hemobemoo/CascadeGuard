@@ -204,6 +204,17 @@
     }
   },
   {
+    "source_file": "OECD_Recommendation_AI.pdf",
+    "output": "OECD_Recommendation_AI.jsonl",
+    "page_count": 12,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Author": "Kemal ERDOGAN",
+      "CreationDate": "D:20260903164722+02'00'"
+    }
+  },
+  {
     "source_file": "Responsible-Metaverse-Self-governance-Framework-2023-EN.pdf",
     "output": "Responsible-Metaverse-Self-governance-Framework-2023-EN.jsonl",
     "page_count": 35,
@@ -285,6 +296,36 @@
     ],
     "metadata": {
       "CreationDate": "D:20181126100827+04'00'"
+    }
+  },
+  {
+    "source_file": "UAE_National_Cybersecurity_Strategy.pdf",
+    "output": "UAE_National_Cybersecurity_Strategy.jsonl",
+    "page_count": 16,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "CreationDate": "D:20190708120549"
+    }
+  },
+  {
+    "source_file": "UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf",
+    "output": "UNESCO Recommendation on the Ethics of Artificial Intelligence.jsonl",
+    "page_count": 44,
+    "pages_without_text": [
+      8,
+      12,
+      16,
+      24
+    ],
+    "image_pages_without_text": [
+      8,
+      12,
+      16,
+      24
+    ],
+    "metadata": {
+      "CreationDate": "D:20220331091524+02'00'"
     }
   },
   {

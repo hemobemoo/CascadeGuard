@@ -2,13 +2,16 @@
 touches the books and is deterministic."""
 
 import json
+import shutil
 from pathlib import Path
 
 from cascadeguard.cli import load_world, search_repairs
 from cascadeguard.engine.constraints import RuleBook
+from cascadeguard.knowledge.loader import EXTRACTED_DIR
 from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
     NOT_CITABLE_LABEL,
+    NOT_SEARCHED,
     WEB_CONTEXT_LABEL,
     clauses_for_role,
     extracted_digest,
@@ -100,6 +103,53 @@ def test_real_web_pages_are_searched_and_labelled() -> None:
     web = [s for s in found if s.source_file.startswith("web/")]
     assert web and all(s.label == WEB_CONTEXT_LABEL for s in web)
     assert all(s.label == CONTEXT_LABEL for s in found if s not in web)
+
+
+TRA_STRATEGY = "UAE_National_Cybersecurity_Strategy.pdf"
+TRA_QUERIES = (
+    "cyber security strategy",
+    "information sharing exchange between tra and the entities",
+    "incident response capabilities respond and recover",
+    "critical sectors health",
+    "telecommunications regulatory authority national",
+)
+
+
+def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
+    """Human decision 2026-10-28: the TRA-era strategy is kept as provenance only. Its extracted
+    text does match these queries, yet no snippet from it is ever returned."""
+    assert {TRA_STRATEGY} == NOT_SEARCHED
+    jsonl = EXTRACTED_DIR / TRA_STRATEGY.replace(".pdf", ".jsonl")
+    pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
+    for query in TRA_QUERIES:
+        words = [w for w in query.split() if len(w) > 2]
+        assert any(w in p["text"].casefold() for p in pages for w in words), query
+        found = search_extracted(query, limit=1000)
+        assert found, query
+        assert all(s.source_file != TRA_STRATEGY for s in found), query
+    # The 2025 strategy's web transcription (03) is a different document and stays searched.
+    assert any(s.source_file.startswith("web/03_") for s in search_extracted(TRA_QUERIES[0]))
+
+
+def test_tra_era_strategy_is_not_searched_under_any_file_name(tmp_path: Path) -> None:
+    rows = {
+        "UAE_National_Cybersecurity_Strategy.jsonl": TRA_STRATEGY,
+        "Copy.jsonl": TRA_STRATEGY,  # the record's own source_file is checked too
+        "uae_national_cybersecurity_strategy.jsonl": "uae_national_cybersecurity_strategy.pdf",
+        "Law.jsonl": "Law.pdf",
+    }
+    for name, source in rows.items():
+        row = {"source_file": source, "page": 1, "text": "incident report"}
+        (tmp_path / name).write_text(json.dumps(row), encoding="utf-8")
+    found = search_extracted("incident report", extracted_dir=tmp_path)
+    assert [s.source_file for s in found] == ["Law.pdf"]
+
+
+def test_extracted_digest_ignores_the_tra_era_strategy(tmp_path: Path) -> None:
+    without = tmp_path / "without"
+    shutil.copytree(EXTRACTED_DIR, without)
+    (without / TRA_STRATEGY.replace(".pdf", ".jsonl")).unlink()
+    assert extracted_digest(without) == extracted_digest(EXTRACTED_DIR)
 
 
 def test_extracted_digest_follows_the_corpus_and_ignores_the_books(tmp_path: Path) -> None:
