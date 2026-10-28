@@ -1,7 +1,8 @@
 # Phase 6c report — Policy source expansion
 
-Spec `specs/006c-policy-sources.md`. Branch `phase-6c-policy-sources`. Not merged: gates 1
-(clause review) and 6 (rule edits) are open for the human.
+Spec `specs/006c-policy-sources.md`. Branch `phase-6c-policy-sources`. Human decisions
+2026-10-28: gate 6 approved; gate 1 deferred until the official documents are placed; merge on
+reviewer PASS and green CI.
 
 ## What was done
 
@@ -30,7 +31,7 @@ Spec `specs/006c-policy-sources.md`. Branch `phase-6c-policy-sources`. Not merge
 |---|---|---|
 | `uae.mohap-smart-health.p2-coordination` | 01, p.3 | Context for the telecom → health information deadlock (`network_incident_status`); authorises no share. |
 | `uae.mohap-smart-health.p6-cybersecurity` | 01, p.4 | Context for the health operator's security incident at T+15 on a suspected (unconfirmed) alert; no reporting duty, regulator or deadline. |
-| `uae.mohap-smart-health.p7-liability` | 01, p.4 | Context for the orphan duty to review and reverse the automated lockouts: an aim to set liability frameworks, not a framework, and it names no owner. |
+| `uae.mohap-smart-health.p7-liability` | 01, p.4 | Context for the orphan duty to review and reverse the automated lockouts: an aim to set liability frameworks, not a framework, and it names no owner (candidate finding; cf. `uae.ai-charter.human-oversight`, `uae.pdpl.art18-1`). |
 | `uae.cyber-strategy-2025.governance-aim` | 03, p.2 | Strategy-level context for two security incidents handled without a shared escalation path. |
 | `uae.cyber-strategy-2025.partnership-aim` | 03, p.2 | Strategy-level context for the cross-sector deadlock. |
 | `unesco.ai-ethics.human-oversight` | 06, p.4 | Precedent for a human owner of the lockout review and reversal. |

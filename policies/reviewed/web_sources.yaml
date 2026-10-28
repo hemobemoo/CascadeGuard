@@ -1,7 +1,8 @@
 # Clauses quoted from the web transcriptions in policies/sources/web/ (Phase 6c, spec 006c).
 # Each file is an official web page printed to PDF by the human: unverified, and not the original
 # document (see policies/sources/web/MANIFEST.md). Every clause here is a policy aim, strategy
-# aim or international principle: binding false, no normalized reading. A power or aim to
+# aim or international principle: binding false (or unknown, with the reason in notes), no
+# normalized reading. A power or aim to
 # regulate is never read as a duty.
 clauses:
   - id: uae.mohap-smart-health.p2-coordination
@@ -61,7 +62,8 @@ clauses:
       binding unknown: national public policy; legal effect not verified.
       An aim to establish liability frameworks, not a framework and not a duty: it assigns no
       owner. Cascade: context for the orphan duty to review and reverse the AI fraud model's
-      automated lockouts (no owner found in the reviewed corpus). Whether the portal's
+      automated lockouts (candidate finding: no owner found in the reviewed corpus; cf.
+      uae.ai-charter.human-oversight, uae.pdpl.art18-1). Whether the portal's
       fraud-risk model is an "artificial intelligence application" in the policy's sense is not
       decided.
 
@@ -119,7 +121,8 @@ clauses:
       web transcription — unverified. The transcription is UNESCO's web page summary of the
       principle, not the Recommendation's text; replace with SHS/BIO/PI/2021/1 before review.
       International precedent, not UAE law. Cascade: precedent for a human owner of the review
-      and reversal of the automated lockouts (orphan duty).
+      and reversal of the automated lockouts (candidate orphan duty; cf.
+      uae.ai-charter.human-oversight, uae.pdpl.art18-1).
 
   - id: unesco.ai-ethics.responsibility-accountability
     title: "UNESCO Recommendation: AI systems auditable and traceable, with oversight mechanisms"
