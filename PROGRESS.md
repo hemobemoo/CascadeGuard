@@ -5,7 +5,7 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 ## Current phase
 
 **Phase 6d — Official sources: built on `phase-6d-official-sources` (human instructions
-2026-10-28); PR to be opened after the review loop; not merged (gates 1 and 6).** Spec `specs/006d-official-sources.md`;
+2026-10-28); PR #11 open, not merged (gates 1 and 6).** Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
 `docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
 
@@ -927,7 +927,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6d (2026-10-28), not merged.** One consolidated review list (gate 1).
+**Phase 6d (2026-10-28), PR #11 open, not merged.** One consolidated review list (gate 1).
 
 a) Draft clauses from 6c and 6d (all `status: draft`; none is loaded by the engine):
 
@@ -1065,7 +1065,7 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d PR (opened after the review loop): the human reviews the list under "Waiting on human" (gate 1) and decides the
+Phase 6d PR #11 open: the human reviews the list under "Waiting on human" (gate 1) and decides the
 merge. Correction (human, 2026-10-28) to the earlier next step: the 2025 Cyber Security Council
 strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
