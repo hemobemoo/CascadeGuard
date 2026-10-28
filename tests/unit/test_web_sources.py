@@ -87,6 +87,11 @@ A = "https://e.org/a"
             "type",
         ),
         ([row("a.pdf", A, "2026-10-27 | Issuer | 2024 | law | reviewed")], ["a.pdf"], "unverified"),
+        (
+            [row("a.pdf", A, "2026-10-27 | Issuer | 2024 | law | superseded")],
+            ["a.pdf"],
+            "unverified",
+        ),
     ],
 )
 def test_malformed_manifest_stops_the_extraction(
@@ -145,3 +150,63 @@ def test_web_pdfs_are_byte_identical_to_the_hashes_recorded_at_placement() -> No
 
 def test_repository_root_holds_no_web_transcription() -> None:
     assert not [p.name for p in ROOT.glob("0[0-7]_*")]
+
+
+def test_superseded_web_files_are_06_and_07_and_no_clause_quotes_them() -> None:
+    """Phase 6d: the official originals replace 06 and 07; the web files stay, unquoted."""
+    from cascadeguard.knowledge.loader import load_clauses
+
+    rows = (WEB / "MANIFEST.md").read_text("utf-8").splitlines()
+    superseded = sorted(
+        r.split("`")[1]
+        for r in rows
+        if r.endswith("| unverified; superseded by official original in policies/sources/ |")
+    )
+    assert superseded == ["06_unesco_ai_ethics_recommendation.pdf", "07_oecd_ai_principles.pdf"]
+    quoted = {c.source_file for c in load_clauses()}
+    assert not {f"web/{name}" for name in superseded} & quoted
+    assert all((WEB / name).exists() for name in superseded)
+
+
+def test_only_the_listed_two_column_original_is_read_by_column() -> None:
+    """Phase 6d: UNESCO pages with a clear gutter are read column by column, so a paragraph is
+    contiguous; no other extracted file carries "columns"."""
+    script = extract_script()
+    assert {
+        "UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf"
+    } == script.TWO_COLUMN
+    split: dict[str, list[int]] = {}
+    for path in sorted(EXTRACTED.glob("*.jsonl")):
+        for line in path.read_text("utf-8").splitlines():
+            record = json.loads(line)
+            if record.get("columns"):
+                split.setdefault(record["source_file"], []).append(record["page"])
+    assert set(split) == set(script.TWO_COLUMN)
+    unesco = EXTRACTED / "UNESCO Recommendation on the Ethics of Artificial Intelligence.jsonl"
+    page = json.loads(unesco.read_text("utf-8").splitlines()[21])
+    assert page["page"] == 22 and page["columns"] == 2
+    assert (
+        " ".join(page["text"].split()).count(
+            "35. Member States should ensure that it is always possible to attribute ethical"
+        )
+        == 1
+    )
+
+
+def test_committed_originals_are_byte_identical_to_the_recorded_hashes() -> None:
+    """Originals in policies/sources/ are never modified, renamed or deleted (AGENTS.md). The
+    two books are not committed and are not recorded."""
+    inventory = (ROOT / "docs" / "policy-inventory.md").read_text("utf-8")
+    recorded = {
+        name: digest
+        for digest, name in re.findall(r"^`([0-9a-f]{64})`\s+`([^`]+\.pdf)`$", inventory, re.M)
+    }
+    sources = ROOT / "policies" / "sources"
+    on_disk = sorted(
+        p.name
+        for p in sources.glob("*.pdf")
+        if not any(m in p.name.casefold() for m in ("abhivardhan", "oxford handbook"))
+    )
+    assert len(recorded) == 20 and sorted(recorded) == on_disk
+    for name in on_disk:
+        assert hashlib.sha256((sources / name).read_bytes()).hexdigest() == recorded[name], name

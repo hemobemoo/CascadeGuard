@@ -31,6 +31,9 @@ only; official sources:
 | `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf` | UAE (federal) | [uaelegislation.gov.ae](https://uaelegislation.gov.ae/en/legislations/1209/download) |
 | `UAE Policy Foundation.pdf` | Unofficial compilation of u.ae policy pages; Charter part: UAE AI Office | [u.ae (Charter)](https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/policies/Ai/The-UAE-Charter-for-the-Development-and-Use-of-Artificial-Intelligence) |
 | `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf` | UAE Government | [u.ae](https://u.ae/-/media/AI-publications/UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf) |
+| `OECD_Recommendation_AI.pdf` | OECD Council (OECD/LEGAL/0449) | [legalinstruments.oecd.org](http://legalinstruments.oecd.org) (as printed in the PDF) |
+| `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | UNESCO General Conference | SHS/BIO/PI/2021/1 (no URL printed in the PDF) |
+| `UAE_National_Cybersecurity_Strategy.pdf` | Telecommunications Regulatory Authority (TRA era; undated) | Official source not located; historical context, superseded by the 2025 National Cybersecurity Strategy |
 | Two published books (not committed; context only) | Abhivardhan (BPB); Bullock, Chen et al. (eds., OUP) | [bpbonline.com](https://bpbonline.com/products/artificial-intelligence-ethics-and-international-law-2nd-edition); [academic.oup.com](https://academic.oup.com/edited-volume/41989) |
 
 ## Setup

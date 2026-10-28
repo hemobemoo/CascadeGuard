@@ -30,7 +30,7 @@ cascadeguard/
 ├── docs/                             no separate agent-rules or MCP-rules files here
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
-│   ├── policy-inventory.md           [P1] table of the 19 PDFs (pages, text, issuer, date)
+│   ├── policy-inventory.md           [P1] table of the 22 PDFs (pages, text, issuer, date)
 │   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor
 │   │                                 (also phase reports; [P6] phase-6-ui/ and [P6b]
 │   │                                 phase-6b-polish/ before/after reports and screenshots)
@@ -44,7 +44,8 @@ cascadeguard/
 │   ├── 005-llm-agents.md             [P5]
 │   ├── 006-demo-ui-v2.md             [P6]
 │   ├── 006b-demo-ui-polish.md        [P6b] display names, plain-language repairs (display only)
-│   └── 006c-policy-sources.md        [P6c] web transcriptions, draft clauses, impact check
+│   ├── 006c-policy-sources.md        [P6c] web transcriptions, draft clauses, impact check
+│   └── 006d-official-sources.md      [P6d] OECD/UNESCO originals, re-anchored drafts
 │
 ├── src/cascadeguard/
 │   ├── __init__.py                   [P0]
@@ -99,7 +100,7 @@ cascadeguard/
 │       └── tracing.py                [P7] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
 │
 ├── policies/
-│   ├── sources/                      [P0] the 19 original PDFs — never modified; engine never reads them
+│   ├── sources/                      [P0] the original PDFs (22 since P6d) — never modified; engine never reads them
 │   │   └── web/                      [P6c] web transcriptions of official pages (unverified), MANIFEST.md
 │   ├── approvals.yaml                [P3] digests of human-approved reviewed clauses (gate 1)
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text

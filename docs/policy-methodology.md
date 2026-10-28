@@ -2,7 +2,7 @@
 
 How CascadeGuard turns source documents into clauses the engine can check.
 
-1. **Sources.** The 19 original PDFs in `policies/sources/`, plus the web transcriptions in
+1. **Sources.** The 22 original PDFs in `policies/sources/`, plus the web transcriptions in
    `policies/sources/web/` (listed in its `MANIFEST.md`, see 5b), are the knowledge base. They
    are never modified. The two published books (Abhivardhan; the Oxford Handbook) are context only: never
    a clause source and never committed.

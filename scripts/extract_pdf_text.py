@@ -32,6 +32,10 @@ SOURCES = ROOT / "policies" / "sources"
 OCR_SOURCES = SOURCES / "ocr"  # OCR'd copies of originals, named <original-stem>.ocr.pdf
 WEB_SOURCES = SOURCES / "web"  # web-page transcriptions, listed in MANIFEST.md
 MANIFEST = WEB_SOURCES / "MANIFEST.md"
+# Two-column originals whose lines pdfplumber interleaves across the gutter. Their pages are read
+# column by column (left, then right) when no word crosses the middle of the page; other pages,
+# and every other file, are read whole as before.
+TWO_COLUMN = frozenset({"UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf"})
 EXTRACTED = ROOT / "policies" / "extracted"
 INVENTORY = EXTRACTED / "_inventory.json"
 
@@ -40,6 +44,10 @@ MIN_TEXT_CHARS = 20
 # A manifest table row: | `<file>.pdf` | URL | Retrieved | Issuer | Document date | Type | Status |
 MANIFEST_ROW = re.compile(r"^\|\s*`([^`]+\.pdf)`\s*\|")
 MANIFEST_COLUMNS = 7
+# "unverified", or that plus the official original that replaces the file (Phase 6d).
+STATUSES = frozenset(
+    {"unverified", "unverified; superseded by official original in policies/sources/"}
+)
 TABLE_LINE = re.compile(r"^ {0,3}\|")
 TABLE_SEPARATOR = re.compile(r"^ {0,3}\|[\s|:-]*$")
 TABLE_HEADER = re.compile(r"^\|\s*File\s*\|")
@@ -89,14 +97,32 @@ def manifest_urls(manifest: Path, pdf_names: list[str]) -> dict[str, str]:
             raise ManifestError(f"{manifest.name}: {name} needs retrieval date, issuer and date")
         if kind not in DOCUMENT_TYPES:
             raise ManifestError(f"{manifest.name}: {name} has unknown document type {kind!r}")
-        if status != "unverified":
-            raise ManifestError(f"{manifest.name}: {name} status must be 'unverified'")
+        if status not in STATUSES:
+            raise ManifestError(f"{manifest.name}: {name} status must be one of {sorted(STATUSES)}")
         urls[name] = url
     if missing := sorted(set(pdf_names) - set(urls)):
         raise ManifestError(f"{manifest.name}: no row for {missing}")
     if unknown := sorted(set(urls) - set(pdf_names)):
         raise ManifestError(f"{manifest.name}: rows for files not in web/: {unknown}")
     return urls
+
+
+def _has_gutter(page: Any) -> bool:
+    """True when the page has words on both sides of its middle and none crossing it."""
+    middle = page.width / 2
+    words = page.extract_words()
+    left = any(w["x1"] <= middle for w in words)
+    right = any(w["x0"] >= middle for w in words)
+    return left and right and not any(w["x0"] < middle < w["x1"] for w in words)
+
+
+def _column_text(page: Any) -> str:
+    middle = page.width / 2
+    halves = (
+        page.crop((0, 0, middle, page.height)),
+        page.crop((middle, 0, page.width, page.height)),
+    )
+    return "\n".join(t for h in halves if (t := h.extract_text() or ""))
 
 
 def extract_pdf(pdf_path: Path, source_url: str | None = None) -> dict[str, Any]:
@@ -112,7 +138,8 @@ def extract_pdf(pdf_path: Path, source_url: str | None = None) -> dict[str, Any]
         metadata = {k: str(v) for k, v in raw_metadata.items()}
         page_count = len(pdf.pages)
         for number, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text() or ""
+            split = source_file in TWO_COLUMN and _has_gutter(page)
+            text = _column_text(page) if split else page.extract_text() or ""
             if len("".join(text.split())) < MIN_TEXT_CHARS:
                 empty_pages.append(number)
                 if page.images:
@@ -120,6 +147,8 @@ def extract_pdf(pdf_path: Path, source_url: str | None = None) -> dict[str, Any]
             record: dict[str, Any] = {"source_file": source_file, "page": number, "text": text}
             if ocr:
                 record["ocr"] = True
+            if split:
+                record["columns"] = 2
             if web:
                 record["web"] = True
                 record["source_url"] = source_url
