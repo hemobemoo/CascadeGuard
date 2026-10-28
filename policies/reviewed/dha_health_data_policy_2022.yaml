@@ -146,3 +146,5 @@ clauses:
       quote: it comes from 4.18.4 ("The Entity is required to report breaches/incidents",
       dha.pp11.4-18-4). The two clauses stay separate (human decision 3p, 2026-10-24); the
       actor's source is part of this clause's review.
+      Decision (gate 1, Ibrahim Melhem, 2026-10-28): keep as draft, closed: duplicates the
+      reviewed obligation in dha.pp11.4-18-4 (same actor and action).
