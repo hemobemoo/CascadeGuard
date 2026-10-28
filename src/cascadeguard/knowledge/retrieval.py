@@ -6,7 +6,7 @@ boundary. Selection uses the engine's own scope rule (decision 7n, `RuleBook.con
 agent is shown exactly the clauses it may cite for its allowed actions. Clauses outside the
 corpus (hypothetical repair rules in a replay) are shown so an agent can adapt to a repair, but
 marked not citable. Extracted PDF text is unreviewed context: never a clause, never citable,
-and the two published books are always excluded.
+and the two published books and the TRA-era cyber strategy (NOT_SEARCHED) are always excluded.
 """
 
 import hashlib
@@ -26,6 +26,10 @@ ANY_ACTION = "any_proposed_action"
 CONTEXT_LABEL = "context only; not citable"
 # A snippet from a web transcription (policies/sources/web/) says so (human decision 2026-10-28).
 WEB_CONTEXT_LABEL = f"{WEB_FLAG}; {CONTEXT_LABEL}"
+# Kept as historical provenance but never searched (human decision 2026-10-28): the TRA-era
+# strategy is superseded by the 2025 strategy, and its extraction is unreliable (p.5, pp.6-16).
+NOT_SEARCHED = frozenset({"UAE_National_Cybersecurity_Strategy.pdf"})
+NOT_SEARCHED_STEMS = frozenset(Path(name).stem.casefold() for name in NOT_SEARCHED)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,14 +112,20 @@ def _is_book(name: str) -> bool:
     return any(marker in name.casefold() for marker in BOOK_MARKERS)
 
 
+def _not_searched(name: str) -> bool:
+    """A book, or a document kept out of the search (NOT_SEARCHED), by file or source name."""
+    return _is_book(name) or Path(name).stem.casefold() in NOT_SEARCHED_STEMS
+
+
 @cache
 def extracted_digest(extracted_dir: Path = EXTRACTED_DIR) -> str:
-    """Digest of the searchable extracted text (books excluded). Snippets are not part of a
-    view, so this goes into the prompt version: a changed corpus never reuses a decision. Built
-    from the parsed records, so line endings (CRLF checkouts on Windows) do not change it."""
+    """Digest of the searchable extracted text (books and NOT_SEARCHED excluded). Snippets are
+    not part of a view, so this goes into the prompt version: a changed corpus never reuses a
+    decision. Built from the parsed records, so line endings (CRLF checkouts on Windows) do not
+    change it."""
     digest = hashlib.sha256()
     for path in sorted(extracted_dir.glob("*.jsonl")):
-        if not _is_book(path.name):
+        if not _not_searched(path.name):
             records = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
             digest.update(json.dumps([path.name, records], sort_keys=True).encode() + b"\n")
     return digest.hexdigest()[:12]
@@ -125,18 +135,19 @@ def search_extracted(
     query: str, limit: int = 5, extracted_dir: Path = EXTRACTED_DIR, width: int = 400
 ) -> tuple[Snippet, ...]:
     """Pages of policies/extracted/ that contain the most query words (case-insensitive).
-    Deterministic: ties are broken by file name and page. The books are never searched."""
+    Deterministic: ties are broken by file name and page. The books and NOT_SEARCHED are never
+    searched."""
     words = sorted({w for w in query.casefold().split() if len(w) > 2})
     if not words or limit <= 0:
         return ()
     scored: list[tuple[int, str, int, str, bool]] = []
     for path in sorted(extracted_dir.glob("*.jsonl")):
-        if _is_book(path.name):
+        if _not_searched(path.name):
             continue
         for line in path.read_text(encoding="utf-8").splitlines():
             page = json.loads(line)
             source, number, text = str(page["source_file"]), int(page["page"]), str(page["text"])
-            if _is_book(source):
+            if _not_searched(source):
                 continue
             folded = text.casefold()
             score = sum(folded.count(w) for w in words)

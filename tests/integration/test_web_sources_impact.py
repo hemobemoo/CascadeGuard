@@ -218,7 +218,8 @@ def test_default_path_is_byte_identical_without_the_6d_drafts(
 
 def test_extracted_context_fingerprint_changes_with_the_new_extracted_text(tmp_path: Path) -> None:
     """Expected, not a failure: with --extracted-context on, the prompt version carries a digest
-    of the searchable extracted corpus, and the three new originals add text to it."""
+    of the searchable extracted corpus, and the OECD and UNESCO originals add text to it (the
+    TRA-era strategy is not searched)."""
     before = tmp_path / "extracted"
     shutil.copytree(EXTRACTED_DIR, before)
     for name in OFFICIAL_6D:
