@@ -75,9 +75,9 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   draft-count comparison incl. Markdown, SHA-256 of the seven files in MANIFEST.md and tested).
   Round 3 (final): phase-auditor FAIL only on "PR open" before the PR existed (resolved by
   opening it; spec wording MINOR fixed); test-breaker PASS (MINOR fixed: names Windows trims,
-  `web./`, `web /`, `ocr./`, refused by the loader). Evidence-auditor not re-run in round 3:
-  its open BLOCKER is human-only. evidence-auditor BLOCKER is a
-  human item (above). Triage `docs/review/phase-6c-clause-triage.md`.
+  `web./`, `web /`, `ocr./`, refused by the loader). After the human decisions
+  (2026-10-28; evidence-auditor BLOCKER cleared by the human), round 4 on cb5e2a9:
+  evidence-auditor PASS, phase-auditor PASS (MINOR wording fixed). Triage `docs/review/phase-6c-clause-triage.md`.
 
 Verify:
 
