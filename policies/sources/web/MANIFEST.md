@@ -19,8 +19,8 @@ instructions.
 | `03_uae_national_cybersecurity_strategy.pdf` | https://uaecabinet.ae/en/news/uae-cabinet-approves-national-cybersecurity-strategy-api-first-policy | 2026-10-27 | UAE Cabinet (approval announcement); also transcribes the WAM launch report, https://www.wam.ae/en/article/bi5dfsr-uae-launch-national-cybersecurity-strategy | 2025-02-03 (Cabinet approval; WAM report 2025-02-11) | strategy | unverified |
 | `04_uae_digital_government_strategy_2025.pdf` | https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/strategies-plans-and-visions/government-services-and-digital-transformation/uae-national-digital-government-strategy | 2026-10-27 | UAE Government (u.ae portal; issuing entity not printed) | unknown (page updated 2026-10-06) | strategy | unverified |
 | `05_uae_ai_government_policies.pdf` | https://u.ae/en/about-the-uae/digital-uae/digital-technology/artificial-intelligence/artificial-intelligence-in-government-policies | 2026-10-27 | UAE Government (u.ae portal; issuing entity not printed) | unknown (page updated 2026-10-06) | policy | unverified |
-| `06_unesco_ai_ethics_recommendation.pdf` | https://www.unesco.org/en/artificial-intelligence/recommendation-ethics | 2026-10-27 | UNESCO | 2021-11 (Recommendation adopted) | international precedent | unverified |
-| `07_oecd_ai_principles.pdf` | https://www.oecd.org/en/topics/sub-issues/ai-principles.html | 2026-10-27 | OECD | 2024 (adopted 2019, updated 2024) | international precedent | unverified |
+| `06_unesco_ai_ethics_recommendation.pdf` | https://www.unesco.org/en/artificial-intelligence/recommendation-ethics | 2026-10-27 | UNESCO | 2021-11 (Recommendation adopted) | international precedent | unverified; superseded by official original in policies/sources/ |
+| `07_oecd_ai_principles.pdf` | https://www.oecd.org/en/topics/sub-issues/ai-principles.html | 2026-10-27 | OECD | 2024 (adopted 2019, updated 2024) | international precedent | unverified; superseded by official original in policies/sources/ |
 
 Notes on the rows:
 
@@ -33,6 +33,10 @@ Notes on the rows:
 - **06**, **07**: international, non-binding for the UAE.
 - Document type for 01, 02 and 05 is "policy" (public policy, not legislation); none of the seven
   is a law.
+
+Superseded (Phase 6d, 2026-10-28): 06 by `UNESCO Recommendation on the Ethics of Artificial
+Intelligence.pdf` and 07 by `OECD_Recommendation_AI.pdf`, both official originals in
+`policies/sources/`. The web files are kept; no clause quotes them any more.
 
 ## SHA-256 at placement (2026-10-28)
 

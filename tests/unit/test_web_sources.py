@@ -87,6 +87,11 @@ A = "https://e.org/a"
             "type",
         ),
         ([row("a.pdf", A, "2026-10-27 | Issuer | 2024 | law | reviewed")], ["a.pdf"], "unverified"),
+        (
+            [row("a.pdf", A, "2026-10-27 | Issuer | 2024 | law | superseded")],
+            ["a.pdf"],
+            "unverified",
+        ),
     ],
 )
 def test_malformed_manifest_stops_the_extraction(
@@ -145,3 +150,19 @@ def test_web_pdfs_are_byte_identical_to_the_hashes_recorded_at_placement() -> No
 
 def test_repository_root_holds_no_web_transcription() -> None:
     assert not [p.name for p in ROOT.glob("0[0-7]_*")]
+
+
+def test_superseded_web_files_are_06_and_07_and_no_clause_quotes_them() -> None:
+    """Phase 6d: the official originals replace 06 and 07; the web files stay, unquoted."""
+    from cascadeguard.knowledge.loader import load_clauses
+
+    rows = (WEB / "MANIFEST.md").read_text("utf-8").splitlines()
+    superseded = sorted(
+        r.split("`")[1]
+        for r in rows
+        if r.endswith("| unverified; superseded by official original in policies/sources/ |")
+    )
+    assert superseded == ["06_unesco_ai_ethics_recommendation.pdf", "07_oecd_ai_principles.pdf"]
+    quoted = {c.source_file for c in load_clauses()}
+    assert not {f"web/{name}" for name in superseded} & quoted
+    assert all((WEB / name).exists() for name in superseded)
