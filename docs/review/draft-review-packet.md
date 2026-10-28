@@ -220,8 +220,9 @@ several at once costs the same LLM re-run as reviewing one.
 - **Binding / type:** false; international precedent (ethical principle).
 - **Reaches:** policy_legal_adviser. **Baseline/goldens:** unchanged.
 - **Open flag:** none (CLEAN in round 3).
-- **Recommendation: reviewed.** The quote is exact and has no gap. It is the only source that
-  supports traceability, though less directly than item 7.
+- **Recommendation: reviewed.** The quote is exact and has no gap. It is the only clause drafted
+  so far that mentions traceability (OECD 1.5 b, on the same OECD page, is not drafted), though
+  it is less directly relevant than item 7.
 
 ## 9. `oecd.ai-principles.robustness-override`
 
@@ -257,8 +258,8 @@ several at once costs the same LLM re-run as reviewing one.
 - **Binding / type:** false; international precedent (OECD principle, non-binding).
 - **Reaches:** policy_legal_adviser. **Baseline/goldens:** unchanged.
 - **Open flag:** same adherence question as item 9.
-- **Recommendation: reviewed.** It is the only source that speaks to co-operation between two AI
-  actors, which is the cascade's core.
+- **Recommendation: reviewed.** It is the most direct source on co-operation between AI actors
+  (cf. the draft `nist.ai-rmf.manage-4-3`), which is the cascade's core.
 
 ## 11. `dha.pp11.applicability`
 
@@ -346,8 +347,10 @@ several at once costs the same LLM re-run as reviewing one.
   rule 4). `expected_repairs.yaml` is unchanged.
 - **Open flag:** MINOR (deferred since 6c): the title leaves out "where feasible".
 - **Recommendation: retitle, then reviewed.** For example: "GDPR: breach notification without
-  undue delay and, where feasible, within 72 hours". It is the corpus's only explicit
-  notification deadline, and reviewing it removes a standing draft-citation finding.
+  undue delay and, where feasible, within 72 hours". Once reviewed, it would be the only
+  reviewed clause with an explicit regulator-notification deadline (the draft
+  `eu.ai-act.art73-3` and an illustrative telecom rule also state deadlines). Reviewing it removes
+  a standing draft-citation finding.
 
 ---
 

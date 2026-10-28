@@ -1,5 +1,6 @@
 """Phase 6c and 6d impact checks (spec 006c d, spec 006d d), as rewritten after gate 1
-(human, 2026-10-28; approved in advance as Phase 6c decision 6).
+(human, 2026-10-28). The web part was approved in advance (Phase 6c decision 6); the 6d part
+follows from the gate-1 decision itself.
 
 Every run here is compared with a run on a copy of policies/reviewed/ that leaves out some of
 the web (6c) or 6d clauses. The ones still draft are never loaded, so leaving them out changes
@@ -134,7 +135,7 @@ def test_web_clause_statuses_follow_the_gate_1_decisions() -> None:
     assert web_ids() & set(load_engine_clauses()) == REVIEWED_WEB
 
 
-def test_baseline_views_cache_keys_and_search_are_byte_identical_without_the_web_drafts(
+def test_baseline_views_cache_keys_and_search_are_byte_identical_without_the_web_drafts_left(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     with_drafts = snapshot()
@@ -146,7 +147,7 @@ def test_baseline_views_cache_keys_and_search_are_byte_identical_without_the_web
     assert with_drafts == without_drafts
 
 
-def test_goldens_still_match_with_the_web_drafts_present() -> None:
+def test_goldens_match_with_the_remaining_web_drafts_present() -> None:
     assert web_ids()
     assert cli.run_scenario(SCENARIO).summary() == yaml.safe_load(
         GOLDEN_BASELINE.read_text(encoding="utf-8")
@@ -231,6 +232,35 @@ def test_reviewed_clauses_change_only_the_analysts_views(
     assert with_reviewed["search"] == without["search"]
     pairs = list(zip(with_reviewed["views"], without["views"], strict=True))
     for replay, other in zip(with_reviewed["replay_views"], without["replay_views"], strict=True):
+        pairs += list(zip(replay, other, strict=True))
+    assert {role_of(a) for a, b in pairs if a != b} == {ANALYST}
+    assert all(role_of(a) == role_of(b) for a, b in pairs)
+
+
+# Gate 1 (2026-10-28): the two reviewed clauses that are neither web nor 6d.
+OTHER_REVIEWED = {"dha.pp11.applicability", "eu.gdpr.art33-1"}
+
+
+def test_the_other_gate_1_clauses_change_only_the_analysts_views(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Back to draft on a copy, `dha.pp11.applicability` and `eu.gdpr.art33-1` change only
+    `policy_legal_adviser`'s views; the repair search is byte-identical. The baseline changes
+    through eu.gdpr.art33-1 (its golden records the reviewed run)."""
+    reviewed = snapshot()
+    rev = tmp_path / "rev"
+    rev.mkdir()
+    for path in sorted(REVIEWED_DIR.glob("*.yaml")):
+        data: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["clauses"] = [
+            {**c, "status": "draft"} if c["id"] in OTHER_REVIEWED else c for c in data["clauses"]
+        ]
+        (rev / path.name).write_text(yaml.safe_dump(data), encoding="utf-8")
+    monkeypatch.setattr(cli, "REVIEWED_DIR", rev)
+    drafted = snapshot()
+    assert reviewed["search"] == drafted["search"]
+    pairs = list(zip(reviewed["views"], drafted["views"], strict=True))
+    for replay, other in zip(reviewed["replay_views"], drafted["replay_views"], strict=True):
         pairs += list(zip(replay, other, strict=True))
     assert {role_of(a) for a, b in pairs if a != b} == {ANALYST}
     assert all(role_of(a) == role_of(b) for a, b in pairs)

@@ -8,8 +8,8 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 `phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
 after the PR #11 decisions were applied, evidence-auditor round 3 PASS and CI green). Before the
 merge, a repo-wide search found no remaining false U+FFFD claims (see Waiting on human). Review
-packet for gate 1: `docs/review/draft-review-packet.md`; gate 1 decided 2026-10-28, PR open on
-`review-packet-6d` (not merged). No new phase opened. Spec `specs/006d-official-sources.md`;
+packet for gate 1: `docs/review/draft-review-packet.md`; gate 1 decided 2026-10-28, PR from
+`review-packet-6d` (not merged; see Waiting on human). No new phase opened. Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
 `docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
 
@@ -623,9 +623,10 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 - **Human decisions, 2026-10-28 (gate 1 on the 6c/6d list, reviewer Ibrahim Melhem):** eight
   clauses reviewed, four closed as draft, two kept open (see "Waiting on human" and the packet's
   Decisions). `eu.gdpr.art33-1` retitled before review; `expected_baseline.yaml` updated in the
-  review commit (rule 4). The impact tests that pinned these clauses as drafts were rewritten as
-  "reviewed clauses reach only the roles measured; repair search and repairs golden unchanged"
-  (approved in advance, decision 6 of Phase 6c).
+  review commit (rule 4). The impact tests that pinned these clauses as drafts were rewritten:
+  the web part as approved in advance (Phase 6c decision 6); the 6d part and the baseline golden
+  follow from the gate-1 decision itself (the human asked for the golden update). Open question:
+  does decision 6 also cover the 6d tests (phase-auditor QUESTION-FOR-HUMAN)?
 - **Human decisions, 2026-10-28 (Phase 6d, on PR #11):**
   1. Para 42/43 deviation accepted as done.
   2. Gate-6 edits confirmed (`AGENTS.md` 22 originals; Phase 6d in `START_PROMPT.md`).
@@ -965,7 +966,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Gate 1 on the 6c/6d review list: decided (Ibrahim Melhem, 2026-10-28); PR open on
+**Gate 1 on the 6c/6d review list: decided (Ibrahim Melhem, 2026-10-28); PR from
 `review-packet-6d`, not merged.** Decisions and the measured impact are in
 `docs/review/draft-review-packet.md`, "Decisions"; each clause's notes record them.
 - Reviewed: `uae.mohap-smart-health.p7-liability`, `unesco.ai-ethics.human-oversight`,
@@ -980,8 +981,17 @@ Still on the review list (draft, open): `uae.cyber-strategy-2025.governance-aim`
 p.2). Only an announcement summary is in the repository; they wait for the official strategy PDF
 (see "Open items").
 
-Question for the human (no change made): the baseline no longer shows any rejected draft
-citation. Should one be kept for the demo?
+Questions for the human from the gate-1 review (no change made):
+- The baseline no longer shows any rejected draft citation. Should one be kept for the demo?
+- (test-breaker) Reviewed clauses show only "reviewed" to agents, the CLI and the UI; nothing
+  says "not binding", "web transcription" or "foreign precedent" (`binding` and `jurisdiction`
+  are not displayed). Add a qualifier to `status_label`/`RoleClause`? It would change the
+  adviser's views and cache keys.
+- (phase-auditor) `uae.mohap-smart-health.p7-liability` is reviewed but its notes still open with
+  "web transcription — unverified" (required by the web rule), next to the note that you checked
+  it against the page. Leave as is, or reword? Any notes edit sends it back to draft.
+- (phase-auditor) Does the advance approval of Phase 6c decision 6 also cover the rewritten 6d
+  impact tests? The commit explains each change.
 
 Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked;
 the two OECD clauses are reviewed with "UAE adherence not checked" kept).
@@ -1094,7 +1104,8 @@ decides whether a draft citation stays in the demo baseline. No new phase until 
 next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
 so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
-not re-quoted. Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the
+not re-quoted for now. Gate 1 (2026-10-28) keeps them draft and open until a future phase adds the
+official strategy PDF (see "Open items"). Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the
 gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
