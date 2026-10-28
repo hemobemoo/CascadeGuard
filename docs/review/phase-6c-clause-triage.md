@@ -57,3 +57,11 @@ longer calls `UAE Policy Foundation.pdf` a non-clause source.
 - `uae.mohap-smart-health.*`: `binding: unknown`, notes "binding unknown: national public
   policy; legal effect not verified". 03, 06, 07 stay `binding: false`.
 - No clause reviewed; all nine stay draft until re-quoted from the official documents.
+
+## Round 4-5 (after the human decisions)
+
+Verdict **PASS** (cb5e2a9 and again on e7d33d8). No FIX. CLEAN: all nine web clauses except the
+two `uae.cyber-strategy-2025.*` (NEEDS-HUMAN-JUDGMENT, attribution; re-quote from the strategy
+PDF). Earlier NEEDS-HUMAN-JUDGMENT unchanged: `dha.pp11.applicability`, `dha.pp11.4-18-5`,
+`mocai.ethics.fallback-plan`. MINOR fixed: owner wording now a candidate finding citing
+`uae.ai-charter.human-oversight`, `uae.pdpl.art18-1`. MINOR deferred: `eu.gdpr.art33-1` title.
