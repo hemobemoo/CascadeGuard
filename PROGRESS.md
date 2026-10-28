@@ -8,7 +8,8 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 `phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
 after the PR #11 decisions were applied, evidence-auditor round 3 PASS and CI green). Before the
 merge, a repo-wide search found no remaining false U+FFFD claims (see Waiting on human). Review
-packet for gate 1: `docs/review/draft-review-packet.md`. No new phase opened. Spec `specs/006d-official-sources.md`;
+packet for gate 1: `docs/review/draft-review-packet.md`; gate 1 decided 2026-10-28, PR open on
+`review-packet-6d` (not merged). No new phase opened. Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
 `docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
 
@@ -47,6 +48,9 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   request retries.
 - **Known limitation:** the gap-wording pattern flags "no authority has been triggered" (pinned
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
+- **Official 2025 strategy (human, 2026-10-28):** a future phase adds the Cyber Security
+  Council's 2025 National Cybersecurity Strategy PDF as an original and re-quotes
+  `uae.cyber-strategy-2025.*` from it (draft, open until then).
 - **Deferred from the 6d review (test-breaker):** crafted-tie unit tests for ranking levels 3b,
   4 and 10 (they hold under probe; only the golden encodes them); a slow test that re-extracting
   every source is byte-identical (holds under probe; the command is under Done, Phase 6d).
@@ -616,6 +620,12 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   was added in 392f162 after the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+- **Human decisions, 2026-10-28 (gate 1 on the 6c/6d list, reviewer Ibrahim Melhem):** eight
+  clauses reviewed, four closed as draft, two kept open (see "Waiting on human" and the packet's
+  Decisions). `eu.gdpr.art33-1` retitled before review; `expected_baseline.yaml` updated in the
+  review commit (rule 4). The impact tests that pinned these clauses as drafts were rewritten as
+  "reviewed clauses reach only the roles measured; repair search and repairs golden unchanged"
+  (approved in advance, decision 6 of Phase 6c).
 - **Human decisions, 2026-10-28 (Phase 6d, on PR #11):**
   1. Para 42/43 deviation accepted as done.
   2. Gate-6 edits confirmed (`AGENTS.md` 22 originals; Phase 6d in `START_PROMPT.md`).
@@ -955,42 +965,26 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6d (2026-10-28), merged and tagged.** One consolidated review list (gate 1). Each item
-is set out in `docs/review/draft-review-packet.md`: quote, notes, type, binding, the roles it
-reaches, the impact of review on the baseline and goldens, open flags, and a recommendation. Only
-`eu.gdpr.art33-1` changes the baseline golden when reviewed. All stay draft until you decide.
+**Gate 1 on the 6c/6d review list: decided (Ibrahim Melhem, 2026-10-28); PR open on
+`review-packet-6d`, not merged.** Decisions and the measured impact are in
+`docs/review/draft-review-packet.md`, "Decisions"; each clause's notes record them.
+- Reviewed: `uae.mohap-smart-health.p7-liability`, `unesco.ai-ethics.human-oversight`,
+  `unesco.ai-ethics.review-and-correct`, `unesco.ai-ethics.responsibility-accountability`,
+  `oecd.ai-principles.robustness-override`, `oecd.ai-principles.accountability-cooperation`,
+  `dha.pp11.applicability` (binding unknown kept), `eu.gdpr.art33-1` (retitled).
+- Closed as draft (off the review list): `uae.mohap-smart-health.p2-coordination`,
+  `uae.mohap-smart-health.p6-cybersecurity`, `dha.pp11.4-18-5`, `mocai.ethics.fallback-plan`.
 
-a) Draft clauses from 6c and 6d (all `status: draft`; none is loaded by the engine):
+Still on the review list (draft, open): `uae.cyber-strategy-2025.governance-aim` and
+`uae.cyber-strategy-2025.partnership-aim` (`web/03_uae_national_cybersecurity_strategy.pdf`,
+p.2). Only an announcement summary is in the repository; they wait for the official strategy PDF
+(see "Open items").
 
-| id | source_file | page | article | binding |
-|---|---|---|---|---|
-| `uae.mohap-smart-health.p2-coordination` | `web/01_uae_smart_health_ai_policy.pdf` | 3 | Priorities and Key Components, 2, first item | unknown |
-| `uae.mohap-smart-health.p6-cybersecurity` | `web/01_uae_smart_health_ai_policy.pdf` | 4 | Priorities and Key Components, 6, first item | unknown |
-| `uae.mohap-smart-health.p7-liability` | `web/01_uae_smart_health_ai_policy.pdf` | 4 | Priorities and Key Components, 7, second item | unknown |
-| `uae.cyber-strategy-2025.governance-aim` | `web/03_uae_national_cybersecurity_strategy.pdf` | 2 | Cabinet approval announcement, "The strategy seeks to", first item | false |
-| `uae.cyber-strategy-2025.partnership-aim` | `web/03_uae_national_cybersecurity_strategy.pdf` | 2 | Cabinet approval announcement, "The strategy seeks to", fifth item | false |
-| `unesco.ai-ethics.human-oversight` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 22 | III.2, Human oversight and determination, paras 35-36 | false |
-| `unesco.ai-ethics.review-and-correct` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 22 | III.2, Transparency and explainability, para 38 | false |
-| `unesco.ai-ethics.responsibility-accountability` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 23 | III.2, Responsibility and accountability, para 43 | false |
-| `oecd.ai-principles.robustness-override` | `OECD_Recommendation_AI.pdf` | 9 | Section 1, 1.4 b) | false |
-| `oecd.ai-principles.accountability-cooperation` | `OECD_Recommendation_AI.pdf` | 9 | Section 1, 1.5 c) | false |
+Question for the human (no change made): the baseline no longer shows any rejected draft
+citation. Should one be kept for the demo?
 
-The two `uae.cyber-strategy-2025.*` clauses stay quoted from the 03 web transcription (the only
-source for the 2025 strategy); the human checks whether the wording is the Cabinet's own.
-Reviewing any clause in this list changes `policy_legal_adviser`'s view and LLM cache keys (new
-paid run of its steps, gate 4); the impact tests are then rewritten as approved on 2026-10-28.
-
-b) Older open items:
-- **DHA applicability** (`dha.pp11.applicability`): does DHA PP-11 bind the synthetic portal
-  operator, and on what basis (`binding: unknown` meanwhile)?
-- **DHA 4.18.5 actor** (`dha.pp11.4-18-5`): the actor comes from 4.18.4, outside the quote
-  (decision 3p); confirm or remove the mapping.
-- **MOCAI fallback mapping** (`mocai.ethics.fallback-plan`): actor and action are interpreted
-  (decision 4d); the text says only "AI systems".
-- **GDPR Art 33(1) title** (`eu.gdpr.art33-1`): the title drops "where feasible"; retitle at
-  review.
-
-Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked).
+Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked;
+the two OECD clauses are reviewed with "UAE adherence not checked" kept).
 
 Real U+FFFD (reported, not changed): `T-AI4G-AI4GOOD-2025-6-PDF-E.jsonl` holds 1,294, on page 5
 (contents dot leaders) and pages 41–44 (full stops); no clause quotes it.
@@ -1094,9 +1088,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d merged and tagged `phase-6d`. The human reviews the draft list using
-`docs/review/draft-review-packet.md` (gate 1), then commits `Reviewed by human: <ids>`. No new phase
-until then. Correction (human, 2026-10-28) to the earlier
+Phase 6d merged and tagged `phase-6d`. Gate 1 decided (2026-10-28); the `review-packet-6d` PR
+carries the "Reviewed by human" commit and the updated baseline golden. The human merges it and
+decides whether a draft citation stays in the demo baseline. No new phase until then. Correction (human, 2026-10-28) to the earlier
 next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
 so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are

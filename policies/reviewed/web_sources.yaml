@@ -57,7 +57,7 @@ clauses:
     issuer: Ministry of Health and Prevention (lead entity, as printed)
     jurisdiction: UAE (federal public policy, health sector)
     document_date: "2026-05-18"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
@@ -68,6 +68,8 @@ clauses:
       uae.ai-charter.human-oversight, uae.pdpl.art18-1). Whether the portal's
       fraud-risk model is an "artificial intelligence application" in the policy's sense is not
       decided.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28): the sentence was checked against
+      the uaelegislation.gov.ae page and matches.
 
   - id: uae.cyber-strategy-2025.governance-aim
     title: "National Cybersecurity Strategy 2025: cohesive cybersecurity governance framework (aim)"
