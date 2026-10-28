@@ -38,14 +38,17 @@ reviews them. No new dependency, no paid call, no download, no web scraping.
   policies/sources/"; the web files stay. The 03 web transcription stays the only source for the
   2025 strategy; its two clauses are unchanged.
 - The TRA-era strategy is undated (`unknown`), historical context, superseded by the 2025
-  strategy. No clause is drafted from it.
+  strategy. No clause is drafted from it. On PR #11 (human, 2026-10-28) it is excluded from
+  `--extracted-context` retrieval (`NOT_SEARCHED`), with a test that no snippet from it appears.
+- On PR #11 (human, 2026-10-28): `responsibility-accountability` quotes "whistle-blowers’
+  protection" directly, with no gap; `mocai.ethics.contest-redress` notes give the text its `[...]` skip.
 
 ## d. Impact check
 
 `tests/integration/test_web_sources_impact.py`: on the default path, baseline, every role view and
 LLM cache key, the repair search, replay views and both goldens are byte-identical with and
 without the 6d drafts. With `--extracted-context`, the prompt-version fingerprint changes because
-of the new extracted text (expected).
+of the new extracted text (expected), and again when the TRA-era strategy is excluded.
 
 ## e. Rule changes (gate 6, approved by the human)
 

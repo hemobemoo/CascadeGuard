@@ -231,7 +231,7 @@ clauses:
     title: "UNESCO Recommendation: oversight, impact assessment, audit and due diligence; auditability and traceability"
     text: >-
       43. Appropriate oversight, impact assessment, audit and due diligence mechanisms, including
-      whistle-blowers [...] protection, should be developed to ensure accountability for AI
+      whistle-blowers’ protection, should be developed to ensure accountability for AI
       systems and their impact throughout their life cycle. Both technical and institutional
       designs should ensure auditability and traceability of (the working of) AI systems in
       particular to address any conflicts with human rights norms and standards and threats to
@@ -245,8 +245,9 @@ clauses:
     status: draft
     binding: false
     notes: >-
-      Official original (SHS/BIO/PI/2021/1). The [...] skips one character the extraction gives
-      as U+FFFD (the apostrophe of "whistle-blowers'"). Para 42 starts on p.22 and ends on p.23,
+      Official original (SHS/BIO/PI/2021/1). Quoted without a gap (human decision 2026-10-28):
+      the extraction gives the apostrophe of "whistle-blowers’" as U+2019. Para 42
+      starts on p.22 and ends on p.23,
       so it is not quoted (a clause cites one page); its last sentence reads "The ethical
       responsibility and liability for the decisions and actions based in any way on an AI
       system should always ultimately be attributable to AI actors corresponding to their role

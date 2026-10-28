@@ -5,7 +5,8 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 ## Current phase
 
 **Phase 6d — Official sources: built on `phase-6d-official-sources` (human instructions
-2026-10-28); PR #11 open, not merged (gates 1 and 6).** Spec `specs/006d-official-sources.md`;
+2026-10-28); PR #11 open, not merged. Human decisions on PR #11 (2026-10-28) applied on the
+branch (see Decisions, 6d); the human merges, then reviews the draft list.** Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
 `docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
 
@@ -44,6 +45,9 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   request retries.
 - **Known limitation:** the gap-wording pattern flags "no authority has been triggered" (pinned
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
+- **Deferred from the 6d review (test-breaker):** crafted-tie unit tests for ranking levels 3b,
+  4 and 10 (they hold under probe; only the golden encodes them); a slow test that re-extracting
+  every source is byte-identical (holds under probe; the command is under Done, Phase 6d).
 
 ## Done
 
@@ -61,17 +65,26 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
 - `MANIFEST.md`: 06 and 07 "unverified; superseded by official original in policies/sources/";
   web files kept, unquoted (tested).
 - TRA-era strategy: `document_date: unknown`, historical context, superseded by the 2025
-  strategy (`docs/policy-inventory.md`); no clause drafted.
+  strategy (`docs/policy-inventory.md`); no clause drafted. Kept out of `--extracted-context`
+  retrieval (`NOT_SEARCHED` in `knowledge/retrieval.py`; human decision 2026-10-28): no snippet
+  from it reaches any agent, and it is not part of the extracted digest (tested in
+  `tests/unit/test_retrieval.py`).
+- Evidence MINORs applied (human decision 2026-10-28): `unesco.ai-ethics.responsibility-accountability`
+  quotes "whistle-blowers’ protection" directly with no gap (the extraction has U+2019 there;
+  the earlier "U+FFFD" claims in 6d notes and docs were a console-encoding misreading, now
+  corrected); `mocai.ethics.contest-redress` notes give the text its two `[...]` skip. Both drafts.
 - Gate-6 edits approved by the human: `AGENTS.md` 19 → 22 originals; Phase 6d in
   `START_PROMPT.md`.
 - Impact (`tests/integration/test_web_sources_impact.py`): default path byte-identical without
   the 6d drafts; goldens match; draft count 29 → 30. `--extracted-context` fingerprint
-  `765eb44c26f0` → `ef1611888f36` (expected: new extracted text).
+  `765eb44c26f0` → `ef1611888f36` (expected: new extracted text), then `cbfe8170a200` once the
+  TRA-era strategy is excluded (expected: less searchable text).
 - Review round 1: evidence-auditor FAIL (MAJOR: unqualified orphan-duty sentence in the report),
   phase-auditor FAIL (MAJOR: PROGRESS claimed a PR and triage before they existed),
   test-breaker PASS; all fixed in 9bf725f, plus SHA-256 of the 20 committed originals recorded
   and tested. Round 2: evidence-auditor PASS, phase-auditor PASS (wording MINORs fixed). Triage
-  `docs/review/phase-6d-clause-triage.md`.
+  `docs/review/phase-6d-clause-triage.md`. Round 3 (after the PR #11 decisions, changed clauses
+  only): evidence-auditor PASS, one triage-row MINOR fixed. Checks: 509 passed.
 
 Verify:
 ```bash
@@ -601,6 +614,19 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   was added in 392f162 after the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+- **Human decisions, 2026-10-28 (Phase 6d, on PR #11):**
+  1. Para 42/43 deviation accepted as done.
+  2. Gate-6 edits confirmed (`AGENTS.md` 22 originals; Phase 6d in `START_PROMPT.md`).
+  3. The TRA-era strategy is excluded from `--extracted-context` retrieval entirely; the PDF,
+     its SHA-256 and its inventory entry stay as historical provenance. Reason (inventory):
+     superseded by the 2025 strategy, and extraction unreliable (p.5, pp.6-16). Tested.
+  4. No historical-context clause from the TRA strategy.
+  5. Both evidence MINORs applied on the branch: "whistle-blowers’ protection" quoted directly
+     (no gap needed: the extraction has U+2019, not U+FFFD as earlier notes said); the MOCAI skipped text
+     added to `mocai.ethics.contest-redress` notes.
+  6. Deferred test-breaker MINORs logged under "Open items".
+  7. Rerun the evidence-auditor on the changed clauses only, run local checks, push, confirm CI
+     green; do not merge.
 - **Human decisions, 2026-10-28 (Phase 6c):**
   1. The YAML headers and the 03 "ingestion guidance" in the web PDFs are the human's own
      metadata; the seven files are confirmed as they are. Evidence-auditor BLOCKER cleared by the
@@ -961,14 +987,9 @@ b) Older open items:
 
 Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked).
 
-c) Question from the 6d review (test-breaker): with `--extracted-context`, snippets from the
-TRA-era `UAE_National_Cybersecurity_Strategy.pdf` (undated, partly garbled, superseded) carry
-only "context only; not citable". Keep it searchable with a "historical; superseded" label,
-exclude it from the snippet search, or leave it as is? Nothing changes until you decide.
-
-Deferred MINORs from the 6d review (test-breaker): crafted-tie unit tests for ranking levels 3b,
-4 and 10 (they hold under probe; only the golden encodes them); a slow test that re-extracting
-every source is byte-identical (holds under probe; the command is under Done, Phase 6d).
+Answered on PR #11 (2026-10-28): para 42/43 deviation accepted; gate-6 edits confirmed;
+TRA-era strategy excluded from `--extracted-context` with no historical-context clause; both
+evidence MINORs applied. The deferred test-breaker MINORs are under "Open items".
 
 **Phase 6b (2026-10-27):** answered (summary approved; "Show all N" total); merge on green CI.
 
@@ -1065,9 +1086,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d PR #11 open: the human reviews the list under "Waiting on human" (gate 1) and decides the
-merge. Correction (human, 2026-10-28) to the earlier next step: the 2025 Cyber Security Council
-strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
+Phase 6d PR #11 open with the human's PR #11 decisions applied: the human merges, then reviews
+the draft list under "Waiting on human" (gate 1). Correction (human, 2026-10-28) to the earlier
+next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
 so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
 not re-quoted. Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the

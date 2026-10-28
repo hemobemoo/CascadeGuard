@@ -28,8 +28,8 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 17 | `UAE Federal Law No. 2 of 2019…Health Fields..pdf` | Federal Law No. 2 of 2019 on ICT in Health Fields (English translation) | UAE (federal) | 2019 | 7 | — | Yes |
 | 18 | `UAE Policy Foundation.pdf` | Unofficial compilation of UAE policy pages (contents below) | not printed (unofficial compilation); Charter part: UAE AI, Digital Economy and Remote Work Applications Office (human decision) | unknown; Charter part: 2024-07 (human decision) | 16 | — | Yes |
 | 19 | `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf` | UAE National Strategy for AI 2031 | UAE Government (not printed on extracted pages) | not printed | 25 | 1, 25 (covers) | Yes |
-| 20 | `OECD_Recommendation_AI.pdf` | Recommendation of the Council on Artificial Intelligence, OECD/LEGAL/0449 (official original) | OECD Council | adopted 2019-05-22; revised 2023-11-08 and 2024-05-03 | 12 | — | Yes (running header `O_E_C_D_/L_E_G_A_L` on each page; some apostrophes and bullets extract as U+FFFD) |
-| 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave. Some apostrophes extract as U+FFFD |
+| 20 | `OECD_Recommendation_AI.pdf` | Recommendation of the Council on Artificial Intelligence, OECD/LEGAL/0449 (official original) | OECD Council | adopted 2019-05-22; revised 2023-11-08 and 2024-05-03 | 12 | — | Yes (running header `O_E_C_D_/L_E_G_A_L` on each page) |
+| 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave |
 | 22 | `UAE_National_Cybersecurity_Strategy.pdf` | National Cyber Security Strategy (TRA era) | Telecommunications Regulatory Authority (TRA) | **unknown** (not printed) | 16 | — | **No — see below** |
 
 **SHA-256 of the committed originals** (Phase 6d; the two books are not committed and not
@@ -94,13 +94,19 @@ when a clause is drafted from it; only the Charter part has been decided by the 
 
 - **#22 `UAE_National_Cybersecurity_Strategy.pdf`.** Garbled, not guessed: page 5 (the "Cyber
   Security Strategy Framework" circle diagram) extracts as scattered letters; pages 6–16 are
-  diagram and table pages whose labels run together across columns, with bullets as U+FFFD
+  diagram and table pages whose labels run together across columns
   (worst: 7, 9, 11, 14, 16). Text must be checked against the page image before any quote.
 
 **#22 is historical context; superseded by the 2025 National Cybersecurity Strategy** (human
 decision 2026-10-28). It is undated (`document_date: unknown`; its file metadata says 2019, which
 is not used) and from the TRA era. No clause is drafted from it. The 2025 strategy itself is not in
 `policies/sources/`; the 03 web transcription is its only source here.
+
+**#22 is not searched** (human decision 2026-10-28): it is kept out of `--extracted-context`
+retrieval and out of the extracted digest (`NOT_SEARCHED` in `src/cascadeguard/knowledge/retrieval.py`),
+so no snippet from it reaches any agent. Reason: superseded by the 2025 strategy, and its
+extraction is unreliable (page 5; pages 6–16). The PDF, its SHA-256, this entry and its extracted
+`.jsonl` stay as historical provenance.
 
 Not scanned in the OCR sense: no PDF is an image-only scan.
 
