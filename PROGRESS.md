@@ -77,7 +77,10 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   opening it; spec wording MINOR fixed); test-breaker PASS (MINOR fixed: names Windows trims,
   `web./`, `web /`, `ocr./`, refused by the loader). After the human decisions
   (2026-10-28; evidence-auditor BLOCKER cleared by the human), round 4 on cb5e2a9:
-  evidence-auditor PASS, phase-auditor PASS (MINOR wording fixed). Triage `docs/review/phase-6c-clause-triage.md`.
+  evidence-auditor PASS, phase-auditor PASS (MINOR wording fixed).
+  test-breaker PASS (MINORs fixed: line-ending-proof digest, strict manifest rows); evidence-
+  auditor re-run on e7d33d8 PASS. Deferred MINOR: `eu.gdpr.art33-1` (draft) title drops "where
+  feasible"; retitle at its review. Triage `docs/review/phase-6c-clause-triage.md`.
 
 Verify:
 
