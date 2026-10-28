@@ -174,3 +174,127 @@ clauses:
     notes: >-
       Common terminology for classifying the scenario's cascade as an AI incident. The quote
       stops after harm (b); harms (c) and (d) follow on the same page.
+
+  # Phase 6d: UNESCO and OECD clauses re-quoted from the official originals (formerly quoted from
+  # the web transcriptions 06 and 07, which MANIFEST.md now marks superseded).
+  - id: unesco.ai-ethics.human-oversight
+    title: "UNESCO Recommendation: responsibility attributable to persons; AI never replaces ultimate human responsibility"
+    text: >-
+      35. Member States should ensure that it is always possible to attribute ethical and legal
+      responsibility for any stage of the life cycle of AI systems, as well as in cases of
+      remedy related to AI systems, to physical persons or to existing legal entities. Human
+      oversight refers thus not only to individual human oversight, but to inclusive public
+      oversight, as appropriate. 36. It may be the case that sometimes humans would choose to
+      rely on AI systems for reasons of efficacy, but the decision to cede control in limited
+      contexts remains that of humans, as humans can resort to AI systems in decision-making and
+      acting, but an AI system can never replace ultimate human responsibility and
+      accountability. As a rule, life and death decisions should not be ceded to AI systems.
+    source_file: UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf
+    page: 22
+    article: "III.2 Principles, Human oversight and determination, paras 35-36"
+    issuer: UNESCO General Conference
+    jurisdiction: International (UNESCO Member States; non-binding recommendation)
+    document_date: "2021-11-23"
+    status: draft
+    binding: false
+    notes: >-
+      Official original (SHS/BIO/PI/2021/1, p.2). Not binding: operative para 2 "Recommends that
+      Member States apply on a voluntary basis the provisions of this Recommendation" (p.7).
+      International precedent, not UAE law. Cascade: precedent for a human owner of the review
+      and reversal of the automated lockouts (candidate orphan duty; cf.
+      uae.ai-charter.human-oversight, uae.pdpl.art18-1).
+
+  - id: unesco.ai-ethics.review-and-correct
+    title: "UNESCO Recommendation: submissions to a designated staff member able to review and correct the decision"
+    text: >-
+      In addition, individuals should be able to access the reasons for a decision affecting
+      their rights and freedoms, and have the option of making submissions to a designated staff
+      member of the private [...] sector company or public sector institution able to review and
+      correct the decision.
+    source_file: UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf
+    page: 22
+    article: "III.2 Principles, Transparency and explainability, para 38"
+    issuer: UNESCO General Conference
+    jurisdiction: International (UNESCO Member States; non-binding recommendation)
+    document_date: "2021-11-23"
+    status: draft
+    binding: false
+    notes: >-
+      Official original (SHS/BIO/PI/2021/1). The [...] skips only the page number "22", printed
+      between the bottom of the left column and the top of the right column. Not binding:
+      operative para 2, "apply on a voluntary basis" (p.7). International precedent, not UAE
+      law; no normalized obligation. Cascade: a named person able to review and correct an AI
+      decision is the role missing for the patients locked out by the fraud model (candidate
+      orphan duty to review and reverse the lockouts).
+
+  - id: unesco.ai-ethics.responsibility-accountability
+    title: "UNESCO Recommendation: oversight, impact assessment, audit and due diligence; auditability and traceability"
+    text: >-
+      43. Appropriate oversight, impact assessment, audit and due diligence mechanisms, including
+      whistle-blowers [...] protection, should be developed to ensure accountability for AI
+      systems and their impact throughout their life cycle. Both technical and institutional
+      designs should ensure auditability and traceability of (the working of) AI systems in
+      particular to address any conflicts with human rights norms and standards and threats to
+      environmental and ecosystem well-being.
+    source_file: UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf
+    page: 23
+    article: "III.2 Principles, Responsibility and accountability, para 43"
+    issuer: UNESCO General Conference
+    jurisdiction: International (UNESCO Member States; non-binding recommendation)
+    document_date: "2021-11-23"
+    status: draft
+    binding: false
+    notes: >-
+      Official original (SHS/BIO/PI/2021/1). The [...] skips one character the extraction gives
+      as U+FFFD (the apostrophe of "whistle-blowers'"). Para 42 starts on p.22 and ends on p.23,
+      so it is not quoted (a clause cites one page); its last sentence reads "The ethical
+      responsibility and liability for the decisions and actions based in any way on an AI
+      system should always ultimately be attributable to AI actors corresponding to their role
+      in the life cycle of the AI system." Not binding: operative para 2, "apply on a voluntary
+      basis" (p.7). International precedent, not UAE law. Cascade: precedent for tracing the
+      lockouts back to the telecom traffic model's update.
+
+  - id: oecd.ai-principles.robustness-override
+    title: "OECD AI Recommendation: harmful AI can be overridden, repaired or decommissioned"
+    text: >-
+      b) Mechanisms should be in place, as appropriate, to ensure that if AI systems risk causing
+      undue harm or exhibit undesired behaviour, they can be overridden, repaired, and/or
+      decommissioned safely as needed.
+    source_file: OECD_Recommendation_AI.pdf
+    page: 9
+    article: "Section 1, 1.4 Robustness, security and safety, b)"
+    issuer: OECD Council
+    jurisdiction: International (OECD Adherents; non-binding recommendation; UAE adherence not checked)
+    document_date: "2024-05-03"
+    status: draft
+    binding: false
+    notes: >-
+      Official original, OECD/LEGAL/0449 (adopted 22 May 2019; revised 8 November 2023 and 3 May
+      2024, p.3). Not binding: "Recommendations are adopted by Council and are not legally
+      binding" (OECD Legal Instruments, p.12). The UAE is not named as an Adherent in this PDF;
+      adherence not checked. International precedent, not UAE law. Cascade: precedent for
+      suspending the telecom traffic-management model and reversing the fraud model's automated
+      lockouts.
+
+  - id: oecd.ai-principles.accountability-cooperation
+    title: "OECD AI Recommendation: risk management via co-operation between AI actors"
+    text: >-
+      c) AI actors, should, based on their roles, the context, and their ability to act, apply a
+      systematic risk management approach to each phase of the AI system lifecycle on an ongoing
+      basis and adopt responsible business conduct to address risks related to AI systems,
+      including, as appropriate, via co-operation between different AI actors, suppliers of AI
+      knowledge and AI resources, AI system users, and other stakeholders.
+    source_file: OECD_Recommendation_AI.pdf
+    page: 9
+    article: "Section 1, 1.5 Accountability, c)"
+    issuer: OECD Council
+    jurisdiction: International (OECD Adherents; non-binding recommendation; UAE adherence not checked)
+    document_date: "2024-05-03"
+    status: draft
+    binding: false
+    notes: >-
+      Official original, OECD/LEGAL/0449 (p.3 for dates). The quote ends at a sentence boundary;
+      the next sentence only lists examples of risks. Not binding: "Recommendations are adopted
+      by Council and are not legally binding" (OECD Legal Instruments, p.12). International
+      precedent, not UAE law. Cascade: precedent for co-operation between the two AI actors
+      (telecom traffic model, health fraud model) whose interaction caused the lockouts.

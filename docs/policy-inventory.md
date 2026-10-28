@@ -1,6 +1,6 @@
-# Policy source inventory (Phase 1a)
+# Policy source inventory (Phase 1a; #20–22 added in Phase 6d)
 
-The 19 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table, and the
+The 22 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table, and the
 seven web transcriptions in `policies/sources/web/`, listed at the end), from
 `policies/extracted/_inventory.json`
 (`uv run python scripts/extract_pdf_text.py`). "No-text pages" = fewer than 20 non-space
@@ -28,6 +28,9 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 17 | `UAE Federal Law No. 2 of 2019…Health Fields..pdf` | Federal Law No. 2 of 2019 on ICT in Health Fields (English translation) | UAE (federal) | 2019 | 7 | — | Yes |
 | 18 | `UAE Policy Foundation.pdf` | Unofficial compilation of UAE policy pages (contents below) | not printed (unofficial compilation); Charter part: UAE AI, Digital Economy and Remote Work Applications Office (human decision) | unknown; Charter part: 2024-07 (human decision) | 16 | — | Yes |
 | 19 | `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf` | UAE National Strategy for AI 2031 | UAE Government (not printed on extracted pages) | not printed | 25 | 1, 25 (covers) | Yes |
+| 20 | `OECD_Recommendation_AI.pdf` | Recommendation of the Council on Artificial Intelligence, OECD/LEGAL/0449 (official original) | OECD Council | adopted 2019-05-22; revised 2023-11-08 and 2024-05-03 | 12 | — | Yes (running header `O_E_C_D_/L_E_G_A_L` on each page; some apostrophes and bullets extract as U+FFFD) |
+| 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave. Some apostrophes extract as U+FFFD |
+| 22 | `UAE_National_Cybersecurity_Strategy.pdf` | National Cyber Security Strategy (TRA era) | Telecommunications Regulatory Authority (TRA) | **unknown** (not printed) | 16 | — | **No — see below** |
 
 **#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
 and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.
@@ -65,6 +68,16 @@ when a clause is drafted from it; only the Charter part has been decided by the 
 - **Other no-text pages** are covers, blank pages or full-page images (#3, #4, #5, #11, #15, #19).
   None is needed by the scenario.
 
+- **#22 `UAE_National_Cybersecurity_Strategy.pdf`.** Garbled, not guessed: page 5 (the "Cyber
+  Security Strategy Framework" circle diagram) extracts as scattered letters; pages 6–16 are
+  diagram and table pages whose labels run together across columns, with bullets as U+FFFD
+  (worst: 7, 9, 11, 14, 16). Text must be checked against the page image before any quote.
+
+**#22 is historical context; superseded by the 2025 National Cybersecurity Strategy** (human
+decision 2026-10-28). It is undated (`document_date: unknown`; its file metadata says 2019, which
+is not used) and from the TRA era. No clause is drafted from it. The 2025 strategy itself is not in
+`policies/sources/`; the 03 web transcription is its only source here.
+
 Not scanned in the OCR sense: no PDF is an image-only scan.
 
 ## Web transcriptions (`policies/sources/web/`, Phase 6c)
@@ -79,5 +92,5 @@ dates and types are in `policies/sources/web/MANIFEST.md`. Every page has extrac
 | `03_uae_national_cybersecurity_strategy.pdf` | 3 | 2 (`uae.cyber-strategy-2025.*`; announcement summaries, not the strategy) |
 | `04_uae_digital_government_strategy_2025.pdf` | 14 | none (source only) |
 | `05_uae_ai_government_policies.pdf` | 7 | none (source only) |
-| `06_unesco_ai_ethics_recommendation.pdf` | 6 | 2 (`unesco.ai-ethics.*`; web page summary) |
-| `07_oecd_ai_principles.pdf` | 10 | 2 (`oecd.ai-principles.*`; web page text) |
+| `06_unesco_ai_ethics_recommendation.pdf` | 6 | none since Phase 6d (superseded by #21) |
+| `07_oecd_ai_principles.pdf` | 10 | none since Phase 6d (superseded by #20) |

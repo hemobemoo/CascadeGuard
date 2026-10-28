@@ -4,9 +4,14 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 6c — Policy source expansion: built on `phase-6c-policy-sources` (human instructions
-2026-10-28), PR #10; human decisions 2026-10-28 applied; merge on reviewer PASS and green
-CI (gate 1 deferred until the official documents are placed).** Spec
+**Phase 6d — Official sources: built on `phase-6d-official-sources` (human instructions
+2026-10-28); PR open, not merged (gates 1 and 6).** Spec `specs/006d-official-sources.md`;
+report and impact check `docs/review/phase-6d-report.md`; triage
+`docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
+
+**Phase 6c — Policy source expansion: merged to main via PR #10 (merge commit b73421e, branch
+`phase-6c-policy-sources` kept), tagged `phase-6c`** (2026-10-28, on the human's instruction,
+after all three reviewers passed and CI was green). Spec
 `specs/006c-policy-sources.md`; report and impact check `docs/review/phase-6c-report.md`;
 triage `docs/review/phase-6c-clause-triage.md`. See "Waiting on human".
 
@@ -41,6 +46,33 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
 
 ## Done
+
+### Phase 6d — Official sources (branch `phase-6d-official-sources`)
+- `OECD_Recommendation_AI.pdf`, `UNESCO Recommendation on the Ethics of Artificial
+  Intelligence.pdf`, `UAE_National_Cybersecurity_Strategy.pdf` moved from the root to
+  `policies/sources/` (names and bytes unchanged, SHA-256 checked); 22 originals.
+- Extracted; every existing `.jsonl` re-extracted byte-identical. UNESCO (two columns) is read
+  column by column where the gutter is clear (`TWO_COLUMN` in `scripts/extract_pdf_text.py`,
+  records `"columns": 2`). Garbled pages flagged in `docs/policy-inventory.md`, not guessed.
+- 06/07 clauses re-quoted from the originals (same ids, now in
+  `international_precedents.yaml`, `binding: false` with each original's own wording); new
+  draft `unesco.ai-ethics.review-and-correct` (para 38). Para 42 crosses pages, so
+  `responsibility-accountability` quotes para 43 and gives para 42's sentence in notes.
+- `MANIFEST.md`: 06 and 07 "unverified; superseded by official original in policies/sources/";
+  web files kept, unquoted (tested).
+- TRA-era strategy: `document_date: unknown`, historical context, superseded by the 2025
+  strategy (`docs/policy-inventory.md`); no clause drafted.
+- Gate-6 edits approved by the human: `AGENTS.md` 19 → 22 originals; Phase 6d in
+  `START_PROMPT.md`.
+- Impact (`tests/integration/test_web_sources_impact.py`): default path byte-identical without
+  the 6d drafts; goldens match; draft count 29 → 30. `--extracted-context` fingerprint
+  `765eb44c26f0` → `ef1611888f36` (expected: new extracted text).
+
+Verify:
+```bash
+uv run pytest tests/integration/test_web_sources_impact.py tests/unit/test_web_sources.py tests/unit/test_clause_loader.py -q
+uv run python scripts/extract_pdf_text.py --only "UNESCO Recommendation"   # git diff stays empty
+```
 
 ### Phase 6c — Policy source expansion (branch `phase-6c-policy-sources`)
 - Seven web transcriptions moved from the root to `policies/sources/web/` (filenames and bytes
@@ -890,15 +922,39 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6c (2026-10-28), PR #10:** answered by the human on 2026-10-28 (see Decisions). Still
-open, none blocking the merge:
-- **Gate 1, later:** no clause reviewed now. After the official documents are placed and the
-  03/06/07 clauses re-quoted (see Next step), the agent gives the final list of ids to review.
-- **03 attribution:** settled by re-quoting from the Cyber Security Council strategy PDF.
-- **OECD:** record whether the UAE adheres to OECD/LEGAL/0449 when the instrument is placed.
-- **Official documents to download** (the agent downloads nothing): UNESCO SHS/BIO/PI/2021/1;
-  OECD/LEGAL/0449; the Cyber Security Council National Cybersecurity Strategy PDF; the National
-  Cyber Security Policy for AI (URLs in `MANIFEST.md`).
+**Phase 6d (2026-10-28), PR open, not merged.** One consolidated review list (gate 1).
+
+a) Draft clauses from 6c and 6d (all `status: draft`; none is loaded by the engine):
+
+| id | source_file | page | article | binding |
+|---|---|---|---|---|
+| `uae.mohap-smart-health.p2-coordination` | `web/01_uae_smart_health_ai_policy.pdf` | 3 | Priorities and Key Components, 2, first item | unknown |
+| `uae.mohap-smart-health.p6-cybersecurity` | `web/01_uae_smart_health_ai_policy.pdf` | 4 | Priorities and Key Components, 6, first item | unknown |
+| `uae.mohap-smart-health.p7-liability` | `web/01_uae_smart_health_ai_policy.pdf` | 4 | Priorities and Key Components, 7, second item | unknown |
+| `uae.cyber-strategy-2025.governance-aim` | `web/03_uae_national_cybersecurity_strategy.pdf` | 2 | Cabinet approval announcement, "The strategy seeks to", first item | false |
+| `uae.cyber-strategy-2025.partnership-aim` | `web/03_uae_national_cybersecurity_strategy.pdf` | 2 | Cabinet approval announcement, "The strategy seeks to", fifth item | false |
+| `unesco.ai-ethics.human-oversight` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 22 | III.2, Human oversight and determination, paras 35-36 | false |
+| `unesco.ai-ethics.review-and-correct` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 22 | III.2, Transparency and explainability, para 38 | false |
+| `unesco.ai-ethics.responsibility-accountability` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 23 | III.2, Responsibility and accountability, para 43 | false |
+| `oecd.ai-principles.robustness-override` | `OECD_Recommendation_AI.pdf` | 9 | Section 1, 1.4 b) | false |
+| `oecd.ai-principles.accountability-cooperation` | `OECD_Recommendation_AI.pdf` | 9 | Section 1, 1.5 c) | false |
+
+The two `uae.cyber-strategy-2025.*` clauses stay quoted from the 03 web transcription (the only
+source for the 2025 strategy); the human checks whether the wording is the Cabinet's own.
+Reviewing any clause in this list changes `policy_legal_adviser`'s view and LLM cache keys (new
+paid run of its steps, gate 4); the impact tests are then rewritten as approved on 2026-10-28.
+
+b) Older open items:
+- **DHA applicability** (`dha.pp11.applicability`): does DHA PP-11 bind the synthetic portal
+  operator, and on what basis (`binding: unknown` meanwhile)?
+- **DHA 4.18.5 actor** (`dha.pp11.4-18-5`): the actor comes from 4.18.4, outside the quote
+  (decision 3p); confirm or remove the mapping.
+- **MOCAI fallback mapping** (`mocai.ethics.fallback-plan`): actor and action are interpreted
+  (decision 4d); the text says only "AI systems".
+- **GDPR Art 33(1) title** (`eu.gdpr.art33-1`): the title drops "where feasible"; retitle at
+  review.
+
+Also open: whether the UAE adheres to OECD/LEGAL/0449 (not named in the PDF's Adherents).
 
 **Phase 6b (2026-10-27):** answered (summary approved; "Show all N" total); merge on green CI.
 
@@ -995,12 +1051,13 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-When the human adds the official UNESCO (SHS/BIO/PI/2021/1), OECD (OECD/LEGAL/0449), Cyber
-Security Council National Cybersecurity Strategy and National Cyber Security Policy for AI PDFs
-to `policies/sources/`: extract them, re-quote the 03, 06 and 07 clauses from the originals,
-mark the web versions as superseded in `policies/sources/web/MANIFEST.md`, and give the human
-the final list of clause ids to review (gate 1). Then Phase 7 (tracing, optional). Still open:
-the deferred MINORs, the gap-wording known limitation and the two-owners limitation.
+Phase 6d PR open: the human reviews the list under "Waiting on human" (gate 1) and decides the
+merge. Correction (human, 2026-10-28) to the earlier next step: the 2025 Cyber Security Council
+strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
+added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
+so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
+not re-quoted. Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the
+gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):
 

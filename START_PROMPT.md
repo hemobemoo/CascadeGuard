@@ -188,6 +188,14 @@ Phase 6c is done when the seven files are placed and extracted, `MANIFEST.md` is
 draft clauses pass all checks, the impact report shows no change to baseline, views or
 goldens, and all checks pass.
 
+**Phase 6d — Official sources.** Place three official originals in `policies/sources/` (OECD
+and UNESCO AI Recommendations, the TRA-era National Cyber Security Strategy), extract them,
+and re-quote the 06 and 07 clauses from the originals (drafts only). Spec
+`specs/006d-official-sources.md`.
+
+Phase 6d is done when the three originals are placed and extracted, the 06/07 clauses are
+re-anchored, the impact test passes, and all checks pass.
+
 **Phase 7 — Tracing (optional).** OpenTelemetry/OpenInference to Phoenix for retrieval,
 agent decisions, constraint checks, and replay. Off by default; enabled by an env flag.
 
