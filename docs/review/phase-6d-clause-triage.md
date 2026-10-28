@@ -35,3 +35,10 @@ wording is the Cabinet's own; the TRA-era PDF does not answer it).
 - **MINOR (fixed)** — this triage file now exists.
 - **QUESTION-FOR-HUMAN** — DHA applicability, DHA 4.18.5 actor (3p), MOCAI fallback mapping
   (4d), 03 attribution: in the review list in `PROGRESS.md`.
+
+## Round 2
+
+Verdict **PASS**. No FIX; same CLEAN / NEEDS-HUMAN-JUDGMENT split. UNESCO pp.22–23 and the
+telecom p.14 quote checked against page images. MINORs left for review: quote
+"whistle-blowers' protection" instead of the one-character `[...]` (U+FFFD), or keep it; add the
+skipped MOCAI 3.4.2.2(c) text to `mocai.ethics.contest-redress` notes; `eu.gdpr.art33-1` title.

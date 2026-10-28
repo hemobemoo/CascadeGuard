@@ -67,6 +67,11 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
 - Impact (`tests/integration/test_web_sources_impact.py`): default path byte-identical without
   the 6d drafts; goldens match; draft count 29 → 30. `--extracted-context` fingerprint
   `765eb44c26f0` → `ef1611888f36` (expected: new extracted text).
+- Review round 1: evidence-auditor FAIL (MAJOR: unqualified orphan-duty sentence in the report),
+  phase-auditor FAIL (MAJOR: PROGRESS claimed a PR and triage before they existed),
+  test-breaker PASS; all fixed in 9bf725f, plus SHA-256 of the 20 committed originals recorded
+  and tested. Round 2: evidence-auditor PASS, phase-auditor PASS (wording MINORs fixed). Triage
+  `docs/review/phase-6d-clause-triage.md`.
 
 Verify:
 ```bash
