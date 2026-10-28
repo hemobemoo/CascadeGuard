@@ -4,9 +4,11 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 6d — Official sources: built on `phase-6d-official-sources` (human instructions
-2026-10-28); PR #11 open, not merged. Human decisions on PR #11 (2026-10-28) applied on the
-branch (see Decisions, 6d); the human merges, then reviews the draft list.** Spec `specs/006d-official-sources.md`;
+**Phase 6d — Official sources: merged to main via PR #11 (merge commit bf753c9, branch
+`phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
+after the PR #11 decisions were applied, evidence-auditor round 3 PASS and CI green). Before the
+merge, a repo-wide search found no remaining false U+FFFD claims (see Waiting on human). Review
+packet for gate 1: `docs/review/draft-review-packet.md`. No new phase opened. Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
 `docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
 
@@ -953,7 +955,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6d (2026-10-28), PR #11 open, not merged.** One consolidated review list (gate 1).
+**Phase 6d (2026-10-28), merged and tagged.** One consolidated review list (gate 1). Each item
+is set out in `docs/review/draft-review-packet.md`: quote, notes, type, binding, the roles it
+reaches, the impact of review on the baseline and goldens, open flags, and a recommendation. Only
+`eu.gdpr.art33-1` changes the baseline golden when reviewed. All stay draft until you decide.
 
 a) Draft clauses from 6c and 6d (all `status: draft`; none is loaded by the engine):
 
@@ -986,6 +991,9 @@ b) Older open items:
   review.
 
 Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked).
+
+Real U+FFFD (reported, not changed): `T-AI4G-AI4GOOD-2025-6-PDF-E.jsonl` holds 1,294, on page 5
+(contents dot leaders) and pages 41–44 (full stops); no clause quotes it.
 
 Answered on PR #11 (2026-10-28): para 42/43 deviation accepted; gate-6 edits confirmed;
 TRA-era strategy excluded from `--extracted-context` with no historical-context clause; both
@@ -1086,8 +1094,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d PR #11 open with the human's PR #11 decisions applied: the human merges, then reviews
-the draft list under "Waiting on human" (gate 1). Correction (human, 2026-10-28) to the earlier
+Phase 6d merged and tagged `phase-6d`. The human reviews the draft list using
+`docs/review/draft-review-packet.md` (gate 1), then commits `Reviewed by human: <ids>`. No new phase
+until then. Correction (human, 2026-10-28) to the earlier
 next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
 so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
