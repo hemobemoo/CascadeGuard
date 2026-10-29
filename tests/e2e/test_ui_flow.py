@@ -385,7 +385,7 @@ def test_expert_mode_shows_every_section(page: Page) -> None:
     for key in "abcdefgx":
         expect(section(page, key)).to_be_visible()
     expect(section(page, "x")).to_contain_text("draft clauses not loaded")
-    expect(section(page, "x")).to_contain_text("[reviewed (interpreted)]")
+    expect(section(page, "x")).to_contain_text("[reviewed (interpreted) · binding unknown]")
     # Expert mode shows the raw ids next to the names (spec 006b).
     expect(section(page, "b").get_by_text("locked_account_records").first).to_be_visible()
     expect(section(page, "d").get_by_text("orphan_duty:reverse_automated_lockouts")).to_be_visible()

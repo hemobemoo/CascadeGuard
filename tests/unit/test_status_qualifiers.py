@@ -1,0 +1,121 @@
+"""Status labels carry binding status and source type (human decision 2026-10-29): agents, the
+CLI and the UI see e.g. "reviewed · not binding · international precedent" next to a clause,
+never a bare "reviewed" for non-binding, foreign or unverified material."""
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from cascadeguard.cli import load_world
+from cascadeguard.domain.policies import (
+    LABEL_SEPARATOR,
+    OCR_FLAG,
+    WEB_FLAG,
+    ClauseStatus,
+    PolicyClause,
+    in_source_dir,
+)
+from cascadeguard.knowledge.loader import load_clauses
+from cascadeguard.ui import view_model as vm
+
+ROOT = Path(__file__).resolve().parents[2]
+BASE: dict[str, Any] = {
+    "id": "test.clause",
+    "title": "A clause",
+    "text": "Some verbatim text.",
+    "source_file": "doc.pdf",
+    "page": 3,
+    "issuer": "Issuer",
+    "jurisdiction": "UAE",
+    "document_date": "2021",
+    "status": "reviewed",
+    "binding": True,
+}
+BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
+
+
+@pytest.mark.parametrize(
+    ("changes", "label"),
+    [
+        ({}, "reviewed · binding"),
+        ({"binding": False}, "reviewed · not binding"),
+        ({"binding": "unknown", "jurisdiction": "Dubai, UAE"}, "reviewed · binding unknown"),
+        (
+            {"binding": False, "jurisdiction": "EU"},
+            "reviewed · not binding · international precedent",
+        ),
+        (  # names the UAE, but is not a UAE jurisdiction
+            {"binding": False, "jurisdiction": "International (UAE adherence not checked)"},
+            "reviewed · not binding · international precedent",
+        ),
+        (
+            {"binding": "unknown", "source_file": "web/01_page.pdf", "notes": WEB_FLAG},
+            "reviewed · binding unknown · web transcription",
+        ),
+        (
+            {"source_file": "ocr/doc.ocr.pdf", "notes": OCR_FLAG, "status": "draft"},
+            "draft · binding · OCR copy",
+        ),
+        (
+            {
+                "status": "illustrative",
+                "binding": False,
+                "source_file": None,
+                "page": None,
+                "notes": "needed by the scenario",
+            },
+            "illustrative",
+        ),
+    ],
+)
+def test_label_shows_binding_status_and_source_type(changes: dict[str, Any], label: str) -> None:
+    assert PolicyClause.model_validate(BASE | changes).status_label == label
+
+
+def test_every_repository_clause_label_states_binding_and_source_type() -> None:
+    for c in load_clauses():
+        parts = c.status_label.split(LABEL_SEPARATOR)
+        if c.status is ClauseStatus.ILLUSTRATIVE:
+            assert parts == [c.status_label], c.id
+            continue
+        assert parts[1] == BINDING[c.binding], c.id
+        if in_source_dir(c.source_file, "web/"):
+            assert parts[2:] == ["web transcription"], c.id
+        elif not c.jurisdiction.startswith(("UAE", "Dubai")):
+            assert parts[2:] == ["international precedent"], c.id
+
+
+SHOWN = {
+    "eu.gdpr.art33-1": "reviewed · not binding · international precedent",
+    "unesco.ai-ethics.review-and-correct": "reviewed · not binding · international precedent",
+    "oecd.ai-principles.robustness-override": "reviewed · not binding · international precedent",
+    "uae.mohap-smart-health.p7-liability": "reviewed · binding unknown · web transcription",
+    "uae.fl2-2019.art2": "reviewed · binding",
+}
+
+
+def test_agents_the_cli_and_the_ui_see_the_qualified_labels() -> None:
+    world = load_world("uae_health_access")
+    baseline = world.baseline()
+    adviser = next(v for v in baseline.views if v.role_id == "policy_legal_adviser")
+    in_view = {c.id: c.status_label for c in adviser.role_clauses}
+    ui = vm.role_view(
+        baseline, "policy_legal_adviser", adviser.minute, world.roles.known_categories()
+    )
+    cli = subprocess.run(
+        [sys.executable, "-m", "cascadeguard.cli", "run", "uae_health_access"],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    ).stdout
+    for cid, label in SHOWN.items():
+        assert in_view[cid] == label, cid
+        assert any(line.startswith(f"{cid} [{label}]") for line in ui.role_clauses), cid
+        assert f"- {cid} [{label}]" in cli, cid

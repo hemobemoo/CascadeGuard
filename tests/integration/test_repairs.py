@@ -261,7 +261,7 @@ def test_dynamic_hard_filter_discards_a_replay_that_lifts_a_restriction() -> Non
 
 def test_markdown_labels_every_clause_and_states_the_qualification(found: SearchResult) -> None:
     text = comparison_markdown(found.comparison(SHARE))
-    assert "`dha.pp11.4-18-1` [reviewed (interpreted)]" in text
+    assert "`dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown]" in text
     assert "not a confirmed legal or standards gap" in text
     assert "hypothetical rules, not source clauses" in text
     assert "Requires authorization: **yes**" in text
