@@ -413,12 +413,11 @@ draft (it was a draft from the compilation).
   no `normalized` block), plus the re-quote record.
 - **Binding / type:** false; policy charter. **Label:** `draft · not binding` (no "unofficial
   compilation" any more).
-- **Reaches:** no role (no `normalized` block, so the scope rule gives it to none).
+- **Reaches:** no role while draft (the engine does not load drafts). It has no `normalized`
+  block; which roles would see it once reviewed was not measured.
 - **Baseline/goldens: unchanged** (measured: baseline and repair output byte-identical before
-  and after the re-quote; it is a draft, so the engine does not load it, and once reviewed it
-  still binds no role).
-- **Recommendation:** stays draft unless the scenario needs it; reviewing it would change no
-  output. Your call.
+  and after the re-quote). The effect of reviewing it was not measured.
+- **Recommendation:** stays draft, as you decided.
 
 ---
 
