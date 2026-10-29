@@ -48,6 +48,9 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   request retries.
 - **Known limitation:** the gap-wording pattern flags "no authority has been triggered" (pinned
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
+- **Demo-only draft citation (human, 2026-10-29):** in demo prep, a demo-only scenario (not the
+  golden baseline) where the scripted adviser cites `uae.cyber-strategy-2025.governance-aim` and
+  the engine rejects it.
 - **Official 2025 strategy (human, 2026-10-28):** a future phase adds the Cyber Security
   Council's 2025 National Cybersecurity Strategy PDF as an original and re-quotes
   `uae.cyber-strategy-2025.*` from it (draft, open until then).
@@ -981,17 +984,17 @@ Still on the review list (draft, open): `uae.cyber-strategy-2025.governance-aim`
 p.2). Only an announcement summary is in the repository; they wait for the official strategy PDF
 (see "Open items").
 
-Questions for the human from the gate-1 review (no change made):
-- The baseline no longer shows any rejected draft citation. Should one be kept for the demo?
-- (test-breaker) Reviewed clauses show only "reviewed" to agents, the CLI and the UI; nothing
-  says "not binding", "web transcription" or "foreign precedent" (`binding` and `jurisdiction`
-  are not displayed). Add a qualifier to `status_label`/`RoleClause`? It would change the
-  adviser's views and cache keys.
-- (phase-auditor) `uae.mohap-smart-health.p7-liability` is reviewed but its notes still open with
-  "web transcription — unverified" (required by the web rule), next to the note that you checked
-  it against the page. Leave as is, or reword? Any notes edit sends it back to draft.
-- (phase-auditor) Does the advance approval of Phase 6c decision 6 also cover the rewritten 6d
-  impact tests? The commit explains each change.
+Answers from the human on the gate-1 questions (2026-10-29):
+1. Keep a rejected draft citation for the demo: yes, but not by leaving a real clause
+   unreviewed. Later, in demo prep, add a demo-only scenario (not the golden baseline) where the
+   scripted adviser cites `uae.cyber-strategy-2025.governance-aim` and the engine rejects it. Not
+   now (see "Open items").
+2. Show binding status and source type next to "reviewed" to agents, the CLI and the UI (e.g.
+   "reviewed · not binding · international precedent", "reviewed · web transcription"). The
+   cache-key change is accepted. Its own small PR after the gate-1 PR.
+3. `uae.mohap-smart-health.p7-liability` notes stay as they are.
+4. Phase 6c decision 6 also covers the rewritten 6d impact tests (recorded here; commit history
+   not rewritten).
 
 Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked;
 the two OECD clauses are reviewed with "UAE adherence not checked" kept).
