@@ -207,6 +207,6 @@ def test_committed_originals_are_byte_identical_to_the_recorded_hashes() -> None
         for p in sources.glob("*.pdf")
         if not any(m in p.name.casefold() for m in ("abhivardhan", "oxford handbook"))
     )
-    assert len(recorded) == 20 and sorted(recorded) == on_disk
+    assert len(recorded) == 21 and sorted(recorded) == on_disk
     for name in on_disk:
         assert hashlib.sha256((sources / name).read_bytes()).hexdigest() == recorded[name], name
