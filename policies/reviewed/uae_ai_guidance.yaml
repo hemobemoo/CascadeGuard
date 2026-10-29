@@ -33,7 +33,7 @@ clauses:
     issuer: UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office
     jurisdiction: UAE
     document_date: "2024-07"
-    status: draft
+    status: reviewed
     binding: false
     normalized:
       basis: interpreted
@@ -53,8 +53,9 @@ clauses:
       date as printed on p.1. Text unchanged from the earlier source (UAE Policy Foundation.pdf
       p.2, an unofficial compilation). The PDF renders its text as images or vector outlines over an unreliable text layer
       (p.4 reads "human over / oversight Al"), so the quote is checked against
-      policies/transcriptions/, transcribed from page image — check against image. Back to draft
-      for re-approval (AGENTS.md gate 1); it was reviewed from the compilation.
+      policies/transcriptions/, transcribed from page image — check against image. Re-approved
+      by the human (Ibrahim Melhem, 2026-10-29) after checking the quote and the page-4
+      transcription against the PDF image (gate 1; packet entry 15).
 
   - id: mocai.ethics.contest-redress
     title: "MOCAI ethics: contest and redress against AI decisions"
