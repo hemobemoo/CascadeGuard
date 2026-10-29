@@ -4,6 +4,9 @@ Durable rules for every coding agent working in this repository (Claude Code, Cl
 This file is the single source of truth for agent rules. `CascadeGuard.md` is the authoritative
 project concept. Read it before any architectural change. If the two conflict, ask.
 
+**New session: read `PROGRESS.md` first**, starting with its "Start here" section. It holds the
+current state, the next task and what is waiting on the human.
+
 ## What we are building
 
 > Find where AI decisions and institutional rules collide, identify the smallest safe repair,
