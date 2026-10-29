@@ -6,8 +6,9 @@ boundary. Selection uses the engine's own scope rule (decision 7n, `RuleBook.con
 agent is shown exactly the clauses it may cite for its allowed actions. Clauses outside the
 corpus (hypothetical repair rules in a replay) are shown so an agent can adapt to a repair, but
 marked not citable. Extracted PDF text is unreviewed context: never a clause, never citable,
-and the two published books, the TRA-era cyber strategy and the news item on the 2025 strategy
-(NOT_SEARCHED) are always excluded.
+and the two published books, the TRA-era cyber strategy, the news item on the 2025 strategy and
+the Charter's unreliable text layer (NOT_SEARCHED) are always excluded. For a source whose text
+layer is unreliable, only its reviewed page-image transcriptions are searched.
 """
 
 import hashlib
@@ -17,9 +18,9 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
-from cascadeguard.domain.policies import WEB_FLAG, PolicyClause
+from cascadeguard.domain.policies import TRANSCRIBED_SOURCES, WEB_FLAG, PolicyClause
 from cascadeguard.engine.constraints import RuleBook
-from cascadeguard.knowledge.loader import BOOK_MARKERS, EXTRACTED_DIR
+from cascadeguard.knowledge.loader import BOOK_MARKERS, EXTRACTED_DIR, TRANSCRIPTIONS_DIR
 
 NOT_CITABLE_LABEL = "hypothetical repair rule (not a source clause; not citable)"
 ANY_ACTION = "any_proposed_action"
@@ -27,11 +28,16 @@ ANY_ACTION = "any_proposed_action"
 CONTEXT_LABEL = "context only; not citable"
 # A snippet from a web transcription (policies/sources/web/) says so (human decision 2026-10-28).
 WEB_CONTEXT_LABEL = f"{WEB_FLAG}; {CONTEXT_LABEL}"
+# A snippet from a reviewed page-image transcription says so (human decision 2026-10-29).
+TRANSCRIPTION_CONTEXT_LABEL = f"transcribed from page image, reviewed; {CONTEXT_LABEL}"
 # Kept as provenance but never searched. The TRA-era strategy (human decision 2026-10-28) is
 # superseded by the 2025 strategy, and its extraction is unreliable (p.5, pp.6-16). Web page 03
 # (human decision 2026-10-29) is a news item about the 2025 strategy, not the strategy's text.
+# TRANSCRIBED_SOURCES (the Charter; human decision 2026-10-29) have an unreliable text layer:
+# only their reviewed transcriptions are searched.
 NOT_SEARCHED = frozenset(
     {"UAE_National_Cybersecurity_Strategy.pdf", "web/03_uae_national_cybersecurity_strategy.pdf"}
+    | TRANSCRIBED_SOURCES
 )
 NOT_SEARCHED_STEMS = frozenset(Path(name).stem.casefold() for name in NOT_SEARCHED)
 
@@ -121,30 +127,55 @@ def _not_searched(name: str) -> bool:
     return _is_book(name) or Path(name).stem.casefold() in NOT_SEARCHED_STEMS
 
 
+def _reviewed_transcriptions(transcriptions_dir: Path) -> list[dict[str, object]]:
+    """Reviewed page-image transcriptions of TRANSCRIBED_SOURCES, in file and page order. Draft
+    ones wait for the human's check against the image and are never searched."""
+    records: list[dict[str, object]] = []
+    for path in sorted(transcriptions_dir.glob("*.jsonl")):
+        for line in path.read_text("utf-8").splitlines():
+            record: dict[str, object] = json.loads(line) if line else {}
+            if (
+                record.get("transcribed") is True
+                and record.get("status") == "reviewed"
+                and record.get("source_file") in TRANSCRIBED_SOURCES
+            ):
+                records.append(record)
+    return records
+
+
 @cache
-def extracted_digest(extracted_dir: Path = EXTRACTED_DIR) -> str:
-    """Digest of the searchable extracted text (books and NOT_SEARCHED excluded). Snippets are
-    not part of a view, so this goes into the prompt version: a changed corpus never reuses a
-    decision. Built from the parsed records, so line endings (CRLF checkouts on Windows) do not
-    change it."""
+def extracted_digest(
+    extracted_dir: Path = EXTRACTED_DIR, transcriptions_dir: Path = TRANSCRIPTIONS_DIR
+) -> str:
+    """Digest of the searchable text: extracted text (books and NOT_SEARCHED excluded) and the
+    reviewed transcriptions. Snippets are not part of a view, so this goes into the prompt
+    version: a changed corpus never reuses a decision. Built from the parsed records, so line
+    endings (CRLF checkouts on Windows) do not change it."""
     digest = hashlib.sha256()
     for path in sorted(extracted_dir.glob("*.jsonl")):
         if not _not_searched(path.name):
             records = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
             digest.update(json.dumps([path.name, records], sort_keys=True).encode() + b"\n")
+    transcribed = _reviewed_transcriptions(transcriptions_dir)
+    if transcribed:  # with none, the digest is what it was before transcriptions existed
+        digest.update(json.dumps(["transcriptions", transcribed], sort_keys=True).encode())
     return digest.hexdigest()[:12]
 
 
 def search_extracted(
-    query: str, limit: int = 5, extracted_dir: Path = EXTRACTED_DIR, width: int = 400
+    query: str,
+    limit: int = 5,
+    extracted_dir: Path = EXTRACTED_DIR,
+    width: int = 400,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
 ) -> tuple[Snippet, ...]:
-    """Pages of policies/extracted/ that contain the most query words (case-insensitive).
-    Deterministic: ties are broken by file name and page. The books and NOT_SEARCHED are never
-    searched."""
+    """Pages of policies/extracted/ and reviewed transcriptions that contain the most query words
+    (case-insensitive). Deterministic: ties are broken by file name and page. The books and
+    NOT_SEARCHED are never searched in the extracted text."""
     words = sorted({w for w in query.casefold().split() if len(w) > 2})
     if not words or limit <= 0:
         return ()
-    scored: list[tuple[int, str, int, str, bool]] = []
+    scored: list[tuple[int, str, int, str, str]] = []
     for path in sorted(extracted_dir.glob("*.jsonl")):
         if _not_searched(path.name):
             continue
@@ -156,14 +187,19 @@ def search_extracted(
             folded = text.casefold()
             score = sum(folded.count(w) for w in words)
             if score:
-                scored.append((-score, source, number, text, page.get("web") is True))
+                label = WEB_CONTEXT_LABEL if page.get("web") is True else CONTEXT_LABEL
+                scored.append((-score, source, number, text, label))
+    for page in _reviewed_transcriptions(transcriptions_dir):
+        source, number, text = str(page["source_file"]), int(str(page["page"])), str(page["text"])
+        score = sum(text.casefold().count(w) for w in words)
+        if score:
+            scored.append((-score, source, number, text, TRANSCRIPTION_CONTEXT_LABEL))
     scored.sort(key=lambda s: s[:3])
     snippets: list[Snippet] = []
-    for _, source, number, text, web in scored[:limit]:
+    for _, source, number, text, label in scored[:limit]:
         folded = text.casefold()
         first = min(i for w in words if (i := folded.find(w)) >= 0)
         start = max(0, first - width // 4)
-        label = WEB_CONTEXT_LABEL if web else CONTEXT_LABEL
         excerpt = " ".join(text[start : start + width].split())
         snippets.append(Snippet(source, number, excerpt, label))
     return tuple(snippets)

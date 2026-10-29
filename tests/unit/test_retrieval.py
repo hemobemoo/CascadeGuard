@@ -7,11 +7,12 @@ from pathlib import Path
 
 from cascadeguard.cli import load_world, search_repairs
 from cascadeguard.engine.constraints import RuleBook
-from cascadeguard.knowledge.loader import EXTRACTED_DIR
+from cascadeguard.knowledge.loader import EXTRACTED_DIR, TRANSCRIPTIONS_DIR
 from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
     NOT_CITABLE_LABEL,
     NOT_SEARCHED,
+    TRANSCRIPTION_CONTEXT_LABEL,
     WEB_CONTEXT_LABEL,
     clauses_for_role,
     extracted_digest,
@@ -107,6 +108,7 @@ def test_real_web_pages_are_searched_and_labelled() -> None:
 
 TRA_STRATEGY = "UAE_National_Cybersecurity_Strategy.pdf"
 NEWS_ITEM = "web/03_uae_national_cybersecurity_strategy.pdf"
+CHARTER = "The UAE Charter for the Development and Use of Artificial Intelligence.pdf"
 TRA_QUERIES = (
     "cyber security strategy",
     "information sharing exchange between tra and the entities",
@@ -119,7 +121,7 @@ TRA_QUERIES = (
 def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
     """Human decision 2026-10-28: the TRA-era strategy is kept as provenance only. Its extracted
     text does match these queries, yet no snippet from it is ever returned."""
-    assert {TRA_STRATEGY, NEWS_ITEM} == NOT_SEARCHED
+    assert {TRA_STRATEGY, NEWS_ITEM, CHARTER} == NOT_SEARCHED
     jsonl = EXTRACTED_DIR / TRA_STRATEGY.replace(".pdf", ".jsonl")
     pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
     for query in TRA_QUERIES:
@@ -208,3 +210,62 @@ def test_extracted_digest_ignores_line_endings(tmp_path: Path) -> None:
         d.mkdir()
         (d / "Law.jsonl").write_bytes(end.join(r.encode() for r in rows) + end)
     assert extracted_digest(lf) == extracted_digest(crlf)
+
+
+def test_the_charter_text_layer_is_never_searched_only_reviewed_transcriptions() -> None:
+    """Human decision 2026-10-29: the Charter's text layer is unreliable, so --extracted-context
+    searches only its reviewed page-image transcriptions (today: p.4)."""
+    found = search_extracted("human oversight judgment errors biases", limit=1000)
+    charter = [s for s in found if s.source_file == CHARTER]
+    assert [s.page for s in charter] == [4]
+    assert charter[0].label == TRANSCRIPTION_CONTEXT_LABEL
+    assert "human oversight over AI" in charter[0].text  # the image text, not "oversight Al"
+    # Words only the text layer or a draft transcription has never match.
+    assert not [s for s in search_extracted("theirreplaceablevalue", limit=1000)]
+    assert not [
+        s for s in search_extracted("peaceful coexistence", limit=1000) if s.source_file == CHARTER
+    ]  # p.5: draft transcription
+
+
+def test_only_reviewed_transcriptions_are_searched(tmp_path: Path) -> None:
+    rows = [
+        {
+            "source_file": CHARTER,
+            "page": 1,
+            "text": "incident report",
+            "transcribed": True,
+            "status": "reviewed",
+        },
+        {
+            "source_file": CHARTER,
+            "page": 2,
+            "text": "incident report",
+            "transcribed": True,
+            "status": "draft",
+        },
+        {"source_file": CHARTER, "page": 3, "text": "incident report", "status": "reviewed"},
+        {
+            "source_file": "Law.pdf",
+            "page": 1,
+            "text": "incident report",
+            "transcribed": True,
+            "status": "reviewed",
+        },  # not a TRANSCRIBED_SOURCES file
+    ]
+    (tmp_path / "x.jsonl").write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    empty = tmp_path / "extracted"
+    empty.mkdir()
+    found = search_extracted("incident report", extracted_dir=empty, transcriptions_dir=tmp_path)
+    assert [(s.source_file, s.page) for s in found] == [(CHARTER, 1)]
+
+
+def test_extracted_digest_follows_reviewed_transcriptions_only(tmp_path: Path) -> None:
+    none = tmp_path / "none"
+    none.mkdir()
+    base = extracted_digest(EXTRACTED_DIR, none)
+    draft = tmp_path / "draft"
+    draft.mkdir()
+    row = {"source_file": CHARTER, "page": 2, "text": "x", "transcribed": True, "status": "draft"}
+    (draft / "c.jsonl").write_text(json.dumps(row), encoding="utf-8")
+    assert extracted_digest(EXTRACTED_DIR, draft) == base
+    assert extracted_digest(EXTRACTED_DIR, TRANSCRIPTIONS_DIR) != base  # p.4 is reviewed
