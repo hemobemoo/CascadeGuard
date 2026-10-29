@@ -1079,6 +1079,10 @@ translation" to them. Not applied. Apply it?
 **Charter safety clause (decided 2026-10-29):** re-quoted from the official PDF p.3 (same id,
 draft; packet entry 16). The p.3 transcription waits for the human's check.
 
+**Charter transcriptions (gate 1):** pages 1, 2, 3 and 5 are transcribed from the images
+(draft). Page-by-page list: `docs/review/draft-review-packet.md`, "Charter transcriptions to
+check". On approval each record's `status` goes to `reviewed`.
+
 **Charter text in LLM context:** the Charter's garbled text layer is now searchable by
 `--extracted-context`. Add it to `NOT_SEARCHED`, or search the transcription instead?
 
