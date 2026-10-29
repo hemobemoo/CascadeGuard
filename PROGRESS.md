@@ -13,6 +13,8 @@ PRs follow, one at a time; each stops once open with CI green:
    expected outputs until then, by the human's choice (2026-10-29).
 3. Vector knowledge base (gate 3 approved: ChromaDB with `nomic-embed-text-v1.5` via
    `fastembed`), after reading the ITU reference code's ingestion (MIT, with attribution);
+   it excludes `NOT_SEARCHED` text and, for `TRANSCRIBED_SOURCES`, uses only reviewed
+   transcriptions (human decision 2026-10-29);
    vector retrieval on the LLM context path only; `cascadeguard kb query`; an export the
    reference code's ingestion can load.
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
@@ -1083,8 +1085,11 @@ draft; packet entry 16). The p.3 transcription waits for the human's check.
 (draft). Page-by-page list: `docs/review/draft-review-packet.md`, "Charter transcriptions to
 check". On approval each record's `status` goes to `reviewed`.
 
-**Charter text in LLM context:** the Charter's garbled text layer is now searchable by
-`--extracted-context`. Add it to `NOT_SEARCHED`, or search the transcription instead?
+**Charter text in LLM context (decided 2026-10-29):** the Charter's text layer is in
+`NOT_SEARCHED`; `--extracted-context` searches only reviewed transcriptions (label
+"transcribed from page image, reviewed; context only; not citable"), and they enter
+`extracted_digest`. **PR 3's vector knowledge base must use the same rule** (no chunk from a
+`TRANSCRIBED_SOURCES` text layer; only reviewed transcriptions).
 
 **Gate 6:** `AGENTS.md` says the knowledge base is "the 22 original PDF documents"; with the
 Charter it is 23. Its extraction workflow also says quotes come "verbatim from the extracted
