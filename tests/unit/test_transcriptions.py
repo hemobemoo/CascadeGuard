@@ -24,6 +24,11 @@ def charter_clause():
     return next(c for c in load_clauses() if c.id == CLAUSE_ID)
 
 
+def page_record(stem: str, page: int | None) -> dict[str, object]:
+    lines = (TRANSCRIPTIONS_DIR / f"{stem}.jsonl").read_text("utf-8").splitlines()
+    return next(r for r in map(json.loads, lines) if r["page"] == page)
+
+
 def test_the_charter_quote_is_found_only_in_the_transcription() -> None:
     clause = charter_clause()
     assert clause.source_file == CHARTER and TRANSCRIBED_FLAG in (clause.notes or "")
@@ -36,7 +41,7 @@ def test_the_charter_quote_is_found_only_in_the_transcription() -> None:
 def test_a_transcription_never_stands_in_for_extracted_text(tmp_path: Path) -> None:
     clause = charter_clause().model_copy(update={"notes": "no flag"})
     stem = Path(CHARTER).stem
-    record = json.loads((TRANSCRIPTIONS_DIR / f"{stem}.jsonl").read_text("utf-8"))
+    record = page_record(stem, clause.page)
     (tmp_path / f"{stem}.jsonl").write_text(json.dumps(record), encoding="utf-8")
     assert not quote_found_on_page(clause, extracted_dir=tmp_path)
 
@@ -44,7 +49,7 @@ def test_a_transcription_never_stands_in_for_extracted_text(tmp_path: Path) -> N
 def test_extracted_text_never_stands_in_for_a_transcription(tmp_path: Path) -> None:
     clause = charter_clause()
     stem = Path(CHARTER).stem
-    record = json.loads((TRANSCRIPTIONS_DIR / f"{stem}.jsonl").read_text("utf-8"))
+    record = page_record(stem, clause.page)
     del record["transcribed"]  # an extracted-style record in the transcriptions folder
     (tmp_path / f"{stem}.jsonl").write_text(json.dumps(record), encoding="utf-8")
     assert not quote_found_on_page(clause, transcriptions_dir=tmp_path)

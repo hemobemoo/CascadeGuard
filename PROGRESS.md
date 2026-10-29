@@ -1076,9 +1076,8 @@ policy, quoted by `uae.mohap-smart-health.p7-liability`, reviewed, and two draft
 uaelegislation.gov.ae, not by MOHAP. Applying the rule to web transcriptions would add "English
 translation" to them. Not applied. Apply it?
 
-**Charter safety clause:** `uae.ai-charter.safety` (draft) still cites the compilation; its text
-is word for word on the official PDF p.3 (evidence-auditor). Re-quote it too (with a p.3
-transcription)?
+**Charter safety clause (decided 2026-10-29):** re-quoted from the official PDF p.3 (same id,
+draft; packet entry 16). The p.3 transcription waits for the human's check.
 
 **Charter text in LLM context:** the Charter's garbled text layer is now searchable by
 `--extracted-context`. Add it to `NOT_SEARCHED`, or search the transcription instead?
