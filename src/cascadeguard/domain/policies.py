@@ -13,6 +13,10 @@ OCR_DIR = "ocr/"  # source_file prefix of OCR'd copies in policies/sources/ocr/ 
 OCR_FLAG = "OCR — check against image"  # must appear in notes of a clause quoted from OCR text
 WEB_DIR = "web/"  # source_file prefix of web-page transcriptions in policies/sources/web/
 WEB_FLAG = "web transcription — unverified"  # must appear in notes of a clause quoted from one
+# In notes of a clause quoted from a page whose text layer is unreliable: the quote is checked
+# against a transcription of the page image in policies/transcriptions/ (human decision
+# 2026-10-29), which the human checks against the image with the clause.
+TRANSCRIBED_FLAG = "transcribed from page image — check against image"
 LABEL_SEPARATOR = " · "  # between a clause's status and its qualifiers in status_label
 # Originals in policies/sources/ that are not official documents, with the type shown in their
 # clauses' labels. Each must match its row in docs/policy-inventory.md (tested).
