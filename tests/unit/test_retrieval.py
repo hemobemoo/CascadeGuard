@@ -214,12 +214,16 @@ def test_extracted_digest_ignores_line_endings(tmp_path: Path) -> None:
 
 def test_the_charter_text_layer_is_never_searched_only_reviewed_transcriptions() -> None:
     """Human decision 2026-10-29: the Charter's text layer is unreliable, so --extracted-context
-    searches only its reviewed page-image transcriptions (today: p.4)."""
-    found = search_extracted("human oversight judgment errors biases", limit=1000)
+    searches only its reviewed page-image transcriptions."""
+    lines = (TRANSCRIPTIONS_DIR / f"{Path(CHARTER).stem}.jsonl").read_text("utf-8").splitlines()
+    reviewed = sorted(r["page"] for r in map(json.loads, lines) if r["status"] == "reviewed")
+    found = search_extracted("the uae and of", limit=1000)  # words on every Charter page
     charter = [s for s in found if s.source_file == CHARTER]
-    assert [s.page for s in charter] == [4]
-    assert charter[0].label == TRANSCRIPTION_CONTEXT_LABEL
-    assert "human oversight over AI" in charter[0].text  # the image text, not "oversight Al"
+    assert sorted(s.page for s in charter) == reviewed and reviewed
+    assert all(s.label == TRANSCRIPTION_CONTEXT_LABEL for s in charter)
+    oversight = search_extracted("human oversight judgment errors biases", limit=1000)
+    page4 = [s for s in oversight if s.source_file == CHARTER]
+    assert all("oversight Al" not in s.text for s in page4)  # never the garbled text layer
     # Words only the text layer or a draft transcription has never match.
     assert not [s for s in search_extracted("theirreplaceablevalue", limit=1000)]
     assert not [

@@ -91,8 +91,9 @@ def test_only_sources_with_an_unreliable_text_layer_may_be_transcribed() -> None
     rows = {
         line.split("|")[2].strip(" `"): line for line in inventory.splitlines() if "| `" in line
     }
-    for source in TRANSCRIBED_SOURCES:
-        assert "unreliable" in rows[source], source
+    for source in TRANSCRIBED_SOURCES:  # the row's last column ("Clean?") says so
+        clean = rows[source].rstrip(" |").rsplit("|", 1)[1]
+        assert "No — " in clean and "unreliable" in clean and "not unreliable" not in clean
 
 
 def all_records() -> list[dict[str, object]]:
@@ -113,6 +114,7 @@ def test_every_reviewed_transcription_matches_its_approved_digest() -> None:
     }
     assert set(reviewed) <= set(approved), "reviewed without a human approval"
     for key, record in reviewed.items():
+        assert record.get("reviewed_by") and record.get("reviewed_on"), key
         assert transcription_digest(str(record["text"])) == approved[key], (
             f"{key} was edited after approval: set it back to draft"
         )
