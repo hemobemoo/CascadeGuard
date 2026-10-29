@@ -16,8 +16,8 @@ showed it.
 
 > **Note on submission method.** The event page lists what to submit (a technical report of at
 > most 5 pages on the official template, the GitHub repository, the knowledge base, and an
-> optional demo video) but does not state how to submit. The human's instruction is to email
-> the repository link, so everything must be in the repository.
+> optional demo video) but does not state how to submit. Emailing the repository link comes
+> from mentoring session 4 (the human, 2026-10-29), so everything must be in the repository.
 
 ## Ranked gaps (by effect on scoring, then effort)
 
@@ -303,4 +303,5 @@ Also missing for an open, emailed submission:
 - Whether official PDFs exist for the MOHAP policy and the AI Charter.
 - Whether DuckDB's vector functions need an extension.
 - The submission template's contents.
-- Whether the organizers accept an emailed link (the page states no method).
+- Whether the organizers accept an emailed link: the page states no method; mentoring session 4
+  says to email it (the human, 2026-10-29).
