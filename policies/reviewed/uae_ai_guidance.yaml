@@ -26,13 +26,13 @@ clauses:
       6. Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and
       human oversight over AI, aligning with ethical values and social standards to correct any
       errors or biases that may arise.
-    source_file: UAE Policy Foundation.pdf
-    page: 2
-    article: Priorities & Key Components, 6
-    issuer: UAE Artificial Intelligence, Digital Economy and Remote Work Applications Office
+    source_file: The UAE Charter for the Development and Use of Artificial Intelligence.pdf
+    page: 4
+    article: General Principles of the Charter, 6
+    issuer: UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office
     jurisdiction: UAE
     document_date: "2024-07"
-    status: reviewed
+    status: draft
     binding: false
     normalized:
       basis: interpreted
@@ -47,6 +47,13 @@ clauses:
       Policy charter, not law. Supports human review of automated locks but assigns no owner
       or deadline. The text names no actor or action; `health_service_operator` and
       `review_automated_lockouts` are the scenario's mapping, an interpretation.
+      Re-quoted 2026-10-29 from the official Charter PDF (human decision; Ibrahim Melhem), printed
+      page 04, item 6 under "General Principles of the Charter:" (heading on p.3); issuer and
+      date as printed on p.1. Text unchanged from the earlier source (UAE Policy Foundation.pdf
+      p.2, an unofficial compilation). The PDF's pages are images with an unreliable text layer
+      (p.4 reads "human over / oversight Al"), so the quote is checked against
+      policies/transcriptions/, transcribed from page image — check against image. Back to draft
+      for re-approval (AGENTS.md gate 1); it was reviewed from the compilation.
 
   - id: mocai.ethics.contest-redress
     title: "MOCAI ethics: contest and redress against AI decisions"
