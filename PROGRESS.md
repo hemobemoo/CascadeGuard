@@ -60,6 +60,32 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
 
 ## Done
 
+### Clause qualifier labels (branch `clause-qualifier-labels`, stacked on `review-packet-6d`)
+Human answer 2 (2026-10-29), implemented; PR not merged.
+- `PolicyClause.status_label` = status, then binding status (binding / not binding / binding
+  unknown), then source type when the source is not an original document (web transcription,
+  OCR copy, or `SOURCE_TYPES`: `UAE Policy Foundation.pdf` → "unofficial compilation"), then
+  "international precedent" when the jurisdiction does not start with the UAE or an emirate
+  (whole words). Illustrative clauses keep "illustrative". One property feeds agents' views, the
+  CLI, the UI and exports. Example: `uae.ai-charter.human-oversight [reviewed (interpreted) · not
+  binding · unofficial compilation]`.
+- Effect: role views and LLM cache keys change (accepted). Baseline result, repair search and
+  both goldens unchanged. Exports' `"status"` now carries the full label (intended: it is the
+  label shown next to the clause).
+- Deferred MINOR (test-breaker, round 2): jurisdiction is free text, so a mixed value such as
+  "UAE and EU" would read as UAE. Every corpus jurisdiction is listed and labelled correctly
+  (tested); a closed jurisdiction grammar in the loader would close it.
+- Tests: `tests/unit/test_status_qualifiers.py` (label rules, every corpus clause exactly,
+  `SOURCE_TYPES` against the inventory, agents/CLI/UI). Two LLM-cache tests now pick the
+  files of the last steps instead of the first by hash, which depended on view contents.
+- UI checked with Playwright: `docs/review/qualifier-labels-ui.png`.
+
+Verify:
+```bash
+uv run pytest tests/unit/test_status_qualifiers.py -q
+uv run cascadeguard run uae_health_access   # labels in the clause list
+```
+
 ### Phase 6d — Official sources (branch `phase-6d-official-sources`)
 - `OECD_Recommendation_AI.pdf`, `UNESCO Recommendation on the Ethics of Artificial
   Intelligence.pdf`, `UAE_National_Cybersecurity_Strategy.pdf` moved from the root to
@@ -984,6 +1010,23 @@ Still on the review list (draft, open): `uae.cyber-strategy-2025.governance-aim`
 p.2). Only an announcement summary is in the repository; they wait for the official strategy PDF
 (see "Open items").
 
+Questions for the human from the qualifier-label review (no change made):
+- Drafts also carry the binding qualifier, e.g. `uae.pdpl.art9-1 [draft · binding]`; the
+  answer named "reviewed" only. Keep on drafts, or drop the binding part for drafts?
+- "binding" has no scope hint, though PDPL applicability to health data is open (Art 2(2)) and
+  the FL 2/2019 notes call applicability a working reading. Add e.g. "binding · applicability
+  unconfirmed", or keep the scope in notes?
+- NIST (a US voluntary framework) is labelled "international precedent". Keep, or "foreign
+  precedent"?
+- Illustrative clauses always show plain "illustrative", even a foreign one. Confirm.
+- (phase-auditor, gate 4) The new labels change every role view, so the local recorded LLM
+  cache (`data/llm_cache`, not committed) no longer matches: an offline LLM run is `not_cached`
+  on 36 of 36 steps, and the UI's "LLM (cached only)" mode has no recorded decisions. Re-recording
+  is a paid run. Re-record before the demo, or keep the demo on scripted agents?
+- (evidence-auditor) FL 2/2019 is an English translation and the PDPL and telecom PDFs are
+  English versions or consolidations; their labels say "binding" with no source type. Add a
+  qualifier such as "English translation", or keep that in notes?
+
 Answers from the human on the gate-1 questions (2026-10-29):
 1. Keep a rejected draft citation for the demo: yes, but not by leaving a real clause
    unreviewed. Later, in demo prep, add a demo-only scenario (not the golden baseline) where the
@@ -1101,9 +1144,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d merged and tagged `phase-6d`. Gate 1 decided (2026-10-28); the `review-packet-6d` PR
-carries the "Reviewed by human" commit and the updated baseline golden. The human merges it and
-decides whether a draft citation stays in the demo baseline. No new phase until then. Correction (human, 2026-10-28) to the earlier
+Phase 6d merged and tagged `phase-6d`. Gate 1 decided (2026-10-28): PR #12 (`review-packet-6d`)
+awaits the human's merge. The qualifier-label PR (`clause-qualifier-labels`, stacked on #12)
+follows. The submission-readiness audit is `docs/submission-readiness.md` (2026-10-29; deadline
+10 Nov 2026); its ranked gaps are the next work, on the human's go-ahead. Demo-only draft
+citation scenario: in demo prep (answer 1). No new phase until then. Correction (human, 2026-10-28) to the earlier
 next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
 so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
