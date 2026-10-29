@@ -119,3 +119,23 @@ def test_names_windows_would_trim_are_refused(dirs: tuple[Path, Path], source: s
     write(reviewed, source)
     with pytest.raises(ClauseLoadError, match="source_file"):
         load_clauses(reviewed, sources)
+
+
+def test_a_source_must_be_named_as_listed_not_by_a_short_name(dirs: tuple[Path, Path]) -> None:
+    """A Windows 8.3 short name would open the file but escape the labels' spelling rules."""
+    reviewed, sources = dirs
+    (sources / "doc~1.pdf").write_bytes(b"%PDF-")
+    write(reviewed, "doc~1.pdf")
+    with pytest.raises(ClauseLoadError, match="as listed"):
+        load_clauses(reviewed, sources)
+
+
+def test_real_short_names_are_refused(dirs: tuple[Path, Path]) -> None:
+    reviewed, sources = dirs
+    long_name = sources / "A long document name.pdf"
+    long_name.write_bytes(b"%PDF-")
+    short = [p.name for p in sources.iterdir()]  # the listing never shows short names
+    assert "A long document name.pdf" in short
+    write(reviewed, "ALONGD~1.PDF")
+    with pytest.raises(ClauseLoadError, match="source_file"):
+        load_clauses(reviewed, sources)

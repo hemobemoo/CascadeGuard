@@ -7,6 +7,53 @@ Prototype for the ITU AI for Good Sandbox Hackathon (UAE). Decision support only
 issue legal interpretations. All scenario data is synthetic. See `CascadeGuard.md` for the
 concept, `AGENTS.md` for the rules, and `PROGRESS.md` for current status.
 
+## Submission
+
+ITU AI for Good Sandbox Hackathon (UAE), submitted by sending this repository's link.
+
+| | |
+|---|---|
+| Team | GM of AI |
+| Member | Ibrahim Melhem (sole member) |
+| Affiliation | Al Balqa Applied University |
+| Mentor | Dr. Wafaa Almaaitah |
+
+**Reproduce step by step** (no API key and no LLM calls; scripted agents are the default and
+give byte-identical output on every run):
+
+1. `uv sync` installs Python 3.12 and the pinned dependencies (`uv.lock`).
+2. `uv run cascadeguard run uae_health_access` runs the incident without a repair. Its result
+   is pinned in `scenarios/uae_health_access/expected_baseline.yaml` (checked by
+   `tests/integration/test_real_baseline.py`).
+3. `uv run cascadeguard repairs uae_health_access` searches, replays and ranks every candidate
+   repair. The ranking is pinned in `scenarios/uae_health_access/expected_repairs.yaml` (checked
+   by `tests/integration/test_repairs.py`).
+4. `uv run cascadeguard run uae_health_access --repair <repair-id>` replays the same incident
+   with one repair (ids from step 3).
+5. `uv run python -m cascadeguard.ui.app` opens the demo UI at http://localhost:8765.
+6. `uv run pytest` runs the tests (see Checks below).
+
+**Where things are**
+
+| What | Where |
+|---|---|
+| Concept and requirements | `CascadeGuard.md`, `specs/` |
+| Knowledge base: original sources | `policies/sources/` (SHA-256 and status in `docs/policy-inventory.md`) |
+| Knowledge base: cited clauses | `policies/reviewed/*.yaml` (verbatim text, file, page, status; human approvals in `policies/approvals.yaml`) |
+| How clauses are extracted and reviewed | `docs/policy-methodology.md` |
+| Scenario, roles and expected outputs | `scenarios/uae_health_access/` |
+| Architecture | `docs/architecture.md`, `docs/decisions/` |
+| Evaluation | `docs/evaluation/` |
+| Submission readiness audit | `docs/submission-readiness.md` |
+
+Still to be added before submission, each in its own pull request: the vector knowledge base
+and its `cascadeguard kb query` command, the governed vs ungoverned comparison, the gap analysis
+(`docs/gap-analysis.md`), an example trace export (`docs/evaluation/traces/`), and the technical
+report.
+
+**Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in
+`policies/sources/` are not: they belong to their issuers (see Sources).
+
 ## Sources
 
 The documents in `policies/sources/` belong to their issuers and are used here for research

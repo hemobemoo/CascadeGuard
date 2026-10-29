@@ -4,6 +4,27 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
+**Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
+Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
+PRs follow, one at a time; each stops once open with CI green:
+1. **Label refinements, web/03 exclusion, licence and README** (branch `label-refinements`):
+   built; see Done.
+2. Official AI Charter PDF as an original; re-quote `uae.ai-charter.human-oversight` from it
+   (same id, back to draft) and a review packet entry.
+3. Vector knowledge base (gate 3 approved: ChromaDB with `nomic-embed-text-v1.5` via
+   `fastembed`), after reading the ITU reference code's ingestion (MIT, with attribution);
+   vector retrieval on the LLM context path only; `cascadeguard kb query`; an export the
+   reference code's ingestion can load.
+4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
+   golden) and the side-by-side comparison in the CLI and UI.
+5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`.
+
+Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
+ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
+only after asking again; until then the demo stays scripted. The two
+`uae.cyber-strategy-2025.*` drafts stay unloaded for this submission; no new sources after the
+Charter PDF. Live querying of the adviser is deferred until after submission.
+
 **Phase 6d — Official sources: merged to main via PR #11 (merge commit bf753c9, branch
 `phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
 after the PR #11 decisions were applied, evidence-auditor round 3 PASS and CI green). Before the
@@ -60,8 +81,32 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
 
 ## Done
 
-### Clause qualifier labels (branch `clause-qualifier-labels`, stacked on `review-packet-6d`)
-Human answer 2 (2026-10-29), implemented; PR not merged.
+### Label refinements, web/03 exclusion, licence, README (branch `label-refinements`)
+Human decisions 2026-10-29. PR not merged.
+- Labels: "foreign precedent" for a single non-UAE jurisdiction (EU, US: GDPR, EU AI Act, NIST),
+  "international precedent" for a jurisdiction starting "International" (OECD, UNESCO, ITU).
+  "English translation" for files in `TRANSLATIONS` (`domain/policies.py`), listed with the
+  reason in `docs/policy-inventory.md` and tested against it: the telecom law and its OCR copy,
+  Dubai Law 26/2015, the PDPL and FL 2/2019. The DHA policy is not listed (the issuer's own
+  English version; see "Waiting on human"). Binding stays on drafts; no scope hint; illustrative
+  unchanged. Role views and LLM cache keys change again (recording run comes later, gate 4).
+  Baseline, repair search and both goldens unchanged.
+- `web/03_uae_national_cybersecurity_strategy.pdf` (a news item on the 2025 strategy) added to
+  `NOT_SEARCHED`: never in `--extracted-context`; `extracted_digest` ignores it (tested). The
+  test that checked it was searched is replaced by one checking it never is (decision change).
+- `LICENSE` (MIT, Ibrahim Melhem). README "Submission" section: team, step-by-step
+  reproduction, where things are, what is still to come. No email in the README.
+- `docs/submission-readiness.md` (the audit) is included; it now notes that emailing the repo
+  link comes from mentoring session 4.
+- Review round 1: evidence-auditor, test-breaker and phase-auditor all PASS with MINORs, all
+  fixed: inventory no longer states Arabic authority as fact where the file does not; a third
+  FL 2/2019 label pin updated (792a5ac; commit aaf78c1 alone fails that test); the loader refuses
+  a `source_file` part with "~" or not listed in its directory (Windows short names escaped the
+  labels); "International" matched as a whole word, any case; news item tested under other names.
+  Deferred: `test_performance_budget` failed once under concurrent suites, passed alone.
+
+### Clause qualifier labels (PR #13, merged after PR #12)
+Human answer 2 (2026-10-29), implemented and merged.
 - `PolicyClause.status_label` = status, then binding status (binding / not binding / binding
   unknown), then source type when the source is not an original document (web transcription,
   OCR copy, or `SOURCE_TYPES`: `UAE Policy Foundation.pdf` → "unofficial compilation"), then
@@ -995,8 +1040,14 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Gate 1 on the 6c/6d review list: decided (Ibrahim Melhem, 2026-10-28); PR from
-`review-packet-6d`, not merged.** Decisions and the measured impact are in
+**To confirm (label refinements PR):** the "English translation" list. Listed: telecom law (and
+OCR copy), Dubai Law 26/2015, PDPL, FL 2/2019. Not listed: the DHA policy (issued in English by
+DHA itself, though it says the Arabic version prevails), MOCAI, the AI Strategy 2031 and the AI
+Adoption Guideline (issued in English by the government, no translation notice). One rule
+question: the TDRA consolidation is listed although TDRA, the regulator, published it (as DHA
+published its own policy); keep it listed, or treat TDRA like DHA?
+
+**Gate 1 on the 6c/6d review list: decided (Ibrahim Melhem, 2026-10-28); merged via PR #12.** Decisions and the measured impact are in
 `docs/review/draft-review-packet.md`, "Decisions"; each clause's notes record them.
 - Reviewed: `uae.mohap-smart-health.p7-liability`, `unesco.ai-ethics.human-oversight`,
   `unesco.ai-ethics.review-and-correct`, `unesco.ai-ethics.responsibility-accountability`,
@@ -1010,7 +1061,9 @@ Still on the review list (draft, open): `uae.cyber-strategy-2025.governance-aim`
 p.2). Only an announcement summary is in the repository; they wait for the official strategy PDF
 (see "Open items").
 
-Questions for the human from the qualifier-label review (no change made):
+Questions for the human from the qualifier-label review (answered 2026-10-29: keep binding on
+drafts; no scope hint; foreign vs international precedent; keep "illustrative"; add "English
+translation"; gate 4 recording run later, see "Current phase"):
 - Drafts also carry the binding qualifier, e.g. `uae.pdpl.art9-1 [draft · binding]`; the
   answer named "reviewed" only. Keep on drafts, or drop the binding part for drafts?
 - "binding" has no scope hint, though PDPL applicability to health data is open (Art 2(2)) and
@@ -1144,17 +1197,13 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d merged and tagged `phase-6d`. Gate 1 decided (2026-10-28): PR #12 (`review-packet-6d`)
-awaits the human's merge. The qualifier-label PR (`clause-qualifier-labels`, stacked on #12)
-follows. The submission-readiness audit is `docs/submission-readiness.md` (2026-10-29; deadline
-10 Nov 2026); its ranked gaps are the next work, on the human's go-ahead. Demo-only draft
-citation scenario: in demo prep (answer 1). No new phase until then. Correction (human, 2026-10-28) to the earlier
-next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
-added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
-so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
-not re-quoted for now. Gate 1 (2026-10-28) keeps them draft and open until a future phase adds the
-official strategy PDF (see "Open items"). Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the
-gap-wording known limitation and the two-owners limitation.
+Label-refinements PR (1 of 5) open, CI green; on the human's go-ahead, PR 2: the official AI Charter PDF
+(`The UAE Charter for the Development and Use of Artificial Intelligence.pdf`, now in the repo
+root, untracked) moves to `policies/sources/` with its SHA-256 and an inventory entry, and
+`uae.ai-charter.human-oversight` is re-quoted from it. Then PRs 3–5 (see "Current phase").
+
+Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
+two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
 
 Earlier (done):
 
