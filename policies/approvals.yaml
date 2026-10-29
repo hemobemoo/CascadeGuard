@@ -33,3 +33,10 @@ approved:
   unesco.ai-ethics.responsibility-accountability: 3195745fed5d15a48fefa5fbd6591cace0170368b5f51486c92dfe13e95531f2
   unesco.ai-ethics.review-and-correct: 10629ca9a2b97e92f340a55be8130bcb843c90457c705d0f8c8b806ce07f629f
 reapproval_needed: []
+# Page-image transcriptions the human checked against the image (AGENTS.md, transcription
+# route): "<source_file>#<page>" -> SHA-256 of the record's text at approval. A record with
+# `status: reviewed` must match its entry here; editing its text sends it back to draft, and any
+# reviewed clause resting on it with it (tests/unit/test_transcriptions.py).
+# Charter p.4: approved by the human with uae.ai-charter.human-oversight, 2026-10-29 (0e03aef).
+approved_transcriptions:
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#4": 31f30fc7a152dc6bd28ffb34e2d6d0100c8ba8ffda80c2213c22eac85ef19840

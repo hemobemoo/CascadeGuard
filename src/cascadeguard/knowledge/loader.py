@@ -92,18 +92,32 @@ def clause_digest(clause: PolicyClause) -> str:
     return hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+APPROVAL_KEYS = frozenset({"approved", "reapproval_needed", "approved_transcriptions"})
+
+
+def _approvals_data(path: Path) -> dict[str, Any]:
+    raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+    if not isinstance(raw, dict) or frozenset(cast(dict[str, Any], raw)) != APPROVAL_KEYS:
+        raise ClauseLoadError(f"{path.name}: expected exactly {sorted(APPROVAL_KEYS)}")
+    return cast(dict[str, Any], raw)
+
+
 def load_approvals(path: Path = APPROVALS_FILE) -> tuple[dict[str, str], tuple[str, ...]]:
     """The human's approved digests and the clauses awaiting re-approval (approvals.yaml)."""
-    raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
-    if not isinstance(raw, dict) or set(cast(dict[str, Any], raw)) != {
-        "approved",
-        "reapproval_needed",
-    }:
-        raise ClauseLoadError(f"{path.name}: expected 'approved' and 'reapproval_needed'")
-    data = cast(dict[str, Any], raw)
+    data = _approvals_data(path)
     approved = cast(dict[str, str], data["approved"] or {})
     pending = cast(list[str], data["reapproval_needed"] or [])
     return dict(approved), tuple(pending)
+
+
+def load_transcription_approvals(path: Path = APPROVALS_FILE) -> dict[str, str]:
+    """The human's approved page-image transcriptions: "<source_file>#<page>" -> the SHA-256 of
+    the page text at approval (approvals.yaml, `approved_transcriptions`)."""
+    return dict(cast(dict[str, str], _approvals_data(path)["approved_transcriptions"] or {}))
+
+
+def transcription_digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def quote_found_on_page(

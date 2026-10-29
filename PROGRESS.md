@@ -8,9 +8,9 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
 PRs follow, one at a time; each stops once open with CI green:
 1. **Label refinements, web/03 exclusion, licence and README:** merged (PR #14).
-2. **Charter source and re-quote** (branch `charter-source`): built; waits on the human's
-   re-approval of `uae.ai-charter.human-oversight` (see "Waiting on human"). CI fails on the
-   expected outputs until then, by the human's choice (2026-10-29).
+2. **Charter source and re-quote** (PR #15, branch `charter-source`): `uae.ai-charter.human-oversight`
+   re-approved 2026-10-29; the safety clause re-quoted (draft); all Charter pages transcribed.
+   Waits on the human's check of the pp.1, 2, 3, 5 transcriptions, then merge.
 3. Vector knowledge base (gate 3 approved: ChromaDB with `nomic-embed-text-v1.5` via
    `fastembed`), after reading the ITU reference code's ingestion (MIT, with attribution);
    it excludes `NOT_SEARCHED` text and, for `TRANSCRIBED_SOURCES`, uses only reviewed
@@ -92,20 +92,28 @@ Human decisions 2026-10-29. PR not merged.
   `TRANSCRIBED_FLAG` ("transcribed from page image — check against image") is checked against
   `policies/transcriptions/<stem>.jsonl` (records `"transcribed": true`, `"status": "draft"`),
   never the text layer; an unflagged clause never against a transcription
-  (`tests/unit/test_transcriptions.py`). Transcribed: Charter p.4.
+  (`tests/unit/test_transcriptions.py`). Transcribed: every Charter page (p.4 reviewed; pp.1, 2, 3,
+  5 draft).
 - `uae.ai-charter.human-oversight` re-quoted from it: page 4, item 6, issuer as printed; text
-  unchanged; back to draft, listed under `reapproval_needed`. Packet entry 15 in
-  `docs/review/draft-review-packet.md`. While draft, the scripted health operator's T+45 and T+60
+  unchanged; went back to draft, then re-approved by the human on 2026-10-29 (commit
+  "Reviewed by human: uae.ai-charter.human-oversight"). Packet entry 15 in
+  `docs/review/draft-review-packet.md`. While it was draft, the scripted health operator's T+45 and T+60
   decisions are rejected (`draft_citation`) and the repair search finds no resolving repair:
   39 tests fail (24 unit, 9 integration including both expected-output tests, 6 e2e UI). Measured on a copy with the clause
   reviewed: only the approval-digest tests fail, and the baseline and repair output equal main's
   apart from the label.
 - Translation rule recorded in the inventory and applied to every file: `TRANSLATIONS` is
-  unchanged. It would change only for web/01 (not applied; see "Waiting on human").
+  unchanged. The rule covers documents only, so web/01 keeps "web transcription".
 - Counts: 23 original PDFs in the inventory, methodology and `AGENTS.md` (gate 6 approved).
-- Effect on LLM context: the Charter's extracted text (garbled text layer) is now searched by
-  `--extracted-context`, so `extracted_digest`, and with it the LLM prompt version and cache
-  keys, change when that flag is on. The recording run comes later anyway (gate 4).
+- Effect on LLM context: the Charter's text layer is never searched (`NOT_SEARCHED`); only its
+  reviewed transcriptions are, and they enter `extracted_digest`, so the LLM prompt version and
+  cache keys change when `--extracted-context` is on. The recording run comes later (gate 4).
+- `uae.ai-charter.safety` re-quoted from the official PDF p.3 (draft, packet entry 16);
+  baseline and repair output byte-identical.
+- Approved transcription pages are pinned by digest in `policies/approvals.yaml`
+  (`approved_transcriptions`); a reviewed clause may rest only on a reviewed page (tested).
+- Review round 2: evidence-auditor PASS (doc MINORs fixed), phase-auditor FAIL on stale
+  PROGRESS and PR body (fixed) plus the unenforced transcription rule (fixed above).
 - Review round 1: evidence-auditor PASS, test-breaker PASS (MINORs fixed:
   `TRANSCRIBED_SOURCES` allow-list, doc wording, failing-test count), phase-auditor FAIL only on
   the 39 expected failures while the clause is draft (MINORs fixed: structure file,
@@ -682,6 +690,8 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   "not printed (unofficial compilation)", date unknown. Clauses from its Charter part (pp. 1–3:
   `uae.ai-charter.safety`, `uae.ai-charter.human-oversight`) use issuer "UAE Artificial
   Intelligence, Digital Economy and Remote Work Applications Office", date 2024-07, binding false.
+  **Superseded 2026-10-29:** both Charter clauses now cite the official Charter PDF (#23), with
+  the issuer as printed on its p.1.
   The other parts and their pages are listed in `docs/policy-inventory.md`.
 
 - **Phase 2 engine decisions (2026-10-23):** authority comes from an obligation or permission
@@ -1249,10 +1259,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Charter PR (2 of 5) open; it waits on the human's re-approval of
-`uae.ai-charter.human-oversight` (then commit "Reviewed by human: …" with its new digest in
-`policies/approvals.yaml`, clear `reapproval_needed`, and CI goes green). Then PR 3, the vector
-knowledge base (see "Current phase").
+Charter PR #15 (2 of 5) open: the human checks the pp.1, 2, 3, 5 transcriptions (packet,
+"Charter transcriptions to check"), then merges. Then PR 3, the vector knowledge base (see
+"Current phase").
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
