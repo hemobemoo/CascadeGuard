@@ -38,5 +38,10 @@ reapproval_needed: []
 # `status: reviewed` must match its entry here; editing its text sends it back to draft, and any
 # reviewed clause resting on it with it (tests/unit/test_transcriptions.py).
 # Charter p.4: approved by the human with uae.ai-charter.human-oversight, 2026-10-29 (0e03aef).
+# Charter pp.1, 2, 3, 5: approved by the human (Ibrahim Melhem) against the page images, 2026-10-30.
 approved_transcriptions:
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#1": fd6f75f80a29812017ecf0d7531f2f64730c8606ec922d3a3266e1879f0a21e9
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#2": a16a280602009e287e4847f6708e816973b83734f22f8bd667f19206b17e20f9
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#3": 45bb66040696beaee08f372919a1f2d12aa16e3764858d4818f4921391933c86
   "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#4": 31f30fc7a152dc6bd28ffb34e2d6d0100c8ba8ffda80c2213c22eac85ef19840
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#5": a8a5aca2842073dd733d322a65ef948eb80f1c4afe0267402a257adcf8700a2d
