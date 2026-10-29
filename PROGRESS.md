@@ -101,6 +101,13 @@ Human decisions 2026-10-29. PR not merged.
 - Translation rule recorded in the inventory and applied to every file: `TRANSLATIONS` is
   unchanged. It would change only for web/01 (not applied; see "Waiting on human").
 - Counts: 23 original PDFs in the inventory and methodology. `AGENTS.md` still says 22 (gate 6).
+- Effect on LLM context: the Charter's extracted text (garbled text layer) is now searched by
+  `--extracted-context`, so `extracted_digest`, and with it the LLM prompt version and cache
+  keys, change when that flag is on. The recording run comes later anyway (gate 4).
+- Review round 1: evidence-auditor PASS, test-breaker PASS (MINORs fixed:
+  `TRANSCRIBED_SOURCES` allow-list, doc wording, failing-test count), phase-auditor FAIL only on
+  the 39 expected failures while the clause is draft (MINORs fixed: structure file,
+  architecture line, this note).
 
 ### Label refinements, web/03 exclusion, licence, README (PR #14, merged)
 Human decisions 2026-10-29.
@@ -1074,8 +1081,12 @@ translation" to them. Not applied. Apply it?
 is word for word on the official PDF p.3 (evidence-auditor). Re-quote it too (with a p.3
 transcription)?
 
+**Charter text in LLM context:** the Charter's garbled text layer is now searchable by
+`--extracted-context`. Add it to `NOT_SEARCHED`, or search the transcription instead?
+
 **Gate 6:** `AGENTS.md` says the knowledge base is "the 22 original PDF documents"; with the
-Charter it is 23. Change `AGENTS.md`?
+Charter it is 23. Its extraction workflow also says quotes come "verbatim from the extracted
+page", which the transcription route goes beyond. Change `AGENTS.md`?
 
 **Answered 2026-10-29 (TDRA stays listed; rule recorded):** the "English translation" list. Listed: telecom law (and
 OCR copy), Dubai Law 26/2015, PDPL, FL 2/2019. Not listed: the DHA policy (issued in English by
