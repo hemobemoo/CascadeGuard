@@ -55,6 +55,14 @@ BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
             {"binding": False, "jurisdiction": "International (ITU-T Recommendation)"},
             "reviewed · not binding · international precedent",
         ),
+        (  # whole word, any case
+            {"binding": False, "jurisdiction": "international (x)"},
+            "reviewed · not binding · international precedent",
+        ),
+        (
+            {"binding": False, "jurisdiction": "Internationale Org"},
+            "reviewed · not binding · foreign precedent",
+        ),
         (  # names the UAE, but is not a UAE jurisdiction
             {"binding": False, "jurisdiction": "International (UAE adherence not checked)"},
             "reviewed · not binding · international precedent",
@@ -130,8 +138,6 @@ def test_label_shows_binding_status_and_source_type(changes: dict[str, Any], lab
     assert PolicyClause.model_validate(BASE | changes).status_label == label
 
 
-# Every UAE jurisdiction in the corpus, listed by hand (independent of is_uae_jurisdiction).
-# A clause with a new jurisdiction fails here until it is added to this set or is foreign.
 # Every UAE source that is an English translation not verified as official, listed by hand.
 TRANSLATED_IN_CORPUS = {
     "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
@@ -139,6 +145,8 @@ TRANSLATED_IN_CORPUS = {
     "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf",
     "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf",
 }
+# Every UAE jurisdiction in the corpus, listed by hand (independent of is_uae_jurisdiction).
+# A clause with a new jurisdiction fails here until it is added to one of these sets.
 UAE_IN_CORPUS = {
     "UAE",
     "Dubai, UAE",
