@@ -2,15 +2,85 @@
 
 Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
+## Start here (new session, 2026-10-30)
+
+Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
+
+**State of main.** Submission PRs 1 and 2 are merged (#14 labels/licence/README; #15 Charter).
+The submission deadline is 10 Nov 2026 (repo link by email). No PR is open. The demo runs on
+scripted agents with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
+
+**What PR #15 delivered.**
+- The official UAE AI Charter PDF is original #23 (`policies/sources/`, SHA-256 in
+  `docs/policy-inventory.md`). Its text layer is unreliable, so all five pages are transcribed
+  from the page images in `policies/transcriptions/`. All five are reviewed by the human and
+  pinned by text hash under `approved_transcriptions` in `policies/approvals.yaml`.
+- Both Charter clauses cite it and are reviewed: `uae.ai-charter.human-oversight` (p.4, item 6)
+  and `uae.ai-charter.safety` (p.3, item 2). The baseline loads 21 clauses (21 drafts not
+  loaded); the timeline, findings, repair search and both expected outputs equal what they
+  were before the Charter work.
+- The transcription route is in `AGENTS.md`: only for `TRANSCRIBED_SOURCES`, transcribed from
+  the image, checked by the human before any clause resting on it is reviewed.
+- `--extracted-context` never searches the Charter's text layer (`NOT_SEARCHED`); it searches
+  only reviewed transcriptions, refusing duplicate or ill-typed page records
+  (`transcription_key`).
+
+**Next: PR 3, vector knowledge base.** Branch `vector-kb` from main. Gate 3 is approved:
+ChromaDB, embeddings from `nomic-embed-text-v1.5` via `fastembed` (no Ollama). Not started.
+- **First task:** read the ITU reference code's ingestion
+  (github.com/CrashingGuru/ITUAIReadiness; MIT) and reuse or adapt its chunking and collection
+  layout (`kb_main` etc.) with attribution, before writing code.
+- **Key files:**
+  - `src/cascadeguard/knowledge/retrieval.py`: `search_extracted`, `NOT_SEARCHED`,
+    `_reviewed_transcriptions`, `extracted_digest` (the rules to copy).
+  - `src/cascadeguard/knowledge/loader.py`: `transcription_key`, `load_transcription_approvals`,
+    `transcription_digest`, `TRANSCRIPTIONS_DIR`, `EXTRACTED_DIR`.
+  - `src/cascadeguard/agents/llm.py`: where context snippets enter the LLM prompt
+    (`search_extracted(query, limit=3)`) and the prompt version (`+extracted:<digest>`).
+  - `src/cascadeguard/cli.py`: add `cascadeguard kb query "<text>"`.
+  - `pyproject.toml` / `uv.lock`: add `chromadb` and `fastembed` (approved), nothing else.
+- **Rules PR 3 must follow:**
+  - Index only `policies/extracted/` text outside `NOT_SEARCHED` (never the books, the TRA-era
+    strategy, the web/03 news item, or the Charter's text layer) plus **reviewed**
+    transcriptions. Never a draft transcription.
+  - Apply the same checks as the search: `transcription_key` typing, refuse a duplicate page.
+    Also (fifth-round MINOR, below) serve a transcription only if its text matches its pinned
+    digest in `approved_transcriptions`.
+  - Every chunk records `source_file`, page and span, and maps reviewed clauses to their
+    chunk. Chunks are context only, never citable, and nothing is shown as binding unless an
+    approved clause says so: show each clause's `status_label`.
+  - Vector retrieval on the LLM context path only. The scripted default, both expected
+    outputs and the non-LLM cache keys stay byte-identical. The index digest goes into the
+    prompt version, as `extracted_digest` does.
+  - Embed offline and commit what is needed to reproduce it. `cascadeguard kb query` returns
+    top-k chunks with file, page and label. Also export chunks and metadata in a form the
+    reference code's ingestion can load into ChromaDB, and say whether that was verified.
+  - Run the three reviewers and the full checks; stop once the PR is open with CI green.
+
+**Open items.**
+- **Paid recording run (gate 4):** the role views changed (labels; the safety clause now
+  reaches the `policy_legal_adviser`), so the local LLM cache no longer matches. One governed
+  LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
+  merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
+  after checking they hold no secrets.
+- **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found):**
+  - the case-folded and string-type source checks in `transcription_key` have no test;
+  - malformed transcription lines (blank, BOM, `null`, U+2028 inside text) raise
+    `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
+    split lines differently;
+  - the search serves any int page that says `"status": "reviewed"` without checking
+    `approved_transcriptions` at runtime (repo-data tests check the committed files). PR 3's
+    index should check it; the search can adopt the same check.
+- PRs 4 (`--governance off`) and 5 (gap analysis, traces) follow PR 3; see "Current phase".
+
 ## Current phase
 
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
 PRs follow, one at a time; each stops once open with CI green:
 1. **Label refinements, web/03 exclusion, licence and README:** merged (PR #14).
-2. **Charter source and re-quote** (PR #15, branch `charter-source`): `uae.ai-charter.human-oversight`
-   re-approved 2026-10-29; the safety clause re-quoted (draft); all Charter pages transcribed.
-   Waits on the human's check of the pp.1, 2, 3, 5 transcriptions, then merge.
+2. **Charter source and re-quote:** merged (PR #15), after test-breaker round 5 passed.
+   Both Charter clauses reviewed; all five pages transcribed and reviewed.
 3. Vector knowledge base (gate 3 approved: ChromaDB with `nomic-embed-text-v1.5` via
    `fastembed`), after reading the ITU reference code's ingestion (MIT, with attribution);
    it excludes `NOT_SEARCHED` text and, for `TRANSCRIBED_SOURCES`, uses only reviewed
@@ -124,7 +194,9 @@ Human decisions 2026-10-29. PR not merged.
   whose page is spelled "4" or " 04" passed the search's duplicate check. Fixed: a
   transcription record must have a string source_file and a plain int page
   (`transcription_key`), else it is refused; tested in 15 cases (5 spellings x before, after,
-  other file), 9 of which fail on the previous code. Not re-reviewed.
+  other file), 9 of which fail on the previous code.
+- Review round 5 (human-approved, scope 0d779d3): test-breaker PASS; three MINORs deferred
+  ("Start here", open items).
 - Review round 1: evidence-auditor PASS, test-breaker PASS (MINORs fixed:
   `TRANSCRIBED_SOURCES` allow-list, doc wording, failing-test count), phase-auditor FAIL only on
   the 39 expected failures while the clause is draft (MINORs fixed: structure file,
@@ -1270,9 +1342,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Charter PR #15 (2 of 5) open: the human checks the pp.1, 2, 3, 5 transcriptions (packet,
-"Charter transcriptions to check"), then merges. Then PR 3, the vector knowledge base (see
-"Current phase").
+PR 3, the vector knowledge base: see "Start here" for the branch, key files, first task and
+rules.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
