@@ -317,13 +317,13 @@ def test_json_exports_label_every_clause_and_keep_qualifications() -> None:
     assert all(set(f) >= {"qualification", "description"} for f in base["failures"])
     for f in base["failures"]:
         assert "not a confirmed legal or standards gap" in f["qualification"]
-    assert {"id": "dha.pp11.4-18-1", "status": "reviewed (interpreted)"} in [
+    assert {"id": "dha.pp11.4-18-1", "status": "reviewed (interpreted) · binding unknown"} in [
         c for f in base["failures"] for c in f["clauses"]
     ]
     assert all("status" in c for e in base["rejected_decisions"] for c in e.get("clauses", []))
     search_json = search_export(found)
     assert search_json["clause_set"] == found.clause_set
-    assert {"id": "uae.fl2-2019.art4", "status": "reviewed (interpreted)"} in search_json[
+    assert {"id": "uae.fl2-2019.art4", "status": "reviewed (interpreted) · binding"} in search_json[
         "discarded"
     ][0]["clauses"]
     replay_json = comparison_export(

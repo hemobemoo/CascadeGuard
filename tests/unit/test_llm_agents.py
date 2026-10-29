@@ -491,9 +491,19 @@ def test_duplicate_parameter_names_are_rejected_not_collapsed(
     assert len(client.requests) == 2  # retried once, then rejected
 
 
-def test_untrusted_cache_file_is_a_miss_not_a_crash(scripted: World, tmp_path: Path) -> None:
+def last_step_files(scripted: World, tmp_path: Path) -> list[Path]:
+    """Fill the cache, then return the files of the three last distinct steps an offline run
+    reads. Editing them cannot change any later view, so every edited file is read again. (Files
+    picked by hash order depend on the view contents, e.g. on clause labels.)"""
     llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)).baseline()
-    first, second, third = sorted(tmp_path.glob("*.json"))[:3]
+    reader = DecisionCache(tmp_path)
+    llm_world(scripted, None, reader).baseline()
+    keys = list(dict.fromkeys(reader.stats.keys_hit))[-3:]
+    return [tmp_path / f"{key}.json" for key in keys]
+
+
+def test_untrusted_cache_file_is_a_miss_not_a_crash(scripted: World, tmp_path: Path) -> None:
+    first, second, third = last_step_files(scripted, tmp_path)
     second.write_text(first.read_text(encoding="utf-8"), encoding="utf-8")  # copied entry
     third.write_text("{not json", encoding="utf-8")
     cache = DecisionCache(tmp_path)
@@ -535,8 +545,7 @@ def test_live_search_is_refused_by_the_world_in_use(
 def test_inconsistent_or_stored_failure_cache_entries_are_not_trusted(
     scripted: World, tmp_path: Path
 ) -> None:
-    llm_world(scripted, FakeClient(scripted_replies(scripted)), DecisionCache(tmp_path)).baseline()
-    files = sorted(tmp_path.glob("*.json"))[:3]
+    files = last_step_files(scripted, tmp_path)
     edits = (
         {"outcome": "decision", "decision": None, "no_decision": None},
         {"outcome": "no_decision", "no_decision": "invalid_output"},  # decision still present
