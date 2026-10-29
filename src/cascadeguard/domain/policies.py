@@ -18,8 +18,8 @@ LABEL_SEPARATOR = " · "  # between a clause's status and its qualifiers in stat
 # clauses' labels. Each must match its row in docs/policy-inventory.md (tested).
 SOURCE_TYPES = {"UAE Policy Foundation.pdf": "unofficial compilation"}
 # English texts of UAE legislation whose Arabic text is authoritative and whose English version
-# is not verified as an official translation (human decision 2026-10-29). Each must say
-# "English translation" in its row of docs/policy-inventory.md (tested).
+# is not verified as an official translation (human decision 2026-10-29). Each is listed under
+# "English translations not verified as official" in docs/policy-inventory.md (tested).
 TRANSLATIONS = frozenset(
     {
         "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
