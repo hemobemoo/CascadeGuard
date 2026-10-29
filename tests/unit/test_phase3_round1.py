@@ -323,9 +323,11 @@ def test_json_exports_label_every_clause_and_keep_qualifications() -> None:
     assert all("status" in c for e in base["rejected_decisions"] for c in e.get("clauses", []))
     search_json = search_export(found)
     assert search_json["clause_set"] == found.clause_set
-    assert {"id": "uae.fl2-2019.art4", "status": "reviewed (interpreted) · binding"} in search_json[
-        "discarded"
-    ][0]["clauses"]
+    fl2_art4 = {
+        "id": "uae.fl2-2019.art4",
+        "status": "reviewed (interpreted) · binding · English translation",
+    }
+    assert fl2_art4 in search_json["discarded"][0]["clauses"]
     replay_json = comparison_export(
         found.comparison("share.network_incident_status.telecom_operator.health_service_operator")
     )

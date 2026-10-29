@@ -186,6 +186,13 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
     resolved = (sources_dir / relative).resolve()
     if not resolved.is_relative_to(sources_dir.resolve()) or not resolved.exists():
         raise ClauseLoadError(f"{where}: unknown source_file")
+    # Each part must be a real entry name (any case), so a Windows short name ("UAEFED~1.PDF")
+    # cannot open a file while escaping the labels, which read the spelling.
+    directory = sources_dir
+    for part in relative.parts:
+        if "~" in part or part.casefold() not in {e.name.casefold() for e in directory.iterdir()}:
+            raise ClauseLoadError(f"{where}: source_file must name the file as listed")
+        directory = directory / part
 
 
 def _squash(text: str) -> str:

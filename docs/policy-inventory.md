@@ -56,6 +56,21 @@ listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_
 `dd9767dcc6528d3982363ee75a85502641a8d19ad325baa39029444ac11fbbf7`  `UAE_National_Cybersecurity_Strategy.pdf`
 `faf8887e89c3b43aa373a1e95433f1322eae14fae4fe7db59373fe6a2ed6d675`  `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf`
 
+**English translations not verified as official** (human decision 2026-10-29). Clauses quoted
+from these files carry "English translation" in their label (`TRANSLATIONS` in
+`src/cascadeguard/domain/policies.py`; tested against this list). Each is an English text of UAE
+legislation; the Arabic text is presumed authoritative, but only Dubai Law 26/2015 says so in the
+document (p.1). Nothing in the repository verifies the English as an official translation. The
+DHA policy (#10) is not listed: it is the issuer's own English version, though it says the Arabic
+version prevails (p.46). The TDRA consolidation is listed, though TDRA published it; whether to
+treat it like the DHA policy is open (PROGRESS, "Waiting on human").
+
+- `887026278-TDRA-Telecom-Law-Final-English-o.pdf`
+- `ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf`
+- `Dubai Law No. (26) of 2015.pdf`
+- `Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf`
+- `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf`
+
 **#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
 and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.
 

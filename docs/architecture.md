@@ -20,8 +20,9 @@ simulation/orchestrator  (deterministic code, not an agent)
 - **Clauses enter the engine only through `normalized` readings** (`basis: stated |
   interpreted`). Each clause is shown, to agents, the CLI, the UI and exports, with
   `PolicyClause.status_label`: status, then binding status and source type, e.g. "reviewed
-  (interpreted) · binding unknown" or "reviewed · not binding · international precedent"
-  (illustrative clauses keep the plain "illustrative").
+  (interpreted) · binding unknown", "reviewed · binding · English translation" or "reviewed ·
+  not binding · foreign precedent" ("international precedent" for OECD, UNESCO and ITU;
+  illustrative clauses keep the plain "illustrative").
 - **Determinism.** Fixed role order, all views built before any decision is applied, no clock
   or randomness. The same inputs give the same log, failures and graph.
 - **Graph** (`engine/graph.py`, NetworkX). Nodes are roles, data categories, actions, clauses and

@@ -201,7 +201,10 @@ def test_hostile_agent_text_appears_only_labelled(world: World) -> None:
     hits = [s for s in shown if "XYZZY" in s]
     assert hits and all(AGENT_STATEMENT in s and "\n" not in s for s in hits)
     gap = next(s for s in vm.findings(b) if "candidate_gap_claim" in s)
-    assert GAP_QUALIFICATION in gap and "uae.fl2-2019.art2 [reviewed · binding]" in gap
+    assert (
+        GAP_QUALIFICATION in gap
+        and "uae.fl2-2019.art2 [reviewed · binding · English translation]" in gap
+    )
 
 
 def test_port_defaults_to_8765_and_can_be_overridden(monkeypatch: pytest.MonkeyPatch) -> None:

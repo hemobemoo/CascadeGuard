@@ -106,6 +106,7 @@ def test_real_web_pages_are_searched_and_labelled() -> None:
 
 
 TRA_STRATEGY = "UAE_National_Cybersecurity_Strategy.pdf"
+NEWS_ITEM = "web/03_uae_national_cybersecurity_strategy.pdf"
 TRA_QUERIES = (
     "cyber security strategy",
     "information sharing exchange between tra and the entities",
@@ -118,7 +119,7 @@ TRA_QUERIES = (
 def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
     """Human decision 2026-10-28: the TRA-era strategy is kept as provenance only. Its extracted
     text does match these queries, yet no snippet from it is ever returned."""
-    assert {TRA_STRATEGY} == NOT_SEARCHED
+    assert {TRA_STRATEGY, NEWS_ITEM} == NOT_SEARCHED
     jsonl = EXTRACTED_DIR / TRA_STRATEGY.replace(".pdf", ".jsonl")
     pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
     for query in TRA_QUERIES:
@@ -127,8 +128,40 @@ def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
         found = search_extracted(query, limit=1000)
         assert found, query
         assert all(s.source_file != TRA_STRATEGY for s in found), query
-    # The 2025 strategy's web transcription (03) is a different document and stays searched.
-    assert any(s.source_file.startswith("web/03_") for s in search_extracted(TRA_QUERIES[0]))
+
+
+def test_no_snippet_of_the_news_item_on_the_2025_strategy_reaches_extracted_context() -> None:
+    """Human decision 2026-10-29: web page 03 is a news item about the 2025 strategy, not its
+    text, so it is never searched. (Until then a test here checked that it was searched.)"""
+    jsonl = EXTRACTED_DIR / "03_uae_national_cybersecurity_strategy.jsonl"
+    pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
+    assert {p["source_file"] for p in pages} == {NEWS_ITEM}
+    for query in (*TRA_QUERIES, "national cybersecurity strategy 2025"):
+        assert all(s.source_file != NEWS_ITEM for s in search_extracted(query, limit=1000)), query
+    assert any(w in p["text"].casefold() for p in pages for w in ("cybersecurity", "strategy")), (
+        "the news item matches the queries, so excluding it is what keeps it out"
+    )
+
+
+def test_news_item_is_not_searched_under_any_file_name(tmp_path: Path) -> None:
+    rows = {
+        "Copy.jsonl": NEWS_ITEM,  # the record's own source_file is checked too
+        "x.jsonl": "web/03_UAE_National_Cybersecurity_Strategy.PDF",
+        "03_uae_national_cybersecurity_strategy.jsonl": "elsewhere.pdf",
+        "Law.jsonl": "Law.pdf",
+    }
+    for name, source in rows.items():
+        row = {"source_file": source, "page": 1, "text": "incident report"}
+        (tmp_path / name).write_text(json.dumps(row), encoding="utf-8")
+    found = search_extracted("incident report", extracted_dir=tmp_path)
+    assert [s.source_file for s in found] == ["Law.pdf"]
+
+
+def test_extracted_digest_ignores_the_news_item(tmp_path: Path) -> None:
+    without = tmp_path / "without"
+    shutil.copytree(EXTRACTED_DIR, without)
+    (without / "03_uae_national_cybersecurity_strategy.jsonl").unlink()
+    assert extracted_digest(without) == extracted_digest(EXTRACTED_DIR)
 
 
 def test_tra_era_strategy_is_not_searched_under_any_file_name(tmp_path: Path) -> None:

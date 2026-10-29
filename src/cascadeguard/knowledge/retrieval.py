@@ -6,7 +6,8 @@ boundary. Selection uses the engine's own scope rule (decision 7n, `RuleBook.con
 agent is shown exactly the clauses it may cite for its allowed actions. Clauses outside the
 corpus (hypothetical repair rules in a replay) are shown so an agent can adapt to a repair, but
 marked not citable. Extracted PDF text is unreviewed context: never a clause, never citable,
-and the two published books and the TRA-era cyber strategy (NOT_SEARCHED) are always excluded.
+and the two published books, the TRA-era cyber strategy and the news item on the 2025 strategy
+(NOT_SEARCHED) are always excluded.
 """
 
 import hashlib
@@ -26,9 +27,12 @@ ANY_ACTION = "any_proposed_action"
 CONTEXT_LABEL = "context only; not citable"
 # A snippet from a web transcription (policies/sources/web/) says so (human decision 2026-10-28).
 WEB_CONTEXT_LABEL = f"{WEB_FLAG}; {CONTEXT_LABEL}"
-# Kept as historical provenance but never searched (human decision 2026-10-28): the TRA-era
-# strategy is superseded by the 2025 strategy, and its extraction is unreliable (p.5, pp.6-16).
-NOT_SEARCHED = frozenset({"UAE_National_Cybersecurity_Strategy.pdf"})
+# Kept as provenance but never searched. The TRA-era strategy (human decision 2026-10-28) is
+# superseded by the 2025 strategy, and its extraction is unreliable (p.5, pp.6-16). Web page 03
+# (human decision 2026-10-29) is a news item about the 2025 strategy, not the strategy's text.
+NOT_SEARCHED = frozenset(
+    {"UAE_National_Cybersecurity_Strategy.pdf", "web/03_uae_national_cybersecurity_strategy.pdf"}
+)
 NOT_SEARCHED_STEMS = frozenset(Path(name).stem.casefold() for name in NOT_SEARCHED)
 
 

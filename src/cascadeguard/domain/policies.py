@@ -17,6 +17,22 @@ LABEL_SEPARATOR = " · "  # between a clause's status and its qualifiers in stat
 # Originals in policies/sources/ that are not official documents, with the type shown in their
 # clauses' labels. Each must match its row in docs/policy-inventory.md (tested).
 SOURCE_TYPES = {"UAE Policy Foundation.pdf": "unofficial compilation"}
+# English texts of UAE legislation whose Arabic text is authoritative and whose English version
+# is not verified as an official translation (human decision 2026-10-29). Each is listed under
+# "English translations not verified as official" in docs/policy-inventory.md (tested).
+TRANSLATIONS = frozenset(
+    {
+        "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
+        "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf",
+        "Dubai Law No. (26) of 2015.pdf",
+        "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf",
+        "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf",
+    }
+)
+# A non-UAE jurisdiction that starts with this is an intergovernmental instrument (OECD, UNESCO,
+# ITU): "international precedent". Any other non-UAE one is a single jurisdiction (EU, US):
+# "foreign precedent" (human decision 2026-10-29).
+INTERNATIONAL = "International"
 # A jurisdiction whose first words are one of these is a UAE source; any other is an
 # international one. Whole words only: "UAEU partner states" is not the UAE.
 UAE_JURISDICTIONS = (
@@ -32,12 +48,30 @@ UAE_JURISDICTIONS = (
 )
 
 
+def is_international_jurisdiction(jurisdiction: str) -> bool:
+    """Does the jurisdiction start with INTERNATIONAL as a whole word, in any case?"""
+    word = jurisdiction.split(maxsplit=1)[0] if jurisdiction.strip() else ""
+    return word.casefold() == INTERNATIONAL.casefold()
+
+
+def _plain_name(source_file: str) -> str:
+    """The source path without "." parts, case-folded (as in_source_dir)."""
+    return "/".join(p for p in source_file.split("/") if p not in ("", ".")).casefold()
+
+
 def _source_type(source_file: str | None) -> str | None:
-    """The SOURCE_TYPES entry for this file, ignoring "." parts and case (as in_source_dir)."""
+    """The SOURCE_TYPES entry for this file, ignoring "." parts and case."""
     if source_file is None:
         return None
-    name = "/".join(p for p in source_file.split("/") if p not in ("", ".")).casefold()
+    name = _plain_name(source_file)
     return next((t for f, t in SOURCE_TYPES.items() if f.casefold() == name), None)
+
+
+def is_translation(source_file: str | None) -> bool:
+    """Is this file listed in TRANSLATIONS, ignoring "." parts and case?"""
+    return source_file is not None and _plain_name(source_file) in {
+        f.casefold() for f in TRANSLATIONS
+    }
 
 
 def is_uae_jurisdiction(jurisdiction: str) -> bool:
@@ -166,9 +200,9 @@ class PolicyClause(DomainModel):
     @property
     def status_label(self) -> str:
         """The label agents, reports and the UI show next to the clause, e.g.
-        "reviewed · not binding · international precedent" (human decision 2026-10-29): the
-        status, then for a sourced clause its binding status and, where it is not an official UAE
-        source, its source type. An illustrative clause keeps its plain label."""
+        "reviewed · not binding · foreign precedent" (human decisions 2026-10-29): the status,
+        then for a sourced clause its binding status and, where it is not an official UAE source,
+        its source type. An illustrative clause keeps its plain label."""
         label = str(self.status)
         if self.normalized is not None and self.normalized.basis is NormalizedBasis.INTERPRETED:
             label += " (interpreted)"
@@ -179,9 +213,11 @@ class PolicyClause(DomainModel):
     @property
     def qualifiers(self) -> tuple[str, ...]:
         """Binding status; then the source type when the source is not an original document
-        (web transcription, OCR copy, or a type recorded in SOURCE_TYPES); then "international
-        precedent" when the jurisdiction does not start with the UAE or one of its emirates.
-        Empty for an illustrative clause."""
+        (web transcription, OCR copy, or a type recorded in SOURCE_TYPES); then "English
+        translation" for a file in TRANSLATIONS; then, when the jurisdiction does not start with
+        the UAE or one of its emirates, "international precedent" for an intergovernmental
+        instrument or "foreign precedent" for another country or the EU. Empty for an
+        illustrative clause."""
         if self.status is ClauseStatus.ILLUSTRATIVE:
             return ()
         binding = {True: "binding", False: "not binding", "unknown": "binding unknown"}
@@ -192,6 +228,9 @@ class PolicyClause(DomainModel):
             parts.append("OCR copy")
         elif (kind := _source_type(self.source_file)) is not None:
             parts.append(kind)
+        if is_translation(self.source_file):
+            parts.append("English translation")
         if not is_uae_jurisdiction(self.jurisdiction):
-            parts.append("international precedent")
+            international = is_international_jurisdiction(self.jurisdiction)
+            parts.append("international precedent" if international else "foreign precedent")
         return tuple(parts)
