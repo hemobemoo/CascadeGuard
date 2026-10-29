@@ -354,6 +354,101 @@ several at once costs the same LLM re-run as reviewing one.
 
 ---
 
+## 15. `uae.ai-charter.human-oversight` (re-quote, added 2026-10-29)
+
+Re-quoted from the official Charter PDF on the human's decision (2026-10-29); same id, back to
+draft for re-approval (it was reviewed from the unofficial compilation).
+
+**Decided 2026-10-29 (Ibrahim Melhem): reviewed**, with the page-4 transcription, after checking
+both against the PDF image. The text below is as it was proposed (status and label then: draft).
+
+- **Source:** `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`
+  (SHA-256 `785f7192…bd03808`), PDF page 4 = printed "Page 04". Item 6 under "General Principles
+  of the Charter:" (heading on p.3). Was: `UAE Policy Foundation.pdf` p.2.
+- **Issuer and date (as printed on p.1):** UAE Minister of State for Artificial Intelligence,
+  Digital Economy & Remote Work Applications Office; July 2024. Was: "UAE Artificial
+  Intelligence, Digital Economy and Remote Work Applications Office".
+- **Text (unchanged, read from the page image):** "6. Human Oversight: The Charter emphasizes the
+  irreplaceable value of human judgment and human oversight over AI, aligning with ethical values
+  and social standards to correct any errors or biases that may arise."
+- **How the quote is checked:** the PDF renders its text as images or vector outlines, and the embedded text layer is
+  garbled here ("human over / oversight Al", "may" on its own line). On your decision, the
+  quote is checked against `policies/transcriptions/The UAE Charter for the Development and Use
+  of Artificial Intelligence.jsonl`, a transcription of page 4 from the image (draft). The
+  clause notes carry "transcribed from page image — check against image". **Please check the
+  transcription of page 4 against the image too.**
+- **Notes:** unchanged reading (policy charter, not law; no owner or deadline; the
+  `normalized` actor and action are the scenario's interpretation), plus the re-quote record.
+- **Binding / type:** false; policy charter. **Label:** `draft (interpreted) · not binding` now;
+  `reviewed (interpreted) · not binding` once re-approved ("unofficial compilation" goes).
+- **Reaches:** health_service_operator (and, as before, the roles whose views list it).
+- **Baseline/goldens while draft: large change.** The scripted health operator cites it at T+45
+  and T+60, so both decisions are rejected whole as `draft_citation`:
+  - `notify_health_data_oversight` and `review_automated_lockouts` (T+45), and
+    `reverse_automated_lockouts` and `activate_fallback_channel` (T+60), are not applied;
+  - the DHA 4.18.4 duty stays open instead of fulfilled at T+45;
+  - the repair search lists 3 candidates instead of 21, and none resolves the incident.
+- **Baseline/goldens once re-approved: unchanged** except the label text (measured on a copy
+  with the clause set to reviewed: baseline and repair output identical to main apart from the
+  label).
+- **Open flags:** none from the quote itself; the text matches the image word for word.
+- **Recommendation: reviewed**, after you check the page-4 transcription against the image.
+
+---
+
+## 16. `uae.ai-charter.safety` (re-quote, added 2026-10-29)
+
+Re-quoted from the official Charter PDF on the human's decision (2026-10-29); same id, stays
+draft (it was a draft from the compilation).
+
+**Decided 2026-10-30 (Ibrahim Melhem): reviewed**, after the page-3 transcription was approved.
+Measured effect: the baseline lists it among the loaded clauses (21 loaded, 21 drafts); the
+timeline, findings, repair search and both expected outputs are unchanged. It reaches the
+`policy_legal_adviser`'s view, so that role's LLM cache keys change (recording run later, gate 4).
+
+- **Source:** `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`, PDF
+  page 3 = printed "Page 03". Item 2 under "General Principles of the Charter:". Was:
+  `UAE Policy Foundation.pdf` p.1, "Priorities & Key Components, 2".
+- **Issuer and date (as printed on p.1):** UAE Minister of State for Artificial Intelligence,
+  Digital Economy & Remote Work Applications Office; July 2024.
+- **Text (unchanged, read from the page image):** "2. Safety: The UAE places great importance on
+  safety, ensuring that all AI systems comply with the highest safety standards. The country
+  encourages modifying or removing systems that pose risks."
+- **How the quote is checked:** against the page-3 transcription in `policies/transcriptions/`
+  (draft); the text layer here is garbled ("greatimportance", "he country", "removingsystemsthatposerisks").
+  **Please check the page-3 transcription against the image.**
+- **Notes:** unchanged reading (non-binding; names no actor; "encourages" is not a permission, so
+  no `normalized` block), plus the re-quote record.
+- **Binding / type:** false; policy charter. **Label:** `draft · not binding` (no "unofficial
+  compilation" any more).
+- **Reaches:** no role while draft (the engine does not load drafts). It has no `normalized`
+  block; which roles would see it once reviewed was not measured.
+- **Baseline/goldens: unchanged** (measured: baseline and repair output byte-identical before
+  and after the re-quote). The effect of reviewing it was not measured.
+- **Recommendation:** stays draft, as you decided.
+
+---
+
+## Charter transcriptions to check (added 2026-10-29)
+
+**Decided 2026-10-30 (Ibrahim Melhem): pages 1, 2, 3 and 5 reviewed**, checked against the page
+images; each page's text is pinned under `approved_transcriptions` in `policies/approvals.yaml`.
+
+`policies/transcriptions/The UAE Charter for the Development and Use of Artificial Intelligence.jsonl`,
+one record per PDF page, each transcribed from the page image (PDF page = printed page). Check
+each against the image; on your approval each record's `status` goes to `reviewed` (methodology
+5c). Line breaks follow the image; headings and footers are kept.
+
+| PDF page | Printed | Content | Clause resting on it | Status | What to check |
+|---|---|---|---|---|---|
+| 1 | (cover) | masthead (3 lines), title (2 lines), "July 2024" | none (issuer and date of both clauses) | **reviewed** 2026-10-30 | Masthead spelling: "MINISTER OF STATE FOR ARTIFICIAL INTELLIGENCE," / "DIGITAL ECONOMY & REMOTE WORK APPLICATIONS OFFICE". Emblem and photo not transcribed (noted in the record). |
+| 2 | Page 02 | Introduction (1 paragraph) | none | **reviewed** 2026-10-30 | "(AI)" and "UAE community". |
+| 3 | Page 03 | Relation to the UAE AI Strategy; General Principles 1–4 | `uae.ai-charter.safety` (item 2, draft) | **reviewed** 2026-10-30 | Item 2 word for word; "UAE’s" (curly apostrophe) in item 4. |
+| 4 | Page 04 | General Principles 5–8 | `uae.ai-charter.human-oversight` (item 6, reviewed) | **reviewed** 2026-10-29 | Done. |
+| 5 | Page 05 | General Principles 9–12 | none | **reviewed** 2026-10-30 | "AI" (not "Al") throughout; items 10–12 headings. |
+
+---
+
 ## Related open items (no status change needed)
 
 - The ITU report `T-AI4G-AI4GOOD-2025-6-PDF-E.pdf` really does contain U+FFFD in its extracted

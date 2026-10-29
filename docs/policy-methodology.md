@@ -2,7 +2,7 @@
 
 How CascadeGuard turns source documents into clauses the engine can check.
 
-1. **Sources.** The 22 original PDFs in `policies/sources/`, plus the web transcriptions in
+1. **Sources.** The 23 original PDFs in `policies/sources/`, plus the web transcriptions in
    `policies/sources/web/` (listed in its `MANIFEST.md`, see 5b), are the knowledge base. They
    are never modified. The two published books (Abhivardhan; the Oxford Handbook) are context only: never
    a clause source and never committed.
@@ -33,6 +33,17 @@ How CascadeGuard turns source documents into clauses the engine can check.
    otherwise). Where the transcription is only a summary of a document (UNESCO, OECD, the
    Cybersecurity Strategy announcements), the original document should replace it before the
    clause is reviewed.
+5c. **Page-image transcriptions** (human decision 2026-10-29). Where an original renders its text as
+   images or outlines over an unreliable text layer (the Charter, #23), the agent transcribes the pages a clause
+   needs (or, on the human's decision, the whole document, as for the 5-page Charter), from the page image, into `policies/transcriptions/<pdf-stem>.jsonl` (one record per
+   page: `source_file`, `page`, `text`, `"transcribed": true`, `"transcribed_from": "page image"`,
+   `"status": "draft"`). A clause quoted from it says "transcribed from page image — check against
+   image" in `notes` and is checked against the transcription, never the text layer. The human
+   checks the transcription against the image when reviewing the clause; the same "Reviewed by
+   human" commit sets the transcription's `status` to `reviewed` and records the page text's
+   SHA-256 under `approved_transcriptions` in `policies/approvals.yaml`. Only the sources in
+   `TRANSCRIBED_SOURCES` (`domain/policies.py`, each marked unreliable in the inventory) may be
+   transcribed.
 6. **Illustrative rules.** A rule the scenario needs that no PDF supports is written as
    `status: illustrative`, `binding: false`, with a plain-language text and a note on why it is
    needed. It is listed separately in phase reports and shown with its label in the UI.

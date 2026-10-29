@@ -13,6 +13,15 @@ OCR_DIR = "ocr/"  # source_file prefix of OCR'd copies in policies/sources/ocr/ 
 OCR_FLAG = "OCR — check against image"  # must appear in notes of a clause quoted from OCR text
 WEB_DIR = "web/"  # source_file prefix of web-page transcriptions in policies/sources/web/
 WEB_FLAG = "web transcription — unverified"  # must appear in notes of a clause quoted from one
+# In notes of a clause quoted from a page whose text layer is unreliable: the quote is checked
+# against a transcription of the page image in policies/transcriptions/ (human decision
+# 2026-10-29), which the human checks against the image with the clause.
+TRANSCRIBED_FLAG = "transcribed from page image — check against image"
+# The only originals whose text layer is unreliable (docs/policy-inventory.md says so in each
+# one's row; tested). Only a clause quoted from one of these may carry TRANSCRIBED_FLAG.
+TRANSCRIBED_SOURCES = frozenset(
+    {"The UAE Charter for the Development and Use of Artificial Intelligence.pdf"}
+)
 LABEL_SEPARATOR = " · "  # between a clause's status and its qualifiers in status_label
 # Originals in policies/sources/ that are not official documents, with the type shown in their
 # clauses' labels. Each must match its row in docs/policy-inventory.md (tested).
@@ -185,6 +194,8 @@ class PolicyClause(DomainModel):
             raise ValueError("source_file must be a PDF filename")
         if in_source_dir(self.source_file, OCR_DIR) and OCR_FLAG not in (self.notes or ""):
             raise ValueError(f"a clause quoted from an OCR'd copy must say {OCR_FLAG!r} in notes")
+        if TRANSCRIBED_FLAG in (self.notes or "") and self.source_file not in TRANSCRIBED_SOURCES:
+            raise ValueError("only a clause quoted from a TRANSCRIBED_SOURCES file is transcribed")
         if in_source_dir(self.source_file, WEB_DIR):
             if WEB_FLAG not in (self.notes or ""):
                 raise ValueError(f"a clause quoted from a web transcription must say {WEB_FLAG!r}")

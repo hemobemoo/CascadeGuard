@@ -21,7 +21,8 @@ approved:
   eu.gdpr.art33-1: 8837fb73655ffea6ddc42059d8d084bc52df8c800437b9b629b108f3ac8f17af
   oecd.ai-principles.accountability-cooperation: b026fab3f31cba4999c02fba0ad977155e61fbe035679f4fd25122a95e9fcec8
   oecd.ai-principles.robustness-override: 1fef039e634ec13e30c41e7299ca0dc5492caf2fa2d974b0ac71d70a02b95cae
-  uae.ai-charter.human-oversight: 3bd03c80ed87614e9d0a2cbd87203b7067130db85b9043cc15492d3d1f082ea2
+  uae.ai-charter.safety: 17ae0cbafa5703d1579b2dd908ca2066d5d2294b6694df62bbfbdb28c96c1a37
+  uae.ai-charter.human-oversight: 335c01cfdc9487acd6c81f85f16538764f6614b0c971bf98304dd9d4e1c861fe
   uae.fl2-2019.art16: 2b67b0c9b6a6d3c91ab0af9f6c42deac3d6179739d37d8b8b497999d00ce4df9
   uae.fl2-2019.art16-exceptions: 33bdfc70faad8bfa39c8c610f1221b1a4a808b6a672a9ae926377c9a13545bdb
   uae.fl2-2019.art2: 50f9627bea2946e89dbe78e8ad2144c6d49c0b03cd31fc9961df9050b9793714
@@ -33,3 +34,15 @@ approved:
   unesco.ai-ethics.responsibility-accountability: 3195745fed5d15a48fefa5fbd6591cace0170368b5f51486c92dfe13e95531f2
   unesco.ai-ethics.review-and-correct: 10629ca9a2b97e92f340a55be8130bcb843c90457c705d0f8c8b806ce07f629f
 reapproval_needed: []
+# Page-image transcriptions the human checked against the image (AGENTS.md, transcription
+# route): "<source_file>#<page>" -> SHA-256 of the record's text at approval. A record with
+# `status: reviewed` must match its entry here; editing its text sends it back to draft, and any
+# reviewed clause resting on it with it (tests/unit/test_transcriptions.py).
+# Charter p.4: approved by the human with uae.ai-charter.human-oversight, 2026-10-29 (0e03aef).
+# Charter pp.1, 2, 3, 5: approved by the human (Ibrahim Melhem) against the page images, 2026-10-30.
+approved_transcriptions:
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#1": fd6f75f80a29812017ecf0d7531f2f64730c8606ec922d3a3266e1879f0a21e9
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#2": a16a280602009e287e4847f6708e816973b83734f22f8bd667f19206b17e20f9
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#3": 45bb66040696beaee08f372919a1f2d12aa16e3764858d4818f4921391933c86
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#4": 31f30fc7a152dc6bd28ffb34e2d6d0100c8ba8ffda80c2213c22eac85ef19840
+  "The UAE Charter for the Development and Use of Artificial Intelligence.pdf#5": a8a5aca2842073dd733d322a65ef948eb80f1c4afe0267402a257adcf8700a2d
