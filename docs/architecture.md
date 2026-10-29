@@ -3,6 +3,8 @@
 ```
 policies/sources/*.pdf ──extract──> policies/extracted/*.jsonl ──(agent drafts, human reviews)──>
 policies/reviewed/*.yaml ──knowledge/loader──> engine clauses (reviewed + illustrative)
+  (quotes are checked against policies/extracted/, or against policies/transcriptions/ for a page
+   whose text layer is unreliable: TRANSCRIBED_SOURCES, flagged in the clause's notes)
 
 scenarios/<id>/{scenario,roles,scripted_decisions}.yaml ──simulation/loader──> Scenario, RoleSet
 
