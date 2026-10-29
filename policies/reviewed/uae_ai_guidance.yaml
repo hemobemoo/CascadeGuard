@@ -1,5 +1,6 @@
-# Non-binding UAE AI guidance: the UAE Charter for the Development and Use of AI (from the
-# "UAE Policy Foundation" compilation) and the MOCAI AI Ethics Principles & Guidelines.
+# Non-binding UAE AI guidance: the UAE Charter for the Development and Use of AI (human-oversight
+# from the official Charter PDF; safety still from the "UAE Policy Foundation" compilation) and
+# the MOCAI AI Ethics Principles & Guidelines.
 clauses:
   - id: uae.ai-charter.safety
     title: "Charter: safety, including modifying or removing risky systems"
@@ -50,7 +51,7 @@ clauses:
       Re-quoted 2026-10-29 from the official Charter PDF (human decision; Ibrahim Melhem), printed
       page 04, item 6 under "General Principles of the Charter:" (heading on p.3); issuer and
       date as printed on p.1. Text unchanged from the earlier source (UAE Policy Foundation.pdf
-      p.2, an unofficial compilation). The PDF's pages are images with an unreliable text layer
+      p.2, an unofficial compilation). The PDF renders its text as images or vector outlines over an unreliable text layer
       (p.4 reads "human over / oversight Al"), so the quote is checked against
       policies/transcriptions/, transcribed from page image — check against image. Back to draft
       for re-approval (AGENTS.md gate 1); it was reviewed from the compilation.

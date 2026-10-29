@@ -5,7 +5,9 @@ unflagged clause never against a transcription."""
 import json
 from pathlib import Path
 
-from cascadeguard.domain.policies import TRANSCRIBED_FLAG
+import pytest
+
+from cascadeguard.domain.policies import TRANSCRIBED_FLAG, TRANSCRIBED_SOURCES, PolicyClause
 from cascadeguard.knowledge.loader import (
     EXTRACTED_DIR,
     SOURCES_DIR,
@@ -58,7 +60,24 @@ def test_every_transcription_names_a_real_page_of_a_committed_original() -> None
             record = json.loads(line)
             source = record["source_file"]
             assert path.stem == Path(source).stem
-            assert (SOURCES_DIR / source).is_file()
+            assert source in TRANSCRIBED_SOURCES and (SOURCES_DIR / source).is_file()
             assert 1 <= record["page"] <= pages[source]
             assert record["transcribed"] is True and record["transcribed_from"] == "page image"
-            assert record["status"] == "draft"  # the human checks it against the image
+            # Draft until the human checks it against the image; set to reviewed in the same
+            # "Reviewed by human" commit as the clause that rests on it.
+            assert record["status"] in ("draft", "reviewed")
+
+
+def test_only_sources_with_an_unreliable_text_layer_may_be_transcribed() -> None:
+    """A transcription could otherwise stand in for any page (test-breaker, 2026-10-29)."""
+    data = charter_clause().model_dump()
+    with pytest.raises(ValueError, match="TRANSCRIBED_SOURCES"):
+        PolicyClause.model_validate(data | {"source_file": "doc.pdf"})
+    inventory = (Path(__file__).resolve().parents[2] / "docs" / "policy-inventory.md").read_text(
+        "utf-8"
+    )
+    rows = {
+        line.split("|")[2].strip(" `"): line for line in inventory.splitlines() if "| `" in line
+    }
+    for source in TRANSCRIBED_SOURCES:
+        assert "unreliable" in rows[source], source

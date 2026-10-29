@@ -84,8 +84,8 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
 ### Charter source and re-quote (branch `charter-source`)
 Human decisions 2026-10-29. PR not merged.
 - `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` added to
-  `policies/sources/` as original #23 (SHA-256 in the inventory, tested); extracted. Its pages
-  are images with an unreliable text layer (inventory note).
+  `policies/sources/` as original #23 (SHA-256 in the inventory, tested); extracted. It renders
+  its text as images or vector outlines over an unreliable text layer (inventory note).
 - Quote checking for such pages (human choice): a clause whose notes carry
   `TRANSCRIBED_FLAG` ("transcribed from page image — check against image") is checked against
   `policies/transcriptions/<stem>.jsonl` (records `"transcribed": true`, `"status": "draft"`),
@@ -95,7 +95,7 @@ Human decisions 2026-10-29. PR not merged.
   unchanged; back to draft, listed under `reapproval_needed`. Packet entry 15 in
   `docs/review/draft-review-packet.md`. While draft, the scripted health operator's T+45 and T+60
   decisions are rejected (`draft_citation`) and the repair search finds no resolving repair:
-  24 unit tests and both expected-output tests fail. Measured on a copy with the clause
+  39 tests fail (24 unit, 9 integration including both expected-output tests, 6 e2e UI). Measured on a copy with the clause
   reviewed: only the approval-digest tests fail, and the baseline and repair output equal main's
   apart from the label.
 - Translation rule recorded in the inventory and applied to every file: `TRANSLATIONS` is
@@ -1069,6 +1069,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 policy, quoted by `uae.mohap-smart-health.p7-liability`, reviewed, and two drafts) is published on
 uaelegislation.gov.ae, not by MOHAP. Applying the rule to web transcriptions would add "English
 translation" to them. Not applied. Apply it?
+
+**Charter safety clause:** `uae.ai-charter.safety` (draft) still cites the compilation; its text
+is word for word on the official PDF p.3 (evidence-auditor). Re-quote it too (with a p.3
+transcription)?
 
 **Gate 6:** `AGENTS.md` says the knowledge base is "the 22 original PDF documents"; with the
 Charter it is 23. Change `AGENTS.md`?

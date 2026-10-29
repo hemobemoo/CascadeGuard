@@ -77,6 +77,7 @@ only; official sources:
 | `T-REC-Y.3172-201906-I!!PDF-E.pdf` | ITU-T | [itu.int](https://www.itu.int/ITU-T/recommendations/rec.aspx?rec=13894) |
 | `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf` | UAE (federal) | [uaelegislation.gov.ae](https://uaelegislation.gov.ae/en/legislations/1209/download) |
 | `UAE Policy Foundation.pdf` | Unofficial compilation of u.ae policy pages; Charter part: UAE AI Office | [u.ae (Charter)](https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/policies/Ai/The-UAE-Charter-for-the-Development-and-Use-of-Artificial-Intelligence) |
+| `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` | UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office | [u.ae (Charter page)](https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/policies/Ai/The-UAE-Charter-for-the-Development-and-Use-of-Artificial-Intelligence) (the page the PDF was obtained from was not recorded) |
 | `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf` | UAE Government | [u.ae](https://u.ae/-/media/AI-publications/UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf) |
 | `OECD_Recommendation_AI.pdf` | OECD Council (OECD/LEGAL/0449) | [legalinstruments.oecd.org](http://legalinstruments.oecd.org) (as printed in the PDF) |
 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | UNESCO General Conference | SHS/BIO/PI/2021/1 (no URL printed in the PDF) |
