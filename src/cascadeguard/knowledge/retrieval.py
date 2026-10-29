@@ -25,6 +25,7 @@ from cascadeguard.knowledge.loader import (
     EXTRACTED_DIR,
     TRANSCRIPTIONS_DIR,
     ClauseLoadError,
+    transcription_key,
 )
 
 NOT_CITABLE_LABEL = "hypothetical repair rule (not a source clause; not citable)"
@@ -137,12 +138,14 @@ def _reviewed_transcriptions(transcriptions_dir: Path) -> list[dict[str, object]
     ones wait for the human's check against the image and are never searched. Two records for one
     page are refused, so an unchecked one cannot ride along with the approved one."""
     records: list[dict[str, object]] = []
-    seen: set[tuple[object, object]] = set()
+    seen: set[tuple[str, int]] = set()
     for path in sorted(transcriptions_dir.glob("*.jsonl")):
         for line in path.read_text("utf-8").splitlines():
-            record: dict[str, object] = json.loads(line) if line else {}
-            key = (record.get("source_file"), record.get("page"))
-            if record and key in seen:
+            if not line:
+                continue
+            record: dict[str, object] = json.loads(line)
+            key = transcription_key(record, path.name)
+            if key in seen:
                 raise ClauseLoadError(f"{path.name}: two records for page {key[1]}")
             seen.add(key)
             if (
