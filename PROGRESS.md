@@ -102,7 +102,7 @@ Human decisions 2026-10-29. PR not merged.
   apart from the label.
 - Translation rule recorded in the inventory and applied to every file: `TRANSLATIONS` is
   unchanged. It would change only for web/01 (not applied; see "Waiting on human").
-- Counts: 23 original PDFs in the inventory and methodology. `AGENTS.md` still says 22 (gate 6).
+- Counts: 23 original PDFs in the inventory, methodology and `AGENTS.md` (gate 6 approved).
 - Effect on LLM context: the Charter's extracted text (garbled text layer) is now searched by
   `--extracted-context`, so `extracted_digest`, and with it the LLM prompt version and cache
   keys, change when that flag is on. The recording run comes later anyway (gate 4).
@@ -1073,10 +1073,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
 
-**Translation rule (decided 2026-10-29), one possible change:** web/01 (MOHAP smart health
-policy, quoted by `uae.mohap-smart-health.p7-liability`, reviewed, and two drafts) is published on
-uaelegislation.gov.ae, not by MOHAP. Applying the rule to web transcriptions would add "English
-translation" to them. Not applied. Apply it?
+**Translation rule (decided 2026-10-29):** documents only; web transcriptions keep "web
+transcription", so web/01 is unchanged (recorded in the inventory).
 
 **Charter safety clause (decided 2026-10-29):** re-quoted from the official PDF p.3 (same id,
 draft; packet entry 16). The p.3 transcription waits for the human's check.
@@ -1091,9 +1089,8 @@ check". On approval each record's `status` goes to `reviewed`.
 `extracted_digest`. **PR 3's vector knowledge base must use the same rule** (no chunk from a
 `TRANSCRIBED_SOURCES` text layer; only reviewed transcriptions).
 
-**Gate 6:** `AGENTS.md` says the knowledge base is "the 22 original PDF documents"; with the
-Charter it is 23. Its extraction workflow also says quotes come "verbatim from the extracted
-page", which the transcription route goes beyond. Change `AGENTS.md`?
+**Gate 6 (approved 2026-10-29):** `AGENTS.md` now says 23 original PDFs and states the
+transcription route.
 
 **Answered 2026-10-29 (TDRA stays listed; rule recorded):** the "English translation" list. Listed: telecom law (and
 OCR copy), Dubai Law 26/2015, PDPL, FL 2/2019. Not listed: the DHA policy (issued in English by
