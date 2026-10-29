@@ -48,6 +48,12 @@ UAE_JURISDICTIONS = (
 )
 
 
+def is_international_jurisdiction(jurisdiction: str) -> bool:
+    """Does the jurisdiction start with INTERNATIONAL as a whole word, in any case?"""
+    word = jurisdiction.split(maxsplit=1)[0] if jurisdiction.strip() else ""
+    return word.casefold() == INTERNATIONAL.casefold()
+
+
 def _plain_name(source_file: str) -> str:
     """The source path without "." parts, case-folded (as in_source_dir)."""
     return "/".join(p for p in source_file.split("/") if p not in ("", ".")).casefold()
@@ -225,6 +231,6 @@ class PolicyClause(DomainModel):
         if is_translation(self.source_file):
             parts.append("English translation")
         if not is_uae_jurisdiction(self.jurisdiction):
-            international = self.jurisdiction.startswith(INTERNATIONAL)
+            international = is_international_jurisdiction(self.jurisdiction)
             parts.append("international precedent" if international else "foreign precedent")
         return tuple(parts)

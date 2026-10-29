@@ -143,6 +143,20 @@ def test_no_snippet_of_the_news_item_on_the_2025_strategy_reaches_extracted_cont
     )
 
 
+def test_news_item_is_not_searched_under_any_file_name(tmp_path: Path) -> None:
+    rows = {
+        "Copy.jsonl": NEWS_ITEM,  # the record's own source_file is checked too
+        "x.jsonl": "web/03_UAE_National_Cybersecurity_Strategy.PDF",
+        "03_uae_national_cybersecurity_strategy.jsonl": "elsewhere.pdf",
+        "Law.jsonl": "Law.pdf",
+    }
+    for name, source in rows.items():
+        row = {"source_file": source, "page": 1, "text": "incident report"}
+        (tmp_path / name).write_text(json.dumps(row), encoding="utf-8")
+    found = search_extracted("incident report", extracted_dir=tmp_path)
+    assert [s.source_file for s in found] == ["Law.pdf"]
+
+
 def test_extracted_digest_ignores_the_news_item(tmp_path: Path) -> None:
     without = tmp_path / "without"
     shutil.copytree(EXTRACTED_DIR, without)
