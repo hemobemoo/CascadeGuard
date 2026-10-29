@@ -102,7 +102,7 @@ words move between lines (p.4, item 6: "over" and "may" sit on their own lines).
 (PDF index = printed page), never from the text layer. A quote from it is checked against a
 transcription of the page image in `policies/transcriptions/` (human decision 2026-10-29): the
 clause's notes say "transcribed from page image — check against image", and the human checks the
-transcription against the image with the clause. Transcribed so far: p.4. It replaces `UAE Policy Foundation.pdf` pp.1–3 as the source of `uae.ai-charter.human-oversight`; `uae.ai-charter.safety` (draft) still cites the compilation (question in PROGRESS).
+transcription against the image with the clause. Transcribed: p.4 (reviewed 2026-10-29), p.3 (draft). It replaces `UAE Policy Foundation.pdf` pp.1–3 as the source of both Charter clauses (`uae.ai-charter.human-oversight`, reviewed; `uae.ai-charter.safety`, draft).
 
 **#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
 and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.

@@ -393,6 +393,35 @@ draft for re-approval (it was reviewed from the unofficial compilation).
 
 ---
 
+## 16. `uae.ai-charter.safety` (re-quote, added 2026-10-29)
+
+Re-quoted from the official Charter PDF on the human's decision (2026-10-29); same id, stays
+draft (it was a draft from the compilation).
+
+- **Source:** `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`, PDF
+  page 3 = printed "Page 03". Item 2 under "General Principles of the Charter:". Was:
+  `UAE Policy Foundation.pdf` p.1, "Priorities & Key Components, 2".
+- **Issuer and date (as printed on p.1):** UAE Minister of State for Artificial Intelligence,
+  Digital Economy & Remote Work Applications Office; July 2024.
+- **Text (unchanged, read from the page image):** "2. Safety: The UAE places great importance on
+  safety, ensuring that all AI systems comply with the highest safety standards. The country
+  encourages modifying or removing systems that pose risks."
+- **How the quote is checked:** against the page-3 transcription in `policies/transcriptions/`
+  (draft); the text layer here is garbled ("greatimportance", "he country", "removingsystemsthatposerisks").
+  **Please check the page-3 transcription against the image.**
+- **Notes:** unchanged reading (non-binding; names no actor; "encourages" is not a permission, so
+  no `normalized` block), plus the re-quote record.
+- **Binding / type:** false; policy charter. **Label:** `draft · not binding` (no "unofficial
+  compilation" any more).
+- **Reaches:** no role (no `normalized` block, so the scope rule gives it to none).
+- **Baseline/goldens: unchanged** (measured: baseline and repair output byte-identical before
+  and after the re-quote; it is a draft, so the engine does not load it, and once reviewed it
+  still binds no role).
+- **Recommendation:** stays draft unless the scenario needs it; reviewing it would change no
+  output. Your call.
+
+---
+
 ## Related open items (no status change needed)
 
 - The ITU report `T-AI4G-AI4GOOD-2025-6-PDF-E.pdf` really does contain U+FFFD in its extracted

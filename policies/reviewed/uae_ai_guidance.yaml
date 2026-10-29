@@ -1,6 +1,5 @@
-# Non-binding UAE AI guidance: the UAE Charter for the Development and Use of AI (human-oversight
-# from the official Charter PDF; safety still from the "UAE Policy Foundation" compilation) and
-# the MOCAI AI Ethics Principles & Guidelines.
+# Non-binding UAE AI guidance: the UAE Charter for the Development and Use of AI (from the
+# official Charter PDF) and the MOCAI AI Ethics Principles & Guidelines.
 clauses:
   - id: uae.ai-charter.safety
     title: "Charter: safety, including modifying or removing risky systems"
@@ -8,10 +7,10 @@ clauses:
       2. Safety: The UAE places great importance on safety, ensuring that all AI systems comply
       with the highest safety standards. The country encourages modifying or removing systems
       that pose risks.
-    source_file: UAE Policy Foundation.pdf
-    page: 1
-    article: Priorities & Key Components, 2
-    issuer: UAE Artificial Intelligence, Digital Economy and Remote Work Applications Office
+    source_file: The UAE Charter for the Development and Use of Artificial Intelligence.pdf
+    page: 3
+    article: General Principles of the Charter, 2
+    issuer: UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office
     jurisdiction: UAE
     document_date: "2024-07"
     status: draft
@@ -20,6 +19,12 @@ clauses:
       Policy charter, not law: a non-binding principle. The text names no actor and says
       "encourages", which is not a permission, so it carries no permission mapping (human
       decision 4d, 2026-10-24). Context for suspending the traffic-management model only.
+      Re-quoted 2026-10-29 from the official Charter PDF (human decision; Ibrahim Melhem), printed
+      page 03, item 2 under "General Principles of the Charter:"; issuer and date as printed on
+      p.1. Text unchanged from the earlier source (UAE Policy Foundation.pdf p.1, an unofficial
+      compilation). The PDF renders its text as images or vector outlines over an unreliable
+      text layer, so the quote is checked against policies/transcriptions/, transcribed from page
+      image — check against image. Stays draft.
 
   - id: uae.ai-charter.human-oversight
     title: "Charter: human oversight to correct errors"
