@@ -263,6 +263,17 @@
     }
   },
   {
+    "source_file": "The UAE Charter for the Development and Use of Artificial Intelligence.pdf",
+    "output": "The UAE Charter for the Development and Use of Artificial Intelligence.jsonl",
+    "page_count": 5,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": " UAEAI-Methaq-Jul-EN",
+      "CreationDate": "D:20240730103556+04'00'"
+    }
+  },
+  {
     "source_file": "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf",
     "output": "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..jsonl",
     "page_count": 7,

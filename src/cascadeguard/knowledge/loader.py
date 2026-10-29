@@ -14,12 +14,14 @@ from typing import Any, cast
 import yaml
 from pydantic import ValidationError
 
-from cascadeguard.domain.policies import ELISION, ClauseStatus, PolicyClause
+from cascadeguard.domain.policies import ELISION, TRANSCRIBED_FLAG, ClauseStatus, PolicyClause
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REVIEWED_DIR = PROJECT_ROOT / "policies" / "reviewed"
 SOURCES_DIR = PROJECT_ROOT / "policies" / "sources"
 EXTRACTED_DIR = PROJECT_ROOT / "policies" / "extracted"
+# Page-image transcriptions for sources whose text layer is unreliable (see TRANSCRIBED_FLAG).
+TRANSCRIPTIONS_DIR = PROJECT_ROOT / "policies" / "transcriptions"
 APPROVALS_FILE = PROJECT_ROOT / "policies" / "approvals.yaml"
 
 ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
@@ -90,32 +92,58 @@ def clause_digest(clause: PolicyClause) -> str:
     return hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+APPROVAL_KEYS = frozenset({"approved", "reapproval_needed", "approved_transcriptions"})
+
+
+def _approvals_data(path: Path) -> dict[str, Any]:
+    raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+    if not isinstance(raw, dict) or frozenset(cast(dict[str, Any], raw)) != APPROVAL_KEYS:
+        raise ClauseLoadError(f"{path.name}: expected exactly {sorted(APPROVAL_KEYS)}")
+    return cast(dict[str, Any], raw)
+
+
 def load_approvals(path: Path = APPROVALS_FILE) -> tuple[dict[str, str], tuple[str, ...]]:
     """The human's approved digests and the clauses awaiting re-approval (approvals.yaml)."""
-    raw: Any = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
-    if not isinstance(raw, dict) or set(cast(dict[str, Any], raw)) != {
-        "approved",
-        "reapproval_needed",
-    }:
-        raise ClauseLoadError(f"{path.name}: expected 'approved' and 'reapproval_needed'")
-    data = cast(dict[str, Any], raw)
+    data = _approvals_data(path)
     approved = cast(dict[str, str], data["approved"] or {})
     pending = cast(list[str], data["reapproval_needed"] or [])
     return dict(approved), tuple(pending)
 
 
-def quote_found_on_page(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DIR) -> bool:
-    """True if the clause text appears verbatim (ignoring whitespace) on its cited page.
+def load_transcription_approvals(path: Path = APPROVALS_FILE) -> dict[str, str]:
+    """The human's approved page-image transcriptions: "<source_file>#<page>" -> the SHA-256 of
+    the page text at approval (approvals.yaml, `approved_transcriptions`)."""
+    return dict(cast(dict[str, str], _approvals_data(path)["approved_transcriptions"] or {}))
+
+
+def transcription_digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def quote_found_on_page(
+    clause: PolicyClause,
+    extracted_dir: Path = EXTRACTED_DIR,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+) -> bool:
+    """True if the clause text appears verbatim (ignoring whitespace) on its cited page: in the
+    page-image transcription for a clause flagged TRANSCRIBED_FLAG, else in the extracted text.
 
     The text may mark an omission with ELISION ("[...]"), e.g. where two-column layouts
     interleave on extraction; every piece must then appear on the page, in order.
     """
-    return skipped_texts(clause, extracted_dir) is not None
+    return skipped_texts(clause, extracted_dir, transcriptions_dir) is not None
 
 
-def skipped_texts(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DIR) -> list[str] | None:
+def skipped_texts(
+    clause: PolicyClause,
+    extracted_dir: Path = EXTRACTED_DIR,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+) -> list[str] | None:
     """The page text each ELISION skips, in order; None if the quote is not on its page."""
-    page_text = _page_text(clause, extracted_dir)
+    if TRANSCRIBED_FLAG in (clause.notes or ""):
+        page_text = _page_text(clause, transcriptions_dir, transcribed=True)
+    else:
+        page_text = _page_text(clause, extracted_dir)
     if page_text is None:
         return None
     kept = [i for i, ch in enumerate(page_text) if not ch.isspace()]
@@ -135,19 +163,41 @@ def skipped_texts(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DIR) -> 
     ]
 
 
-def _page_text(clause: PolicyClause, extracted_dir: Path) -> str | None:
+def transcription_key(record: dict[str, Any], where: str) -> tuple[str, int]:
+    """(case-folded source_file, page) of a transcription record. The page must be a plain int
+    and the source a string, so a page spelled "4" or " 04" cannot pose as another record for
+    page 4 (test-breaker, 2026-10-30)."""
+    source, page = record.get("source_file"), record.get("page")
+    if not isinstance(source, str) or type(page) is not int:
+        raise ClauseLoadError(f"{where}: a transcription needs a string source_file and int page")
+    return source.casefold(), page
+
+
+def _page_text(clause: PolicyClause, directory: Path, transcribed: bool = False) -> str | None:
+    """The cited page's text. A transcription record must say "transcribed": true, and an
+    extracted record must not, so neither stands in for the other. Two records for the page are
+    refused: an unchecked one could otherwise shadow the one the human approved."""
     if clause.source_file is None or clause.page is None:
         return None
-    jsonl = extracted_dir / f"{Path(clause.source_file).stem}.jsonl"
+    jsonl = directory / f"{Path(clause.source_file).stem}.jsonl"
     if not jsonl.exists():
         return None
+    texts: list[str] = []
     with jsonl.open(encoding="utf-8") as lines:
         for line in lines:
             record = json.loads(line)
+            if transcribed:
+                transcription_key(record, jsonl.name)  # refuses a page spelled other than int
             # Same stem, other document (an original and a web or OCR copy): never a match.
-            if record["page"] == clause.page and record["source_file"] == clause.source_file:
-                return str(record["text"])
-    return None
+            if (
+                record["page"] == clause.page
+                and record["source_file"] == clause.source_file
+                and (record.get("transcribed") is True) == transcribed
+            ):
+                texts.append(str(record["text"]))
+    if len(texts) > 1:
+        raise ClauseLoadError(f"{jsonl.name}: {len(texts)} records for page {clause.page}")
+    return texts[0] if texts else None
 
 
 def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
