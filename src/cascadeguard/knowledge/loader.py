@@ -165,12 +165,14 @@ def skipped_texts(
 
 def _page_text(clause: PolicyClause, directory: Path, transcribed: bool = False) -> str | None:
     """The cited page's text. A transcription record must say "transcribed": true, and an
-    extracted record must not, so neither stands in for the other."""
+    extracted record must not, so neither stands in for the other. Two records for the page are
+    refused: an unchecked one could otherwise shadow the one the human approved."""
     if clause.source_file is None or clause.page is None:
         return None
     jsonl = directory / f"{Path(clause.source_file).stem}.jsonl"
     if not jsonl.exists():
         return None
+    texts: list[str] = []
     with jsonl.open(encoding="utf-8") as lines:
         for line in lines:
             record = json.loads(line)
@@ -180,8 +182,10 @@ def _page_text(clause: PolicyClause, directory: Path, transcribed: bool = False)
                 and record["source_file"] == clause.source_file
                 and (record.get("transcribed") is True) == transcribed
             ):
-                return str(record["text"])
-    return None
+                texts.append(str(record["text"]))
+    if len(texts) > 1:
+        raise ClauseLoadError(f"{jsonl.name}: {len(texts)} records for page {clause.page}")
+    return texts[0] if texts else None
 
 
 def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:

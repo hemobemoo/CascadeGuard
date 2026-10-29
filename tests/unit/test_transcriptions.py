@@ -17,11 +17,13 @@ from cascadeguard.knowledge.loader import (
     EXTRACTED_DIR,
     SOURCES_DIR,
     TRANSCRIPTIONS_DIR,
+    ClauseLoadError,
     load_clauses,
     load_transcription_approvals,
     quote_found_on_page,
     transcription_digest,
 )
+from cascadeguard.knowledge.retrieval import search_extracted
 
 CHARTER = "The UAE Charter for the Development and Use of Artificial Intelligence.pdf"
 CLAUSE_ID = "uae.ai-charter.human-oversight"
@@ -127,3 +129,23 @@ def test_a_reviewed_clause_rests_only_on_a_reviewed_transcription() -> None:
     for c in flagged:
         if c.status is ClauseStatus.REVIEWED:
             assert status[(c.source_file, c.page)] == "reviewed", c.id
+
+
+def test_transcription_pages_are_unique() -> None:
+    keys = [(r["source_file"], r["page"]) for r in all_records()]
+    assert len(keys) == len(set(keys))
+
+
+def test_a_duplicated_page_is_refused_by_the_quote_check_and_the_search(tmp_path: Path) -> None:
+    """An unchecked record placed before the approved one must not shadow it (test-breaker,
+    2026-10-29)."""
+    clause = charter_clause()
+    stem = Path(CHARTER).stem
+    approved = page_record(stem, clause.page)
+    forged = approved | {"text": "FORGED UNCHECKED TEXT. " + str(approved["text"])}
+    rows = "".join(json.dumps(r) + "\n" for r in (forged, approved))
+    (tmp_path / f"{stem}.jsonl").write_text(rows, encoding="utf-8")
+    with pytest.raises(ClauseLoadError, match="records for page"):
+        quote_found_on_page(clause, transcriptions_dir=tmp_path)
+    with pytest.raises(ClauseLoadError, match="two records"):
+        search_extracted("forged", transcriptions_dir=tmp_path)

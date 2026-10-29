@@ -223,9 +223,12 @@ def test_the_charter_text_layer_is_never_searched_only_reviewed_transcriptions()
     assert all(s.label == TRANSCRIPTION_CONTEXT_LABEL for s in charter)
     oversight = search_extracted("human oversight judgment errors biases", limit=1000)
     page4 = [s for s in oversight if s.source_file == CHARTER]
-    assert all("oversight Al" not in s.text for s in page4)  # never the garbled text layer
-    # Words only the text layer or a draft transcription has never match.
-    assert not [s for s in search_extracted("theirreplaceablevalue", limit=1000)]
+    assert page4 and all("oversight Al" not in s.text for s in page4)  # never the text layer
+    # A run-together word only the Charter's text layer has (it is there), and words only a
+    # draft transcription has, never match.
+    layer = EXTRACTED_DIR / f"{Path(CHARTER).stem}.jsonl"
+    assert "greatimportance" in layer.read_text("utf-8")
+    assert not search_extracted("greatimportance", limit=1000)
     assert not [
         s for s in search_extracted("peaceful coexistence", limit=1000) if s.source_file == CHARTER
     ]  # p.5: draft transcription

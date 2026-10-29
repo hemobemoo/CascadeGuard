@@ -114,6 +114,12 @@ Human decisions 2026-10-29. PR not merged.
   (`approved_transcriptions`); a reviewed clause may rest only on a reviewed page (tested).
 - Review round 2: evidence-auditor PASS (doc MINORs fixed), phase-auditor FAIL on stale
   PROGRESS and PR body (fixed) plus the unenforced transcription rule (fixed above).
+- Review round 3 (the last the loop allows): phase-auditor PASS (MINOR fixed: structure tag);
+  test-breaker FAIL on a duplicate page record shadowing the approved one. Fixed after the
+  round, verified by tests here, not re-reviewed: two records for one page are refused by the
+  quote check and the search; reviewed pages must name reviewer and date; stricter search
+  tests. Also from round 2: tampering with reviewed p.4, demoting it, or self-promoting a draft
+  page each fail the tests.
 - Review round 1: evidence-auditor PASS, test-breaker PASS (MINORs fixed:
   `TRANSCRIBED_SOURCES` allow-list, doc wording, failing-test count), phase-auditor FAIL only on
   the 39 expected failures while the clause is draft (MINORs fixed: structure file,

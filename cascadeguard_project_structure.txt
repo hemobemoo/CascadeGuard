@@ -104,7 +104,7 @@ cascadeguard/
 │   │   └── web/                      [P6c] web transcriptions of official pages (unverified), MANIFEST.md
 │   ├── approvals.yaml                [P3] digests of human-approved reviewed clauses (gate 1)
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
-│   ├── transcriptions/               page-image transcriptions for sources with an unreliable text layer
+│   ├── transcriptions/               [Charter PR] page-image transcriptions for sources with an unreliable text layer
 │   │                                 (TRANSCRIBED_SOURCES); quotes flagged so are checked here
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
