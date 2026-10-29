@@ -4,11 +4,14 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 ## Current phase
 
-**Phase 6d — Official sources: built on `phase-6d-official-sources` (human instructions
-2026-10-28); PR #11 open, not merged. Human decisions on PR #11 (2026-10-28) applied on the
-branch (see Decisions, 6d); the human merges, then reviews the draft list.** Spec `specs/006d-official-sources.md`;
+**Phase 6d — Official sources: merged to main via PR #11 (merge commit bf753c9, branch
+`phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
+after the PR #11 decisions were applied, evidence-auditor round 3 PASS and CI green). Before the
+merge, a repo-wide search found no remaining false U+FFFD claims (see Waiting on human). Review
+packet for gate 1: `docs/review/draft-review-packet.md`; gate 1 decided 2026-10-28, PR from
+`review-packet-6d` (not merged; see Waiting on human). No new phase opened. Spec `specs/006d-official-sources.md`;
 report and impact check `docs/review/phase-6d-report.md`; triage
-`docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the one review list.
+`docs/review/phase-6d-clause-triage.md`. See "Waiting on human" for the two clauses still open and the gate-1 questions.
 
 **Phase 6c — Policy source expansion: merged to main via PR #10 (merge commit b73421e, branch
 `phase-6c-policy-sources` kept), tagged `phase-6c`** (2026-10-28, on the human's instruction,
@@ -45,6 +48,12 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
   request retries.
 - **Known limitation:** the gap-wording pattern flags "no authority has been triggered" (pinned
   by `test_known_limitation_gap_pattern_flags_own_inaction`).
+- **Demo-only draft citation (human, 2026-10-29):** in demo prep, a demo-only scenario (not the
+  golden baseline) where the scripted adviser cites `uae.cyber-strategy-2025.governance-aim` and
+  the engine rejects it.
+- **Official 2025 strategy (human, 2026-10-28):** a future phase adds the Cyber Security
+  Council's 2025 National Cybersecurity Strategy PDF as an original and re-quotes
+  `uae.cyber-strategy-2025.*` from it (draft, open until then).
 - **Deferred from the 6d review (test-breaker):** crafted-tie unit tests for ranking levels 3b,
   4 and 10 (they hold under probe; only the golden encodes them); a slow test that re-extracting
   every source is byte-identical (holds under probe; the command is under Done, Phase 6d).
@@ -614,6 +623,13 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
   was added in 392f162 after the core-set review.
 - **NetworkX without stubs:** `types-networkx` is not on the AGENTS.md list, so NetworkX is
   confined to `engine/graph.py` behind typed helpers instead of adding a dependency.
+- **Human decisions, 2026-10-28 (gate 1 on the 6c/6d list, reviewer Ibrahim Melhem):** eight
+  clauses reviewed, four closed as draft, two kept open (see "Waiting on human" and the packet's
+  Decisions). `eu.gdpr.art33-1` retitled before review; `expected_baseline.yaml` updated in the
+  review commit (rule 4). The impact tests that pinned these clauses as drafts were rewritten:
+  the web part as approved in advance (Phase 6c decision 6); the 6d part and the baseline golden
+  follow from the gate-1 decision itself (the human asked for the golden update). Open question:
+  does decision 6 also cover the 6d tests (phase-auditor QUESTION-FOR-HUMAN)?
 - **Human decisions, 2026-10-28 (Phase 6d, on PR #11):**
   1. Para 42/43 deviation accepted as done.
   2. Gate-6 edits confirmed (`AGENTS.md` 22 originals; Phase 6d in `START_PROMPT.md`).
@@ -953,39 +969,38 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Phase 6d (2026-10-28), PR #11 open, not merged.** One consolidated review list (gate 1).
+**Gate 1 on the 6c/6d review list: decided (Ibrahim Melhem, 2026-10-28); PR from
+`review-packet-6d`, not merged.** Decisions and the measured impact are in
+`docs/review/draft-review-packet.md`, "Decisions"; each clause's notes record them.
+- Reviewed: `uae.mohap-smart-health.p7-liability`, `unesco.ai-ethics.human-oversight`,
+  `unesco.ai-ethics.review-and-correct`, `unesco.ai-ethics.responsibility-accountability`,
+  `oecd.ai-principles.robustness-override`, `oecd.ai-principles.accountability-cooperation`,
+  `dha.pp11.applicability` (binding unknown kept), `eu.gdpr.art33-1` (retitled).
+- Closed as draft (off the review list): `uae.mohap-smart-health.p2-coordination`,
+  `uae.mohap-smart-health.p6-cybersecurity`, `dha.pp11.4-18-5`, `mocai.ethics.fallback-plan`.
 
-a) Draft clauses from 6c and 6d (all `status: draft`; none is loaded by the engine):
+Still on the review list (draft, open): `uae.cyber-strategy-2025.governance-aim` and
+`uae.cyber-strategy-2025.partnership-aim` (`web/03_uae_national_cybersecurity_strategy.pdf`,
+p.2). Only an announcement summary is in the repository; they wait for the official strategy PDF
+(see "Open items").
 
-| id | source_file | page | article | binding |
-|---|---|---|---|---|
-| `uae.mohap-smart-health.p2-coordination` | `web/01_uae_smart_health_ai_policy.pdf` | 3 | Priorities and Key Components, 2, first item | unknown |
-| `uae.mohap-smart-health.p6-cybersecurity` | `web/01_uae_smart_health_ai_policy.pdf` | 4 | Priorities and Key Components, 6, first item | unknown |
-| `uae.mohap-smart-health.p7-liability` | `web/01_uae_smart_health_ai_policy.pdf` | 4 | Priorities and Key Components, 7, second item | unknown |
-| `uae.cyber-strategy-2025.governance-aim` | `web/03_uae_national_cybersecurity_strategy.pdf` | 2 | Cabinet approval announcement, "The strategy seeks to", first item | false |
-| `uae.cyber-strategy-2025.partnership-aim` | `web/03_uae_national_cybersecurity_strategy.pdf` | 2 | Cabinet approval announcement, "The strategy seeks to", fifth item | false |
-| `unesco.ai-ethics.human-oversight` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 22 | III.2, Human oversight and determination, paras 35-36 | false |
-| `unesco.ai-ethics.review-and-correct` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 22 | III.2, Transparency and explainability, para 38 | false |
-| `unesco.ai-ethics.responsibility-accountability` | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | 23 | III.2, Responsibility and accountability, para 43 | false |
-| `oecd.ai-principles.robustness-override` | `OECD_Recommendation_AI.pdf` | 9 | Section 1, 1.4 b) | false |
-| `oecd.ai-principles.accountability-cooperation` | `OECD_Recommendation_AI.pdf` | 9 | Section 1, 1.5 c) | false |
+Answers from the human on the gate-1 questions (2026-10-29):
+1. Keep a rejected draft citation for the demo: yes, but not by leaving a real clause
+   unreviewed. Later, in demo prep, add a demo-only scenario (not the golden baseline) where the
+   scripted adviser cites `uae.cyber-strategy-2025.governance-aim` and the engine rejects it. Not
+   now (see "Open items").
+2. Show binding status and source type next to "reviewed" to agents, the CLI and the UI (e.g.
+   "reviewed · not binding · international precedent", "reviewed · web transcription"). The
+   cache-key change is accepted. Its own small PR after the gate-1 PR.
+3. `uae.mohap-smart-health.p7-liability` notes stay as they are.
+4. Phase 6c decision 6 also covers the rewritten 6d impact tests (recorded here; commit history
+   not rewritten).
 
-The two `uae.cyber-strategy-2025.*` clauses stay quoted from the 03 web transcription (the only
-source for the 2025 strategy); the human checks whether the wording is the Cabinet's own.
-Reviewing any clause in this list changes `policy_legal_adviser`'s view and LLM cache keys (new
-paid run of its steps, gate 4); the impact tests are then rewritten as approved on 2026-10-28.
+Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked;
+the two OECD clauses are reviewed with "UAE adherence not checked" kept).
 
-b) Older open items:
-- **DHA applicability** (`dha.pp11.applicability`): does DHA PP-11 bind the synthetic portal
-  operator, and on what basis (`binding: unknown` meanwhile)?
-- **DHA 4.18.5 actor** (`dha.pp11.4-18-5`): the actor comes from 4.18.4, outside the quote
-  (decision 3p); confirm or remove the mapping.
-- **MOCAI fallback mapping** (`mocai.ethics.fallback-plan`): actor and action are interpreted
-  (decision 4d); the text says only "AI systems".
-- **GDPR Art 33(1) title** (`eu.gdpr.art33-1`): the title drops "where feasible"; retitle at
-  review.
-
-Also open: whether the UAE adheres to OECD/LEGAL/0449 (the PDF lists no Adherents; not checked).
+Real U+FFFD (reported, not changed): `T-AI4G-AI4GOOD-2025-6-PDF-E.jsonl` holds 1,294, on page 5
+(contents dot leaders) and pages 41–44 (full stops); no clause quotes it.
 
 Answered on PR #11 (2026-10-28): para 42/43 deviation accepted; gate-6 edits confirmed;
 TRA-era strategy excluded from `--extracted-context` with no historical-context clause; both
@@ -1086,12 +1101,14 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Phase 6d PR #11 open with the human's PR #11 decisions applied: the human merges, then reviews
-the draft list under "Waiting on human" (gate 1). Correction (human, 2026-10-28) to the earlier
+Phase 6d merged and tagged `phase-6d`. Gate 1 decided (2026-10-28); the `review-packet-6d` PR
+carries the "Reviewed by human" commit and the updated baseline golden. The human merges it and
+decides whether a draft citation stays in the demo baseline. No new phase until then. Correction (human, 2026-10-28) to the earlier
 next step: the 2025 Cyber Security Council strategy PDF could not be downloaded and the National Cyber Security Policy for AI is not being
 added. `UAE_National_Cybersecurity_Strategy.pdf` is a TRA-era document, not the 2025 strategy,
 so the 03 web transcription stays the only source for the 2025 strategy and its two clauses are
-not re-quoted. Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the
+not re-quoted for now. Gate 1 (2026-10-28) keeps them draft and open until a future phase adds the
+official strategy PDF (see "Open items"). Then Phase 7 (tracing, optional). Still open: the deferred MINORs, the
 gap-wording known limitation and the two-owners limitation.
 
 Earlier (done):

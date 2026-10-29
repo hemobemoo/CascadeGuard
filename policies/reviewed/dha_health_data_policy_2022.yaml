@@ -12,11 +12,13 @@ clauses:
     issuer: Dubai Health Authority
     jurisdiction: Dubai, UAE
     document_date: "2022-08-10"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       Applies only because the scenario places the portal operator in Dubai. Whether the policy
       is binding (and on whom) is for the human to confirm.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28): the quote is confirmed; binding:
+      unknown kept.
 
   - id: dha.pp11.4-18-1
     title: Incident response and business continuity plans
@@ -146,3 +148,5 @@ clauses:
       quote: it comes from 4.18.4 ("The Entity is required to report breaches/incidents",
       dha.pp11.4-18-4). The two clauses stay separate (human decision 3p, 2026-10-24); the
       actor's source is part of this clause's review.
+      Decision (gate 1, Ibrahim Melhem, 2026-10-28): keep as draft, closed: duplicates the
+      reviewed obligation in dha.pp11.4-18-4 (same actor and action).

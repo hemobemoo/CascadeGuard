@@ -11,15 +11,25 @@
 # Baseline: the core set reviewed on 2026-10-23 (6edbb51), including the post-review
 # edits in 9b7b7fa, which the human accepted on 2026-10-23.
 # uae.fl2-2019.art16-exceptions: reviewed by the human against PDF page 5 on 2026-10-26.
+# Gate 1 on 2026-10-28 (reviewer Ibrahim Melhem): the eight 6c/6d/older clauses in
+# docs/review/draft-review-packet.md, Decisions.
 approved:
   dha.pp11.4-18-1: 19b74d4a70e6a56fc7ddb71cd96ed0c13195a039be045759b09b27aeb459188f
   dha.pp11.4-18-2: 5c11ce7530f83cf90a4fea662de78d5d34bdbc72e5c81b8608bc49fa94c65d6e
   dha.pp11.4-18-4: 2586264c85cf66a9695acee39b0404ef069139f04ce30706dd3615c8d8bb0a8c
+  dha.pp11.applicability: 74dbb3e9681d5f7fe112af37e6bdb277875055c54ef2049253c588d05f2b7793
+  eu.gdpr.art33-1: 8837fb73655ffea6ddc42059d8d084bc52df8c800437b9b629b108f3ac8f17af
+  oecd.ai-principles.accountability-cooperation: b026fab3f31cba4999c02fba0ad977155e61fbe035679f4fd25122a95e9fcec8
+  oecd.ai-principles.robustness-override: 1fef039e634ec13e30c41e7299ca0dc5492caf2fa2d974b0ac71d70a02b95cae
   uae.ai-charter.human-oversight: 3bd03c80ed87614e9d0a2cbd87203b7067130db85b9043cc15492d3d1f082ea2
   uae.fl2-2019.art16: 2b67b0c9b6a6d3c91ab0af9f6c42deac3d6179739d37d8b8b497999d00ce4df9
   uae.fl2-2019.art16-exceptions: 33bdfc70faad8bfa39c8c610f1221b1a4a808b6a672a9ae926377c9a13545bdb
   uae.fl2-2019.art2: 50f9627bea2946e89dbe78e8ad2144c6d49c0b03cd31fc9961df9050b9793714
   uae.fl2-2019.art4: b5b22ba382e365a4afbf30a10d4fdc6f422b43fab39ed5f555937397a4c613aa
   uae.fl2-2019.art6: 2629f26febb8f0392def11d95bfa0c5fe09004fe8c8234119d80a0f34c0d2f41
+  uae.mohap-smart-health.p7-liability: ab93b217110e2b365fda7ead4847f3d6a3074f47c4529be5b853bc22f9ec1acd
   uae.pdpl.art2-2: 9e5f38b29768bf886a69fb77b233704440ea7518515388c96d5f4af1351c90f0
+  unesco.ai-ethics.human-oversight: 203850fd654c6f850445201b8c84e0335caf48882b868ceb1c35463e9333c7a4
+  unesco.ai-ethics.responsibility-accountability: 3195745fed5d15a48fefa5fbd6591cace0170368b5f51486c92dfe13e95531f2
+  unesco.ai-ethics.review-and-correct: 10629ca9a2b97e92f340a55be8130bcb843c90457c705d0f8c8b806ce07f629f
 reapproval_needed: []
