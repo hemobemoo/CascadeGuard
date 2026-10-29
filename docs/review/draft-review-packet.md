@@ -359,6 +359,9 @@ several at once costs the same LLM re-run as reviewing one.
 Re-quoted from the official Charter PDF on the human's decision (2026-10-29); same id, back to
 draft for re-approval (it was reviewed from the unofficial compilation).
 
+**Decided 2026-10-29 (Ibrahim Melhem): reviewed**, with the page-4 transcription, after checking
+both against the PDF image. The text below is as it was proposed (status and label then: draft).
+
 - **Source:** `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`
   (SHA-256 `785f7192…bd03808`), PDF page 4 = printed "Page 04". Item 6 under "General Principles
   of the Charter:" (heading on p.3). Was: `UAE Policy Foundation.pdf` p.2.

@@ -109,7 +109,7 @@ acceptable".
 | Clause (reviewed) | Source | Why it is not an official document | Official document exists? |
 |---|---|---|---|
 | `uae.mohap-smart-health.p7-liability` | `web/01_uae_smart_health_ai_policy.pdf`, a transcription of the uaelegislation.gov.ae policy page | A printed transcription of an official government page, not a published document; label "web transcription" | The page itself is on the official legislation portal (the human checked the sentence against it). Whether the portal offers a PDF of this policy: **not checked** |
-| `uae.ai-charter.human-oversight` | `UAE Policy Foundation.pdf` (at the audit) | The inventory (#18) calls it an "unofficial compilation of UAE policy pages" | **Since the audit:** re-quoted from the official Charter PDF (#23, charter-source PR), draft until the human re-approves |
+| `uae.ai-charter.human-oversight` | `UAE Policy Foundation.pdf` (at the audit) | The inventory (#18) calls it an "unofficial compilation of UAE policy pages" | **Since the audit:** re-quoted from the official Charter PDF (#23, charter-source PR), re-approved by the human on 2026-10-29 |
 
 **Drafts on announcement summaries (not loaded)**
 - `uae.cyber-strategy-2025.governance-aim` and `uae.cyber-strategy-2025.partnership-aim` come

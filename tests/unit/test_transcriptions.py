@@ -7,13 +7,20 @@ from pathlib import Path
 
 import pytest
 
-from cascadeguard.domain.policies import TRANSCRIBED_FLAG, TRANSCRIBED_SOURCES, PolicyClause
+from cascadeguard.domain.policies import (
+    TRANSCRIBED_FLAG,
+    TRANSCRIBED_SOURCES,
+    ClauseStatus,
+    PolicyClause,
+)
 from cascadeguard.knowledge.loader import (
     EXTRACTED_DIR,
     SOURCES_DIR,
     TRANSCRIPTIONS_DIR,
     load_clauses,
+    load_transcription_approvals,
     quote_found_on_page,
+    transcription_digest,
 )
 
 CHARTER = "The UAE Charter for the Development and Use of Artificial Intelligence.pdf"
@@ -86,3 +93,35 @@ def test_only_sources_with_an_unreliable_text_layer_may_be_transcribed() -> None
     }
     for source in TRANSCRIBED_SOURCES:
         assert "unreliable" in rows[source], source
+
+
+def all_records() -> list[dict[str, object]]:
+    return [
+        json.loads(line)
+        for path in sorted(TRANSCRIPTIONS_DIR.glob("*.jsonl"))
+        for line in path.read_text("utf-8").splitlines()
+        if line
+    ]
+
+
+def test_every_reviewed_transcription_matches_its_approved_digest() -> None:
+    """AGENTS.md transcription route: a reviewed page is pinned like a reviewed clause, so an
+    edit after the human's check is caught (phase-auditor, 2026-10-29)."""
+    approved = load_transcription_approvals()
+    reviewed = {
+        f"{r['source_file']}#{r['page']}": r for r in all_records() if r["status"] == "reviewed"
+    }
+    assert set(reviewed) <= set(approved), "reviewed without a human approval"
+    for key, record in reviewed.items():
+        assert transcription_digest(str(record["text"])) == approved[key], (
+            f"{key} was edited after approval: set it back to draft"
+        )
+
+
+def test_a_reviewed_clause_rests_only_on_a_reviewed_transcription() -> None:
+    status = {(r["source_file"], r["page"]): r["status"] for r in all_records()}
+    flagged = [c for c in load_clauses() if TRANSCRIBED_FLAG in (c.notes or "")]
+    assert flagged
+    for c in flagged:
+        if c.status is ClauseStatus.REVIEWED:
+            assert status[(c.source_file, c.page)] == "reviewed", c.id
