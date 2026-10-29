@@ -14,9 +14,14 @@ OCR_FLAG = "OCR — check against image"  # must appear in notes of a clause quo
 WEB_DIR = "web/"  # source_file prefix of web-page transcriptions in policies/sources/web/
 WEB_FLAG = "web transcription — unverified"  # must appear in notes of a clause quoted from one
 LABEL_SEPARATOR = " · "  # between a clause's status and its qualifiers in status_label
-# A jurisdiction starting with one of these is a UAE source; any other is an international one.
+# Originals in policies/sources/ that are not official documents, with the type shown in their
+# clauses' labels. Each must match its row in docs/policy-inventory.md (tested).
+SOURCE_TYPES = {"UAE Policy Foundation.pdf": "unofficial compilation"}
+# A jurisdiction whose first words are one of these is a UAE source; any other is an
+# international one. Whole words only: "UAEU partner states" is not the UAE.
 UAE_JURISDICTIONS = (
     "UAE",
+    "United Arab Emirates",
     "Abu Dhabi",
     "Dubai",
     "Sharjah",
@@ -25,6 +30,16 @@ UAE_JURISDICTIONS = (
     "Ras Al Khaimah",
     "Fujairah",
 )
+
+
+def is_uae_jurisdiction(jurisdiction: str) -> bool:
+    """Does the jurisdiction start with the UAE or one of its emirates, as whole words?"""
+    return any(
+        jurisdiction == name or jurisdiction.startswith((f"{name} ", f"{name},", f"{name};"))
+        for name in UAE_JURISDICTIONS
+    )
+
+
 CLAUSE_ID_PATTERN = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
 # Year, year-month, full ISO date, or "unknown" when the PDF prints no date (never guessed).
 DOCUMENT_DATE_PATTERN = r"^(\d{4}(-\d{2}(-\d{2})?)?|unknown)$"
@@ -155,18 +170,20 @@ class PolicyClause(DomainModel):
 
     @property
     def qualifiers(self) -> tuple[str, ...]:
-        """Binding status, then source type: web transcription, OCR copy, or international
-        precedent (a jurisdiction that does not start with the UAE or one of its emirates). Empty
-        for an illustrative clause."""
+        """Binding status; then the source type when the source is not an original document
+        (web transcription, OCR copy, or a type recorded in SOURCE_TYPES); then "international
+        precedent" when the jurisdiction does not start with the UAE or one of its emirates.
+        Empty for an illustrative clause."""
         if self.status is ClauseStatus.ILLUSTRATIVE:
             return ()
         binding = {True: "binding", False: "not binding", "unknown": "binding unknown"}
+        parts = [binding[self.binding]]
         if in_source_dir(self.source_file, WEB_DIR):
-            source = ("web transcription",)
+            parts.append("web transcription")
         elif in_source_dir(self.source_file, OCR_DIR):
-            source = ("OCR copy",)
-        elif not self.jurisdiction.startswith(UAE_JURISDICTIONS):
-            source = ("international precedent",)
-        else:
-            source = ()
-        return (binding[self.binding], *source)
+            parts.append("OCR copy")
+        elif self.source_file in SOURCE_TYPES:
+            parts.append(SOURCE_TYPES[self.source_file])
+        if not is_uae_jurisdiction(self.jurisdiction):
+            parts.append("international precedent")
+        return tuple(parts)
