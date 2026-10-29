@@ -401,6 +401,11 @@ both against the PDF image. The text below is as it was proposed (status and lab
 Re-quoted from the official Charter PDF on the human's decision (2026-10-29); same id, stays
 draft (it was a draft from the compilation).
 
+**Decided 2026-10-30 (Ibrahim Melhem): reviewed**, after the page-3 transcription was approved.
+Measured effect: the baseline lists it among the loaded clauses (21 loaded, 21 drafts); the
+timeline, findings, repair search and both expected outputs are unchanged. It reaches the
+`policy_legal_adviser`'s view, so that role's LLM cache keys change (recording run later, gate 4).
+
 - **Source:** `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`, PDF
   page 3 = printed "Page 03". Item 2 under "General Principles of the Charter:". Was:
   `UAE Policy Foundation.pdf` p.1, "Priorities & Key Components, 2".

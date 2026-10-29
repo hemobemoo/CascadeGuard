@@ -1092,8 +1092,9 @@ and the page-4 transcription, after checking both against the PDF image.
 **Translation rule (decided 2026-10-29):** documents only; web transcriptions keep "web
 transcription", so web/01 is unchanged (recorded in the inventory).
 
-**Charter safety clause (decided 2026-10-29):** re-quoted from the official PDF p.3 (same id,
-draft; packet entry 16). The p.3 transcription waits for the human's check.
+**Charter safety clause:** re-quoted from the official PDF p.3 (2026-10-29); **reviewed by the
+human 2026-10-30** after the p.3 transcription was approved (packet entry 16). Baseline lists 21
+loaded clauses; expected outputs unchanged; the adviser's view (and LLM cache keys) change.
 
 **Charter transcriptions (gate 1): approved 2026-10-30** (Ibrahim Melhem): pages 1, 2, 3 and 5,
 checked against the page images; digests pinned in `policies/approvals.yaml`.

@@ -13,7 +13,7 @@ clauses:
     issuer: UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office
     jurisdiction: UAE
     document_date: "2024-07"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Policy charter, not law: a non-binding principle. The text names no actor and says
@@ -24,7 +24,8 @@ clauses:
       p.1. Text unchanged from the earlier source (UAE Policy Foundation.pdf p.1, an unofficial
       compilation). The PDF renders its text as images or vector outlines over an unreliable
       text layer, so the quote is checked against policies/transcriptions/, transcribed from page
-      image — check against image. Stays draft.
+      image — check against image. Reviewed by the human (Ibrahim Melhem, 2026-10-30) after the
+      page-3 transcription was approved (gate 1; packet entry 16).
 
   - id: uae.ai-charter.human-oversight
     title: "Charter: human oversight to correct errors"
