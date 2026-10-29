@@ -229,9 +229,7 @@ def test_the_charter_text_layer_is_never_searched_only_reviewed_transcriptions()
     layer = EXTRACTED_DIR / f"{Path(CHARTER).stem}.jsonl"
     assert "greatimportance" in layer.read_text("utf-8")
     assert not search_extracted("greatimportance", limit=1000)
-    assert not [
-        s for s in search_extracted("peaceful coexistence", limit=1000) if s.source_file == CHARTER
-    ]  # p.5: draft transcription
+    # Drafts are never searched: test_only_reviewed_transcriptions_are_searched (synthetic).
 
 
 def test_only_reviewed_transcriptions_are_searched(tmp_path: Path) -> None:

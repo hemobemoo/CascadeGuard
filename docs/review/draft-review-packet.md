@@ -426,6 +426,9 @@ draft (it was a draft from the compilation).
 
 ## Charter transcriptions to check (added 2026-10-29)
 
+**Decided 2026-10-30 (Ibrahim Melhem): pages 1, 2, 3 and 5 reviewed**, checked against the page
+images; each page's text is pinned under `approved_transcriptions` in `policies/approvals.yaml`.
+
 `policies/transcriptions/The UAE Charter for the Development and Use of Artificial Intelligence.jsonl`,
 one record per PDF page, each transcribed from the page image (PDF page = printed page). Check
 each against the image; on your approval each record's `status` goes to `reviewed` (methodology
@@ -433,11 +436,11 @@ each against the image; on your approval each record's `status` goes to `reviewe
 
 | PDF page | Printed | Content | Clause resting on it | Status | What to check |
 |---|---|---|---|---|---|
-| 1 | (cover) | masthead (3 lines), title (2 lines), "July 2024" | none (issuer and date of both clauses) | draft | Masthead spelling: "MINISTER OF STATE FOR ARTIFICIAL INTELLIGENCE," / "DIGITAL ECONOMY & REMOTE WORK APPLICATIONS OFFICE". Emblem and photo not transcribed (noted in the record). |
-| 2 | Page 02 | Introduction (1 paragraph) | none | draft | "(AI)" and "UAE community". |
-| 3 | Page 03 | Relation to the UAE AI Strategy; General Principles 1–4 | `uae.ai-charter.safety` (item 2, draft) | draft | Item 2 word for word; "UAE’s" (curly apostrophe) in item 4. |
+| 1 | (cover) | masthead (3 lines), title (2 lines), "July 2024" | none (issuer and date of both clauses) | **reviewed** 2026-10-30 | Masthead spelling: "MINISTER OF STATE FOR ARTIFICIAL INTELLIGENCE," / "DIGITAL ECONOMY & REMOTE WORK APPLICATIONS OFFICE". Emblem and photo not transcribed (noted in the record). |
+| 2 | Page 02 | Introduction (1 paragraph) | none | **reviewed** 2026-10-30 | "(AI)" and "UAE community". |
+| 3 | Page 03 | Relation to the UAE AI Strategy; General Principles 1–4 | `uae.ai-charter.safety` (item 2, draft) | **reviewed** 2026-10-30 | Item 2 word for word; "UAE’s" (curly apostrophe) in item 4. |
 | 4 | Page 04 | General Principles 5–8 | `uae.ai-charter.human-oversight` (item 6, reviewed) | **reviewed** 2026-10-29 | Done. |
-| 5 | Page 05 | General Principles 9–12 | none | draft | "AI" (not "Al") throughout; items 10–12 headings. |
+| 5 | Page 05 | General Principles 9–12 | none | **reviewed** 2026-10-30 | "AI" (not "Al") throughout; items 10–12 headings. |
 
 ---
 

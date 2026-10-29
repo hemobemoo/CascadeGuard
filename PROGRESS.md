@@ -92,8 +92,8 @@ Human decisions 2026-10-29. PR not merged.
   `TRANSCRIBED_FLAG` ("transcribed from page image — check against image") is checked against
   `policies/transcriptions/<stem>.jsonl` (records `"transcribed": true`, `"status": "draft"`),
   never the text layer; an unflagged clause never against a transcription
-  (`tests/unit/test_transcriptions.py`). Transcribed: every Charter page (p.4 reviewed; pp.1, 2, 3,
-  5 draft).
+  (`tests/unit/test_transcriptions.py`). Transcribed: every Charter page, all reviewed (p.4
+  2026-10-29; pp.1, 2, 3, 5 2026-10-30).
 - `uae.ai-charter.human-oversight` re-quoted from it: page 4, item 6, issuer as printed; text
   unchanged; went back to draft, then re-approved by the human on 2026-10-29 (commit
   "Reviewed by human: uae.ai-charter.human-oversight"). Packet entry 15 in
@@ -1095,9 +1095,8 @@ transcription", so web/01 is unchanged (recorded in the inventory).
 **Charter safety clause (decided 2026-10-29):** re-quoted from the official PDF p.3 (same id,
 draft; packet entry 16). The p.3 transcription waits for the human's check.
 
-**Charter transcriptions (gate 1):** pages 1, 2, 3 and 5 are transcribed from the images
-(draft). Page-by-page list: `docs/review/draft-review-packet.md`, "Charter transcriptions to
-check". On approval each record's `status` goes to `reviewed`.
+**Charter transcriptions (gate 1): approved 2026-10-30** (Ibrahim Melhem): pages 1, 2, 3 and 5,
+checked against the page images; digests pinned in `policies/approvals.yaml`.
 
 **Charter text in LLM context (decided 2026-10-29):** the Charter's text layer is in
 `NOT_SEARCHED`; `--extracted-context` searches only reviewed transcriptions (label
