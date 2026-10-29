@@ -24,7 +24,8 @@ from cascadeguard.simulation.state import SimulationState
 class ClauseSummary:
     id: str
     title: str
-    status_label: str  # e.g. "illustrative" or "reviewed (interpreted)"; shown wherever cited
+    # e.g. "illustrative", "reviewed (interpreted) · binding unknown"; shown wherever cited
+    status_label: str
 
 
 @dataclass(frozen=True, slots=True)

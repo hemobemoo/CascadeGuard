@@ -14,6 +14,7 @@ from cascadeguard.cli import load_world
 from cascadeguard.domain.policies import (
     LABEL_SEPARATOR,
     OCR_FLAG,
+    SOURCE_TYPES,
     WEB_FLAG,
     ClauseStatus,
     PolicyClause,
@@ -60,6 +61,29 @@ BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
             {"source_file": "ocr/doc.ocr.pdf", "notes": OCR_FLAG, "status": "draft"},
             "draft · binding · OCR copy",
         ),
+        (  # a web copy of a foreign source keeps both qualifiers
+            {
+                "binding": False,
+                "jurisdiction": "International",
+                "source_file": "web/06_page.pdf",
+                "notes": WEB_FLAG,
+            },
+            "reviewed · not binding · web transcription · international precedent",
+        ),
+        ({"jurisdiction": "United Arab Emirates"}, "reviewed · binding"),
+        ({"jurisdiction": "UAE (federal)"}, "reviewed · binding"),
+        (
+            {"binding": False, "jurisdiction": "UAEU partner states"},
+            "reviewed · not binding · international precedent",
+        ),
+        (
+            {"binding": False, "jurisdiction": "Dubaian Republic"},
+            "reviewed · not binding · international precedent",
+        ),
+        (
+            {"binding": False, "source_file": "UAE Policy Foundation.pdf"},
+            "reviewed · not binding · unofficial compilation",
+        ),
         (
             {
                 "status": "illustrative",
@@ -83,10 +107,26 @@ def test_every_repository_clause_label_states_binding_and_source_type() -> None:
             assert parts == [c.status_label], c.id
             continue
         assert parts[1] == BINDING[c.binding], c.id
+        expected: list[str] = []
         if in_source_dir(c.source_file, "web/"):
-            assert parts[2:] == ["web transcription"], c.id
-        elif not c.jurisdiction.startswith(("UAE", "Dubai")):
-            assert parts[2:] == ["international precedent"], c.id
+            expected.append("web transcription")
+        elif in_source_dir(c.source_file, "ocr/"):
+            expected.append("OCR copy")
+        elif c.source_file == "UAE Policy Foundation.pdf":
+            expected.append("unofficial compilation")
+        if not c.jurisdiction.startswith(("UAE ", "UAE,", "Dubai,")) and c.jurisdiction != "UAE":
+            expected.append("international precedent")
+        assert parts[2:] == expected, c.id
+
+
+def test_every_recorded_source_type_matches_the_inventory() -> None:
+    """SOURCE_TYPES must say what docs/policy-inventory.md says about each source."""
+    inventory = (ROOT / "docs" / "policy-inventory.md").read_text(encoding="utf-8")
+    rows = {
+        line.split("|")[2].strip(" `"): line for line in inventory.splitlines() if "| `" in line
+    }
+    for source, kind in SOURCE_TYPES.items():
+        assert kind.casefold() in rows[source].casefold(), source
 
 
 SHOWN = {
