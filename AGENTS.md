@@ -84,7 +84,7 @@ An absent provision in the reviewed corpus is never reported as a confirmed lega
 
 ## Policy and evidence rules
 
-- The policy knowledge base is the 22 original PDF documents in `policies/sources/` plus the
+- The policy knowledge base is the 23 original PDF documents in `policies/sources/` plus the
   web transcriptions of official pages in `policies/sources/web/`, listed in its `MANIFEST.md`.
   These originals are never modified, renamed, or deleted.
 - The two published books among them are context only: never a clause source, never quoted
@@ -99,6 +99,12 @@ An absent provision in the reviewed corpus is never reported as a confirmed lega
      quoting the text verbatim from the extracted page, with `status: draft`.
   3. The human checks each draft against the PDF and changes it to `status: reviewed`.
      Agents never set `status: reviewed` themselves.
+- Transcription route, for a page whose text layer is unreliable: allowed only for sources in
+  `TRANSCRIBED_SOURCES` whose text layer the inventory (`docs/policy-inventory.md`) marks
+  unreliable. The agent transcribes the page from the page image into
+  `policies/transcriptions/<pdf-stem>.jsonl` (status draft), and the clause's quote is checked
+  against that transcription instead of the extracted page. The human checks the transcription
+  against the image before any clause resting on it is set to `status: reviewed`.
 - Every clause records: `id`, `title`, `text` (verbatim), `source_file` (PDF filename),
   `page`, `article` (article/section number if present), `issuer`, `jurisdiction`,
   `document_date`, `status` (`draft` | `reviewed` | `illustrative`),

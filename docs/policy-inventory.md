@@ -88,12 +88,13 @@ file:
 | #18 unofficial compilation | various | not printed | no ("unofficial compilation" already) |
 | #1, #7, #9, #12–15, #20, #21 | NIST, EU, OECD, ITU, UNESCO, Agile Nations | the same; English is an official language of each | no |
 | #22 TRA-era strategy | TRA | TRA | no (not searched, no clause) |
-| web/01 MOHAP smart health policy | Ministry of Health and Prevention | the uaelegislation.gov.ae portal, not MOHAP | **would change: yes** (not applied; see PROGRESS) |
+| web/01 MOHAP smart health policy | Ministry of Health and Prevention | the uaelegislation.gov.ae portal, not MOHAP | no: web transcriptions are outside the rule (human decision 2026-10-29) |
 | web/02, web/04, web/05 | UAE Government, entity not printed | the same portals | no clause; cannot tell |
 | web/03, web/06, web/07 | news item; UNESCO; OECD | — | no (not a translation of an instrument) |
 
-The list above (`TRANSLATIONS`) does not change, except web/01 if the rule is applied to web
-transcriptions.
+The list above (`TRANSLATIONS`) does not change. The rule covers documents only (human decision
+2026-10-29): web transcriptions (web/01–07) keep their "web transcription" label and never get
+"English translation", so web/01 is unchanged.
 
 **#23 Charter (official PDF), text layer.** The pages render their text as images (pp.1, 2, 4) or
 vector outlines (pp.3, 5), over an embedded text layer that is not reliable: words run together or split ("theirreplaceablevalue"), "AI" reads "Al", and
