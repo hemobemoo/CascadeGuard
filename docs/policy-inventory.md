@@ -62,8 +62,8 @@ from these files carry "English translation" in their label (`TRANSLATIONS` in
 legislation; the Arabic text is presumed authoritative, but only Dubai Law 26/2015 says so in the
 document (p.1). Nothing in the repository verifies the English as an official translation. The
 DHA policy (#10) is not listed: it is the issuer's own English version, though it says the Arabic
-version prevails (p.46). Whether the TDRA consolidation should be treated the same way is open
-(PROGRESS, "Waiting on human").
+version prevails (p.46). The TDRA consolidation is listed, though TDRA published it; whether to
+treat it like the DHA policy is open (PROGRESS, "Waiting on human").
 
 - `887026278-TDRA-Telecom-Law-Final-English-o.pdf`
 - `ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf`

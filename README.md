@@ -18,8 +18,8 @@ ITU AI for Good Sandbox Hackathon (UAE), submitted by sending this repository's 
 | Affiliation | Al Balqa Applied University |
 | Mentor | Dr. Wafaa Almaaitah |
 
-**Reproduce step by step** (no API key, no network calls after `uv sync`; scripted agents are
-the default and give byte-identical output on every run):
+**Reproduce step by step** (no API key and no LLM calls; scripted agents are the default and
+give byte-identical output on every run):
 
 1. `uv sync` installs Python 3.12 and the pinned dependencies (`uv.lock`).
 2. `uv run cascadeguard run uae_health_access` runs the incident without a repair. Its result
