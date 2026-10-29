@@ -32,4 +32,5 @@ approved:
   unesco.ai-ethics.human-oversight: 203850fd654c6f850445201b8c84e0335caf48882b868ceb1c35463e9333c7a4
   unesco.ai-ethics.responsibility-accountability: 3195745fed5d15a48fefa5fbd6591cace0170368b5f51486c92dfe13e95531f2
   unesco.ai-ethics.review-and-correct: 10629ca9a2b97e92f340a55be8130bcb843c90457c705d0f8c8b806ce07f629f
-reapproval_needed: []
+reapproval_needed:
+  - uae.ai-charter.human-oversight

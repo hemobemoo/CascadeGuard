@@ -354,6 +354,45 @@ several at once costs the same LLM re-run as reviewing one.
 
 ---
 
+## 15. `uae.ai-charter.human-oversight` (re-quote, added 2026-10-29)
+
+Re-quoted from the official Charter PDF on the human's decision (2026-10-29); same id, back to
+draft for re-approval (it was reviewed from the unofficial compilation).
+
+- **Source:** `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`
+  (SHA-256 `785f7192…bd03808`), PDF page 4 = printed "Page 04". Item 6 under "General Principles
+  of the Charter:" (heading on p.3). Was: `UAE Policy Foundation.pdf` p.2.
+- **Issuer and date (as printed on p.1):** UAE Minister of State for Artificial Intelligence,
+  Digital Economy & Remote Work Applications Office; July 2024. Was: "UAE Artificial
+  Intelligence, Digital Economy and Remote Work Applications Office".
+- **Text (unchanged, read from the page image):** "6. Human Oversight: The Charter emphasizes the
+  irreplaceable value of human judgment and human oversight over AI, aligning with ethical values
+  and social standards to correct any errors or biases that may arise."
+- **How the quote is checked:** the PDF's pages are images, and the embedded text layer is
+  garbled here ("human over / oversight Al", "may" on its own line). On your decision, the
+  quote is checked against `policies/transcriptions/The UAE Charter for the Development and Use
+  of Artificial Intelligence.jsonl`, a transcription of page 4 from the image (draft). The
+  clause notes carry "transcribed from page image — check against image". **Please check the
+  transcription of page 4 against the image too.**
+- **Notes:** unchanged reading (policy charter, not law; no owner or deadline; the
+  `normalized` actor and action are the scenario's interpretation), plus the re-quote record.
+- **Binding / type:** false; policy charter. **Label:** `draft (interpreted) · not binding` now;
+  `reviewed (interpreted) · not binding` once re-approved ("unofficial compilation" goes).
+- **Reaches:** health_service_operator (and, as before, the roles whose views list it).
+- **Baseline/goldens while draft: large change.** The scripted health operator cites it at T+45
+  and T+60, so both decisions are rejected whole as `draft_citation`:
+  - `notify_health_data_oversight` and `review_automated_lockouts` (T+45), and
+    `reverse_automated_lockouts` and `activate_fallback_channel` (T+60), are not applied;
+  - the DHA 4.18.4 duty stays open instead of fulfilled at T+45;
+  - the repair search lists 3 candidates instead of 21, and none resolves the incident.
+- **Baseline/goldens once re-approved: unchanged** except the label text (measured on a copy
+  with the clause set to reviewed: baseline and repair output identical to main apart from the
+  label).
+- **Open flags:** none from the quote itself; the text matches the image word for word.
+- **Recommendation: reviewed**, after you check the page-4 transcription against the image.
+
+---
+
 ## Related open items (no status change needed)
 
 - The ITU report `T-AI4G-AI4GOOD-2025-6-PDF-E.pdf` really does contain U+FFFD in its extracted

@@ -7,10 +7,10 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
 PRs follow, one at a time; each stops once open with CI green:
-1. **Label refinements, web/03 exclusion, licence and README** (branch `label-refinements`):
-   built; see Done.
-2. Official AI Charter PDF as an original; re-quote `uae.ai-charter.human-oversight` from it
-   (same id, back to draft) and a review packet entry.
+1. **Label refinements, web/03 exclusion, licence and README:** merged (PR #14).
+2. **Charter source and re-quote** (branch `charter-source`): built; waits on the human's
+   re-approval of `uae.ai-charter.human-oversight` (see "Waiting on human"). CI fails on the
+   expected outputs until then, by the human's choice (2026-10-29).
 3. Vector knowledge base (gate 3 approved: ChromaDB with `nomic-embed-text-v1.5` via
    `fastembed`), after reading the ITU reference code's ingestion (MIT, with attribution);
    vector retrieval on the LLM context path only; `cascadeguard kb query`; an export the
@@ -81,8 +81,29 @@ Spec `specs/006b-demo-ui-polish.md`; report, before/after numbers and screenshot
 
 ## Done
 
-### Label refinements, web/03 exclusion, licence, README (branch `label-refinements`)
+### Charter source and re-quote (branch `charter-source`)
 Human decisions 2026-10-29. PR not merged.
+- `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` added to
+  `policies/sources/` as original #23 (SHA-256 in the inventory, tested); extracted. Its pages
+  are images with an unreliable text layer (inventory note).
+- Quote checking for such pages (human choice): a clause whose notes carry
+  `TRANSCRIBED_FLAG` ("transcribed from page image — check against image") is checked against
+  `policies/transcriptions/<stem>.jsonl` (records `"transcribed": true`, `"status": "draft"`),
+  never the text layer; an unflagged clause never against a transcription
+  (`tests/unit/test_transcriptions.py`). Transcribed: Charter p.4.
+- `uae.ai-charter.human-oversight` re-quoted from it: page 4, item 6, issuer as printed; text
+  unchanged; back to draft, listed under `reapproval_needed`. Packet entry 15 in
+  `docs/review/draft-review-packet.md`. While draft, the scripted health operator's T+45 and T+60
+  decisions are rejected (`draft_citation`) and the repair search finds no resolving repair:
+  24 unit tests and both expected-output tests fail. Measured on a copy with the clause
+  reviewed: only the approval-digest tests fail, and the baseline and repair output equal main's
+  apart from the label.
+- Translation rule recorded in the inventory and applied to every file: `TRANSLATIONS` is
+  unchanged. It would change only for web/01 (not applied; see "Waiting on human").
+- Counts: 23 original PDFs in the inventory and methodology. `AGENTS.md` still says 22 (gate 6).
+
+### Label refinements, web/03 exclusion, licence, README (PR #14, merged)
+Human decisions 2026-10-29.
 - Labels: "foreign precedent" for a single non-UAE jurisdiction (EU, US: GDPR, EU AI Act, NIST),
   "international precedent" for a jurisdiction starting "International" (OECD, UNESCO, ITU).
   "English translation" for files in `TRANSLATIONS` (`domain/policies.py`), listed with the
@@ -1040,7 +1061,19 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**To confirm (label refinements PR):** the "English translation" list. Listed: telecom law (and
+**Charter PR (gate 1):** check packet entry 15 and the page-4 transcription
+(`policies/transcriptions/`) against the PDF image, then give the id for
+`Reviewed by human: uae.ai-charter.human-oversight`. CI on the PR is red until then.
+
+**Translation rule (decided 2026-10-29), one possible change:** web/01 (MOHAP smart health
+policy, quoted by `uae.mohap-smart-health.p7-liability`, reviewed, and two drafts) is published on
+uaelegislation.gov.ae, not by MOHAP. Applying the rule to web transcriptions would add "English
+translation" to them. Not applied. Apply it?
+
+**Gate 6:** `AGENTS.md` says the knowledge base is "the 22 original PDF documents"; with the
+Charter it is 23. Change `AGENTS.md`?
+
+**Answered 2026-10-29 (TDRA stays listed; rule recorded):** the "English translation" list. Listed: telecom law (and
 OCR copy), Dubai Law 26/2015, PDPL, FL 2/2019. Not listed: the DHA policy (issued in English by
 DHA itself, though it says the Arabic version prevails), MOCAI, the AI Strategy 2031 and the AI
 Adoption Guideline (issued in English by the government, no translation notice). One rule
@@ -1197,10 +1230,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Label-refinements PR (1 of 5) open, CI green; on the human's go-ahead, PR 2: the official AI Charter PDF
-(`The UAE Charter for the Development and Use of Artificial Intelligence.pdf`, now in the repo
-root, untracked) moves to `policies/sources/` with its SHA-256 and an inventory entry, and
-`uae.ai-charter.human-oversight` is re-quoted from it. Then PRs 3–5 (see "Current phase").
+Charter PR (2 of 5) open; it waits on the human's re-approval of
+`uae.ai-charter.human-oversight` (then commit "Reviewed by human: …" with its new digest in
+`policies/approvals.yaml`, clear `reapproval_needed`, and CI goes green). Then PR 3, the vector
+knowledge base (see "Current phase").
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
