@@ -13,6 +13,18 @@ OCR_DIR = "ocr/"  # source_file prefix of OCR'd copies in policies/sources/ocr/ 
 OCR_FLAG = "OCR — check against image"  # must appear in notes of a clause quoted from OCR text
 WEB_DIR = "web/"  # source_file prefix of web-page transcriptions in policies/sources/web/
 WEB_FLAG = "web transcription — unverified"  # must appear in notes of a clause quoted from one
+LABEL_SEPARATOR = " · "  # between a clause's status and its qualifiers in status_label
+# A jurisdiction starting with one of these is a UAE source; any other is an international one.
+UAE_JURISDICTIONS = (
+    "UAE",
+    "Abu Dhabi",
+    "Dubai",
+    "Sharjah",
+    "Ajman",
+    "Umm Al Quwain",
+    "Ras Al Khaimah",
+    "Fujairah",
+)
 CLAUSE_ID_PATTERN = r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
 # Year, year-month, full ISO date, or "unknown" when the PDF prints no date (never guessed).
 DOCUMENT_DATE_PATTERN = r"^(\d{4}(-\d{2}(-\d{2})?)?|unknown)$"
@@ -130,7 +142,31 @@ class PolicyClause(DomainModel):
 
     @property
     def status_label(self) -> str:
-        """The label reports and the UI show next to the clause, e.g. "draft (interpreted)"."""
+        """The label agents, reports and the UI show next to the clause, e.g.
+        "reviewed · not binding · international precedent" (human decision 2026-10-29): the
+        status, then for a sourced clause its binding status and, where it is not an official UAE
+        source, its source type. An illustrative clause keeps its plain label."""
+        label = str(self.status)
         if self.normalized is not None and self.normalized.basis is NormalizedBasis.INTERPRETED:
-            return f"{self.status} (interpreted)"
-        return str(self.status)
+            label += " (interpreted)"
+        if self.status is ClauseStatus.ILLUSTRATIVE:
+            return label
+        return LABEL_SEPARATOR.join((label, *self.qualifiers))
+
+    @property
+    def qualifiers(self) -> tuple[str, ...]:
+        """Binding status, then source type: web transcription, OCR copy, or international
+        precedent (a jurisdiction that does not start with the UAE or one of its emirates). Empty
+        for an illustrative clause."""
+        if self.status is ClauseStatus.ILLUSTRATIVE:
+            return ()
+        binding = {True: "binding", False: "not binding", "unknown": "binding unknown"}
+        if in_source_dir(self.source_file, WEB_DIR):
+            source = ("web transcription",)
+        elif in_source_dir(self.source_file, OCR_DIR):
+            source = ("OCR copy",)
+        elif not self.jurisdiction.startswith(UAE_JURISDICTIONS):
+            source = ("international precedent",)
+        else:
+            source = ()
+        return (binding[self.binding], *source)

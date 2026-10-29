@@ -214,7 +214,11 @@ def test_quote_check_honours_elisions_and_order(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("normalized", "label"),
-    [(None, "draft"), (STATED, "draft"), (INTERPRETED, "draft (interpreted)")],
+    [
+        (None, "draft · binding"),
+        (STATED, "draft · binding"),
+        (INTERPRETED, "draft (interpreted) · binding"),
+    ],
 )
 def test_normalized_basis_loads_and_shows_in_the_label(
     dirs: tuple[Path, Path], normalized: dict[str, Any] | None, label: str
