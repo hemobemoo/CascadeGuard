@@ -58,10 +58,12 @@ listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_
 
 **English translations not verified as official** (human decision 2026-10-29). Clauses quoted
 from these files carry "English translation" in their label (`TRANSLATIONS` in
-`src/cascadeguard/domain/policies.py`; tested against this list). Each is the English text of UAE
-legislation whose Arabic text is authoritative, and nothing in the repository verifies the English
-as an official translation (Dubai Law 26/2015 says so itself on its first page). The DHA policy (#10)
-is not listed: it is the issuer's own English version, though it says the Arabic version prevails.
+`src/cascadeguard/domain/policies.py`; tested against this list). Each is an English text of UAE
+legislation; the Arabic text is presumed authoritative, but only Dubai Law 26/2015 says so in the
+document (p.1). Nothing in the repository verifies the English as an official translation. The
+DHA policy (#10) is not listed: it is the issuer's own English version, though it says the Arabic
+version prevails (p.46). Whether the TDRA consolidation should be treated the same way is open
+(PROGRESS, "Waiting on human").
 
 - `887026278-TDRA-Telecom-Law-Final-English-o.pdf`
 - `ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf`

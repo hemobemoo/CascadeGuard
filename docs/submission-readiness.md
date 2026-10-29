@@ -55,7 +55,7 @@ showed it.
   page-level text from `scripts/extract_pdf_text.py`.
 - **`--extracted-context` (LLM only):** `search_extracted` scores pages by **keyword counts** and
   returns 400-character snippets labelled "context only; not citable". The books and the
-  TRA-era strategy are excluded.
+  TRA-era strategy are excluded, and (since the label-refinements PR) the 03 news item.
 - **Graph:** `src/cascadeguard/engine/graph.py` (NetworkX) is the incident's causal and
   failure graph, built per run. It is not a knowledge graph of the corpus.
 - **Store:** DuckDB holds audit records (`src/cascadeguard/storage/audit.py`), not the corpus.
@@ -121,11 +121,10 @@ acceptable".
   clauses are then re-quoted (draft), reviewed or dropped.
 
 **Other source risks**
-- **`--extracted-context`** still searches the 01–05 web transcriptions, including the 03 news
-  item, and gives agents labelled snippets from them. To meet the mentoring rule strictly, add
-  `web/03_…` (and any other news page) to `NOT_SEARCHED`
-  (`src/cascadeguard/knowledge/retrieval.py`). 01, 02, 04 and 05 are government portal pages,
-  not news; whether they count as "published documents" is for the human to decide.
+- **`--extracted-context`** searched the 01–05 web transcriptions, including the 03 news item.
+  Resolved for 03 (human decision 2026-10-29, label-refinements PR): `web/03_…` is in
+  `NOT_SEARCHED` (`src/cascadeguard/knowledge/retrieval.py`). 01, 02, 04 and 05 are government
+  portal pages, not news, and stay searched.
 - **Illustrative clauses:** `illus.telecom.incident-report` and
   `illus.telecom.regulator-information-request` are synthetic rules, labelled "illustrative".
   They fill the telecom side where no official text was available. They are honest but not
@@ -183,7 +182,7 @@ The unnumbered alignment paragraph (Y.3172 and the AI Readiness Framework) is co
 | Role (page) | Status | Evidence | Smallest change |
 |---|---|---|---|
 | Innovative AI solution agent ("uses the knowledge base and demonstrates unique value") | **partial** | No single agent does this; the system's value comes from the engine and repair search (diagnosis → smallest safe repair → replay). | Present the repair ranker plus replay as the solution, with the agents as its inputs. |
-| **Policy and legal adviser** ("participants can query during simulated error scenarios"; legislation, mandates, emergency powers, international obligations; gaps and global best practices) | **partial** | `policy_legal_adviser` in `scenarios/uae_health_access/roles.yaml`, as scripted and LLM agents. It sees every clause it may cite with its label, which now includes "not binding · international precedent". Gap claims must cite clauses and carry the fixed qualification. **Not queryable:** it answers only at scenario steps. | A "query the adviser at T+n" panel/CLI. It reuses that step's boundary view and the same `AgentDecision` schema, its answer is audited like any decision, and LLM answers go through the cache (gate 4 for live calls). |
+| **Policy and legal adviser** ("participants can query during simulated error scenarios"; legislation, mandates, emergency powers, international obligations; gaps and global best practices) | **partial** | `policy_legal_adviser` in `scenarios/uae_health_access/roles.yaml`, as scripted and LLM agents. It sees every clause it may cite with its label, which now includes "not binding · foreign precedent" or "not binding · international precedent". Gap claims must cite clauses and carry the fixed qualification. **Not queryable:** it answers only at scenario steps. | A "query the adviser at T+n" panel/CLI. It reuses that step's boundary view and the same `AgentDecision` schema, its answer is audited like any decision, and LLM answers go through the cache (gate 4 for live calls). |
 | **Institutional participant** (a specific government actor) | **covered** | `telecom_regulator` and `health_data_oversight`, each with its own mandate, allowed actions and boundary (`roles.yaml`). | — |
 | **Multi-agent coordination** (different information, mandates, independent assessments; inter-agent coordination protocols) | **covered** | Six roles. Facts are released per role, and actions are permitted per role. Coordination happens only through engine-mediated actions (`request_information`, `share_incident_status`, `request_determination`, `recommend_measure`), which the engine accepts or rejects (`src/cascadeguard/simulation/orchestrator.py`, `engine/constraints.py`). Diagnosed coordination failures: `information_deadlock`, `orphan_duty` and `undefined_trigger`. | In the report, describe the engine-mediated actions as the coordination protocol. |
 
@@ -191,7 +190,7 @@ The unnumbered alignment paragraph (Y.3172 and the AI Readiness Framework) is co
 
 | Criterion (page) | Status | Evidence | Smallest change |
 |---|---|---|---|
-| **Knowledge base quality**: completeness, accuracy and structure of the national material; retrieval of relevant policy context under query | **partial** | Accuracy and structure are strong: verbatim quotes, page-checked, human-reviewed, provenance and SHA-256 recorded (`docs/policy-inventory.md`, `policies/sources/web/MANIFEST.md`). Completeness is narrow (18 reviewed clauses, scenario-driven). Retrieval is not semantic. | §1. Also list the corpus's 20 originals and 7 web pages with what each covers. |
+| **Knowledge base quality**: completeness, accuracy and structure of the national material; retrieval of relevant policy context under query | **partial** | Accuracy and structure are strong: verbatim quotes, page-checked, human-reviewed (18 of 42 clauses; only reviewed clauses are citable), provenance and SHA-256 recorded (`docs/policy-inventory.md`, `policies/sources/web/MANIFEST.md`). Completeness is narrow (18 reviewed clauses, scenario-driven). Retrieval is not semantic. | §1. Also list the corpus's 20 originals and 7 web pages with what each covers. |
 | **Agent capability**: relevance and accuracy in simulated error scenarios; adherence to laws, mandates and coordination | **partial** | Scripted agents are deterministic and fully tested. The LLM baseline was reviewed step by step (`docs/evaluation/llm-baseline-review.md`, `docs/evaluation/adr-0002-golden-llm-replay.md`): 4 candidate gap claims, all supported, and the engine rejected the over-reaching actions. | Re-run the LLM baseline from the cache with the new labels (gate 4 if live) and update the review. |
 | **Gap identification with global examples**: unclear responsibilities, standards, technology and legislative gaps, coordination problems, conflicting objectives; relevance of gaps and accuracy of global examples | **partial** | The engine diagnoses 4 failures: an information deadlock, two orphan duties and an undefined trigger (`expected_baseline.yaml`). Each carries "not a confirmed legal or standards gap". Global examples are reviewed: UNESCO paras 35–36, 38 and 43; OECD 1.4 b) and 1.5 c); GDPR Art 33(1). Drafts include NIST, the EU AI Act, ITU Y.3172 and the OECD incident framework. There is no single table linking them. | Generate `docs/gap-analysis.md` from a run: for each diagnosed failure, give the UAE clause evidence (or "no owner found in the reviewed corpus"), the global example clause with verbatim text, the qualification, and the repair that resolves it in replay. Gate 7 applies to any conclusion wording. |
 | **Auditability**: logs, chain-of-thought traces, source attribution | **partial** | §4 row 6. Source attribution is strong: every clause shown with its qualified status label; citations are only to reviewed IDs. | §4 row 6 |
