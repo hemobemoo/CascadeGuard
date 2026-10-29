@@ -24,6 +24,7 @@ clauses:
       deadline, so it carries no normalized reading and authorises no share. Cascade: context
       for the information deadlock between the telecom operator and the health service operator
       (network_incident_status); it does not permit the telecom-to-health status share.
+      Decision (gate 1, Ibrahim Melhem, 2026-10-28): keep as draft, closed: no actor or duty.
 
   - id: uae.mohap-smart-health.p6-cybersecurity
     title: "Smart health AI policy: integrated cybersecurity system for the healthcare sector"
@@ -43,6 +44,7 @@ clauses:
       Public policy priority, not legislation: no reporting duty, regulator or deadline is read
       from it. Cascade: context for the health service operator's security incident at T+15,
       raised on a suspected (unconfirmed) credential-stuffing alert from its own AI fraud model.
+      Decision (gate 1, Ibrahim Melhem, 2026-10-28): keep as draft, closed: no actor or duty.
 
   - id: uae.mohap-smart-health.p7-liability
     title: "Smart health AI policy: clear medical liability frameworks for AI in health"
@@ -55,7 +57,7 @@ clauses:
     issuer: Ministry of Health and Prevention (lead entity, as printed)
     jurisdiction: UAE (federal public policy, health sector)
     document_date: "2026-05-18"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       web transcription — unverified (uaelegislation.gov.ae policy page; MANIFEST.md row 01).
@@ -66,6 +68,8 @@ clauses:
       uae.ai-charter.human-oversight, uae.pdpl.art18-1). Whether the portal's
       fraud-risk model is an "artificial intelligence application" in the policy's sense is not
       decided.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28): the sentence was checked against
+      the uaelegislation.gov.ae page and matches.
 
   - id: uae.cyber-strategy-2025.governance-aim
     title: "National Cybersecurity Strategy 2025: cohesive cybersecurity governance framework (aim)"
@@ -85,6 +89,9 @@ clauses:
       repository. Strategy-level context only: no deadline, regulator or reporting duty is
       inferred. Cascade: context for the two security incidents (telecom and health) handled
       without a shared escalation path.
+      Decision (gate 1, Ibrahim Melhem, 2026-10-28): keep as draft, open: only an announcement
+      summary is in the repository; re-quote when the official Cyber Security Council 2025
+      strategy PDF is added as an original.
 
   - id: uae.cyber-strategy-2025.partnership-aim
     title: "National Cybersecurity Strategy 2025: national and international partnerships (aim)"
@@ -103,3 +110,6 @@ clauses:
       row 03). Not the strategy text. Strategy-level context only: it authorises no data share
       and sets no duty. Cascade: context for the cross-sector information deadlock between the
       telecom and health operators.
+      Decision (gate 1, Ibrahim Melhem, 2026-10-28): keep as draft, open: only an announcement
+      summary is in the repository; re-quote when the official Cyber Security Council 2025
+      strategy PDF is added as an original.

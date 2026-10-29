@@ -58,3 +58,13 @@ Verdict **PASS** (scope: the two changed clauses).
 
 MINOR (fixed): the round-1 row for `responsibility-accountability` still described a `[...]`
 gap; marked superseded.
+
+## Gate 1 (branch `review-packet-6d`, 2026-10-28)
+
+evidence-auditor **PASS**. CLEAN: `uae.mohap-smart-health.p2-coordination`, `p6-cybersecurity`,
+`p7-liability`, the three `unesco.ai-ethics.*`, the two `oecd.ai-principles.*`,
+`eu.gdpr.art33-1`. NEEDS-HUMAN-JUDGMENT (all left as the human decided): the two
+`uae.cyber-strategy-2025.*` (attribution; draft, open), `dha.pp11.applicability` (applicability;
+reviewed, binding unknown), `dha.pp11.4-18-5` and `mocai.ethics.fallback-plan` (interpreted
+actors; draft, closed). All 20 reviewed digests match `policies/approvals.yaml`. Three MINOR
+wording overstatements in `draft-review-packet.md` (items 8, 10, 14) fixed.

@@ -272,7 +272,9 @@ def test_repository_web_clauses_are_flagged_and_never_binding() -> None:
         assert WEB_FLAG in (clause.notes or ""), clause.id
         assert clause.binding is not True, clause.id
         assert clause.normalized is None, clause.id  # policy aims and principles: no duty read
-        assert clause.status is ClauseStatus.DRAFT, clause.id
+        # Gate 1 (Ibrahim Melhem, 2026-10-28) reviewed one web clause; the rest stay draft.
+        reviewed = clause.id == "uae.mohap-smart-health.p7-liability"
+        assert clause.status is (ClauseStatus.REVIEWED if reviewed else ClauseStatus.DRAFT)
 
 
 def test_quote_is_never_checked_against_another_document_with_the_same_stem(

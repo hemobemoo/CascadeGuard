@@ -131,7 +131,7 @@ clauses:
       Unchanged by the 2026 amendment (Regulation (EU) 2026/1744 does not amend Regulation (EU) 2016/679; EUR-Lex lists only corrigenda for it; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus).
 
   - id: eu.gdpr.art33-1
-    title: "GDPR: breach notification within 72 hours unless unlikely to result in risk"
+    title: "GDPR: breach notification without undue delay and, where feasible, within 72 hours"
     text: >-
       1. In the case of a personal data breach, the controller shall without undue delay and,
       where feasible, not later than 72 hours after having become aware of it, notify the
@@ -144,7 +144,7 @@ clauses:
     issuer: European Union
     jurisdiction: EU
     document_date: "2016-04-27"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Not binding in the UAE. Precedent with an explicit regulator-notification deadline. No
@@ -155,6 +155,8 @@ clauses:
       consolidated text, which states it is a documentation tool with no legal effect (PDF
       page 1).
       Unchanged by the 2026 amendment (Regulation (EU) 2026/1744 does not amend Regulation (EU) 2016/679; EUR-Lex lists only corrigenda for it; checked on EUR-Lex, 2026-10-23, https://eur-lex.europa.eu/eli/reg/2026/1744/oj; that source is not in the reviewed corpus).
+      Retitled to keep "where feasible", then reviewed by human (gate 1, Ibrahim Melhem,
+      2026-10-28).
 
   - id: oecd.ai-incidents.definition
     title: "OECD: definition of an AI incident"
@@ -195,7 +197,7 @@ clauses:
     issuer: UNESCO General Conference
     jurisdiction: International (UNESCO Member States; non-binding recommendation)
     document_date: "2021-11-23"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Official original (SHS/BIO/PI/2021/1, p.2). Not binding: operative para 2 "Recommends that
@@ -203,6 +205,7 @@ clauses:
       International precedent, not UAE law. Cascade: precedent for a human owner of the review
       and reversal of the automated lockouts (candidate orphan duty; cf.
       uae.ai-charter.human-oversight, uae.pdpl.art18-1).
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28).
 
   - id: unesco.ai-ethics.review-and-correct
     title: "UNESCO Recommendation: submissions to a designated staff member able to review and correct the decision"
@@ -217,7 +220,7 @@ clauses:
     issuer: UNESCO General Conference
     jurisdiction: International (UNESCO Member States; non-binding recommendation)
     document_date: "2021-11-23"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Official original (SHS/BIO/PI/2021/1). The [...] skips only the page number "22", printed
@@ -226,6 +229,7 @@ clauses:
       law; no normalized obligation. Cascade: precedent for a named person able to review and
       correct the fraud model's lockout decisions (candidate finding: no owner found in the
       reviewed corpus; cf. uae.ai-charter.human-oversight, uae.pdpl.art18-1).
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28).
 
   - id: unesco.ai-ethics.responsibility-accountability
     title: "UNESCO Recommendation: oversight, impact assessment, audit and due diligence; auditability and traceability"
@@ -242,7 +246,7 @@ clauses:
     issuer: UNESCO General Conference
     jurisdiction: International (UNESCO Member States; non-binding recommendation)
     document_date: "2021-11-23"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Official original (SHS/BIO/PI/2021/1). Quoted without a gap (human decision 2026-10-28):
@@ -254,6 +258,7 @@ clauses:
       in the life cycle of the AI system." Not binding: operative para 2, "apply on a voluntary
       basis" (p.7). International precedent, not UAE law. Cascade: precedent for tracing the
       lockouts back to the telecom traffic model's update.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28).
 
   - id: oecd.ai-principles.robustness-override
     title: "OECD AI Recommendation: harmful AI can be overridden, repaired or decommissioned"
@@ -267,7 +272,7 @@ clauses:
     issuer: OECD Council
     jurisdiction: International (OECD Adherents; non-binding recommendation; UAE adherence not checked)
     document_date: "2024-05-03"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Official original, OECD/LEGAL/0449 (adopted 22 May 2019; revised 8 November 2023 and 3 May
@@ -276,6 +281,7 @@ clauses:
       checked. International precedent, not UAE law. Cascade: precedent for
       suspending the telecom traffic-management model and reversing the fraud model's automated
       lockouts.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28); UAE adherence still not checked.
 
   - id: oecd.ai-principles.accountability-cooperation
     title: "OECD AI Recommendation: risk management via co-operation between AI actors"
@@ -291,7 +297,7 @@ clauses:
     issuer: OECD Council
     jurisdiction: International (OECD Adherents; non-binding recommendation; UAE adherence not checked)
     document_date: "2024-05-03"
-    status: draft
+    status: reviewed
     binding: false
     notes: >-
       Official original, OECD/LEGAL/0449 (p.3 for dates). The quote ends at a sentence boundary;
@@ -299,3 +305,4 @@ clauses:
       by Council and are not legally binding" (OECD Legal Instruments, p.12). International
       precedent, not UAE law. Cascade: precedent for co-operation between the two AI actors
       (telecom traffic model, health fraud model) whose interaction caused the lockouts.
+      Reviewed by human (gate 1, Ibrahim Melhem, 2026-10-28); UAE adherence still not checked.

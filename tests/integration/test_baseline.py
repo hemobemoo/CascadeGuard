@@ -6,6 +6,7 @@ from typing import Any
 import yaml
 
 from cascadeguard.cli import run_scenario
+from cascadeguard.knowledge.loader import REVIEWED_DIR
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_CLAUSES = ROOT / "tests" / "fixtures" / "clauses"
@@ -48,9 +49,29 @@ def test_safeguard_holds_patient_records_never_reach_telecom() -> None:
     assert "locked_account_records" not in {e.detail for e in released}
 
 
-def test_real_corpus_run_labels_its_clause_set_and_rejects_draft_citations() -> None:
+def test_real_corpus_run_labels_its_clause_set_and_rejects_draft_citations(
+    tmp_path: Path,
+) -> None:
+    """Since gate 1 on 2026-10-28 the scripted agents cite no draft on the real corpus, so the
+    rejection is checked on a copy where the one clause they cited before (eu.gdpr.art33-1) is a
+    draft again."""
     result = run_scenario("uae_health_access")
     assert result.clause_set.startswith("policies/reviewed")
+    assert not [f for f in result.findings if f.kind == "draft_citation"]
+
+    copy = tmp_path / "reviewed"
+    copy.mkdir()
+    for path in REVIEWED_DIR.glob("*.yaml"):
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["clauses"] = [
+            {**c, "status": "draft"} if c["id"] == "eu.gdpr.art33-1" else c for c in data["clauses"]
+        ]
+        (copy / path.name).write_text(yaml.safe_dump(data), encoding="utf-8")
+    result = run_scenario("uae_health_access", copy)
     loaded = {cid for cid, _ in result.loaded_clauses}
     drafts = {c for f in result.findings if f.kind == "draft_citation" for c in f.clause_ids}
-    assert drafts and not drafts & loaded
+    assert drafts == {"eu.gdpr.art33-1"} and not drafts & loaded
+    rejected = result.summary()["rejected_decisions"]
+    assert [(d["role"], d["reasons"]) for d in rejected] == [
+        ("policy_legal_adviser", ["draft_citation"])
+    ]
