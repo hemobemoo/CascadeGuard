@@ -270,9 +270,10 @@ section:
 | f. Requirements mapped to local policies | missing | `policies/reviewed/*.yaml` (reviewed clauses), `docs/policy-inventory.md`; needs a requirement → clause table |
 | g. Evaluation scenario (technical and policy) | partial | `expected_baseline.yaml`, `expected_repairs.yaml`, `docs/evaluation/llm-baseline-review.md`, UI screenshots in `docs/review/phase-6*-…` |
 | h. Policy/standards gaps from the mapping | partial | Diagnosed failures with qualifications; candidate findings in clause notes; §6 gap table to build |
-| Team contact details | **missing** | Not in the repository. Needed from the human: names, roles, emails, affiliation, the team leader (the page caps teams at 4 and has a women's-team prize), and a mentor if any. |
+| Team contact details | **missing** (since the audit: covered in the README "Submission" section; email for the report only) | Not in the repository. Needed from the human: names, roles, emails, affiliation, the team leader (the page caps teams at 4 and has a women's-team prize), and a mentor if any. |
 
-Also missing for an open, emailed submission:
+Also missing for an open, emailed submission (since the audit, the label-refinements PR adds the
+`LICENSE` and the README "Submission" section):
 - a `LICENSE` file (the human's choice; the reference code is MIT);
 - a README "Submission" section with the report link, run commands, how to reproduce each
   output step by step, and where the knowledge base, the policy mapping and the gap analysis
