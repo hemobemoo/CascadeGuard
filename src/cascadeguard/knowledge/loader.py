@@ -163,6 +163,16 @@ def skipped_texts(
     ]
 
 
+def transcription_key(record: dict[str, Any], where: str) -> tuple[str, int]:
+    """(case-folded source_file, page) of a transcription record. The page must be a plain int
+    and the source a string, so a page spelled "4" or " 04" cannot pose as another record for
+    page 4 (test-breaker, 2026-10-30)."""
+    source, page = record.get("source_file"), record.get("page")
+    if not isinstance(source, str) or type(page) is not int:
+        raise ClauseLoadError(f"{where}: a transcription needs a string source_file and int page")
+    return source.casefold(), page
+
+
 def _page_text(clause: PolicyClause, directory: Path, transcribed: bool = False) -> str | None:
     """The cited page's text. A transcription record must say "transcribed": true, and an
     extracted record must not, so neither stands in for the other. Two records for the page are
@@ -176,6 +186,8 @@ def _page_text(clause: PolicyClause, directory: Path, transcribed: bool = False)
     with jsonl.open(encoding="utf-8") as lines:
         for line in lines:
             record = json.loads(line)
+            if transcribed:
+                transcription_key(record, jsonl.name)  # refuses a page spelled other than int
             # Same stem, other document (an original and a web or OCR copy): never a match.
             if (
                 record["page"] == clause.page

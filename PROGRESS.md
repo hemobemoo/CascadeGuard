@@ -120,6 +120,11 @@ Human decisions 2026-10-29. PR not merged.
   quote check and the search; reviewed pages must name reviewer and date; stricter search
   tests. Also from round 2: tampering with reviewed p.4, demoting it, or self-promoting a draft
   page each fail the tests.
+- Review round 4 (human-approved, scope: the duplicate fix): test-breaker FAIL: a duplicate
+  whose page is spelled "4" or " 04" passed the search's duplicate check. Fixed: a
+  transcription record must have a string source_file and a plain int page
+  (`transcription_key`), else it is refused; tested in 15 cases (5 spellings x before, after,
+  other file), 9 of which fail on the previous code. Not re-reviewed.
 - Review round 1: evidence-auditor PASS, test-breaker PASS (MINORs fixed:
   `TRANSCRIBED_SOURCES` allow-list, doc wording, failing-test count), phase-auditor FAIL only on
   the 39 expected failures while the clause is draft (MINORs fixed: structure file,

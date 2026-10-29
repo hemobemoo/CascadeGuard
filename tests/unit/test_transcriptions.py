@@ -23,7 +23,7 @@ from cascadeguard.knowledge.loader import (
     quote_found_on_page,
     transcription_digest,
 )
-from cascadeguard.knowledge.retrieval import search_extracted
+from cascadeguard.knowledge.retrieval import extracted_digest, search_extracted
 
 CHARTER = "The UAE Charter for the Development and Use of Artificial Intelligence.pdf"
 CLAUSE_ID = "uae.ai-charter.human-oversight"
@@ -149,3 +149,35 @@ def test_a_duplicated_page_is_refused_by_the_quote_check_and_the_search(tmp_path
         quote_found_on_page(clause, transcriptions_dir=tmp_path)
     with pytest.raises(ClauseLoadError, match="two records"):
         search_extracted("forged", transcriptions_dir=tmp_path)
+
+
+@pytest.mark.parametrize("page", [4, "4", " 04", 4.0, True])
+@pytest.mark.parametrize("where", ["before", "after", "other file"])
+def test_a_second_record_for_a_page_is_refused_however_it_is_spelled(
+    tmp_path: Path, page: object, where: str
+) -> None:
+    """test-breaker round 4 (2026-10-30): a page spelled "4" or " 04" passed the duplicate check
+    in the search. Every spelling, in either position or another file, is refused."""
+    clause = charter_clause()
+    stem = Path(CHARTER).stem
+    approved = page_record(stem, clause.page)
+    # True poses as page 1 (True == 1); the others as page 4.
+    fake = approved | {"page": page, "text": "zzforgedword " + str(approved["text"])}
+    if where == "other file":
+        (tmp_path / f"{stem}.jsonl").write_text(json.dumps(approved) + "\n", encoding="utf-8")
+        (tmp_path / "zz.jsonl").write_text(json.dumps(fake) + "\n", encoding="utf-8")
+    else:
+        rows = (fake, approved) if where == "before" else (approved, fake)
+        text = "".join(json.dumps(r) + "\n" for r in rows)
+        (tmp_path / f"{stem}.jsonl").write_text(text, encoding="utf-8")
+    with pytest.raises(ClauseLoadError):
+        search_extracted("zzforgedword", transcriptions_dir=tmp_path)
+    with pytest.raises(ClauseLoadError):
+        extracted_digest.__wrapped__(EXTRACTED_DIR, tmp_path)
+    if where != "other file":  # the quote check reads only the clause's own file
+        with pytest.raises(ClauseLoadError):
+            quote_found_on_page(clause, transcriptions_dir=tmp_path)
+
+
+def test_every_transcription_page_is_a_plain_int() -> None:
+    assert all(type(r["page"]) is int and isinstance(r["source_file"], str) for r in all_records())
