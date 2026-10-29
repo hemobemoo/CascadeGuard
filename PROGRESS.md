@@ -1068,9 +1068,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Charter PR (gate 1):** check packet entry 15 and the page-4 transcription
-(`policies/transcriptions/`) against the PDF image, then give the id for
-`Reviewed by human: uae.ai-charter.human-oversight`. CI on the PR is red until then.
+**Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
+and the page-4 transcription, after checking both against the PDF image.
 
 **Translation rule (decided 2026-10-29), one possible change:** web/01 (MOHAP smart health
 policy, quoted by `uae.mohap-smart-health.p7-liability`, reviewed, and two drafts) is published on
