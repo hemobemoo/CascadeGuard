@@ -32,6 +32,14 @@ UAE_JURISDICTIONS = (
 )
 
 
+def _source_type(source_file: str | None) -> str | None:
+    """The SOURCE_TYPES entry for this file, ignoring "." parts and case (as in_source_dir)."""
+    if source_file is None:
+        return None
+    name = "/".join(p for p in source_file.split("/") if p not in ("", ".")).casefold()
+    return next((t for f, t in SOURCE_TYPES.items() if f.casefold() == name), None)
+
+
 def is_uae_jurisdiction(jurisdiction: str) -> bool:
     """Does the jurisdiction start with the UAE or one of its emirates, as whole words?"""
     return any(
@@ -182,8 +190,8 @@ class PolicyClause(DomainModel):
             parts.append("web transcription")
         elif in_source_dir(self.source_file, OCR_DIR):
             parts.append("OCR copy")
-        elif self.source_file in SOURCE_TYPES:
-            parts.append(SOURCE_TYPES[self.source_file])
+        elif (kind := _source_type(self.source_file)) is not None:
+            parts.append(kind)
         if not is_uae_jurisdiction(self.jurisdiction):
             parts.append("international precedent")
         return tuple(parts)

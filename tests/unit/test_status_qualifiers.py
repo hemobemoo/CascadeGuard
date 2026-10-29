@@ -84,6 +84,10 @@ BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
             {"binding": False, "source_file": "UAE Policy Foundation.pdf"},
             "reviewed · not binding · unofficial compilation",
         ),
+        (  # other spellings the loader accepts keep the qualifier
+            {"binding": False, "source_file": "./uae policy foundation.PDF"},
+            "reviewed · not binding · unofficial compilation",
+        ),
         (
             {
                 "status": "illustrative",
@@ -100,6 +104,25 @@ def test_label_shows_binding_status_and_source_type(changes: dict[str, Any], lab
     assert PolicyClause.model_validate(BASE | changes).status_label == label
 
 
+# Every UAE jurisdiction in the corpus, listed by hand (independent of is_uae_jurisdiction).
+# A clause with a new jurisdiction fails here until it is added to this set or is foreign.
+UAE_IN_CORPUS = {
+    "UAE",
+    "Dubai, UAE",
+    "UAE (federal public policy, health sector)",
+    "UAE (illustrative)",
+    "UAE (national strategy)",
+}
+FOREIGN_IN_CORPUS = {
+    "EU",
+    "International (ITU-T Recommendation)",
+    "International (OECD Adherents; non-binding recommendation; UAE adherence not checked)",
+    "International (OECD paper)",
+    "International (UNESCO Member States; non-binding recommendation)",
+    "United States (voluntary framework)",
+}
+
+
 def test_every_repository_clause_label_states_binding_and_source_type() -> None:
     for c in load_clauses():
         parts = c.status_label.split(LABEL_SEPARATOR)
@@ -107,6 +130,7 @@ def test_every_repository_clause_label_states_binding_and_source_type() -> None:
             assert parts == [c.status_label], c.id
             continue
         assert parts[1] == BINDING[c.binding], c.id
+        assert c.jurisdiction in UAE_IN_CORPUS | FOREIGN_IN_CORPUS, c.jurisdiction
         expected: list[str] = []
         if in_source_dir(c.source_file, "web/"):
             expected.append("web transcription")
@@ -114,7 +138,7 @@ def test_every_repository_clause_label_states_binding_and_source_type() -> None:
             expected.append("OCR copy")
         elif c.source_file == "UAE Policy Foundation.pdf":
             expected.append("unofficial compilation")
-        if not c.jurisdiction.startswith(("UAE ", "UAE,", "Dubai,")) and c.jurisdiction != "UAE":
+        if c.jurisdiction not in UAE_IN_CORPUS:
             expected.append("international precedent")
         assert parts[2:] == expected, c.id
 
