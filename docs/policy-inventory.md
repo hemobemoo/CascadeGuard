@@ -31,7 +31,7 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 20 | `OECD_Recommendation_AI.pdf` | Recommendation of the Council on Artificial Intelligence, OECD/LEGAL/0449 (official original) | OECD Council | adopted 2019-05-22; revised 2023-11-08 and 2024-05-03 | 12 | — | Yes (running header `O_E_C_D_/L_E_G_A_L` on each page) |
 | 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave |
 | 22 | `UAE_National_Cybersecurity_Strategy.pdf` | National Cyber Security Strategy (TRA era) | Telecommunications Regulatory Authority (TRA) | **unknown** (not printed) | 16 | — | **No — see below** |
-| 23 | `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` | The UAE Charter for the Development & Use of Artificial Intelligence (official PDF) | UAE Minister of State for AI, Digital Economy & Remote Work Applications Office (as printed on p.1) | 2024-07 (as printed on p.1) | 5 | — | **No — image pages with an unreliable embedded text layer; see below** |
+| 23 | `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` | The UAE Charter for the Development & Use of Artificial Intelligence (official PDF) | UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office (as printed on p.1) | 2024-07 (as printed on p.1) | 5 | — | **No — image pages with an unreliable embedded text layer; see below** |
 
 **SHA-256 of the committed originals** (Phase 6d; the two books are not committed and not
 listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_sources.py` checks these.
@@ -95,14 +95,14 @@ file:
 The list above (`TRANSLATIONS`) does not change, except web/01 if the rule is applied to web
 transcriptions.
 
-**#23 Charter (official PDF), text layer.** Every page is one image with an embedded text layer
-that is not reliable: words run together or split ("theirreplaceablevalue"), "AI" reads "Al", and
+**#23 Charter (official PDF), text layer.** The pages render their text as images (pp.1, 2, 4) or
+vector outlines (pp.3, 5), over an embedded text layer that is not reliable: words run together or split ("theirreplaceablevalue"), "AI" reads "Al", and
 words move between lines (p.4, item 6: "over" and "may" sit on their own lines). Footers read
 "Page02", "Page 05" (p.3, printed 03), "Page 04", "Page05". Quotes are read from the page image
 (PDF index = printed page), never from the text layer. A quote from it is checked against a
 transcription of the page image in `policies/transcriptions/` (human decision 2026-10-29): the
 clause's notes say "transcribed from page image — check against image", and the human checks the
-transcription against the image with the clause. Transcribed so far: p.4. It replaces `UAE Policy Foundation.pdf` pp.1–3 as the Charter's source.
+transcription against the image with the clause. Transcribed so far: p.4. It replaces `UAE Policy Foundation.pdf` pp.1–3 as the source of `uae.ai-charter.human-oversight`; `uae.ai-charter.safety` (draft) still cites the compilation (question in PROGRESS).
 
 **#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
 and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.

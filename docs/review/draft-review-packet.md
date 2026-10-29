@@ -368,7 +368,7 @@ draft for re-approval (it was reviewed from the unofficial compilation).
 - **Text (unchanged, read from the page image):** "6. Human Oversight: The Charter emphasizes the
   irreplaceable value of human judgment and human oversight over AI, aligning with ethical values
   and social standards to correct any errors or biases that may arise."
-- **How the quote is checked:** the PDF's pages are images, and the embedded text layer is
+- **How the quote is checked:** the PDF renders its text as images or vector outlines, and the embedded text layer is
   garbled here ("human over / oversight Al", "may" on its own line). On your decision, the
   quote is checked against `policies/transcriptions/The UAE Charter for the Development and Use
   of Artificial Intelligence.jsonl`, a transcription of page 4 from the image (draft). The
