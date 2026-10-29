@@ -157,7 +157,9 @@ def test_a_gap_claim_finding_is_labelled_cited_and_qualified_everywhere(tmp_path
         assert hits and all(AGENT_STATEMENT in line for line in hits), where
     exported = [f for f in run_export(result)["findings"] if f["kind"] == "candidate_gap_claim"]
     assert exported[0]["qualification"] == GAP_QUALIFICATION
-    assert exported[0]["clauses"] == [{"id": "uae.fl2-2019.art2", "status": "reviewed · binding"}]
+    assert exported[0]["clauses"] == [
+        {"id": "uae.fl2-2019.art2", "status": "reviewed · binding · English translation"}
+    ]
     assert exported[0]["detail"] == gaps[0].detail
 
 

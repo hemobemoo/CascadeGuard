@@ -1,6 +1,6 @@
-"""Status labels carry binding status and source type (human decision 2026-10-29): agents, the
-CLI and the UI see e.g. "reviewed · not binding · international precedent" next to a clause,
-never a bare "reviewed" for non-binding, foreign or unverified material."""
+"""Status labels carry binding status and source type (human decisions 2026-10-29): agents, the
+CLI and the UI see e.g. "reviewed · not binding · foreign precedent" next to a clause, never a
+bare "reviewed" for non-binding, foreign, translated or unverified material."""
 
 import os
 import subprocess
@@ -15,6 +15,7 @@ from cascadeguard.domain.policies import (
     LABEL_SEPARATOR,
     OCR_FLAG,
     SOURCE_TYPES,
+    TRANSLATIONS,
     WEB_FLAG,
     ClauseStatus,
     PolicyClause,
@@ -45,8 +46,13 @@ BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
         ({}, "reviewed · binding"),
         ({"binding": False}, "reviewed · not binding"),
         ({"binding": "unknown", "jurisdiction": "Dubai, UAE"}, "reviewed · binding unknown"),
+        ({"binding": False, "jurisdiction": "EU"}, "reviewed · not binding · foreign precedent"),
         (
-            {"binding": False, "jurisdiction": "EU"},
+            {"binding": False, "jurisdiction": "United States (voluntary framework)"},
+            "reviewed · not binding · foreign precedent",
+        ),
+        (
+            {"binding": False, "jurisdiction": "International (ITU-T Recommendation)"},
             "reviewed · not binding · international precedent",
         ),
         (  # names the UAE, but is not a UAE jurisdiction
@@ -74,11 +80,11 @@ BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
         ({"jurisdiction": "UAE (federal)"}, "reviewed · binding"),
         (
             {"binding": False, "jurisdiction": "UAEU partner states"},
-            "reviewed · not binding · international precedent",
+            "reviewed · not binding · foreign precedent",
         ),
         (
             {"binding": False, "jurisdiction": "Dubaian Republic"},
-            "reviewed · not binding · international precedent",
+            "reviewed · not binding · foreign precedent",
         ),
         (
             {"binding": False, "source_file": "UAE Policy Foundation.pdf"},
@@ -87,6 +93,26 @@ BINDING = {True: "binding", False: "not binding", "unknown": "binding unknown"}
         (  # other spellings the loader accepts keep the qualifier
             {"binding": False, "source_file": "./uae policy foundation.PDF"},
             "reviewed · not binding · unofficial compilation",
+        ),
+        (
+            {"source_file": "Dubai Law No. (26) of 2015.pdf", "jurisdiction": "Dubai, UAE"},
+            "reviewed · binding · English translation",
+        ),
+        (
+            {"source_file": "./dubai law no. (26) of 2015.PDF", "status": "draft"},
+            "draft · binding · English translation",
+        ),
+        (  # an OCR copy of a translation keeps both qualifiers
+            {
+                "source_file": "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf",
+                "notes": OCR_FLAG,
+                "status": "draft",
+            },
+            "draft · binding · OCR copy · English translation",
+        ),
+        (  # an issuer's own English version (Arabic prevails) is not listed as a translation
+            {"source_file": "Health Data Protection and Confidentiality Policy_EN2022810559.pdf"},
+            "reviewed · binding",
         ),
         (
             {
@@ -106,6 +132,13 @@ def test_label_shows_binding_status_and_source_type(changes: dict[str, Any], lab
 
 # Every UAE jurisdiction in the corpus, listed by hand (independent of is_uae_jurisdiction).
 # A clause with a new jurisdiction fails here until it is added to this set or is foreign.
+# Every UAE source that is an English translation not verified as official, listed by hand.
+TRANSLATED_IN_CORPUS = {
+    "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
+    "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf",
+    "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf",
+    "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf",
+}
 UAE_IN_CORPUS = {
     "UAE",
     "Dubai, UAE",
@@ -113,13 +146,12 @@ UAE_IN_CORPUS = {
     "UAE (illustrative)",
     "UAE (national strategy)",
 }
-FOREIGN_IN_CORPUS = {
-    "EU",
+FOREIGN_IN_CORPUS = {"EU", "United States (voluntary framework)"}
+INTERNATIONAL_IN_CORPUS = {
     "International (ITU-T Recommendation)",
     "International (OECD Adherents; non-binding recommendation; UAE adherence not checked)",
     "International (OECD paper)",
     "International (UNESCO Member States; non-binding recommendation)",
-    "United States (voluntary framework)",
 }
 
 
@@ -130,7 +162,8 @@ def test_every_repository_clause_label_states_binding_and_source_type() -> None:
             assert parts == [c.status_label], c.id
             continue
         assert parts[1] == BINDING[c.binding], c.id
-        assert c.jurisdiction in UAE_IN_CORPUS | FOREIGN_IN_CORPUS, c.jurisdiction
+        known = UAE_IN_CORPUS | FOREIGN_IN_CORPUS | INTERNATIONAL_IN_CORPUS
+        assert c.jurisdiction in known, c.jurisdiction
         expected: list[str] = []
         if in_source_dir(c.source_file, "web/"):
             expected.append("web transcription")
@@ -138,9 +171,16 @@ def test_every_repository_clause_label_states_binding_and_source_type() -> None:
             expected.append("OCR copy")
         elif c.source_file == "UAE Policy Foundation.pdf":
             expected.append("unofficial compilation")
-        if c.jurisdiction not in UAE_IN_CORPUS:
+        if c.source_file in TRANSLATED_IN_CORPUS:
+            expected.append("English translation")
+        if c.jurisdiction in FOREIGN_IN_CORPUS:
+            expected.append("foreign precedent")
+        elif c.jurisdiction in INTERNATIONAL_IN_CORPUS:
             expected.append("international precedent")
         assert parts[2:] == expected, c.id
+
+
+TRANSLATIONS_HEADING = "**English translations not verified as official**"
 
 
 def test_every_recorded_source_type_matches_the_inventory() -> None:
@@ -151,14 +191,17 @@ def test_every_recorded_source_type_matches_the_inventory() -> None:
     }
     for source, kind in SOURCE_TYPES.items():
         assert kind.casefold() in rows[source].casefold(), source
+    section = inventory.split(TRANSLATIONS_HEADING, 1)[1].split("\n\n", 2)[1]
+    listed = {line.strip("- `") for line in section.splitlines()}
+    assert listed == set(TRANSLATIONS)
 
 
 SHOWN = {
-    "eu.gdpr.art33-1": "reviewed · not binding · international precedent",
+    "eu.gdpr.art33-1": "reviewed · not binding · foreign precedent",
     "unesco.ai-ethics.review-and-correct": "reviewed · not binding · international precedent",
     "oecd.ai-principles.robustness-override": "reviewed · not binding · international precedent",
     "uae.mohap-smart-health.p7-liability": "reviewed · binding unknown · web transcription",
-    "uae.fl2-2019.art2": "reviewed · binding",
+    "uae.fl2-2019.art2": "reviewed · binding · English translation",
 }
 
 
