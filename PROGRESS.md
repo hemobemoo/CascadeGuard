@@ -72,6 +72,9 @@ Human answer 2 (2026-10-29), implemented; PR not merged.
 - Effect: role views and LLM cache keys change (accepted). Baseline result, repair search and
   both goldens unchanged. Exports' `"status"` now carries the full label (intended: it is the
   label shown next to the clause).
+- Deferred MINOR (test-breaker, round 2): jurisdiction is free text, so a mixed value such as
+  "UAE and EU" would read as UAE. Every corpus jurisdiction is listed and labelled correctly
+  (tested); a closed jurisdiction grammar in the loader would close it.
 - Tests: `tests/unit/test_status_qualifiers.py` (label rules, every corpus clause exactly,
   `SOURCE_TYPES` against the inventory, agents/CLI/UI). Two LLM-cache tests now pick the
   files of the last steps instead of the first by hash, which depended on view contents.
@@ -1016,6 +1019,13 @@ Questions for the human from the qualifier-label review (no change made):
 - NIST (a US voluntary framework) is labelled "international precedent". Keep, or "foreign
   precedent"?
 - Illustrative clauses always show plain "illustrative", even a foreign one. Confirm.
+- (phase-auditor, gate 4) The new labels change every role view, so the local recorded LLM
+  cache (`data/llm_cache`, not committed) no longer matches: an offline LLM run is `not_cached`
+  on 36 of 36 steps, and the UI's "LLM (cached only)" mode has no recorded decisions. Re-recording
+  is a paid run. Re-record before the demo, or keep the demo on scripted agents?
+- (evidence-auditor) FL 2/2019 is an English translation and the PDPL and telecom PDFs are
+  English versions or consolidations; their labels say "binding" with no source type. Add a
+  qualifier such as "English translation", or keep that in notes?
 
 Answers from the human on the gate-1 questions (2026-10-29):
 1. Keep a rejected draft citation for the demo: yes, but not by leaving a real clause
