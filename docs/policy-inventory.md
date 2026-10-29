@@ -1,6 +1,6 @@
-# Policy source inventory (Phase 1a; #20–22 added in Phase 6d)
+# Policy source inventory (Phase 1a; #20–22 added in Phase 6d; #23 for the submission)
 
-The 22 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table, and the
+The 23 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table, and the
 seven web transcriptions in `policies/sources/web/`, listed at the end), from
 `policies/extracted/_inventory.json`
 (`uv run python scripts/extract_pdf_text.py`). "No-text pages" = fewer than 20 non-space
@@ -31,6 +31,7 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 20 | `OECD_Recommendation_AI.pdf` | Recommendation of the Council on Artificial Intelligence, OECD/LEGAL/0449 (official original) | OECD Council | adopted 2019-05-22; revised 2023-11-08 and 2024-05-03 | 12 | — | Yes (running header `O_E_C_D_/L_E_G_A_L` on each page) |
 | 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave |
 | 22 | `UAE_National_Cybersecurity_Strategy.pdf` | National Cyber Security Strategy (TRA era) | Telecommunications Regulatory Authority (TRA) | **unknown** (not printed) | 16 | — | **No — see below** |
+| 23 | `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` | The UAE Charter for the Development & Use of Artificial Intelligence (official PDF) | UAE Minister of State for AI, Digital Economy & Remote Work Applications Office (as printed on p.1) | 2024-07 (as printed on p.1) | 5 | — | **No — image pages with an unreliable embedded text layer; see below** |
 
 **SHA-256 of the committed originals** (Phase 6d; the two books are not committed and not
 listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_sources.py` checks these.
@@ -54,22 +55,54 @@ listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_
 `849644db7579a2e8b9bcec8e8033d80e37bb6b0a70aa2a2f68a5d5b3546297f9`  `UAE Policy Foundation.pdf`
 `79e05c502d1fc1247165fc744205984675d6422a490a70201dc4c05bf9aed693`  `UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf`
 `dd9767dcc6528d3982363ee75a85502641a8d19ad325baa39029444ac11fbbf7`  `UAE_National_Cybersecurity_Strategy.pdf`
+`785f71927416942c91c0f7a1b626ad6c9be10641498fc2b3bfea2969bbd03808`  `The UAE Charter for the Development and Use of Artificial Intelligence.pdf`
 `faf8887e89c3b43aa373a1e95433f1322eae14fae4fe7db59373fe6a2ed6d675`  `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf`
 
 **English translations not verified as official** (human decision 2026-10-29). Clauses quoted
 from these files carry "English translation" in their label (`TRANSLATIONS` in
 `src/cascadeguard/domain/policies.py`; tested against this list). Each is an English text of UAE
 legislation; the Arabic text is presumed authoritative, but only Dubai Law 26/2015 says so in the
-document (p.1). Nothing in the repository verifies the English as an official translation. The
-DHA policy (#10) is not listed: it is the issuer's own English version, though it says the Arabic
-version prevails (p.46). The TDRA consolidation is listed, though TDRA published it; whether to
-treat it like the DHA policy is open (PROGRESS, "Waiting on human").
+document (p.1). Nothing in the repository verifies the English as an official translation.
 
 - `887026278-TDRA-Telecom-Law-Final-English-o.pdf`
 - `ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf`
 - `Dubai Law No. (26) of 2015.pdf`
 - `Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf`
 - `UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf`
+
+**Rule** (human decision 2026-10-29): "English translation" applies when the English text was not
+issued by the authority that issued the instrument. DHA issued PP-11 and its English version, so
+#10 has no label. TDRA did not issue the federal telecom law, so its English consolidation (#2 and
+its OCR copy) is labelled. Where the copy does not print who issued the English text (#6, #8,
+#17), it is not shown to come from the instrument's issuer, so it is labelled. Applied to every
+file:
+
+| File | Instrument issued by | English text issued by | Label |
+|---|---|---|---|
+| #2 telecom law, and its OCR copy | UAE (federal decree-law) | TDRA (consolidation) | yes |
+| #6 Dubai Law 26/2015 | Government of Dubai (Arabic text prevails, p.1) | not printed | yes |
+| #8 PDPL | UAE (federal decree-law) | not printed (uaelegislation.gov.ae copy) | yes |
+| #17 FL 2/2019 | UAE (federal law) | not printed (uaelegislation.gov.ae copy) | yes |
+| #10 DHA PP-11 | Dubai Health Authority | Dubai Health Authority | no |
+| #3, #11, #19, #23, and #4 (no clause) | the UAE office or government that issued it | the same, in English | no |
+| #18 unofficial compilation | various | not printed | no ("unofficial compilation" already) |
+| #1, #7, #9, #12–15, #20, #21 | NIST, EU, OECD, ITU, UNESCO, Agile Nations | the same; English is an official language of each | no |
+| #22 TRA-era strategy | TRA | TRA | no (not searched, no clause) |
+| web/01 MOHAP smart health policy | Ministry of Health and Prevention | the uaelegislation.gov.ae portal, not MOHAP | **would change: yes** (not applied; see PROGRESS) |
+| web/02, web/04, web/05 | UAE Government, entity not printed | the same portals | no clause; cannot tell |
+| web/03, web/06, web/07 | news item; UNESCO; OECD | — | no (not a translation of an instrument) |
+
+The list above (`TRANSLATIONS`) does not change, except web/01 if the rule is applied to web
+transcriptions.
+
+**#23 Charter (official PDF), text layer.** Every page is one image with an embedded text layer
+that is not reliable: words run together or split ("theirreplaceablevalue"), "AI" reads "Al", and
+words move between lines (p.4, item 6: "over" and "may" sit on their own lines). Footers read
+"Page02", "Page 05" (p.3, printed 03), "Page 04", "Page05". Quotes are read from the page image
+(PDF index = printed page), never from the text layer. A quote from it is checked against a
+transcription of the page image in `policies/transcriptions/` (human decision 2026-10-29): the
+clause's notes say "transcribed from page image — check against image", and the human checks the
+transcription against the image with the clause. Transcribed so far: p.4. It replaces `UAE Policy Foundation.pdf` pp.1–3 as the Charter's source.
 
 **#4 `AIGuide_EN_v1-online.pdf`:** no official source was found for it (README, question 3x),
 and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is context only.
