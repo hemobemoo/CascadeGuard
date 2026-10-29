@@ -14,7 +14,7 @@ ITU AI for Good Sandbox Hackathon (UAE), submitted by sending this repository's 
 | | |
 |---|---|
 | Team | GM of AI |
-| Member | Ibrahim Melhem (sole member) |
+| Member | Ibrahim Melhem |
 | Affiliation | Al Balqa Applied University |
 | Mentor | Dr. Wafaa Almaaitah |
 
