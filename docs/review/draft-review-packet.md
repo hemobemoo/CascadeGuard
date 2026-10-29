@@ -421,6 +421,23 @@ draft (it was a draft from the compilation).
 
 ---
 
+## Charter transcriptions to check (added 2026-10-29)
+
+`policies/transcriptions/The UAE Charter for the Development and Use of Artificial Intelligence.jsonl`,
+one record per PDF page, each transcribed from the page image (PDF page = printed page). Check
+each against the image; on your approval each record's `status` goes to `reviewed` (methodology
+5c). Line breaks follow the image; headings and footers are kept.
+
+| PDF page | Printed | Content | Clause resting on it | Status | What to check |
+|---|---|---|---|---|---|
+| 1 | (cover) | masthead (3 lines), title (2 lines), "July 2024" | none (issuer and date of both clauses) | draft | Masthead spelling: "MINISTER OF STATE FOR ARTIFICIAL INTELLIGENCE," / "DIGITAL ECONOMY & REMOTE WORK APPLICATIONS OFFICE". Emblem and photo not transcribed (noted in the record). |
+| 2 | Page 02 | Introduction (1 paragraph) | none | draft | "(AI)" and "UAE community". |
+| 3 | Page 03 | Relation to the UAE AI Strategy; General Principles 1–4 | `uae.ai-charter.safety` (item 2, draft) | draft | Item 2 word for word; "UAE’s" (curly apostrophe) in item 4. |
+| 4 | Page 04 | General Principles 5–8 | `uae.ai-charter.human-oversight` (item 6, reviewed) | **reviewed** 2026-10-29 | Done. |
+| 5 | Page 05 | General Principles 9–12 | none | draft | "AI" (not "Al") throughout; items 10–12 headings. |
+
+---
+
 ## Related open items (no status change needed)
 
 - The ITU report `T-AI4G-AI4GOOD-2025-6-PDF-E.pdf` really does contain U+FFFD in its extracted
