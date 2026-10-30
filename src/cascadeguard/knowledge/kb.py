@@ -15,9 +15,13 @@ model slug, the dimensions, the prefix rule and the chunk settings, never from t
 vectors can differ slightly between calls, and that must not change the `+kb:` prompt version
 or the LLM cache keys. The build date is recorded but is not part of the digest.
 
-Search is exact cosine similarity over the committed vectors (numpy; no vector database at
-1,550 chunks), scores rounded to SCORE_DECIMALS and ties broken by chunk id, so the order
-does not depend on the last bits of a query embedding. Only the query is embedded at search
+Search (human decision 2026-10-30, after Charter p.3 ranked 313th for a near-verbatim query
+with 256-word chunks) fuses two rankings by reciprocal rank fusion (RRF_K = 60): exact cosine
+similarity over the committed vectors (numpy; no vector database), rounded to SCORE_DECIMALS,
+and the keyword search's own scoring (`retrieval.keyword_score`) applied to chunks. At most
+MAX_PER_SOURCE chunks per document reach the top-k, so one long source (the EU AI Act) cannot
+crowd out the shorter UAE ones. Every tie is broken by chunk id, so the order does not depend
+on the last bits of a query embedding. Only the query is embedded at search
 time; that needs OPENROUTER_API_KEY and OPENROUTER_BASE_URL (.env) and the network, and fails
 with a clear message without them. The scripted demo and the keyword path never touch it.
 `export_kb_main` writes the chunks in a ChromaDB-compatible form the reference code below loads
@@ -46,9 +50,10 @@ model card (huggingface.co/nvidia/Nemotron-3.5-Embed-1B-BF16):
 
 Adapted from the ITU AI Readiness simulation's ingestion (github.com/CrashingGuru/ITUAIReadiness,
 simulation/server/knowledge/ingest.py and kb.py at 84010da; MIT License, Copyright (c) 2026
-Vishnu Ram OV): the 256-word chunks with a 30-word overlap, the merge of a short tail into the
-previous chunk, the 2,000-character cap, and the `kb_main` collection with cosine distance and
-pre-computed embeddings (the export). Changed here: chunks never cross a page and keep their
+Vishnu Ram OV): word-window chunks with an overlap (theirs 256/30, ours 120/20), the merge of a
+short tail into the previous chunk, the 2,000-character cap, and the `kb_main` collection with
+cosine distance and pre-computed embeddings (the export). Changed here: pages are split at
+numbered headings and blank lines before windowing; chunks never cross a page and keep their
 character span; the input is our extracted records, not re-parsed PDFs; chunk ids are fixed,
 not random; no ingestion timestamp per chunk; no source type or country guessed from file names.
 """
@@ -58,6 +63,7 @@ import json
 import os
 import re
 import time
+from bisect import bisect_left
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from functools import cache
@@ -76,7 +82,7 @@ from cascadeguard.knowledge.loader import (
     load_engine_clauses,
     quote_span,
 )
-from cascadeguard.knowledge.retrieval import searchable_pages
+from cascadeguard.knowledge.retrieval import keyword_score, query_words, searchable_pages
 
 KB_DIR = PROJECT_ROOT / "policies" / "kb"
 MODEL_SLUG = "nvidia/nemotron-3.5-embed-1b:free"  # chosen by the human (PR 3, 2026-10-30)
@@ -91,11 +97,26 @@ PACE_SECONDS = 3.2  # between requests: under 20 a minute, OpenRouter's free-mod
 BACKOFF_SECONDS = 10.0  # before a retry, doubling: 10, 20, 40
 MAX_BACKOFF_SECONDS = 120.0
 EMBED_ENV = ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")
-# Chunk settings of the reference code (config.py: chunk_size, chunk_overlap; ingest.py).
-CHUNK_WORDS = 256
-OVERLAP_WORDS = 30
+# Chunking (human decision 2026-10-30, PR 3 review): pages are first split into segments at
+# numbered headings and blank lines, so each numbered principle or article stands alone; a
+# segment shorter than MIN_SEGMENT_WORDS joins the next one. Long segments are then cut into
+# windows (the reference code's method, at 120/20 words instead of its 256/30).
+CHUNK_WORDS = 120
+OVERLAP_WORDS = 20
 MIN_TAIL_WORDS = 20  # a tail of this many new words or fewer joins the previous chunk
+MIN_SEGMENT_WORDS = 20
 MAX_CHARS = 2000
+# A segment starts at a line beginning "1." / "2.3." / "4)" / "(5)" / "(a)" / "Article" /
+# "Chapter" / "Section", or after a blank line.
+SEGMENT_START = (
+    r"(?m)^[ \t]*(?:\d{1,3}(?:\.\d{1,3})*[.)](?=\s)|\(\d{1,3}\)|\([a-z]\)(?=\s)|"
+    r"Article\b|Chapter\b|Section\b)|\n[ \t]*\n"
+)
+_SEGMENT_START = re.compile(SEGMENT_START)
+# Hybrid ranking (same decision): reciprocal rank fusion of the vector ranking and the keyword
+# search's ranking (retrieval.keyword_score), then at most MAX_PER_SOURCE chunks per document.
+RRF_K = 60
+MAX_PER_SOURCE = 2
 REQUEST_TIMEOUT_SECONDS = 120.0
 SCORE_DECIMALS = 4
 COLLECTION = "kb_main"  # the reference code's collection
@@ -155,8 +176,10 @@ class Chunk:
 
 @dataclass(frozen=True, slots=True)
 class Hit:
-    score: float
+    score: float  # fused score: sum of 1 / (RRF_K + rank) over the two rankings
     chunk: Chunk
+    vector_rank: int = 0  # 1-based rank by cosine similarity
+    keyword_rank: int | None = None  # 1-based rank by keyword score; None: no query word
 
 
 def _windows(n_words: int) -> list[tuple[int, int]]:
@@ -182,9 +205,32 @@ def _capped(words: Sequence[re.Match[str]], a: int, b: int) -> list[tuple[int, i
     return _capped(words, a, middle) + _capped(words, middle, b)
 
 
+def _segments(text: str, words: Sequence[re.Match[str]]) -> list[tuple[int, int]]:
+    """Word ranges of the page's segments (SEGMENT_START), short ones joined to the next."""
+    word_starts = [w.start() for w in words]
+    found = {bisect_left(word_starts, m.start()) for m in _SEGMENT_START.finditer(text)}
+    cuts = sorted({0} | {i for i in found if 0 < i < len(words)})
+    bounds = [*zip(cuts, [*cuts[1:], len(words)], strict=True)]
+    merged: list[tuple[int, int]] = []
+    pending: int | None = None  # start of short segments waiting to join the next
+    for a, b in bounds:
+        a = a if pending is None else pending
+        if b - a < MIN_SEGMENT_WORDS:
+            pending = a
+            continue
+        merged.append((a, b))
+        pending = None
+    if pending is not None:  # short last segment: joins the one before, or stands alone
+        merged[-1:] = [(merged[-1][0], len(words))] if merged else [(pending, len(words))]
+    return merged
+
+
 def chunk_page(source_file: str, page: int, text: str, label: str) -> list[Chunk]:
     words = list(_WORD.finditer(text))
-    spans = [s for a, b in _windows(len(words)) for s in _capped(words, a, b)]
+    if not words:
+        return []
+    windows = [(a + x, a + y) for a, b in _segments(text, words) for x, y in _windows(b - a)]
+    spans = [s for a, b in windows for s in _capped(words, a, b)]
     return [
         Chunk(
             id=f"{source_file}#p{page}#c{n}",
@@ -259,6 +305,8 @@ def settings() -> dict[str, Any]:
         "chunk_words": CHUNK_WORDS,
         "overlap_words": OVERLAP_WORDS,
         "min_tail_words": MIN_TAIL_WORDS,
+        "min_segment_words": MIN_SEGMENT_WORDS,
+        "segment_start": SEGMENT_START,
         "max_chars": MAX_CHARS,
     }
 
@@ -451,6 +499,9 @@ class OpenRouterEmbedder:
     def query(self, text: str) -> Vectors:
         return self._embed([QUERY_PREFIX + text])
 
+    def queries(self, texts: Sequence[str]) -> Vectors:
+        return self._embed([QUERY_PREFIX + t for t in texts])
+
 
 def _retry_after(exc: Exception) -> float | None:
     """Seconds from a Retry-After header on an HTTP error, if any."""
@@ -471,16 +522,80 @@ def _embedder() -> OpenRouterEmbedder:
 def search_kb(
     query: str, k: int = 5, index: Index | None = None, embedder: Embedder | None = None
 ) -> tuple[Hit, ...]:
-    """Top-k chunks by cosine similarity, rounded to SCORE_DECIMALS, ties broken by chunk id."""
+    """Top-k chunks by reciprocal rank fusion of two rankings, at most MAX_PER_SOURCE per
+    document: cosine similarity (rounded to SCORE_DECIMALS) and the keyword search's score
+    (`retrieval.keyword_score`, chunks without a query word unranked). Every tie, in each
+    ranking and in the fused order, is broken by chunk id."""
     if not query.strip() or k <= 0:
         return ()
     embedder = embedder or _embedder()  # a missing key is reported first
     index = index or committed_index()
+    chunks = index.chunks
     vector = _unit(embedder.query(query))[0]
     raw: Vectors = index.vectors @ vector
-    scores = [round(float(x), SCORE_DECIMALS) for x in raw]
-    order = sorted(range(len(index.chunks)), key=lambda i: (-scores[i], index.chunks[i].id))
-    return tuple(Hit(scores[i], index.chunks[i]) for i in order[:k])
+    cosine = [round(float(x), SCORE_DECIMALS) for x in raw]
+    by_vector = sorted(range(len(chunks)), key=lambda i: (-cosine[i], chunks[i].id))
+    words = query_words(query)
+    hits = [keyword_score(c.text, words) for c in chunks]
+    matched = [i for i in range(len(chunks)) if hits[i]]
+    by_keyword = sorted(matched, key=lambda i: (-hits[i], chunks[i].id))
+    vector_rank = {i: r for r, i in enumerate(by_vector, 1)}
+    keyword_rank = {i: r for r, i in enumerate(by_keyword, 1)}
+    fused = {i: 1 / (RRF_K + r) for i, r in vector_rank.items()}
+    for i, r in keyword_rank.items():
+        fused[i] += 1 / (RRF_K + r)
+    taken: list[Hit] = []
+    per_source: dict[str, int] = {}
+    for i in sorted(fused, key=lambda i: (-fused[i], chunks[i].id)):
+        source = chunks[i].source_file
+        if per_source.get(source, 0) >= MAX_PER_SOURCE:
+            continue
+        per_source[source] = per_source.get(source, 0) + 1
+        taken.append(Hit(fused[i], chunks[i], vector_rank[i], keyword_rank.get(i)))
+        if len(taken) == k:
+            break
+    return tuple(taken)
+
+
+def acceptance_queries(kb_dir: Path = KB_DIR) -> list[dict[str, Any]]:
+    """The human's acceptance queries for the index (acceptance.json)."""
+    data = json.loads((kb_dir / "acceptance.json").read_text("utf-8"))
+    return list(data["queries"])
+
+
+def write_query_vectors(embedder: OpenRouterEmbedder, digest: str, kb_dir: Path = KB_DIR) -> int:
+    """Embed the acceptance queries (one request) into query_vectors.json, tied to the index
+    digest, so the acceptance tests run against the committed index with no API."""
+    texts = [str(q["query"]) for q in acceptance_queries(kb_dir)]
+    vectors = embedder.queries(texts)
+    data = {
+        "index_digest": digest,
+        "model_slug": MODEL_SLUG,
+        "query_prefix": QUERY_PREFIX,
+        "vectors": {t: [float(x) for x in v] for t, v in zip(texts, vectors, strict=True)},
+    }
+    text = json.dumps(data, ensure_ascii=False) + "\n"
+    (kb_dir / "query_vectors.json").write_text(text, encoding="utf-8", newline="\n")
+    return len(texts)
+
+
+class StoredQueries:
+    """An Embedder for queries embedded at build time (query_vectors.json): no API. Refuses a
+    file built for another index or model, and any query it does not hold."""
+
+    def __init__(self, digest: str, kb_dir: Path = KB_DIR) -> None:
+        data = json.loads((kb_dir / "query_vectors.json").read_text("utf-8"))
+        if data["index_digest"] != digest or data["model_slug"] != MODEL_SLUG:
+            raise KnowledgeBaseError("query_vectors.json was built for another index or model")
+        self.vectors = {str(k): np.array(v, dtype=np.float32) for k, v in data["vectors"].items()}
+
+    def documents(self, texts: Sequence[str]) -> Vectors:
+        raise KnowledgeBaseError("stored query vectors embed no documents")
+
+    def query(self, text: str) -> Vectors:
+        if text not in self.vectors:
+            raise KnowledgeBaseError(f"no stored vector for the query {text!r}")
+        return self.vectors[text][None, :]
 
 
 def export_records(index: Index) -> list[dict[str, Any]]:

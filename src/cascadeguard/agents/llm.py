@@ -295,6 +295,8 @@ def render_view(
         }
     if kb:  # vector knowledge base (PR 3): same label and rule as the keyword snippets
         query = " ".join((view.event_title, *view.decision_points))
+        # Only the role's own citable clauses are named on a chunk (human decision 2026-10-30).
+        own = {c.id for c in view.role_clauses if c.citable}
         data["knowledge_base_context"] = {
             "label": CONTEXT_LABEL,
             "note": KB_CONTEXT_NOTE,
@@ -305,7 +307,9 @@ def render_view(
                     "page": h.chunk.page,
                     "text": h.chunk.text,
                     "reviewed_clauses_on_this_text": [
-                        {"id": c.id, "status": c.status_label} for c in h.chunk.clauses
+                        {"id": c.id, "status": c.status_label}
+                        for c in h.chunk.clauses
+                        if c.id in own
                     ],
                 }
                 for h in search_kb(query, k=3)
