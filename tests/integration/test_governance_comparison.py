@@ -141,3 +141,15 @@ def test_repairs_has_no_governance_option(capsys: pytest.CaptureFixture[str]) ->
     with pytest.raises(SystemExit):
         main(["repairs", SCENARIO, "--governance", "off"])
     capsys.readouterr()
+
+
+def test_ui_view_matches_the_comparison(comparison: GovernanceComparison) -> None:
+    from cascadeguard.ui import view_model as vm
+
+    v = vm.governance(comparison)
+    assert ("patient_access_restored", "unmet", "met at T+60") in v.goals
+    assert v.governed_raw == tuple(f.id for f in comparison.governed.failures)
+    assert len(v.waived) == len(comparison.waived()) == 3
+    assert all("would have been rejected (" in line for line in v.waived)
+    assert sum(vm.CAUSE_STILL_PRESENT in r for r in v.ungoverned_raw) == len(comparison.masked())
+    assert v.notes == comparison.notes() and not v.withheld

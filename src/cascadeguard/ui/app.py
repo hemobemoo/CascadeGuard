@@ -23,6 +23,7 @@ from nicegui import background_tasks, run, ui
 from cascadeguard.agents.llm import LLMAgent, LLMConfigError
 from cascadeguard.cli import LLM, SCRIPTED, AgentChoice, World, load_world, search_repairs
 from cascadeguard.engine.constraints import AGENT_STATEMENT
+from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
     MASKED_LABEL,
     REMOVED_LABEL,
@@ -64,7 +65,15 @@ STEPS = (  # (key, title, one sentence of narration) for the guided demo
     ),
     ("e", "Repairs", "Candidate repairs from the closed grammar, replayed and ranked."),
     ("f", "Replay", "The identical incident with the repair applied, side by side."),
+    (
+        "h",
+        "Governance off",
+        "The same incident with the clause and mandate checks waived: what governance prevents "
+        "(comparison only).",
+    ),
 )
+
+REPLAY_STEP = next(i for i, (key, _, _) in enumerate(STEPS) if key == "f")
 
 
 def agent_choice(mode: str) -> AgentChoice:
@@ -212,6 +221,7 @@ class Bundle:
     search: SearchResult
     prompt_version: str  # "" for scripted agents
     labels: vm.Labels = vm.IDS
+    governance: GovernanceComparison | None = None  # scripted agents only
 
 
 def compute(scenario_id: str, mode: str) -> Bundle:
@@ -221,7 +231,8 @@ def compute(scenario_id: str, mode: str) -> Bundle:
     found = search_repairs(scenario_id, world=world)
     agent = next(iter(world.agents.values()))
     version = agent.prompt_version if isinstance(agent, LLMAgent) else ""
-    return Bundle(world, baseline, found, version, labels)
+    ungoverned = None if version else GovernanceComparison(baseline, world.ungoverned())
+    return Bundle(world, baseline, found, version, labels, ungoverned)
 
 
 _CACHE: dict[tuple[str, str], Bundle | str] = {}  # a str is the reason it could not be computed
@@ -821,6 +832,45 @@ def index() -> None:
                 )
                 ui.label(f"Source: {row.source}").classes("cg-muted")
 
+    # ----- h. governed vs ungoverned -----
+    with section(s, "h", "h · governance off", "Governed vs ungoverned run of the same incident"):
+
+        @ui.refreshable
+        def governance_view() -> None:
+            d = s.data
+            if d is None:
+                return
+            if d.governance is None:
+                ui.label(vm.GOVERNANCE_LLM).classes("cg-muted").props(
+                    "data-testid=governance-unavailable"
+                )
+                return
+            v = vm.governance(d.governance, d.labels)
+            ui.label(vm.GOVERNANCE_BANNER).classes("cg-bad cg-wrap font-medium").props(
+                "data-testid=governance-banner"
+            )
+            if v.withheld:
+                ui.label(f"Not comparable: {v.withheld}.").classes("italic")
+                return
+            with ui.element("div").classes("cg-split").props("data-testid=governance"):
+                with ui.column().classes("cg-pane gap-1"):
+                    ui.label("Governed (the result)").classes("cg-h2")
+                    lines([f"{g}: {on}" for g, on, _ in v.goals])
+                    ui.label("Diagnosed failures").classes("font-semibold")
+                    named(v.governed_named, v.governed_raw)
+                with ui.column().classes("cg-pane gap-1"):
+                    ui.label("Ungoverned (comparison only)").classes("cg-h2")
+                    lines([f"{g}: {off}" for g, _, off in v.goals])
+                    ui.label("Diagnosed failures").classes("font-semibold")
+                    named(v.ungoverned_named, v.ungoverned_raw)
+            ui.label("Applied only because governance was off").classes("font-semibold")
+            with ui.column().classes("gap-0 w-full").props("data-testid=governance-waived"):
+                lines(v.waived)
+            for note in v.notes:
+                ui.label(note).classes("cg-qual")
+
+        governance_view()
+
     # ----- expert extras -----
     with section(s, "x", "expert", "Clause set and engine findings"):
 
@@ -876,8 +926,9 @@ def index() -> None:
 
     # ----- behaviour -----
     def show_sections() -> None:
-        visible = {STEPS[s.step][0]} if s.guided else {"a", "b", "c", "d", "e", "f", "x", "g"}
-        visible |= {"g"} if s.guided and s.step == len(STEPS) - 1 else set()
+        everything = {"a", "b", "c", "d", "e", "f", "h", "x", "g"}
+        visible = {STEPS[s.step][0]} if s.guided else everything
+        visible |= {"g"} if s.guided and s.step >= REPLAY_STEP else set()  # exports from f on
         for key, box in s.sections.items():
             box.set_visibility(key in visible)
         stepper.set_visibility(s.guided)
@@ -918,6 +969,7 @@ def index() -> None:
         "d": diagnosis_view.refresh,
         "e": ladder_view.refresh,
         "f": split_view.refresh,
+        "h": governance_view.refresh,
         "x": expert_view.refresh,
     }
     pending: set[str] = set()
@@ -960,7 +1012,7 @@ def index() -> None:
             clause_set.set_text("")
             for view in (verdict_view, baseline_lanes, replay_lanes, role_panel_view):
                 view.refresh()
-            for view in (diagnosis_view, ladder_view, split_view, expert_view):
+            for view in (diagnosis_view, ladder_view, split_view, governance_view, expert_view):
                 view.refresh()
             if charts:
                 charts[0].set_visibility(False)
@@ -1050,7 +1102,7 @@ def index() -> None:
                 remove="cg-rung-selected"
             )
         if s.guided:
-            go(len(STEPS) - 1)
+            go(REPLAY_STEP)
         update({"f", "r"}, now={"f"})  # the replay lanes follow the selected repair
 
     # First paint: header, stepper and verdict only. The other sections are filled over the
