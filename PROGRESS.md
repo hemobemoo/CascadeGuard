@@ -27,8 +27,11 @@ opened after the review loop and then waits on the human (not merged).** Human d
   "goal met but the cause is still present". Obligations, fact releases and findings identical.
 - **Verify:** `uv run cascadeguard run uae_health_access --governance off`;
   `uv run pytest tests/unit/test_governance_waivers.py tests/integration/test_governance_comparison.py`.
-- **Host check done (commit 24ea1b4):** `LLMConfig` refuses an `OPENROUTER_BASE_URL` whose
-  host is not openrouter.ai (gate-4 prerequisite).
+- **Host check done (commit 24ea1b4; https and unparsable URLs in fee1f66, 5fc7079):** both
+  OpenRouter clients refuse an `OPENROUTER_BASE_URL` that is not https on openrouter.ai
+  (`kb.is_openrouter_https`; gate-4 prerequisite).
+- **Review loop:** phase-auditor round 1 FAIL (docs only: structure file, "PR open" wording),
+  round 2 PASS; test-breaker round 1 PASS (MINORs fixed in 5fc7079). Full suite 664 passed.
 - Not done in PR 4: the audit file (refused with `--governance off`), UI exports of the
   comparison (CLI `--export` only), an LLM behaviour comparison (gate 4).
 

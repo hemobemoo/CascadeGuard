@@ -405,7 +405,7 @@ def test_governance_off_step_shows_the_comparison(page: Page) -> None:
 
 def test_expert_mode_shows_every_section(page: Page) -> None:
     page.get_by_text("Expert", exact=True).click()
-    for key in "abcdefgx":
+    for key in "abcdefghx":
         expect(section(page, key)).to_be_visible()
     expect(section(page, "x")).to_contain_text("draft clauses not loaded")
     expect(section(page, "x")).to_contain_text("[reviewed (interpreted) · binding unknown]")

@@ -51,7 +51,8 @@ give byte-identical output on every run):
 | Evaluation | `docs/evaluation/` |
 | Submission readiness audit | `docs/submission-readiness.md` |
 
-Still to be added before submission, each in its own pull request: the gap analysis (`docs/gap-analysis.md`), an example trace export
+Still to be added before submission, each in its own pull request: the gap analysis
+(`docs/gap-analysis.md`), an example trace export
 (`docs/evaluation/traces/`), and the technical report.
 
 **Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in

@@ -221,7 +221,8 @@ def comparison_markdown(c: ReplayComparison) -> str:
 
 
 def governance_export(c: GovernanceComparison) -> dict[str, Any]:
-    """The comparison plus both full runs; the ungoverned run is labelled comparison only."""
+    """The comparison plus both full runs: `note` says the ungoverned run is comparison only, and
+    `ungoverned_run.governance` is "off"."""
     labels = dict(c.governed.loaded_clauses)
     data = _label_clause_fields(c.summary(), labels)
     data["note"] = " ".join(c.notes())
