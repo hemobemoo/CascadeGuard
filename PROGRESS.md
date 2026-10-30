@@ -18,15 +18,18 @@ quality after Charter p.3 ranked 313th for a near-verbatim query.
   an obvious page in the top 5; the Arabic query still relevant; scripted path and both expected
   outputs byte-identical; all checks clean; CI green. Encoded in `policies/kb/acceptance.json`
   and `tests/unit/test_kb_acceptance.py` (stored query vectors in `query_vectors.json`, no API).
-- **Results (round 2 index, 4,235 chunks, 133 requests, 425 s; digest 15f93b4a34fa since the
-  ranking settings joined it, no re-embedding):**
-  Charter p.3 rank 313 -> 2; Charter p.4 14 -> 3 (on the limit); PDPL p.13 3 -> 1; FL 2/2019
-  p.4 1 -> 2; GDPR p.21 1 -> 2; Arabic query: a health source at rank 2 -> 1 (web/01 p.4).
-  "Before" is the round-1 index ranked by cosine alone, with the same stored query vectors.
+- **Results (round 2 index: 4,235 chunks, 133 requests, 425 s; round 3 re-digested it with no
+  embedding call, digest 45714d5e2031):** Charter p.3 313 -> 2; Charter p.4 14 -> 2; PDPL p.13
+  3 -> 1; FL 2/2019 p.4 1 -> 2; GDPR p.21 1 -> 2; Arabic query: a health source 2 -> 1. Identical
+  with the Policy Foundation renamed to sort first (`test_duplicates.py`). "Before" is the
+  round-1 index ranked by cosine alone, with the same stored query vectors.
+- **Held-out check (report only, written before looking; round 3):** EU AI Act p.101 rank 2;
+  OECD incidents p.11 rank 2; ITU-T Y.3172 p.8 rank 1; NIST AI RMF p.3 rank 1.
 - **How:** `knowledge/kb.py` splits each page at numbered headings and blank lines (short
   segments join the next), then 120/20-word windows: each Charter principle is its own chunk.
-  Search fuses cosine and the keyword search's score by reciprocal rank fusion (k=60), at most 2
-  chunks per document, ties by chunk id. The shared corpus (`retrieval.searchable_pages`) drops
+  Search fuses cosine and the keyword search's score by reciprocal rank fusion (k=60); tied
+  scores share a rank, at most 2 chunks per document, exact duplicates collapsed into a primary
+  that lists its copies. The shared corpus (`retrieval.searchable_pages`) drops
   web/06, web/07 and the TDRA original, strips web YAML headers (blanked, spans kept) and labels
   OCR pages; `extracted_digest` now hashes the served text, so the keyword path's prompt version
   changes too. A role sees only its own clause ids on a chunk.
@@ -1143,24 +1146,17 @@ all applied: AGENTS.md amendment (93c266a) confirmed; acceptance criteria = the 
 "Start here"; one TDRA copy in both paths (the OCR copy kept: the original has no text layer on
 pp.13-47); web/06 and web/07 excluded from both paths; web YAML headers stripped; OCR pages
 labelled "OCR text, unchecked"; a role sees only its own clause ids on a chunk. Still open:
-- **Charter p.4 meets its limit by a tie-break (test-breaker round 2, QUESTION-FOR-HUMAN).**
-  `UAE Policy Foundation.pdf` p.2 holds a byte-identical copy of Charter principle 6 (and p.1 of
-  principle 2). Equal text gives equal cosine; the tie goes to the chunk id, and "The UAE
-  Charter..." sorts before "UAE Policy Foundation...". With the tie reversed, Charter p.4 falls
-  out of the top 4 (p.3 would still be rank 3). Options: drop the Policy Foundation's Charter
-  pages as duplicates of the official source, rank an exact duplicate below the primary source,
-  or accept either page in the acceptance test.
 - Whether the gate-4 recording run uses `--kb-context`: decided after PR 3 meets its "Done
   when" (human: not yet).
-- Test-breaker MINORs deferred (round 1, no guarantee broken): query embeddings are not counted
-  under `--cap` (free model, but `--cap` says "max requests"); nothing checks that
-  `OPENROUTER_BASE_URL` is an openrouter.ai host (LLM path alike; the amended AGENTS.md rule
-  names openrouter.ai; the embedder now refuses another host since round 2, the LLM path
-  does not yet); `--kb-context` and `--extracted-context` are silently ignored with scripted
-  agents.
-- Test-breaker round 2 MINORs fixed: ranking settings (RRF_K, MAX_PER_SOURCE, SCORE_DECIMALS,
-  PROMPT_K, RANKING_VERSION) are in the index digest, so the `+kb:` key follows them; a test
-  that ties go to the chunk id, not storage order; loaded vectors read-only; embedder host check.
+- **Before gate 4 (human, 2026-10-30): the host check on the LLM path.** Nothing checks that
+  the LLM client's `OPENROUTER_BASE_URL` is an openrouter.ai host (the embedder refuses another
+  host since round 2; the amended AGENTS.md rule names openrouter.ai).
+- Deferred MINOR (test-breaker round 1): query embeddings are not counted under `--cap` (free
+  model, but `--cap` says "max requests").
+- Round 3 (human, 2026-10-30), applied: exact duplicates collapse to a primary in both paths
+  (the Charter p.4 tie with UAE Policy Foundation p.2 is resolved, nothing removed); tied
+  scores share a rank (variant B); `--kb-context` with scripted agents stops with an error. The
+  ranking is locked for this PR: a query that misses later is recorded, not tuned for.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.

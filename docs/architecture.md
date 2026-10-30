@@ -85,7 +85,8 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   `+kb:<digest>`): chunks per page split at numbered headings (about 120 words, with spans),
   embedded offline through OpenRouter (`scripts/build_kb.py` → `policies/kb/`), ranked by
   reciprocal rank fusion of exact cosine over the committed vectors and the keyword score, at
-  most two per document. Acceptance queries and their stored vectors: `policies/kb/acceptance.json`,
+  most two per document; tied scores share a rank; exact duplicates collapse into a primary
+  (reviewed transcription, then a quoted original, then id) in both paths. Acceptance queries and their stored vectors: `policies/kb/acceptance.json`,
   `query_vectors.json`.
   The index digest covers chunks, model slug, dimensions, prefixes and chunk settings, not the
   vectors. Loading the index re-chunks the corpus and refuses a stale one. Neither path touches
