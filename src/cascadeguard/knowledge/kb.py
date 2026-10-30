@@ -32,7 +32,14 @@ model card (huggingface.co/nvidia/Nemotron-3.5-Embed-1B-BF16):
   chat system role by its processor; "Use `query:` for text queries and `passage:` for
   documents" for vLLM offline). OpenRouter documents no prefix handling, so QUERY_PREFIX and
   DOCUMENT_PREFIX are prepended to the text here. Whether the provider also applies them is not
-  documented (not checked).
+  documented. Check, 2026-10-30, one request: the Charter p.4 chunk (156 words) embedded as
+  "passage: <text>" and as "<text>" gave cosine 0.9981, above the 0.99 the human set as the
+  sign that the provider adds the prefix itself. Not conclusive on a long text, where a
+  two-word prefix moves the mean-pooled vector little either way. So a second check, one
+  request, on the short phrase "human oversight of AI": plain vs "passage: " 0.9561, plain vs
+  "query: " 0.9766, "passage: " vs "query: " 0.9539. Neither prefixed form matches the plain
+  text at 0.999 or above, so the provider adds no prefix, and ours are kept as the model card
+  asks (human decision rule, 2026-10-30).
 - Dimensions: 2,048, mean-pooled and L2-normalised; the card says the vector may be truncated
   from the end (e.g. to the first 1,024) "provided they are L2-normalized after truncation".
   So vectors are cut to DIMENSIONS and renormalised here.
