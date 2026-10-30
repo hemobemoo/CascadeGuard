@@ -14,7 +14,13 @@ from typing import Any, cast
 import yaml
 from pydantic import ValidationError
 
-from cascadeguard.domain.policies import ELISION, TRANSCRIBED_FLAG, ClauseStatus, PolicyClause
+from cascadeguard.domain.policies import (
+    ELISION,
+    TRANSCRIBED_FLAG,
+    TRANSCRIBED_SOURCES,
+    ClauseStatus,
+    PolicyClause,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 REVIEWED_DIR = PROJECT_ROOT / "policies" / "reviewed"
@@ -140,6 +146,35 @@ def skipped_texts(
     transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
 ) -> list[str] | None:
     """The page text each ELISION skips, in order; None if the quote is not on its page."""
+    found = _quote_match(clause, extracted_dir, transcriptions_dir)
+    if found is None:
+        return None
+    page_text, kept, spans = found
+    return [
+        page_text[kept[end] : kept[start - 1] + 1] if start > end else ""
+        for (_, end), (start, _) in pairwise(spans)
+    ]
+
+
+def quote_span(
+    clause: PolicyClause,
+    extracted_dir: Path = EXTRACTED_DIR,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+) -> tuple[int, int] | None:
+    """Character span of the clause's quote in its page text, from its first to its last
+    character (elided text included); None if the quote is not on its page."""
+    found = _quote_match(clause, extracted_dir, transcriptions_dir)
+    if found is None:
+        return None
+    _, kept, spans = found
+    return kept[spans[0][0]], kept[spans[-1][1] - 1] + 1
+
+
+def _quote_match(
+    clause: PolicyClause, extracted_dir: Path, transcriptions_dir: Path
+) -> tuple[str, list[int], list[tuple[int, int]]] | None:
+    """The cited page's text, the positions of its non-space characters, and the span of each
+    ELISION piece among them; None if the quote is not on its page."""
     if TRANSCRIBED_FLAG in (clause.notes or ""):
         page_text = _page_text(clause, transcriptions_dir, transcribed=True)
     else:
@@ -157,10 +192,7 @@ def skipped_texts(
             return None
         spans.append((found, found + len(needle)))
         position = found + len(needle)
-    return [
-        page_text[kept[end] : kept[start - 1] + 1] if start > end else ""
-        for (_, end), (start, _) in pairwise(spans)
-    ]
+    return page_text, kept, spans
 
 
 def transcription_key(record: dict[str, Any], where: str) -> tuple[str, int]:
@@ -171,6 +203,41 @@ def transcription_key(record: dict[str, Any], where: str) -> tuple[str, int]:
     if not isinstance(source, str) or type(page) is not int:
         raise ClauseLoadError(f"{where}: a transcription needs a string source_file and int page")
     return source.casefold(), page
+
+
+def reviewed_transcriptions(
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR, approvals_file: Path = APPROVALS_FILE
+) -> list[dict[str, Any]]:
+    """Reviewed page-image transcriptions of TRANSCRIBED_SOURCES, in file and page order: the one
+    reader for the keyword search and the vector index, so both follow one rule. Draft ones wait
+    for the human's check against the image and are never served. Two records for one page are
+    refused, so an unchecked one cannot ride along with the approved one. A reviewed page is
+    served only if its text matches the digest the human pinned in approvals.yaml
+    (`approved_transcriptions`); anything else is refused (test-breaker round 5, 2026-10-30)."""
+    records: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+    for path in sorted(transcriptions_dir.glob("*.jsonl")):
+        for line in path.read_text("utf-8").splitlines():
+            if not line:
+                continue
+            record: dict[str, Any] = json.loads(line)
+            key = transcription_key(record, path.name)
+            if key in seen:
+                raise ClauseLoadError(f"{path.name}: two records for page {key[1]}")
+            seen.add(key)
+            if (
+                record.get("transcribed") is True
+                and record.get("status") == "reviewed"
+                and record.get("source_file") in TRANSCRIBED_SOURCES
+            ):
+                records.append(record)
+    # Checked after every record is read, so a duplicate is reported as one wherever it sits.
+    approved = load_transcription_approvals(approvals_file) if records else {}
+    for record in records:
+        pin = f"{record['source_file']}#{record['page']}"
+        if approved.get(pin) != transcription_digest(str(record.get("text"))):
+            raise ClauseLoadError(f"{pin}: reviewed transcription does not match its approval")
+    return records
 
 
 def _page_text(clause: PolicyClause, directory: Path, transcribed: bool = False) -> str | None:

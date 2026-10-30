@@ -63,6 +63,7 @@ def dry_keys(world: World, repair_id: str) -> tuple[list[str], list[str], int]:
             a.extracted_context,
             a.attempts,
             a.output_mode,
+            kb_context=a.kb_context,
         )
         agents[rid] = Keyed(offline, seen)
     dry = replace(world, agents=agents, cache=dry_cache)

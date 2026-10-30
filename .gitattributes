@@ -1,0 +1,2 @@
+# vectors are binary; never convert line endings
+*.npy binary

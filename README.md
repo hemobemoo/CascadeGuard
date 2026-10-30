@@ -41,18 +41,21 @@ give byte-identical output on every run):
 | Knowledge base: original sources | `policies/sources/` (SHA-256 and status in `docs/policy-inventory.md`) |
 | Knowledge base: cited clauses | `policies/reviewed/*.yaml` (verbatim text, file, page, status; human approvals in `policies/approvals.yaml`) |
 | How clauses are extracted and reviewed | `docs/policy-methodology.md` |
+| Knowledge base: vector index (context only) | `policies/kb/` (chunks, vectors, manifest; built by `scripts/build_kb.py`) |
 | Scenario, roles and expected outputs | `scenarios/uae_health_access/` |
 | Architecture | `docs/architecture.md`, `docs/decisions/` |
 | Evaluation | `docs/evaluation/` |
 | Submission readiness audit | `docs/submission-readiness.md` |
 
-Still to be added before submission, each in its own pull request: the vector knowledge base
-and its `cascadeguard kb query` command, the governed vs ungoverned comparison, the gap analysis
-(`docs/gap-analysis.md`), an example trace export (`docs/evaluation/traces/`), and the technical
-report.
+Still to be added before submission, each in its own pull request: the governed vs ungoverned
+comparison, the gap analysis (`docs/gap-analysis.md`), an example trace export
+(`docs/evaluation/traces/`), and the technical report.
 
 **Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in
-`policies/sources/` are not: they belong to their issuers (see Sources).
+`policies/sources/` are not: they belong to their issuers (see Sources). The knowledge base's
+chunking and `kb_main` export layout are adapted from the ITU AI Readiness simulation
+([CrashingGuru/ITUAIReadiness](https://github.com/CrashingGuru/ITUAIReadiness), MIT,
+Copyright (c) 2026 Vishnu Ram OV).
 
 ## Sources
 
@@ -107,6 +110,29 @@ from `.env` (see `.env.example`); there is no default model, and the model must 
 structured outputs (`response_format` with `json_schema`). Live calls cost money; decisions are
 cached in `data/llm_cache/` and replays reuse them. `scripts/llm_smoke_test.py` makes exactly
 one call.
+
+**Vector knowledge base (context only, never citable).** `policies/kb/` holds the same pages the
+keyword search covers (extracted text outside the excluded sources, plus the reviewed Charter
+transcriptions), split at numbered headings into chunks of at most about 120 words and embedded
+with `nvidia/nemotron-3.5-embed-1b:free` through OpenRouter's embeddings endpoint (1,024
+dimensions). Search fuses cosine similarity over the committed vectors with the keyword search
+(reciprocal rank fusion; tied scores share a rank), at most two chunks per document, exact
+duplicates shown once with the pages that repeat them; only the query is embedded, which
+needs `OPENROUTER_API_KEY` and
+`OPENROUTER_BASE_URL` (free model, no cost). Each chunk shows its file, page and label, and any
+reviewed clause whose quote it holds, with that clause's own status label.
+
+```bash
+uv run cascadeguard kb query "human oversight of AI decisions" -k 3
+uv run cascadeguard run uae_health_access --agents llm --offline --kb-context  # LLM context only
+uv run cascadeguard kb export data/export_kb_main.jsonl
+```
+
+The export writes every chunk with its vector and string metadata in a ChromaDB-compatible
+format that the ITU reference code's ingestion loads into its `kb_main` collection
+(`get_or_create_collection` with cosine distance, then `add` with the pre-computed embeddings).
+ChromaDB is not needed to run CascadeGuard; the test that loads the export uses the optional
+extra: `uv sync --extra chroma`. The scripted demo and the keyword search never use the API.
 
 The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use another port.
 
