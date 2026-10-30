@@ -370,6 +370,7 @@ def test_llm_config_refuses_a_host_other_than_openrouter(
         "http://example.invalid/v1",
         "https://openrouter.ai.evil.test/api/v1",
         "https://openrouter.ai@evil.test/api/v1",
+        "http://openrouter.ai/api/v1",
         "https://evil.test/openrouter.ai",
         "openrouter.ai/api/v1",
         "https://",
@@ -1303,6 +1304,11 @@ def test_live_cli_run_without_a_cap_is_refused(
     monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
     monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")  # never called
     monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+
+    def no_client(*_: object, **__: object) -> None:
+        raise AssertionError("the cap refusal must come before any client is built")
+
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", no_client)
     assert main(["run", SCENARIO, "--agents", "llm", "--cache", str(tmp_path)]) == 2
     assert "live LLM runs need a request cap" in capsys.readouterr().out
 

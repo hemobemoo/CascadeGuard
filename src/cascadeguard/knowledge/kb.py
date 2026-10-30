@@ -528,10 +528,11 @@ class OpenRouterEmbedder:
                 f"{', '.join(missing)} in .env (see .env.example); keyword context "
                 "(--extracted-context) and the scripted demo need neither"
             )
-        if urlsplit(values["OPENROUTER_BASE_URL"].strip()).hostname != KB_HOST:
+        url = urlsplit(values["OPENROUTER_BASE_URL"].strip())
+        if url.scheme != "https" or url.hostname != KB_HOST:
             raise KnowledgeBaseError(
-                f"OPENROUTER_BASE_URL must point at {KB_HOST} (AGENTS.md: the key and corpus "
-                "text go only to the OpenRouter embeddings endpoint)"
+                f"OPENROUTER_BASE_URL must point at {KB_HOST} over https (AGENTS.md: the key and "
+                "corpus text go only to the OpenRouter embeddings endpoint)"
             )
         self._client = OpenAI(
             api_key=values["OPENROUTER_API_KEY"].strip(),
