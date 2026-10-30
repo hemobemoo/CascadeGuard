@@ -11,7 +11,9 @@ and the two published books and NOT_SEARCHED (the TRA-era cyber strategy, the ne
 searched instead, and the Charter's unreliable text layer) are always excluded. For a source
 whose text layer is unreliable, only its reviewed page-image transcriptions are searched, and
 only while each matches the digest the human pinned (`reviewed_transcriptions`). A web
-transcription is served without the human's YAML header at its top.
+transcription is served without the human's YAML header at its top. Exact duplicates (same
+text once whitespace is normalised) are collapsed to one primary result that lists its copies
+(`text_key`, `primary_key`; human decision 2026-10-30), in this path and in the vector index.
 """
 
 import hashlib
@@ -22,13 +24,14 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
-from cascadeguard.domain.policies import TRANSCRIBED_SOURCES, WEB_FLAG, PolicyClause
+from cascadeguard.domain.policies import TRANSCRIBED_SOURCES, WEB_FLAG, ClauseStatus, PolicyClause
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.knowledge.loader import (
     APPROVALS_FILE,
     BOOK_MARKERS,
     EXTRACTED_DIR,
     TRANSCRIPTIONS_DIR,
+    load_engine_clauses,
     reviewed_transcriptions,
 )
 
@@ -141,6 +144,39 @@ class Snippet:
     page: int
     text: str
     label: str = CONTEXT_LABEL
+    also_in: tuple[str, ...] = ()  # "<source_file> p.<page>" of exact copies collapsed into it
+
+
+# Bump when the duplicate rule changes: it is part of extracted_digest and of the index digest.
+DEDUPE_RULE = "exact-v1: reviewed transcription > quoted by a reviewed clause > id"
+
+
+def text_key(text: str) -> str:
+    """Identity of a text for duplicate detection: SHA-256 of its whitespace-normalised form;
+    "" for a text with no words (never a duplicate)."""
+    normalised = " ".join(text.split())
+    return hashlib.sha256(normalised.encode("utf-8")).hexdigest() if normalised else ""
+
+
+def primary_key(label: str, quoted: bool, ident: str) -> tuple[int, str]:
+    """Order within a group of exact duplicates; the smallest is the primary: a reviewed
+    transcription first, then an original a reviewed clause quotes there, then by id."""
+    rank = 0 if label == TRANSCRIPTION_CONTEXT_LABEL else 1 if quoted else 2
+    return rank, ident
+
+
+def page_label(source_file: str, page: int) -> str:
+    return f"{source_file} p.{page}"
+
+
+@cache
+def _quoted_pages() -> frozenset[tuple[str, int]]:
+    """(source_file, page) of every reviewed clause: the pages a reviewed clause quotes."""
+    return frozenset(
+        (c.source_file, c.page)
+        for c in load_engine_clauses().values()
+        if c.status is ClauseStatus.REVIEWED and c.source_file is not None and c.page is not None
+    )
 
 
 def _is_book(name: str) -> bool:
@@ -209,7 +245,7 @@ def extracted_digest(
     and label), so a changed corpus or serving rule never reuses a decision. Snippets are not
     part of a view, so this goes into the prompt version. Built from the parsed records, so line
     endings (CRLF checkouts on Windows) do not change it."""
-    digest = hashlib.sha256()
+    digest = hashlib.sha256(DEDUPE_RULE.encode("utf-8") + b"\n")
     for page in searchable_pages(extracted_dir, transcriptions_dir, approvals_file):
         record = [page.source_file, page.page, page.text, page.label]
         digest.update(json.dumps(record, ensure_ascii=False).encode("utf-8") + b"\n")
@@ -226,7 +262,9 @@ def search_extracted(
 ) -> tuple[Snippet, ...]:
     """Pages of policies/extracted/ and reviewed transcriptions that contain the most query words
     (case-insensitive). Deterministic: ties are broken by file name and page. The books and
-    NOT_SEARCHED are never searched in the extracted text."""
+    NOT_SEARCHED are never searched in the extracted text. Exact duplicate pages are collapsed
+    into their primary (`primary_key`), which lists the copies in `also_in`; a copy takes no
+    place in the limit."""
     words = query_words(query)
     if not words or limit <= 0:
         return ()
@@ -235,6 +273,21 @@ def search_extracted(
         score = keyword_score(page.text, words)
         if score:
             scored.append((-score, page.source_file, page.page, page.text, page.label))
+    groups: dict[str, list[tuple[int, str, int, str, str]]] = {}
+    for entry in scored:
+        if key := text_key(entry[3]):
+            groups.setdefault(key, []).append(entry)
+    copies: dict[tuple[str, int], tuple[str, ...]] = {}
+    dropped: set[tuple[str, int]] = set()
+
+    def order(e: tuple[int, str, int, str, str]) -> tuple[int, str]:
+        return primary_key(e[4], (e[1], e[2]) in _quoted_pages(), f"{e[1]}#p{e[2]:06d}")
+
+    for group in (g for g in groups.values() if len(g) > 1):
+        first, *rest = sorted(group, key=order)
+        copies[(first[1], first[2])] = tuple(page_label(e[1], e[2]) for e in rest)
+        dropped |= {(e[1], e[2]) for e in rest}
+    scored = [e for e in scored if (e[1], e[2]) not in dropped]
     scored.sort(key=lambda s: s[:3])
     snippets: list[Snippet] = []
     for _, source, number, text, label in scored[:limit]:
@@ -242,5 +295,5 @@ def search_extracted(
         first = min(i for w in words if (i := folded.find(w)) >= 0)
         start = max(0, first - width // 4)
         excerpt = " ".join(text[start : start + width].split())
-        snippets.append(Snippet(source, number, excerpt, label))
+        snippets.append(Snippet(source, number, excerpt, label, copies.get((source, number), ())))
     return tuple(snippets)

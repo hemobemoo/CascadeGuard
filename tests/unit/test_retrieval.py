@@ -107,8 +107,9 @@ def test_search_on_the_real_extracted_text_never_returns_a_book() -> None:
 def test_web_transcription_snippets_carry_the_web_label(tmp_path: Path) -> None:
     """Human decision 2026-10-28: web pages are searched, and each web snippet says so."""
     rows = [
-        {"source_file": "web/01_page.pdf", "page": 1, "text": "incident report", "web": True},
-        {"source_file": "Law.pdf", "page": 4, "text": "incident report"},
+        # Different texts: identical pages would collapse into one result (duplicate rule).
+        {"source_file": "web/01_page.pdf", "page": 1, "text": "incident report web", "web": True},
+        {"source_file": "Law.pdf", "page": 4, "text": "incident report law"},
     ]
     for name, row in zip(("01_page.jsonl", "Law.jsonl"), rows, strict=True):
         (tmp_path / name).write_text(json.dumps(row), encoding="utf-8")

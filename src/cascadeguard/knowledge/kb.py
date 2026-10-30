@@ -20,8 +20,10 @@ with 256-word chunks) fuses two rankings by reciprocal rank fusion (RRF_K = 60):
 similarity over the committed vectors (numpy; no vector database), rounded to SCORE_DECIMALS,
 and the keyword search's own scoring (`retrieval.keyword_score`) applied to chunks. At most
 MAX_PER_SOURCE chunks per document reach the top-k, so one long source (the EU AI Act) cannot
-crowd out the shorter UAE ones. Every tie is broken by chunk id, so the order does not depend
-on the last bits of a query embedding. Only the query is embedded at search
+crowd out the shorter UAE ones. Within each ranking, tied scores share the best rank (variant
+B, human decision 2026-10-30), so no file name decides a rank; chunk ids only order tied results
+in the output. Scores are rounded, so the order does not depend on the last bits of a query
+embedding. Only the query is embedded at search
 time; that needs OPENROUTER_API_KEY and OPENROUTER_BASE_URL (.env) and the network, and fails
 with a clear message without them. The scripted demo and the keyword path never touch it.
 `export_kb_main` writes the chunks in a ChromaDB-compatible form the reference code below loads
@@ -83,7 +85,15 @@ from cascadeguard.knowledge.loader import (
     load_engine_clauses,
     quote_span,
 )
-from cascadeguard.knowledge.retrieval import keyword_score, query_words, searchable_pages
+from cascadeguard.knowledge.retrieval import (
+    DEDUPE_RULE,
+    keyword_score,
+    page_label,
+    primary_key,
+    query_words,
+    searchable_pages,
+    text_key,
+)
 
 KB_DIR = PROJECT_ROOT / "policies" / "kb"
 MODEL_SLUG = "nvidia/nemotron-3.5-embed-1b:free"  # chosen by the human (PR 3, 2026-10-30)
@@ -121,7 +131,7 @@ MAX_PER_SOURCE = 2
 PROMPT_K = 3  # chunks shown to an LLM agent with --kb-context
 # Bump when the ranking code changes (keyword_score, fusion, cap): it is part of the digest, so
 # a cached LLM decision is never reused with different context (test-breaker round 2).
-RANKING_VERSION = "rrf-v1"
+RANKING_VERSION = "rrf-v2-shared-ranks"
 KB_HOST = "openrouter.ai"  # AGENTS.md: the key and corpus text go only to OpenRouter
 REQUEST_TIMEOUT_SECONDS = 120.0
 SCORE_DECIMALS = 4
@@ -152,6 +162,10 @@ class Chunk:
     label: str  # the page's snippet label: context only, never citable
     text: str  # the span's words joined by single spaces
     clauses: tuple[ClauseRef, ...] = ()  # reviewed clauses whose quote overlaps the span
+    # Exact duplicates (retrieval.text_key) collapse into one primary (retrieval.primary_key):
+    # a copy names its primary and is never ranked; the primary lists its copies.
+    duplicate_of: str | None = None
+    also_in: tuple[str, ...] = ()  # chunk ids of the copies
 
     def record(self) -> dict[str, Any]:
         return {
@@ -163,6 +177,8 @@ class Chunk:
             "label": self.label,
             "text": self.text,
             "clauses": [{"id": c.id, "status_label": c.status_label} for c in self.clauses],
+            "duplicate_of": self.duplicate_of,
+            "also_in": list(self.also_in),
         }
 
     @staticmethod
@@ -177,7 +193,14 @@ class Chunk:
             str(r["label"]),
             str(r["text"]),
             clauses,
+            None if r["duplicate_of"] is None else str(r["duplicate_of"]),
+            tuple(str(x) for x in r["also_in"]),
         )
+
+    @property
+    def copies(self) -> tuple[str, ...]:
+        """The copies as "<source_file> p.<page>", for display."""
+        return tuple(chunk_location(i) for i in self.also_in)
 
 
 @dataclass(frozen=True, slots=True)
@@ -281,6 +304,33 @@ def _clause_refs(
     return out
 
 
+def chunk_location(chunk_id: str) -> str:
+    """ "<source_file> p.<page>" of a chunk id "<source_file>#p<page>#c<n>"."""
+    source, page, _ = chunk_id.rsplit("#", 2)
+    return page_label(source, int(page[1:]))
+
+
+def collapse_duplicates(chunks: Sequence[Chunk]) -> list[Chunk]:
+    """Mark exact duplicates (same `text_key`): the primary (`primary_key`: a reviewed
+    transcription, then a chunk holding a reviewed clause's quote, then by id) lists its copies;
+    each copy names its primary. Order and content are otherwise unchanged."""
+    groups: dict[str, list[int]] = {}
+    for i, chunk in enumerate(chunks):
+        if key := text_key(chunk.text):
+            groups.setdefault(key, []).append(i)
+    out = list(chunks)
+    for members in (g for g in groups.values() if len(g) > 1):
+        ordered = sorted(
+            members,
+            key=lambda i: primary_key(chunks[i].label, bool(chunks[i].clauses), chunks[i].id),
+        )
+        first, rest = ordered[0], ordered[1:]
+        out[first] = replace(chunks[first], also_in=tuple(chunks[i].id for i in rest))
+        for i in rest:
+            out[i] = replace(chunks[i], duplicate_of=chunks[first].id)
+    return out
+
+
 def build_chunks(
     extracted_dir: Path = EXTRACTED_DIR,
     transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
@@ -296,7 +346,7 @@ def build_chunks(
     if len({c.id for c in chunks}) != len(chunks):
         raise KnowledgeBaseError("two searchable records share a source file and page")
     loaded = load_engine_clauses().values() if clauses is None else clauses
-    return _clause_refs(chunks, loaded, extracted_dir, transcriptions_dir)
+    return collapse_duplicates(_clause_refs(chunks, loaded, extracted_dir, transcriptions_dir))
 
 
 def settings() -> dict[str, Any]:
@@ -320,6 +370,7 @@ def settings() -> dict[str, Any]:
         "max_per_source": MAX_PER_SOURCE,
         "score_decimals": SCORE_DECIMALS,
         "prompt_k": PROMPT_K,
+        "dedupe_rule": DEDUPE_RULE,
     }
 
 
@@ -538,13 +589,23 @@ def _embedder() -> OpenRouterEmbedder:
     return OpenRouterEmbedder()
 
 
+def shared_ranks(scores: dict[int, float]) -> dict[int, int]:
+    """1-based competition ranks, highest score first: tied scores share the best rank, so no
+    file name or id splits a tie inside a ranking (human decision 2026-10-30, variant B)."""
+    ordered = sorted(scores.values(), reverse=True)
+    best = {score: rank for rank, score in reversed(list(enumerate(ordered, 1)))}
+    return {i: best[score] for i, score in scores.items()}
+
+
 def search_kb(
     query: str, k: int = 5, index: Index | None = None, embedder: Embedder | None = None
 ) -> tuple[Hit, ...]:
     """Top-k chunks by reciprocal rank fusion of two rankings, at most MAX_PER_SOURCE per
     document: cosine similarity (rounded to SCORE_DECIMALS) and the keyword search's score
-    (`retrieval.keyword_score`, chunks without a query word unranked). Every tie, in each
-    ranking and in the fused order, is broken by chunk id."""
+    (`retrieval.keyword_score`, chunks without a query word unranked). Within each ranking,
+    tied scores share the best rank (`shared_ranks`); chunk ids order tied results in the
+    output only. Exact copies (`duplicate_of`) are
+    not ranked at all: their primary stands for them and lists them (`Chunk.copies`)."""
     if not query.strip() or k <= 0:
         return ()
     embedder = embedder or _embedder()  # a missing key is reported first
@@ -553,13 +614,11 @@ def search_kb(
     vector = _unit(embedder.query(query))[0]
     raw: Vectors = index.vectors @ vector
     cosine = [round(float(x), SCORE_DECIMALS) for x in raw]
-    by_vector = sorted(range(len(chunks)), key=lambda i: (-cosine[i], chunks[i].id))
+    ranked = [i for i, c in enumerate(chunks) if c.duplicate_of is None]  # copies never rank
     words = query_words(query)
     hits = [keyword_score(c.text, words) for c in chunks]
-    matched = [i for i in range(len(chunks)) if hits[i]]
-    by_keyword = sorted(matched, key=lambda i: (-hits[i], chunks[i].id))
-    vector_rank = {i: r for r, i in enumerate(by_vector, 1)}
-    keyword_rank = {i: r for r, i in enumerate(by_keyword, 1)}
+    vector_rank = shared_ranks({i: cosine[i] for i in ranked})
+    keyword_rank = shared_ranks({i: float(hits[i]) for i in ranked if hits[i]})
     fused = {i: 1 / (RRF_K + r) for i, r in vector_rank.items()}
     for i, r in keyword_rank.items():
         fused[i] += 1 / (RRF_K + r)
@@ -634,6 +693,8 @@ def export_records(index: Index) -> list[dict[str, Any]]:
                 "label": c.label,
                 "clause_ids": ",".join(r.id for r in c.clauses),
                 "clause_labels": " | ".join(r.status_label for r in c.clauses),
+                "duplicate_of": c.duplicate_of or "",
+                "also_in": " | ".join(c.copies),
                 "document_category": "cascadeguard_policies",
             },
         }

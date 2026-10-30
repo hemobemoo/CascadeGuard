@@ -551,6 +551,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command not in ("run", "repairs"):
         parser.print_help()
         return 0
+    if args.kb_context and args.agents != LLM:  # human decision 2026-10-30: never silently ignored
+        print("cascadeguard: --kb-context gives context to LLM agents only; use --agents llm")
+        return 2
     choice = AgentChoice(
         args.agents, args.offline, args.cache, args.extracted_context, args.cap, args.kb_context
     )
@@ -584,6 +587,7 @@ def format_hits(hits: Sequence[Hit]) -> str:
             f"{c.source_file}  p.{c.page}  [{c.start}-{c.end}]"
         )
         lines.append(f"   label: {c.label}")
+        lines.extend(f"   also in: {copy}" for copy in c.copies)
         lines.extend(f"   clause {r.id}: {r.status_label}" for r in c.clauses)
         lines.append(f"   {c.text[:300]}{'...' if len(c.text) > 300 else ''}")
     return "\n".join(lines)

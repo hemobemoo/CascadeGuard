@@ -280,11 +280,12 @@ def test_search_is_deterministic_and_breaks_ties_by_chunk_id() -> None:
     index, embedder = fake_index(), FakeEmbedder()
     hits = search_kb("incident report", k=3, index=index, embedder=embedder)
     assert hits == search_kb("incident report", k=3, index=index, embedder=embedder)
-    # p1 and p2 hold the same words: equal in both rankings, so the id decides each rank; p3 is
-    # the same document's third chunk, beyond MAX_PER_SOURCE.
+    # p1 and p2 hold the same words: tied in both rankings, so they share rank 1 and the same
+    # fused score (human decision 2026-10-30, variant B); the id orders them in the output only.
+    # p3 is the same document's third chunk, beyond MAX_PER_SOURCE.
     assert [h.chunk.page for h in hits] == [1, 2]
-    assert [(h.vector_rank, h.keyword_rank) for h in hits] == [(1, 1), (2, 2)]
-    assert hits[0].score > hits[1].score
+    assert [(h.vector_rank, h.keyword_rank) for h in hits] == [(1, 1), (1, 1)]
+    assert hits[0].score == hits[1].score
     assert search_kb(" ", index=index, embedder=embedder) == ()
     assert search_kb("x", k=0, index=index, embedder=embedder) == ()
 
@@ -653,3 +654,16 @@ def test_the_embedder_refuses_a_host_other_than_openrouter(
         with pytest.raises(KnowledgeBaseError, match=r"must point at openrouter\.ai") as err:
             OpenRouterEmbedder(env_file=tmp_path / "none.env")
         assert "sk-test" not in str(err.value) and url not in str(err.value)
+
+
+def test_tied_scores_share_the_best_rank() -> None:
+    """Variant B (human decision 2026-10-30): equal scores take the same, best rank; the next
+    distinct score takes its position (competition ranking)."""
+    assert kb.shared_ranks({7: 0.9, 3: 0.5, 5: 0.9, 1: 0.2, 2: 0.5}) == {
+        7: 1,
+        5: 1,
+        3: 3,
+        2: 3,
+        1: 5,
+    }
+    assert kb.shared_ranks({}) == {}
