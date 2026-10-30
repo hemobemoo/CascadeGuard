@@ -21,8 +21,8 @@ SCRIPTED_GOVERNANCE_NOTE = (
     "A comparison of agent behaviour without governance needs LLM agents."
 )
 WITHHELD_NOTE = (
-    "goals, failures and changed actions withheld: {n} steps had no decision, so the ungoverned "
-    "run is not comparable with the governed one"
+    "goals, failures and changed actions withheld: {n} steps had no decision ({governed} in the "
+    "governed run, {ungoverned} in the ungoverned run), so the runs are not comparable"
 )
 WAIVED_REASONS = tuple(sorted(r.value for r in WAIVABLE))
 
@@ -105,7 +105,11 @@ class GovernanceComparison:
         if self.failed_steps:  # not comparable, as for an incomplete replay
             return {
                 **head,
-                "withheld": WITHHELD_NOTE.format(n=len(self.failed_steps)),
+                "withheld": WITHHELD_NOTE.format(
+                    n=len(self.failed_steps),
+                    governed=len(self.governed.failed_steps),
+                    ungoverned=len(self.ungoverned.failed_steps),
+                ),
                 "failed_steps": [
                     {"run": run, "minute": m, "role": r, "reason": why}
                     for run, m, r, why in self.failed_steps

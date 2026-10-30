@@ -79,10 +79,11 @@ class LLMConfig:
     def __post_init__(self) -> None:
         # AGENTS.md: the key and corpus text go only to openrouter.ai, as for the embedder. The
         # message never repeats the URL (it could hold a key).
-        if urlsplit(self.base_url).hostname != KB_HOST:
+        url = urlsplit(self.base_url)
+        if url.scheme != "https" or url.hostname != KB_HOST:
             raise LLMConfigError(
-                f"OPENROUTER_BASE_URL must point at {KB_HOST} (AGENTS.md: the key and corpus "
-                "text go only to OpenRouter)"
+                f"OPENROUTER_BASE_URL must point at {KB_HOST} over https (AGENTS.md: the key and "
+                "corpus text go only to OpenRouter)"
             )
 
     @staticmethod
