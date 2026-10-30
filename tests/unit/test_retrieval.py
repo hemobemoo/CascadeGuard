@@ -33,7 +33,11 @@ SUCCESS = (
 def pin_approvals(directory: Path, pages: dict[str, str]) -> Path:
     """An approvals.yaml that pins each "<source_file>#<page>" to the digest of the given text."""
     pins = {key: transcription_digest(text) for key, text in pages.items()}
-    data = {"approved": {}, "reapproval_needed": [], "approved_transcriptions": pins}
+    data: dict[str, object] = {
+        "approved": {},
+        "reapproval_needed": [],
+        "approved_transcriptions": pins,
+    }
     path = directory / "approvals.yaml"
     path.write_text(json.dumps(data), encoding="utf-8")  # JSON is valid YAML
     return path

@@ -1,0 +1,451 @@
+"""knowledge/kb.py: the vector index covers exactly the keyword search's pages, under the same
+page rules; its digest ignores the vectors; search is deterministic; the export loads into a
+ChromaDB kb_main collection the way the reference code loads it (optional `chroma` extra). No
+network and no key: a fake embedder, or a fake client behind OpenRouterEmbedder, stands in for
+the API."""
+
+import hashlib
+import json
+import shutil
+from collections.abc import Sequence
+from dataclasses import replace
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pytest
+
+from cascadeguard.agents.cache import DecisionCache
+from cascadeguard.agents.llm import LLMAgent, render_view
+from cascadeguard.cli import format_hits, load_world, main
+from cascadeguard.domain.policies import TRANSCRIBED_SOURCES, ClauseStatus
+from cascadeguard.knowledge import kb
+from cascadeguard.knowledge.kb import (
+    CHUNK_WORDS,
+    DIMENSIONS,
+    KB_DIR,
+    MAX_CHARS,
+    OVERLAP_WORDS,
+    Chunk,
+    Index,
+    KnowledgeBaseError,
+    OpenRouterEmbedder,
+    Vectors,
+    build_chunks,
+    chunk_page,
+    digest_of,
+    export_kb_main,
+    export_records,
+    load_index,
+    search_kb,
+    write_index,
+)
+from cascadeguard.knowledge.loader import (
+    EXTRACTED_DIR,
+    TRANSCRIPTIONS_DIR,
+    ClauseLoadError,
+    load_clauses,
+    quote_span,
+)
+from cascadeguard.knowledge.retrieval import (
+    NOT_SEARCHED,
+    TRANSCRIPTION_CONTEXT_LABEL,
+    searchable_pages,
+)
+
+CHARTER = next(iter(TRANSCRIBED_SOURCES))
+
+
+class FakeEmbedder:
+    """Bag of words hashed into 64 dimensions: deterministic, no download."""
+
+    def _one(self, text: str) -> list[float]:
+        v = [0.0] * 64
+        for word in text.casefold().split():
+            v[int(hashlib.sha256(word.encode()).hexdigest(), 16) % 64] += 1.0
+        return v
+
+    def documents(self, texts: Sequence[str]) -> Vectors:
+        return np.array([self._one(t) for t in texts], dtype=np.float32)
+
+    def query(self, text: str) -> Vectors:
+        return np.array([self._one(text)], dtype=np.float32)
+
+
+@pytest.fixture(scope="module")
+def real_chunks() -> list[Chunk]:
+    return build_chunks()
+
+
+def words(n: int) -> str:
+    return " ".join(f"w{i}" for i in range(n))
+
+
+def test_chunks_are_word_windows_with_overlap_and_exact_spans() -> None:
+    text = "  " + words(600).replace(" w300 ", "\n\nw300\t")
+    chunks = chunk_page("x.pdf", 3, text, "label")
+    step = CHUNK_WORDS - OVERLAP_WORDS
+    assert [c.id for c in chunks] == ["x.pdf#p3#c0", "x.pdf#p3#c1", "x.pdf#p3#c2"]
+    assert [c.text.split()[0] for c in chunks] == ["w0", f"w{step}", f"w{2 * step}"]
+    assert [len(c.text.split()) for c in chunks] == [CHUNK_WORDS, CHUNK_WORDS, 600 - 2 * step]
+    for c in chunks:
+        assert " ".join(text[c.start : c.end].split()) == c.text
+
+
+def test_a_short_tail_joins_the_previous_chunk() -> None:
+    step = CHUNK_WORDS - OVERLAP_WORDS
+    assert len(chunk_page("x.pdf", 1, words(CHUNK_WORDS + 20), "l")) == 1
+    assert len(chunk_page("x.pdf", 1, words(CHUNK_WORDS + 21), "l")) == 2
+    assert chunk_page("x.pdf", 1, words(step), "l")[0].text == words(step)
+    assert chunk_page("x.pdf", 1, " \n ", "l") == []
+
+
+def test_no_chunk_exceeds_the_character_cap() -> None:
+    text = " ".join("x" * 40 for _ in range(200))
+    chunks = chunk_page("x.pdf", 1, text, "l")
+    assert len(chunks) > 1 and all(len(c.text) <= MAX_CHARS for c in chunks)
+    assert sum(len(c.text.split()) for c in chunks) == 200
+
+
+def test_the_index_covers_exactly_the_searchable_pages(real_chunks: list[Chunk]) -> None:
+    pages = {(p.source_file, p.page): p.label for p in searchable_pages() if p.text.split()}
+    chunks = real_chunks
+    assert {(c.source_file, c.page) for c in chunks} == set(pages)
+    assert all(c.label == pages[(c.source_file, c.page)] for c in chunks)
+    stems = {Path(name).stem.casefold() for name in NOT_SEARCHED}
+    for c in chunks:
+        assert "abhivardhan" not in c.source_file.casefold()
+        assert "oxford handbook" not in c.source_file.casefold()
+        if Path(c.source_file).stem.casefold() in stems:  # only the Charter's transcriptions
+            assert c.source_file in TRANSCRIBED_SOURCES
+            assert c.label == TRANSCRIPTION_CONTEXT_LABEL
+
+
+def test_the_charter_text_layer_never_reaches_the_index(real_chunks: list[Chunk]) -> None:
+    charter = [c for c in real_chunks if c.source_file == CHARTER]
+    assert sorted({c.page for c in charter}) == [1, 2, 3, 4, 5]
+    assert not any("greatimportance" in c.text for c in charter)  # a text-layer artefact
+
+
+def charter_rows() -> list[dict[str, Any]]:
+    lines = (TRANSCRIPTIONS_DIR / f"{Path(CHARTER).stem}.jsonl").read_text("utf-8").splitlines()
+    return [json.loads(line) for line in lines]
+
+
+def test_a_page_that_fails_its_pin_is_refused_by_the_index(tmp_path: Path) -> None:
+    stem = Path(CHARTER).stem
+    rows = charter_rows()
+    rows[3]["text"] += " edited after approval"
+    text = "".join(json.dumps(r) + "\n" for r in rows)
+    (tmp_path / f"{stem}.jsonl").write_text(text, encoding="utf-8")
+    with pytest.raises(ClauseLoadError, match="does not match its approval"):
+        build_chunks(transcriptions_dir=tmp_path)
+
+
+def test_a_draft_transcription_is_never_indexed(tmp_path: Path) -> None:
+    stem = Path(CHARTER).stem
+    rows = charter_rows()
+    rows[3]["status"] = "draft"
+    text = "".join(json.dumps(r) + "\n" for r in rows)
+    (tmp_path / f"{stem}.jsonl").write_text(text, encoding="utf-8")
+    pages = {c.page for c in build_chunks(transcriptions_dir=tmp_path) if c.source_file == CHARTER}
+    assert pages == {1, 2, 3, 5}
+
+
+def test_reviewed_clauses_map_to_the_chunks_holding_their_quote_and_drafts_never(
+    real_chunks: list[Chunk],
+) -> None:
+    chunks = real_chunks
+    mapped = {r.id: r.status_label for c in chunks for r in c.clauses}
+    clauses = {c.id: c for c in load_clauses()}
+    reviewed = [c for c in clauses.values() if c.status is ClauseStatus.REVIEWED]
+    for clause in reviewed:
+        span = quote_span(clause)
+        on_page = [
+            c for c in chunks if (c.source_file, c.page) == (clause.source_file, clause.page)
+        ]
+        if span is None or not on_page:
+            assert clause.id not in mapped
+            continue
+        holders = [c for c in on_page if any(r.id == clause.id for r in c.clauses)]
+        assert holders, clause.id
+        assert all(c.start < span[1] and span[0] < c.end for c in holders)
+        assert mapped[clause.id] == clause.status_label  # the label, never a stronger claim
+    assert all(clauses[cid].status is ClauseStatus.REVIEWED for cid in mapped)
+    assert "uae.ai-charter.human-oversight" in mapped  # rests on reviewed transcription p.4
+
+
+def test_the_digest_ignores_the_vectors_and_follows_everything_else(
+    tmp_path: Path, real_chunks: list[Chunk], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """API vectors can differ slightly between calls: that must not change the digest, so not
+    the `+kb:` prompt version or the LLM cache keys either. The build date is not in it."""
+    chunks = real_chunks
+    a = np.random.default_rng(0).random((len(chunks), DIMENSIONS), dtype=np.float32)
+    b = a + np.float32(1e-4)
+    first = write_index(chunks, a, "2026-10-30", tmp_path / "a")
+    assert write_index(chunks, b, "2026-11-02", tmp_path / "b") == first
+    loaded_a, loaded_b = load_index(tmp_path / "a"), load_index(tmp_path / "b")
+    assert loaded_a.digest == loaded_b.digest == first
+    assert not np.array_equal(loaded_a.vectors, loaded_b.vectors)
+    assert digest_of([*chunks[:-1], replace(chunks[-1], text="x")]) != first
+    for name, value in [
+        ("MODEL_SLUG", "other/model"),
+        ("DIMENSIONS", 512),
+        ("DOCUMENT_PREFIX", "document: "),
+        ("CHUNK_WORDS", 300),
+    ]:
+        with monkeypatch.context() as m:
+            m.setattr(kb, name, value)
+            assert digest_of(chunks) != first, name
+
+
+def test_a_stale_or_tampered_index_is_refused(tmp_path: Path, real_chunks: list[Chunk]) -> None:
+    chunks = real_chunks
+    vectors = np.ones((len(chunks), DIMENSIONS), dtype=np.float32)
+    write_index(chunks[:-1], vectors[:-1], "2026-10-30", tmp_path / "stale")
+    with pytest.raises(KnowledgeBaseError, match="corpus changed"):
+        load_index(tmp_path / "stale")
+    write_index(chunks, vectors, "2026-10-30", tmp_path / "tampered")
+    path = tmp_path / "tampered" / "chunks.jsonl"
+    path.write_text(path.read_text("utf-8").replace("Law", "Lav", 1), encoding="utf-8")
+    with pytest.raises(KnowledgeBaseError, match="manifest digest"):
+        load_index(tmp_path / "tampered")
+    write_index(chunks, vectors, "2026-10-30", tmp_path / "rows")
+    np.save(tmp_path / "rows" / "vectors.npy", vectors[:-1])
+    with pytest.raises(KnowledgeBaseError, match="one row per chunk"):
+        load_index(tmp_path / "rows")
+    with pytest.raises(KnowledgeBaseError, match="1024-dimension"):
+        write_index(chunks, vectors[:, :8], "2026-10-30", tmp_path / "dims")
+
+
+def fake_index() -> Index:
+    chunks = [
+        Chunk(f"f.pdf#p{p}#c0", "f.pdf", p, 0, len(t), "context only; not citable", t)
+        for p, t in enumerate(["incident report duty", "report incident duty", "privacy"], 1)
+    ]
+    vectors = FakeEmbedder().documents([c.text for c in chunks])
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    return Index(tuple(chunks), vectors / norms, {"digest": "fake"})
+
+
+def test_search_is_deterministic_and_breaks_ties_by_chunk_id() -> None:
+    index, embedder = fake_index(), FakeEmbedder()
+    hits = search_kb("incident report", k=3, index=index, embedder=embedder)
+    assert hits == search_kb("incident report", k=3, index=index, embedder=embedder)
+    # p1 and p2 hold the same words: equal scores, so the id decides.
+    assert [h.chunk.page for h in hits] == [1, 2, 3]
+    assert hits[0].score == hits[1].score > hits[2].score
+    assert search_kb(" ", index=index, embedder=embedder) == ()
+    assert search_kb("x", k=0, index=index, embedder=embedder) == ()
+
+
+def test_kb_query_prints_file_page_label_and_clause_status(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    index = fake_index()
+    labelled = kb.ClauseRef("some.clause", "reviewed · not binding")
+    first = replace(index.chunks[0], clauses=(labelled,))
+    index = Index((first, *index.chunks[1:]), index.vectors, index.manifest)
+
+    def fake_search(text: str, k: int = 5) -> tuple[kb.Hit, ...]:
+        return search_kb(text, k, index=index, embedder=FakeEmbedder())
+
+    monkeypatch.setattr("cascadeguard.cli.search_kb", fake_search)
+    assert main(["kb", "query", "incident report", "-k", "2"]) == 0
+    out = capsys.readouterr().out
+    assert "f.pdf  p.1" in out and "f.pdf  p.2" in out and "p.3" not in out
+    assert "label: context only; not citable" in out
+    assert "clause some.clause: reviewed · not binding" in out
+    assert format_hits(()).startswith("Knowledge base: 0 chunks (context only; not citable)")
+
+
+def load_into_chroma(records: Sequence[dict[str, Any]], client: Any) -> Any:
+    """The reference code's load (its kb.py `_col` and `add_documents`): get_or_create_collection
+    with cosine distance, then add with pre-computed embeddings, in batches of 5,000."""
+    collection = client.get_or_create_collection(name="kb_main", metadata={"hnsw:space": "cosine"})
+    for i in range(0, len(records), 5000):
+        batch = records[i : i + 5000]
+        collection.add(
+            ids=[r["id"] for r in batch],
+            documents=[r["document"] for r in batch],
+            embeddings=[r["embedding"] for r in batch],
+            metadatas=[r["metadata"] for r in batch],
+        )
+    return collection
+
+
+def test_the_export_loads_into_a_kb_main_collection_like_the_reference(tmp_path: Path) -> None:
+    """export_kb_main.jsonl, read back and loaded with the reference code's calls
+    (PersistentClient, telemetry off). Not run inside the reference application."""
+    chromadb = pytest.importorskip(
+        "chromadb", reason="the optional `chroma` extra is not installed (uv sync --extra chroma)"
+    )
+    index = fake_index()
+    path = tmp_path / "export_kb_main.jsonl"
+    assert export_kb_main(path, index) == len(index.chunks)
+    records = [json.loads(line) for line in path.read_text("utf-8").splitlines()]
+    assert records == json.loads(json.dumps(export_records(index)))
+    assert all(isinstance(v, str) for r in records for v in r["metadata"].values())
+    settings = chromadb.config.Settings(anonymized_telemetry=False)
+    client = chromadb.PersistentClient(path=str(tmp_path / "chroma"), settings=settings)
+    collection = load_into_chroma(records, client)
+    assert collection.name == "kb_main" and collection.count() == len(index.chunks)
+    assert collection.metadata["hnsw:space"] == "cosine"
+    got = collection.query(query_embeddings=[records[2]["embedding"]], n_results=1)
+    assert got["ids"][0] == [index.chunks[2].id]
+    meta = collection.get(ids=[index.chunks[0].id])["metadatas"][0]
+    assert meta["source_file"] == "f.pdf" and meta["page"] == "1"
+
+
+def test_the_committed_index_matches_the_corpus_and_its_manifest() -> None:
+    index = load_index()
+    m = index.manifest
+    assert m["model_slug"] == "nvidia/nemotron-3.5-embed-1b:free"
+    assert m["dimensions"] == DIMENSIONS == 1024 and m["build_date"]
+    assert index.vectors.shape == (len(index.chunks), DIMENSIONS)
+    assert np.allclose(np.linalg.norm(index.vectors, axis=1), 1, atol=1e-5)
+    assert (KB_DIR / "chunks.jsonl").exists()
+
+
+def test_kb_context_enters_only_the_llm_prompt_and_its_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without --kb-context the prompt and its version are what they were before PR 3; with it,
+    the chunks go in labelled, with the clause status only, and `+kb:<digest>` keys the cache."""
+    plain = LLMAgent("r", "m", None, DecisionCache(tmp_path), ("r",))
+    with_kb = LLMAgent("r", "m", None, DecisionCache(tmp_path), ("r",), kb_context=True)
+    assert plain.prompt_version == "phase5-v4+json_schema"
+    assert with_kb.prompt_version == f"phase5-v4+json_schema+kb:{load_index().digest}"
+
+    world = load_world("uae_health_access")
+    roles = tuple(r.id for r in world.roles.roles)
+    views = world.baseline().views
+    assert all("knowledge_base_context" not in json.loads(render_view(v, roles)) for v in views)
+
+    index = fake_index()
+    labelled = kb.ClauseRef("some.clause", "reviewed · not binding")
+    first = replace(index.chunks[0], clauses=(labelled,))
+    index = Index((first, *index.chunks[1:]), index.vectors, index.manifest)
+    queries: list[str] = []
+
+    def fake_search(text: str, k: int = 5) -> tuple[kb.Hit, ...]:
+        queries.append(text)
+        return search_kb("incident report", k, index=index, embedder=FakeEmbedder())
+
+    monkeypatch.setattr("cascadeguard.agents.llm.search_kb", fake_search)
+    data = json.loads(render_view(views[0], roles, kb=True))["knowledge_base_context"]
+    assert data["label"] == "context only; not citable" and "Never cite it" in data["note"]
+    assert [c["page"] for c in data["chunks"]] == [1, 2, 3]
+    assert data["chunks"][0]["reviewed_clauses_on_this_text"] == [
+        {"id": "some.clause", "status": "reviewed · not binding"}
+    ]
+    assert queries == [" ".join((views[0].event_title, *views[0].decision_points))]
+
+
+def test_the_index_corpus_equals_the_search_corpus_on_disk_copies(
+    tmp_path: Path, real_chunks: list[Chunk]
+) -> None:
+    """A changed extracted page changes the chunks: the index cannot silently drift."""
+    copy = tmp_path / "extracted"
+    shutil.copytree(EXTRACTED_DIR, copy)
+    base = real_chunks
+    target = next(p for p in sorted(copy.glob("*.jsonl")) if p.name.startswith("Dubai"))
+    rows = [json.loads(line) for line in target.read_text("utf-8").splitlines() if line]
+    rows[0]["text"] += " zzaddedword"
+    target.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    changed = build_chunks(copy)
+    assert [c.text for c in changed] != [c.text for c in base]
+    assert any("zzaddedword" in c.text for c in changed)
+
+
+class FakeEmbeddings:
+    """Stands in for `client.embeddings`: replies in reverse order with 2,048-dimension vectors
+    whose first value is the text length, after failing `fail` times."""
+
+    def __init__(self, fail: int = 0) -> None:
+        self.fail = fail
+        self.inputs: list[list[str]] = []
+
+    def create(self, model: str, input: list[str]) -> Any:
+        self.inputs.append(input)
+        if self.fail:
+            self.fail -= 1
+            raise ConnectionError("network down")
+        rows = [
+            type("D", (), {"index": i, "embedding": [float(len(t)), *range(1, 2048)]})()
+            for i, t in enumerate(input)
+        ]
+        return type("R", (), {"data": rows[::-1]})()
+
+
+def api_embedder(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake: FakeEmbeddings
+) -> OpenRouterEmbedder:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test-not-a-real-key")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "http://127.0.0.1:9/never-called")
+    embedder = OpenRouterEmbedder(env_file=tmp_path / "none.env")
+    setattr(embedder, "_client", type("C", (), {"embeddings": fake})())  # noqa: B010
+    return embedder
+
+
+def test_the_api_embedder_batches_prefixes_truncates_and_renormalises(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = FakeEmbeddings()
+    embedder = api_embedder(monkeypatch, tmp_path, fake)
+    texts = [f"text {i} " * (i + 1) for i in range(70)]
+    vectors = embedder.documents(texts)
+    assert [len(b) for b in fake.inputs] == [32, 32, 6]
+    assert all(t.startswith("passage: ") for b in fake.inputs for t in b)
+    assert vectors.shape == (70, DIMENSIONS)
+    assert np.allclose(np.linalg.norm(vectors, axis=1), 1, atol=1e-6)
+    # Row order follows the request, whatever order the reply lists them in.
+    expected = np.array([len("passage: " + texts[5]), *range(1, DIMENSIONS)], dtype=np.float64)
+    assert np.allclose(vectors[5], expected / np.linalg.norm(expected), atol=1e-6)
+    embedder.query("who decides")
+    assert fake.inputs[-1] == ["query: who decides"]
+
+
+def test_the_api_embedder_retries_three_times_then_stops_clearly(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    embedder = api_embedder(monkeypatch, tmp_path, FakeEmbeddings(fail=3))
+    assert embedder.query("x").shape == (1, DIMENSIONS) and embedder.requests == 4
+    embedder = api_embedder(monkeypatch, tmp_path, FakeEmbeddings(fail=4))
+    with pytest.raises(KnowledgeBaseError, match="failed 4 times") as err:
+        embedder.query("x")
+    assert "sk-test" not in str(err.value) and embedder.requests == 4
+
+
+def test_without_a_key_kb_query_and_kb_context_fail_with_a_clear_message(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for name in ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(kb, "PROJECT_ROOT", tmp_path)  # no .env here
+    kb._embedder.cache_clear()  # pyright: ignore[reportPrivateUsage]
+    try:
+        assert main(["kb", "query", "who reverses the lockout"]) == 2
+        out = capsys.readouterr().out
+        assert "OPENROUTER_API_KEY, OPENROUTER_BASE_URL" in out and "Traceback" not in out
+    finally:
+        kb._embedder.cache_clear()  # pyright: ignore[reportPrivateUsage]
+    with pytest.raises(KnowledgeBaseError, match="OPENROUTER_API_KEY"):
+        OpenRouterEmbedder(env_file=tmp_path / "none.env")
+
+
+def test_the_scripted_demo_and_keyword_path_never_touch_the_embedding_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cascadeguard.knowledge.retrieval import search_extracted
+
+    def refuse(*_: object, **__: object) -> None:
+        raise AssertionError("the embedding API was used")
+
+    monkeypatch.setattr(kb.OpenRouterEmbedder, "__init__", refuse)
+    monkeypatch.setattr(kb, "search_kb", refuse)
+    monkeypatch.setattr("cascadeguard.cli.search_kb", refuse)
+    monkeypatch.setattr("cascadeguard.agents.llm.search_kb", refuse)
+    assert main(["run", "uae_health_access"]) == 0
+    assert search_extracted("incident report", limit=2)

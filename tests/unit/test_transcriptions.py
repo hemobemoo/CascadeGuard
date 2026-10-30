@@ -198,7 +198,11 @@ def unpinned_or_edited(tmp_path: Path, how: str) -> Path:
         approvals[f"{CHARTER}#4"] = approvals[f"{CHARTER}#3"]
     text = "".join(json.dumps(r) + "\n" for r in rows)
     (tmp_path / f"{stem}.jsonl").write_text(text, encoding="utf-8")
-    data = {"approved": {}, "reapproval_needed": [], "approved_transcriptions": approvals}
+    data: dict[str, object] = {
+        "approved": {},
+        "reapproval_needed": [],
+        "approved_transcriptions": approvals,
+    }
     path = tmp_path / "approvals.yaml"
     path.write_text(json.dumps(data), encoding="utf-8")  # JSON is valid YAML
     return path

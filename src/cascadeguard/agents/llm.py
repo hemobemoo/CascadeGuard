@@ -30,6 +30,7 @@ from cascadeguard.domain.decisions import (
     NoDecisionReason,
     ProposedAction,
 )
+from cascadeguard.knowledge.kb import index_digest, search_kb
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
@@ -45,6 +46,13 @@ ENV_VARIABLES = ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL", "CASCADEGUARD_MODE
 # v3: citable clauses grouped by action; every citation must support a proposed action.
 # v4: the role's open obligations in the role view (ADR 0002 option A, human, 2026-10-26).
 PROMPT_VERSION = "phase5-v4"
+# The system prompt is unchanged with --kb-context (so runs without it keep their cache keys);
+# the rule for knowledge-base chunks travels with them instead.
+KB_CONTEXT_NOTE = (
+    "Unreviewed text from source documents, retrieved by similarity: context only; not "
+    "citable. Never cite it. A clause listed with a chunk may be cited only under the rules "
+    "for clauses above, and only its status says whether it is binding."
+)
 OUTPUT_MODE_VARIABLE = "CASCADEGUARD_OUTPUT_MODE"
 # json_schema: strict structured output (default). json_object: JSON mode, with the schema in the
 # prompt; chosen explicitly in .env, never as an automatic fallback.
@@ -220,7 +228,9 @@ Reply with JSON matching the schema only.
 """
 
 
-def render_view(view: RoleView, known_roles: tuple[str, ...], snippets: bool = False) -> str:
+def render_view(
+    view: RoleView, known_roles: tuple[str, ...], snippets: bool = False, kb: bool = False
+) -> str:
     data: dict[str, Any] = {
         "role_id": view.role_id,
         "role_name": view.role_name,
@@ -283,6 +293,24 @@ def render_view(view: RoleView, known_roles: tuple[str, ...], snippets: bool = F
                 for s in search_extracted(query, limit=3)
             ],
         }
+    if kb:  # vector knowledge base (PR 3): same label and rule as the keyword snippets
+        query = " ".join((view.event_title, *view.decision_points))
+        data["knowledge_base_context"] = {
+            "label": CONTEXT_LABEL,
+            "note": KB_CONTEXT_NOTE,
+            "chunks": [
+                {
+                    "label": h.chunk.label,
+                    "source_file": h.chunk.source_file,
+                    "page": h.chunk.page,
+                    "text": h.chunk.text,
+                    "reviewed_clauses_on_this_text": [
+                        {"id": c.id, "status": c.status_label} for c in h.chunk.clauses
+                    ],
+                }
+                for h in search_kb(query, k=3)
+            ],
+        }
     return json.dumps(data, ensure_ascii=False, indent=1)
 
 
@@ -303,10 +331,11 @@ def build_messages(
     known_roles: tuple[str, ...],
     snippets: bool = False,
     output_mode: str = DEFAULT_OUTPUT_MODE,
+    kb: bool = False,
 ) -> list[dict[str, str]]:
     return [
         {"role": "system", "content": system_prompt(output_mode)},
-        {"role": "user", "content": render_view(view, known_roles, snippets)},
+        {"role": "user", "content": render_view(view, known_roles, snippets, kb)},
     ]
 
 
@@ -699,6 +728,7 @@ class LLMAgent:
         attempts: int = ATTEMPTS,
         output_mode: str = DEFAULT_OUTPUT_MODE,
         redact: tuple[str, ...] = (),
+        kb_context: bool = False,
     ) -> None:
         self.redact = redact  # strings never to appear in an error detail (e.g. the API key)
         if output_mode not in OUTPUT_MODES:
@@ -711,10 +741,13 @@ class LLMAgent:
         self.cache = cache
         self.known_roles = known_roles
         self.extracted_context = extracted_context
+        self.kb_context = kb_context
         # The output mode and the context option change the request, so both enter the key; with
         # context on, so does the extracted corpus the snippets come from.
-        self.prompt_version = f"{PROMPT_VERSION}+{output_mode}" + (
-            f"+extracted:{extracted_digest()}" if extracted_context else ""
+        self.prompt_version = (
+            f"{PROMPT_VERSION}+{output_mode}"
+            + (f"+extracted:{extracted_digest()}" if extracted_context else "")
+            + (f"+kb:{index_digest()}" if kb_context else "")
         )
         self.schema = response_schema()
         self.last_usage: Usage | None = None  # usage of the last live step (None: cached)
@@ -750,7 +783,9 @@ class LLMAgent:
             return self._no_decision(view, "not_cached")
         request = build_request(
             self.model,
-            build_messages(view, self.known_roles, self.extracted_context, self.output_mode),
+            build_messages(
+                view, self.known_roles, self.extracted_context, self.output_mode, self.kb_context
+            ),
             self.schema,
             self.output_mode,
         )
@@ -846,6 +881,7 @@ def llm_agents(
     output_mode: str | None = None,
     extracted_context: bool = False,
     cap: int | None = None,
+    kb_context: bool = False,
 ) -> dict[str, LLMAgent]:
     """One LLMAgent per role, all with the same model and output mode. Offline needs only the
     model id and output mode (to find cache entries); live needs the full configuration."""
@@ -860,7 +896,15 @@ def llm_agents(
     secrets = (config.api_key,) if config else ()
     return {
         r: LLMAgent(
-            r, model_id, live, cache, role_ids, extracted_context, output_mode=mode, redact=secrets
+            r,
+            model_id,
+            live,
+            cache,
+            role_ids,
+            extracted_context,
+            output_mode=mode,
+            redact=secrets,
+            kb_context=kb_context,
         )
         for r in role_ids
     }
