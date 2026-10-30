@@ -291,6 +291,7 @@ def render_view(
             "label": CONTEXT_LABEL,
             "snippets": [
                 {"label": s.label, "source_file": s.source_file, "page": s.page, "text": s.text}
+                | ({"also_in": list(s.also_in)} if s.also_in else {})
                 for s in search_extracted(query, limit=3)
             ],
         }
@@ -307,6 +308,7 @@ def render_view(
                     "source_file": h.chunk.source_file,
                     "page": h.chunk.page,
                     "text": h.chunk.text,
+                    "also_in": list(h.chunk.copies),
                     "reviewed_clauses_on_this_text": [
                         {"id": c.id, "status": c.status_label}
                         for c in h.chunk.clauses

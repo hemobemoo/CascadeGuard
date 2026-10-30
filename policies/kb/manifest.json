@@ -11,14 +11,15 @@
  "min_segment_words": 20,
  "segment_start": "(?m)^[ \\t]*(?:\\d{1,3}(?:\\.\\d{1,3})*[.)](?=\\s)|\\(\\d{1,3}\\)|\\([a-z]\\)(?=\\s)|Article\\b|Chapter\\b|Section\\b)|\\n[ \\t]*\\n",
  "max_chars": 2000,
- "ranking_version": "rrf-v1",
+ "ranking_version": "rrf-v2-shared-ranks",
  "rrf_k": 60,
  "max_per_source": 2,
  "score_decimals": 4,
  "prompt_k": 3,
+ "dedupe_rule": "exact-v1: reviewed transcription > quoted by a reviewed clause > id",
  "build_date": "2026-10-30",
  "chunks": 4235,
- "digest": "15f93b4a34fa",
- "vectors_sha256": "7f0ef2aa9941303b8b70c5d203d264042f5244145b11b41548fd87bd9267c56a",
+ "digest": "45714d5e2031",
+ "vectors_sha256": "c641d9d9398aac91c49ada69db768c2009aa69f532014a6c885dbb2885b5a1d4",
  "attribution": "chunking and kb_main layout adapted from CrashingGuru/ITUAIReadiness (MIT, Copyright (c) 2026 Vishnu Ram OV)"
 }
