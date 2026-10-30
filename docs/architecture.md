@@ -78,6 +78,19 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   that fails validation twice becomes `AgentDecision.no_decision`, which the engine records as a
   `no_decision` finding. `--offline` (or the UI's "LLM (cached only)") never calls the API.
   A run with missing steps is "inconclusive": never ranked or scored (`SearchResult.inconclusive`).
+- **Context for LLM agents (never citable).** `knowledge/retrieval.searchable_pages` is the one
+  corpus: extracted text outside `NOT_SEARCHED` and the books, then reviewed transcriptions that
+  match their pin in `approvals.yaml` (`loader.reviewed_transcriptions`). `--extracted-context`
+  searches it by keyword (`+extracted:<digest>`); `--kb-context` by vector (`knowledge/kb.py`,
+  `+kb:<digest>`): chunks per page split at numbered headings (about 120 words, with spans),
+  embedded offline through OpenRouter (`scripts/build_kb.py` → `policies/kb/`), ranked by
+  reciprocal rank fusion of exact cosine over the committed vectors and the keyword score, at
+  most two per document; tied scores share a rank; exact duplicates collapse into a primary
+  (reviewed transcription, then a quoted original, then id) in both paths. Acceptance queries and their stored vectors: `policies/kb/acceptance.json`,
+  `query_vectors.json`.
+  The index digest covers chunks, model slug, dimensions, prefixes and chunk settings, not the
+  vectors. Loading the index re-chunks the corpus and refuses a stale one. Neither path touches
+  the scripted demo.
 - **Owner obligations (ADR 0002 option A).** `replay.apply_repair` lists each owner rule in
   `Scenario.owner_obligations`. After every inject and every accepted action, the engine
   (`ConstraintEngine._open_owner_obligations`) opens the owner's obligation once the action's

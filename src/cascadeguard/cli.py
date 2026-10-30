@@ -3,9 +3,12 @@
 cascadeguard run <scenario> [--clauses DIR] [--repair ID] [--export DIR] [--audit [DB]]
 cascadeguard repairs <scenario> [--clauses DIR] [--export DIR]
 Both take --agents scripted|llm (default scripted), --offline and --cache DIR (LLM only).
+cascadeguard kb query "<text>" [-k N] | cascadeguard kb export <path>
 """
 
 import argparse
+import io
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -42,7 +45,16 @@ from cascadeguard.engine.repair_search import (
     replay_one,
     search,
 )
+from cascadeguard.knowledge.kb import (
+    Hit,
+    KnowledgeBaseError,
+    OpenRouterEmbedder,
+    export_kb_main,
+    index_digest,
+    search_kb,
+)
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
+from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
 from cascadeguard.simulation.loader import (
     PROJECT_ROOT,
     SCENARIOS_DIR,
@@ -138,6 +150,21 @@ def build_parser() -> argparse.ArgumentParser:
             help="LLM only: add keyword snippets of the non-book extracted PDFs to each prompt, "
             "labelled 'context only; not citable' (changes the prompt: no reuse of other runs)",
         )
+        cmd.add_argument(
+            "--kb-context",
+            action="store_true",
+            help="LLM only: add the top 3 vector knowledge-base chunks to each prompt, labelled "
+            "'context only; not citable' (changes the prompt: no reuse of other runs)",
+        )
+    kb_cmd = subcommands.add_parser("kb", help="the vector knowledge base (context only)")
+    kb_sub = kb_cmd.add_subparsers(dest="kb_command")
+    query_cmd = kb_sub.add_parser("query", help="top-k chunks for a text, with file, page, label")
+    query_cmd.add_argument("text")
+    query_cmd.add_argument("-k", type=int, default=5, help="number of chunks (default 5)")
+    export_cmd = kb_sub.add_parser(
+        "export", help="write chunks, vectors and metadata as JSONL for a ChromaDB kb_main load"
+    )
+    export_cmd.add_argument("path", type=Path)
     return parser
 
 
@@ -182,6 +209,7 @@ class AgentChoice:
     cache_dir: Path = DEFAULT_CACHE_DIR
     extracted_context: bool = False  # P5-3: labelled snippets of non-book extracted PDFs
     cap: int | None = None  # live LLM runs: max requests, retries included
+    kb_context: bool = False  # PR 3: labelled vector knowledge-base chunks
 
 
 SCRIPTED_CHOICE = AgentChoice()
@@ -217,6 +245,7 @@ def load_world(
             offline=True,
             model=LLMConfig.model_from_env(),
             extracted_context=choice.extracted_context,
+            kb_context=choice.kb_context,
         )
         how = "offline: decision cache only"
     else:
@@ -228,11 +257,21 @@ def load_world(
                 "(requests, retries included)"
             )
         llm = llm_agents(
-            role_ids, cache, config=config, extracted_context=choice.extracted_context, cap=cap
+            role_ids,
+            cache,
+            config=config,
+            extracted_context=choice.extracted_context,
+            cap=cap,
+            kb_context=choice.kb_context,
         )
         how = f"live calls through the decision cache, capped at {cap} requests"
     if choice.extracted_context:
         how += "; extracted-PDF context snippets (context only; not citable)"
+    if choice.kb_context:
+        index_digest()  # refuses a stale index before any step runs
+        if not choice.offline:
+            OpenRouterEmbedder()  # missing key or base URL: a clear message now, not mid-run
+        how += "; vector knowledge-base chunks (context only; not citable)"
     mode = next(iter(llm.values())).output_mode
     # The model id is a .env value: it keys the cache but is never printed or exported.
     agent_label = f"LLM agents (model from CASCADEGUARD_MODEL; output mode {mode}; {how})"
@@ -332,6 +371,7 @@ def uncached_estimate(world: World, repair_id: str) -> tuple[int, int | None]:
             a.extracted_context,
             a.attempts,
             a.output_mode,
+            kb_context=a.kb_context,
         )
         for rid, a in world.agents.items()
         if isinstance(a, LLMAgent)
@@ -508,13 +548,20 @@ def search_markdown(scenario_id: str, result: SearchResult) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command == "kb":
+        return _kb(args, parser)
     if args.command not in ("run", "repairs"):
         parser.print_help()
         return 0
-    choice = AgentChoice(args.agents, args.offline, args.cache, args.extracted_context, args.cap)
+    if args.kb_context and args.agents != LLM:  # human decision 2026-10-30: never silently ignored
+        print("cascadeguard: --kb-context gives context to LLM agents only; use --agents llm")
+        return 2
+    choice = AgentChoice(
+        args.agents, args.offline, args.cache, args.extracted_context, args.cap, args.kb_context
+    )
     try:
         world = load_world(args.scenario, args.clauses, choice=choice)
-    except LLMConfigError as exc:
+    except (LLMConfigError, KnowledgeBaseError) as exc:
         print(f"cascadeguard: {exc}")
         return 2
     try:
@@ -522,9 +569,51 @@ def main(argv: Sequence[str] | None = None) -> int:
     except DailyLimitReached:  # fixed text: the provider's message is not printed here
         print(f"cascadeguard: {DAILY_LIMIT_STOP}")
         return 2
+    except KnowledgeBaseError as exc:  # --kb-context lost the network mid-run
+        print(f"cascadeguard: {exc}")
+        return 2
     if (line := cache_line(world)) is not None:
         print(line)
     return status
+
+
+def format_hits(hits: Sequence[Hit]) -> str:
+    """Top-k chunks: score, file, page, span and label; then any reviewed clause whose quote is
+    in the chunk, with that clause's own status label."""
+    lines = [f"Knowledge base: {len(hits)} chunks ({CONTEXT_LABEL})"]
+    for n, h in enumerate(hits, 1):
+        c = h.chunk
+        keyword = f"#{h.keyword_rank}" if h.keyword_rank is not None else "-"
+        lines.append(
+            f"{n}. {h.score:.4f} (vector #{h.vector_rank}, keyword {keyword})  "
+            f"{c.source_file}  p.{c.page}  [{c.start}-{c.end}]"
+        )
+        lines.append(f"   label: {c.label}")
+        lines.extend(f"   also in: {copy}" for copy in c.copies)
+        lines.extend(f"   clause {r.id}: {r.status_label}" for r in c.clauses)
+        lines.append(f"   {c.text[:300]}{'...' if len(c.text) > 300 else ''}")
+    return "\n".join(lines)
+
+
+def _kb(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    # Chunk text holds characters a legacy console code page cannot encode (cp1252 on Windows):
+    # replace them rather than fail with a traceback (test-breaker round 3).
+    stdout: object = sys.stdout
+    if isinstance(stdout, io.TextIOWrapper):
+        stdout.reconfigure(errors="replace")
+    try:
+        if args.kb_command == "query":
+            print(format_hits(search_kb(args.text, args.k)))
+            return 0
+        if args.kb_command == "export":
+            count = export_kb_main(args.path)
+            print(f"{count} chunks written to {_display(args.path)} (ChromaDB kb_main format)")
+            return 0
+    except KnowledgeBaseError as exc:
+        print(f"cascadeguard: {exc}")
+        return 2
+    parser.print_help()
+    return 0
 
 
 def _main(args: argparse.Namespace, world: World) -> int:

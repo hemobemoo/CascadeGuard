@@ -16,6 +16,7 @@ cascadeguard/
 │                                      no requirements.txt: pyproject.toml + uv.lock replace it)
 ├── .env.example                      [P0] OPENROUTER_API_KEY, OPENROUTER_BASE_URL,
 │                                     CASCADEGUARD_MODEL — names only (never commit .env)
+├── .gitattributes                    [PR 3] *.npy binary (no line-ending conversion)
 ├── .mcp.json                         [P0] MCP config for Claude Code — committed, no secrets
 │                                     (keys come from ${CONTEXT7_API_KEY} etc. set with setx)
 ├── README.md                         [P0] short; how to run the demo
@@ -61,7 +62,8 @@ cascadeguard/
 │   │
 │   ├── knowledge/                    [P1]
 │   │   ├── loader.py                 load + validate reviewed clauses
-│   │   └── retrieval.py              [P5] role clauses (engine scope rule) + keyword search of extracted text
+│   │   ├── retrieval.py              [P5] role clauses (engine scope rule) + keyword search of extracted text
+│   │   └── kb.py                     [PR 3] vector knowledge base: chunks, OpenRouter embeddings, cosine search, export
 │   │
 │   ├── simulation/                   [P2]
 │   │   ├── loader.py                 [P1] load + validate scenario, roles, clause references
@@ -106,11 +108,14 @@ cascadeguard/
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   ├── transcriptions/               [Charter PR] page-image transcriptions for sources with an unreliable text layer
 │   │                                 (TRANSCRIBED_SOURCES); quotes flagged so are checked here
+│   ├── kb/                           [PR 3] vector index: chunks.jsonl, vectors.npy, manifest.json (context only);
+│   │                                 acceptance.json + query_vectors.json (acceptance queries, stored vectors)
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
 │
 ├── scripts/
 │   ├── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
+│   ├── build_kb.py                   [PR 3] chunks + OpenRouter embeddings -> policies/kb/
 │   └── llm_smoke_test.py             [P5] exactly one live LLM call; latency, tokens, cost
 │
 ├── scenarios/
