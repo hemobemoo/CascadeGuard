@@ -371,6 +371,7 @@ def test_llm_config_refuses_a_host_other_than_openrouter(
         "https://openrouter.ai.evil.test/api/v1",
         "https://openrouter.ai@evil.test/api/v1",
         "http://openrouter.ai/api/v1",
+        "https://user@[SECRETTOKEN123]/api/v1",
         "https://evil.test/openrouter.ai",
         "openrouter.ai/api/v1",
         "https://",

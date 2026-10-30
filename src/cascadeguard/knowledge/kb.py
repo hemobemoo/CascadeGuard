@@ -135,6 +135,18 @@ PROMPT_K = 3  # chunks shown to an LLM agent with --kb-context
 # a cached LLM decision is never reused with different context (test-breaker round 2).
 RANKING_VERSION = "rrf-v2-shared-ranks"
 KB_HOST = "openrouter.ai"  # AGENTS.md: the key and corpus text go only to OpenRouter
+
+
+def is_openrouter_https(base_url: str) -> bool:
+    """True only for an https URL whose host is openrouter.ai. A URL urlsplit cannot parse (e.g. a
+    bracketed host) is refused too, never raised: its error text would repeat part of the URL."""
+    try:
+        url = urlsplit(base_url.strip())
+        return url.scheme == "https" and url.hostname == KB_HOST
+    except ValueError:
+        return False
+
+
 REQUEST_TIMEOUT_SECONDS = 120.0
 SCORE_DECIMALS = 4
 COLLECTION = "kb_main"  # the reference code's collection
@@ -528,8 +540,7 @@ class OpenRouterEmbedder:
                 f"{', '.join(missing)} in .env (see .env.example); keyword context "
                 "(--extracted-context) and the scripted demo need neither"
             )
-        url = urlsplit(values["OPENROUTER_BASE_URL"].strip())
-        if url.scheme != "https" or url.hostname != KB_HOST:
+        if not is_openrouter_https(values["OPENROUTER_BASE_URL"]):
             raise KnowledgeBaseError(
                 f"OPENROUTER_BASE_URL must point at {KB_HOST} over https (AGENTS.md: the key and "
                 "corpus text go only to the OpenRouter embeddings endpoint)"
