@@ -403,7 +403,7 @@ def test_kb_context_enters_only_the_llm_prompt_and_its_version(
     plain = LLMAgent("r", "m", None, DecisionCache(tmp_path), ("r",))
     with_kb = LLMAgent("r", "m", None, DecisionCache(tmp_path), ("r",), kb_context=True)
     assert plain.prompt_version == "phase5-v4+json_schema"
-    assert with_kb.prompt_version == f"phase5-v4+json_schema+kb:{load_index().digest}"
+    assert with_kb.prompt_version == f"phase5-v4+json_schema+kb:{load_index().cache_key}"
 
     world = load_world("uae_health_access")
     roles = tuple(r.id for r in world.roles.roles)
@@ -715,3 +715,21 @@ def test_a_nan_or_zero_query_vector_is_refused(bad: str) -> None:
 
     with pytest.raises(KnowledgeBaseError, match="not finite or is all zeros"):
         search_kb("incident", index=fake_index(), embedder=Bad())
+
+
+def test_swapping_two_vector_rows_changes_the_kb_cache_key(tmp_path: Path) -> None:
+    """Human decision 2026-10-30: the --kb-context cache key includes the vectors' SHA-256, so
+    changed vectors refresh the cache; the digest alone stays the same."""
+    shutil.copytree(KB_DIR, tmp_path / "kb")
+    kb_dir = tmp_path / "kb"
+    committed = load_index(kb_dir)
+    vectors = np.load(kb_dir / "vectors.npy")
+    vectors[[0, 1]] = vectors[[1, 0]]
+    np.save(kb_dir / "vectors.npy", vectors, allow_pickle=False)
+    manifest = json.loads((kb_dir / "manifest.json").read_text("utf-8"))
+    manifest["vectors_sha256"] = hashlib.sha256((kb_dir / "vectors.npy").read_bytes()).hexdigest()
+    (kb_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    swapped = load_index(kb_dir)
+    assert swapped.digest == committed.digest
+    assert swapped.cache_key != committed.cache_key
+    assert committed.cache_key.startswith(committed.digest + ".")

@@ -31,7 +31,7 @@ from cascadeguard.domain.decisions import (
     ProposedAction,
 )
 from cascadeguard.knowledge.kb import PROMPT_K as KB_PROMPT_K
-from cascadeguard.knowledge.kb import index_digest, search_kb
+from cascadeguard.knowledge.kb import index_cache_key, search_kb
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
@@ -754,7 +754,7 @@ class LLMAgent:
         self.prompt_version = (
             f"{PROMPT_VERSION}+{output_mode}"
             + (f"+extracted:{extracted_digest()}" if extracted_context else "")
-            + (f"+kb:{index_digest()}" if kb_context else "")
+            + (f"+kb:{index_cache_key()}" if kb_context else "")
         )
         self.schema = response_schema()
         self.last_usage: Usage | None = None  # usage of the last live step (None: cached)
