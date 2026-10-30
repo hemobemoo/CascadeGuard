@@ -6,13 +6,14 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
-**State of main.** Submission PRs 1, 2 and 3 are merged (#14 labels/licence/README; #15 Charter;
-#16 vector knowledge base).
+**State of main.** Submission PRs 1 to 4 are merged (#14 labels/licence/README; #15 Charter;
+#16 vector knowledge base; #17 `--governance off`).
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
-**PR 4, `--governance off`: built on branch `governance-off` (from main 02e7b06); the PR is
-opened after the review loop and then waits on the human (not merged).** Human decisions 2026-10-31: option B (waive
+**PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
+2026-10-31) on the human's approval of the PR and `expected_ungoverned.yaml`, CI green (663
+passed, 1 skipped: the optional chroma extra). Branch `governance-off` kept (deletion is gate 5).** Human decisions 2026-10-31: option B (waive
 `no_authority`, `authority_uncertain`, `restricted_by_clause`, `missing_prerequisite`,
 `missing_information`); evidence checks (citations, gap wording) stay on; LLM agents with
 `--governance off` only with `--offline` (live is gate 4).
@@ -73,7 +74,8 @@ then locked.
   LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
   merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
   after checking they hold no secrets. **It uses `--kb-context`** (human, 2026-10-30).
-- **Before gate 4:** PR 4 merged (the LLM host check is in it, commit 24ea1b4). An ungoverned
+- **Before gate 4:** done: PR 4 merged (824b00a; the LLM host check is in it). Gate 4 still needs
+  the human's separate go-ahead (live LLM calls and model choice). An ungoverned
   LLM variant would need `--governance off` without `--offline`, which PR 4 refuses: lifting
   that is part of the gate-4 decision.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
@@ -84,7 +86,8 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: the human reviews and merges PR 4, then PR 5 (gap analysis, traces); see "Current phase".
+- Next: gate 4 only on the human's separate go-ahead; PR 5 (gap analysis, traces); see
+  "Current phase".
 
 ## Current phase
 
@@ -99,8 +102,7 @@ PRs follow, one at a time; each stops once open with CI green:
    local fastembed, numpy search instead of ChromaDB at runtime (ChromaDB only as an optional
    extra for the export test).
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
-   golden) and the side-by-side comparison in the CLI and UI: built on `governance-off`, PR
-   after review, waiting on the human's merge (see "Start here").
+   golden) and the side-by-side comparison in the CLI and UI: merged (PR #17, 824b00a).
 5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`.
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
@@ -1180,8 +1182,9 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 `--kb-context` cache key includes the vectors' SHA-256). Carried forward, see "Open items":
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
-**PR 4 (`--governance off`, branch `governance-off`): waiting on the human's review and merge**
-(not auto-merged, on the human's instruction). Gate 4 needs it merged first.
+**PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
+**Gate 4 (recording run): waiting on the human's separate go-ahead** (live LLM calls and model
+choice); merging #17 is not that go-ahead.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
@@ -1362,8 +1365,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 4 (`governance-off`): open the PR after the review loop; the human reviews and merges it (not auto-merged, on the
-human's instruction). Then gate 4 (recording run, target 4–5 Nov; ask first) and PR 5.
+PR 4 merged (PR #17, 824b00a). Gate 4 (recording run, target 4–5 Nov) only after the human's
+separate go-ahead; then PR 5.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
