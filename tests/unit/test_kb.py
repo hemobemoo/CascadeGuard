@@ -359,6 +359,9 @@ def test_the_index_corpus_equals_the_search_corpus_on_disk_copies(
     assert any("zzaddedword" in c.text for c in changed)
 
 
+waits: list[float] = []  # what the embedder would have slept, in order
+
+
 class FakeEmbeddings:
     """Stands in for `client.embeddings`: replies in reverse order with 2,048-dimension vectors
     whose first value is the text length, after failing `fail` times."""
@@ -386,6 +389,7 @@ def api_embedder(
     monkeypatch.setenv("OPENROUTER_BASE_URL", "http://127.0.0.1:9/never-called")
     embedder = OpenRouterEmbedder(env_file=tmp_path / "none.env")
     setattr(embedder, "_client", type("C", (), {"embeddings": fake})())  # noqa: B010
+    embedder.sleep = waits.append
     return embedder
 
 
@@ -410,8 +414,12 @@ def test_the_api_embedder_batches_prefixes_truncates_and_renormalises(
 def test_the_api_embedder_retries_three_times_then_stops_clearly(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    waits.clear()
     embedder = api_embedder(monkeypatch, tmp_path, FakeEmbeddings(fail=3))
     assert embedder.query("x").shape == (1, DIMENSIONS) and embedder.requests == 4
+    backoffs = [w for w in waits if w >= 10]
+    assert backoffs == [10.0, 20.0, 40.0]  # no Retry-After header: doubling backoff
+    assert all(w <= kb.PACE_SECONDS + 1e-6 for w in waits if w < 10), waits  # pacing
     embedder = api_embedder(monkeypatch, tmp_path, FakeEmbeddings(fail=4))
     with pytest.raises(KnowledgeBaseError, match="failed 4 times") as err:
         embedder.query("x")
