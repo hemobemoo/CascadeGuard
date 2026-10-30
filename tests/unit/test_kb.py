@@ -226,6 +226,10 @@ def test_the_digest_ignores_the_vectors_and_follows_everything_else(
         ("DIMENSIONS", 512),
         ("DOCUMENT_PREFIX", "document: "),
         ("CHUNK_WORDS", 300),
+        ("RRF_K", 1),  # test-breaker round 2: ranking settings reach the prompt, so the key
+        ("MAX_PER_SOURCE", 1),
+        ("PROMPT_K", 5),
+        ("RANKING_VERSION", "other"),
     ]:
         with monkeypatch.context() as m:
             m.setattr(kb, name, value)
@@ -474,7 +478,7 @@ def api_embedder(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake: FakeEmbeddings
 ) -> OpenRouterEmbedder:
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test-not-a-real-key")
-    monkeypatch.setenv("OPENROUTER_BASE_URL", "http://127.0.0.1:9/never-called")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")  # never called
     embedder = OpenRouterEmbedder(env_file=tmp_path / "none.env")
     setattr(embedder, "_client", type("C", (), {"embeddings": fake})())  # noqa: B010
     embedder.sleep = waits.append
@@ -623,3 +627,29 @@ def test_llm_run_with_kb_context_stops_cleanly_on_a_bad_index_or_lost_network(
     assert main(["run", "uae_health_access"]) == 2
     out = capsys.readouterr().out
     assert "failed 4 times" in out and "Traceback" not in out
+
+
+def test_ties_go_to_the_chunk_id_not_the_storage_order() -> None:
+    """test-breaker round 2: with the index stored in id order, a stable sort hid a missing
+    tie-break. Stored in reverse, the result must still follow the ids."""
+    index = fake_index()
+    reverse = Index(index.chunks[::-1], index.vectors[::-1], index.manifest)
+    hits = search_kb("incident report", k=2, index=reverse, embedder=FakeEmbedder())
+    assert [h.chunk.page for h in hits] == [1, 2]
+
+
+def test_the_loaded_vectors_cannot_be_changed() -> None:
+    with pytest.raises(ValueError):
+        load_index().vectors[0, 0] = 0.0
+
+
+def test_the_embedder_refuses_a_host_other_than_openrouter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """AGENTS.md (amended 2026-10-30): the key and corpus text go only to openrouter.ai."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test-not-a-real-key")
+    for url in ("http://example.invalid/v1", "https://openrouter.ai.evil.test/api/v1"):
+        monkeypatch.setenv("OPENROUTER_BASE_URL", url)
+        with pytest.raises(KnowledgeBaseError, match=r"must point at openrouter\.ai") as err:
+            OpenRouterEmbedder(env_file=tmp_path / "none.env")
+        assert "sk-test" not in str(err.value) and url not in str(err.value)

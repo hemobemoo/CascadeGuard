@@ -30,6 +30,7 @@ from cascadeguard.domain.decisions import (
     NoDecisionReason,
     ProposedAction,
 )
+from cascadeguard.knowledge.kb import PROMPT_K as KB_PROMPT_K
 from cascadeguard.knowledge.kb import index_digest, search_kb
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.knowledge.retrieval import (
@@ -312,7 +313,7 @@ def render_view(
                         if c.id in own
                     ],
                 }
-                for h in search_kb(query, k=3)
+                for h in search_kb(query, k=KB_PROMPT_K)
             ],
         }
     return json.dumps(data, ensure_ascii=False, indent=1)

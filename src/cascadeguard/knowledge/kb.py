@@ -69,6 +69,7 @@ from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import urlsplit
 
 import numpy as np
 import numpy.typing as npt
@@ -117,6 +118,11 @@ _SEGMENT_START = re.compile(SEGMENT_START)
 # search's ranking (retrieval.keyword_score), then at most MAX_PER_SOURCE chunks per document.
 RRF_K = 60
 MAX_PER_SOURCE = 2
+PROMPT_K = 3  # chunks shown to an LLM agent with --kb-context
+# Bump when the ranking code changes (keyword_score, fusion, cap): it is part of the digest, so
+# a cached LLM decision is never reused with different context (test-breaker round 2).
+RANKING_VERSION = "rrf-v1"
+KB_HOST = "openrouter.ai"  # AGENTS.md: the key and corpus text go only to OpenRouter
 REQUEST_TIMEOUT_SECONDS = 120.0
 SCORE_DECIMALS = 4
 COLLECTION = "kb_main"  # the reference code's collection
@@ -294,7 +300,8 @@ def build_chunks(
 
 
 def settings() -> dict[str, Any]:
-    """What the digest covers besides the chunks: model slug, dimensions, prefix rule, chunking."""
+    """What the digest covers besides the chunks: model slug, dimensions, prefix rule, chunking,
+    and the ranking that decides which chunks reach a prompt."""
     return {
         "model_slug": MODEL_SLUG,
         "native_dimensions": NATIVE_DIMENSIONS,
@@ -308,6 +315,11 @@ def settings() -> dict[str, Any]:
         "min_segment_words": MIN_SEGMENT_WORDS,
         "segment_start": SEGMENT_START,
         "max_chars": MAX_CHARS,
+        "ranking_version": RANKING_VERSION,
+        "rrf_k": RRF_K,
+        "max_per_source": MAX_PER_SOURCE,
+        "score_decimals": SCORE_DECIMALS,
+        "prompt_k": PROMPT_K,
     }
 
 
@@ -393,7 +405,9 @@ def load_index(
         raise KnowledgeBaseError("vectors.npy does not match the manifest: rebuild the index")
     if vectors.shape != (len(chunks), DIMENSIONS):
         raise KnowledgeBaseError("vectors.npy does not have one row per chunk")
-    return Index(tuple(chunks), _unit(vectors), manifest)
+    unit = _unit(vectors)
+    unit.setflags(write=False)  # checked once at load; nothing may change it afterwards
+    return Index(tuple(chunks), unit, manifest)
 
 
 @cache
@@ -441,6 +455,11 @@ class OpenRouterEmbedder:
                 f"the knowledge base embeds queries through OpenRouter and needs "
                 f"{', '.join(missing)} in .env (see .env.example); keyword context "
                 "(--extracted-context) and the scripted demo need neither"
+            )
+        if urlsplit(values["OPENROUTER_BASE_URL"].strip()).hostname != KB_HOST:
+            raise KnowledgeBaseError(
+                f"OPENROUTER_BASE_URL must point at {KB_HOST} (AGENTS.md: the key and corpus "
+                "text go only to the OpenRouter embeddings endpoint)"
             )
         self._client = OpenAI(
             api_key=values["OPENROUTER_API_KEY"].strip(),
