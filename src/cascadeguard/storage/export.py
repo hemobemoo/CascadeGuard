@@ -13,6 +13,7 @@ from typing import Any, cast
 from cascadeguard.domain.decisions import GAP_QUALIFICATION
 from cascadeguard.domain.findings import CoordinationFailure
 from cascadeguard.engine.constraints import CANDIDATE_GAP_CLAIM
+from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
     OPEN_AT_END_LABEL,
     OVERDUE_LABEL,
@@ -216,6 +217,81 @@ def comparison_markdown(c: ReplayComparison) -> str:
     if not s["changed_actions"]:
         lines.append("none")
     lines += ["", *(f"_{note}_" for note in comparison_notes(c)[1:]), ""]
+    return "\n".join(lines)
+
+
+def governance_export(c: GovernanceComparison) -> dict[str, Any]:
+    """The comparison plus both full runs: `note` says the ungoverned run is comparison only, and
+    `ungoverned_run.governance` is "off"."""
+    labels = dict(c.governed.loaded_clauses)
+    data = _label_clause_fields(c.summary(), labels)
+    data["note"] = " ".join(c.notes())
+    data["agents"] = c.ungoverned.agents
+    data["governed_run"] = run_export(c.governed)
+    data["ungoverned_run"] = run_export(c.ungoverned)
+    return data
+
+
+def governance_markdown(c: GovernanceComparison) -> str:
+    labels = dict(c.governed.loaded_clauses)
+
+    def cite(ids: Iterable[str]) -> str:
+        return ", ".join(f"`{i}` [{labels.get(i, 'not loaded')}]" for i in ids) or "none"
+
+    s = c.summary()
+    lines = [
+        f"# Governed vs ungoverned: {s['scenario']}",
+        "",
+        f"_{DISCLAIMER}_",
+        "",
+        "**GOVERNANCE OFF: comparison only, not the governed result.**",
+        "",
+        f"_{c.notes()[0]}_",
+        "",
+        f"- Scenario: `{s['scenario']}` (synthetic, hypothetical)",
+        f"- Clause set: {s['clause_set']}",
+        f"- Agents: {c.ungoverned.agents}",
+        f"- Waived in the ungoverned run: {', '.join(f'`{r}`' for r in s['waivable_reasons'])}",
+        "",
+    ]
+    if c.failed_steps:
+        lines += ["## Not comparable", "", f"_{s['withheld']}._", ""]
+        return "\n".join(lines)
+    lines += ["## Recovery goals", "", "| Goal | Governed | Ungoverned |", "|---|---|---|"]
+    lines += [f"| {g} | {v['governed']} | {v['ungoverned']} |" for g, v in s["goals"].items()]
+    lines += ["", "## Diagnosed failures", ""]
+    by_id = {f.id: f for f in c.ungoverned.causes}
+    masked = [by_id[fid] for fid in c.masked()]
+    for title, failures in (
+        ("Governed", c.governed.failures),
+        ("Ungoverned", c.ungoverned.failures),
+        ("Ungoverned, goal met but the cause is still present", masked),
+    ):
+        lines.append(f"**{title}:**" + ("" if failures else " none"))
+        for f in failures:
+            lines.append(f"- `{f.id}`: {f.description} Clauses: {cite(f.clause_ids)}.")
+            lines.append(f"  _{f.qualification}_")
+        lines.append("")
+    lines += ["## Applied only because governance was off", ""]
+    for e in c.ungoverned.log:
+        if e.waived:
+            target = f" -> {e.target}" if e.target else ""
+            lines.append(
+                f"- T+{e.minute:02d} {e.role}: {e.action}{target}: would have been rejected "
+                f"({', '.join(e.waived)}). Clauses: {cite(e.clause_ids)}."
+            )
+    if not s["would_have_been_rejected"]:
+        lines.append("none")
+    lines += ["", "## Actions whose verdict changed", ""]
+    for a in s["changed_actions"]:
+        target = f" -> {a['target']}" if "target" in a else ""
+        lines.append(
+            f"- T+{a['minute']:02d} {a['role']}: {a['action']}{target}: "
+            f"{a['governed']} -> {a['ungoverned']}"
+        )
+    if not s["changed_actions"]:
+        lines.append("none")
+    lines += ["", *(f"_{note}_" for note in c.notes()[1:]), ""]
     return "\n".join(lines)
 
 

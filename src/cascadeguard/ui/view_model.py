@@ -15,6 +15,7 @@ from cascadeguard.domain.findings import CoordinationFailure, FailureCategory
 from cascadeguard.domain.repairs import OWNER_RULE_PREFIX, RepairEdit, RepairOperationType
 from cascadeguard.domain.scenario import Scenario
 from cascadeguard.engine.constraints import AGENT_STATEMENT, OBLIGATION_OVERDUE
+from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     MASKED_LABEL,
@@ -553,6 +554,58 @@ def comparison(c: ReplayComparison, names: Labels = IDS) -> Comparison:
         edit_ids=edit_ids,
         baseline_named=tuple(name(f.id) for f in c.baseline.failures),
         replay_named=(*(f"{name(f)}: {REMOVED_LABEL}" for f in c.removed), *replay_named),
+    )
+
+
+GOVERNANCE_BANNER = "Governance off: comparison only, not the governed result."
+CAUSE_STILL_PRESENT = "goal met but the cause is still present"
+GOVERNANCE_LLM = (
+    "Shown for scripted agents only: an ungoverned LLM run would need decisions that are not "
+    "in the cache."
+)
+
+
+@dataclass(frozen=True, slots=True)
+class GovernanceView:
+    """The governed-vs-ungoverned panel, in the replay comparison layout."""
+
+    goals: tuple[tuple[str, str, str], ...]  # (goal, governed, ungoverned)
+    governed_named: tuple[str, ...]
+    governed_raw: tuple[str, ...]
+    ungoverned_named: tuple[str, ...]  # remaining, then the ones whose cause is still present
+    ungoverned_raw: tuple[str, ...]
+    waived: tuple[str, ...]  # the actions applied only because governance was off
+    notes: tuple[str, ...]
+    withheld: str = ""
+
+
+def governance(c: GovernanceComparison, names: Labels = IDS) -> GovernanceView:
+    s = c.summary()
+    if c.failed_steps:
+        return GovernanceView((), (), (), (), (), (), c.notes(), withheld=str(s["withheld"]))
+    labels = dict(c.governed.loaded_clauses)
+    by_id = {f.id: f for f in c.ungoverned.causes}
+    masked = tuple(by_id[fid] for fid in c.masked())
+    return GovernanceView(
+        goals=tuple((names.goal(g), v["governed"], v["ungoverned"]) for g, v in s["goals"].items()),
+        governed_named=tuple(failure_name(f, names) for f in c.governed.failures),
+        governed_raw=tuple(f.id for f in c.governed.failures),
+        ungoverned_named=(
+            *(failure_name(f, names) for f in c.ungoverned.failures),
+            *(f"{failure_name(f, names)}: {CAUSE_STILL_PRESENT}" for f in masked),
+        ),
+        ungoverned_raw=(
+            *(f.id for f in c.ungoverned.failures),
+            *(f"{f.id}: {CAUSE_STILL_PRESENT}" for f in masked),
+        ),
+        waived=tuple(
+            f"T+{e.minute:02d} {names.role(e.role or '')}: {_act(e.action, e.target, names)}: "
+            f"would have been rejected ({', '.join(e.waived)})"
+            + (f"; clauses {cite(e.clause_ids, labels)}" if e.clause_ids else "")
+            for e in c.ungoverned.log
+            if e.waived
+        ),
+        notes=c.notes(),
     )
 
 

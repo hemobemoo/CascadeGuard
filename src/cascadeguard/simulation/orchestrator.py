@@ -24,7 +24,7 @@ from cascadeguard.domain.decisions import (
 from cascadeguard.domain.findings import CoordinationFailure, Finding, LogEntry
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.scenario import RoleSet, Scenario
-from cascadeguard.engine.constraints import ConstraintEngine
+from cascadeguard.engine.constraints import ConstraintEngine, Governance
 from cascadeguard.engine.diagnosis import diagnose
 from cascadeguard.engine.graph import DependencyGraph, build_graph
 from cascadeguard.simulation.boundaries import RoleView, view_for
@@ -60,12 +60,16 @@ class RunResult:
     # (minute, role) of steps where the model returned invalid output twice: a defined
     # no-decision outcome, flagged in every result but not inconclusive (2026-10-26).
     invalid_steps: tuple[tuple[int, str], ...] = ()
+    # Governance.OFF only for the governed-vs-ungoverned comparison; never a golden.
+    governance: Governance = Governance.ON
 
     def summary(self) -> dict[str, Any]:
         """Plain data for the golden baseline comparison and exports."""
         return {
             "scenario": self.scenario_id,
             "clause_set": self.clause_set,
+            # Only off is shown, so governed summaries (and the goldens) stay unchanged.
+            **({"governance": self.governance.value} if self.governance is Governance.OFF else {}),
             "actions": [
                 {
                     "minute": e.minute,
@@ -74,6 +78,7 @@ class RunResult:
                     **({"target": e.target} if e.target else {}),
                     "verdict": e.kind,
                     **({"reasons": list(e.reasons)} if e.reasons else {}),
+                    **({"would_have_been_rejected": list(e.waived)} if e.waived else {}),
                 }
                 for e in self.log
                 if e.kind in ("accepted", "rejected") and e.action is not None
@@ -178,10 +183,11 @@ def run(
     corpus_clause_ids: frozenset[str],
     agents: Mapping[str, Agent],
     clause_set: str,
+    governance: Governance = Governance.ON,
 ) -> RunResult:
     loaded = dict(sorted(clauses.items()))
     state = SimulationState(scenario, roles)
-    engine = ConstraintEngine(state, loaded, corpus_clause_ids)
+    engine = ConstraintEngine(state, loaded, corpus_clause_ids, governance)
     shown: list[RoleView] = []
     failed: list[tuple[int, str, str]] = []
     invalid: list[tuple[int, str]] = []
@@ -229,4 +235,5 @@ def run(
         agents=SCRIPTED_AGENTS if scripted else OTHER_AGENTS,
         failed_steps=tuple(failed),
         invalid_steps=tuple(invalid),
+        governance=governance,
     )

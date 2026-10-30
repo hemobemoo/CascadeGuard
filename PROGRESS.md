@@ -2,7 +2,7 @@
 
 Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
-## Start here (new session, 2026-10-30)
+## Start here (new session, 2026-10-31)
 
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
@@ -10,6 +10,30 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 #16 vector knowledge base).
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
+
+**PR 4, `--governance off`: built on branch `governance-off` (from main 02e7b06); the PR is
+opened after the review loop and then waits on the human (not merged).** Human decisions 2026-10-31: option B (waive
+`no_authority`, `authority_uncertain`, `restricted_by_clause`, `missing_prerequisite`,
+`missing_information`); evidence checks (citations, gap wording) stay on; LLM agents with
+`--governance off` only with `--offline` (live is gate 4).
+- **Done when (agreed 2026-10-31):** scripted path and both existing expected outputs
+  byte-identical, `run` = `run --governance on`; `run --governance off` matches
+  `scenarios/uae_health_access/expected_ungoverned.yaml` (header "NOT A GOLDEN"), deterministic;
+  tests for kept checks, views, refusals; LLM host check in its own commit; UI step h and the
+  Playwright flow; no API calls; all checks; phase-auditor and test-breaker; PR open, CI green.
+- **Result (scripted):** only the three T+60 actions change (reverse_automated_lockouts,
+  activate_fallback_channel, issue_determination: rejected -> accepted);
+  `patient_access_restored` unmet -> met at T+60; the three failures behind it are shown as
+  "goal met but the cause is still present". Obligations, fact releases and findings identical.
+- **Verify:** `uv run cascadeguard run uae_health_access --governance off`;
+  `uv run pytest tests/unit/test_governance_waivers.py tests/integration/test_governance_comparison.py`.
+- **Host check done (commit 24ea1b4; https and unparsable URLs in fee1f66, 5fc7079):** both
+  OpenRouter clients refuse an `OPENROUTER_BASE_URL` that is not https on openrouter.ai
+  (`kb.is_openrouter_https`; gate-4 prerequisite).
+- **Review loop:** phase-auditor round 1 FAIL (docs only: structure file, "PR open" wording),
+  round 2 PASS; test-breaker round 1 PASS (MINORs fixed in 5fc7079). Full suite 664 passed.
+- Not done in PR 4: the audit file (refused with `--governance off`), UI exports of the
+  comparison (CLI `--export` only), an LLM behaviour comparison (gate 4).
 
 **PR 3, vector knowledge base: done, merged to main via PR #16** (2026-10-30, on the human's
 instruction, CI green; branch `vector-kb` deleted). Index digest 45714d5e2031 (4,235 chunks;
@@ -49,8 +73,9 @@ then locked.
   LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
   merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
   after checking they hold no secrets. **It uses `--kb-context`** (human, 2026-10-30).
-- **Before gate 4:** the host check on the LLM path (nothing yet checks that the LLM client's
-  `OPENROUTER_BASE_URL` is an openrouter.ai host; the embedder already refuses another host).
+- **Before gate 4:** PR 4 merged (the LLM host check is in it, commit 24ea1b4). An ungoverned
+  LLM variant would need `--governance off` without `--offline`, which PR 4 refuses: lifting
+  that is part of the gate-4 decision.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
   "max requests").
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**
@@ -59,7 +84,7 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: PR 4 (`--governance off`), then PR 5 (gap analysis, traces); see "Current phase".
+- Next: the human reviews and merges PR 4, then PR 5 (gap analysis, traces); see "Current phase".
 
 ## Current phase
 
@@ -74,7 +99,8 @@ PRs follow, one at a time; each stops once open with CI green:
    local fastembed, numpy search instead of ChromaDB at runtime (ChromaDB only as an optional
    extra for the export test).
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
-   golden) and the side-by-side comparison in the CLI and UI.
+   golden) and the side-by-side comparison in the CLI and UI: built on `governance-off`, PR
+   after review, waiting on the human's merge (see "Start here").
 5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`.
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
@@ -1152,7 +1178,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 **PR 3 (vector knowledge base, PR #16): merged 2026-10-30** on the human's instruction after
 three review rounds (round-3 human gates answered: AGENTS.md exception (2) widened, cc8608a; the
 `--kb-context` cache key includes the vectors' SHA-256). Carried forward, see "Open items":
-the LLM-path host check before gate 4; query embeddings not counted under `--cap`.
+query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
+
+**PR 4 (`--governance off`, branch `governance-off`): waiting on the human's review and merge**
+(not auto-merged, on the human's instruction). Gate 4 needs it merged first.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
@@ -1333,8 +1362,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 4: `--governance off` (see "Current phase", item 4). New branch from main after PR #16.
-Before gate 4: the LLM-path host check.
+PR 4 (`governance-off`): open the PR after the review loop; the human reviews and merges it (not auto-merged, on the
+human's instruction). Then gate 4 (recording run, target 4–5 Nov; ask first) and PR 5.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.

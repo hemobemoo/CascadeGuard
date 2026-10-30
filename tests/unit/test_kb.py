@@ -649,7 +649,12 @@ def test_the_embedder_refuses_a_host_other_than_openrouter(
 ) -> None:
     """AGENTS.md (amended 2026-10-30): the key and corpus text go only to openrouter.ai."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test-not-a-real-key")
-    for url in ("http://example.invalid/v1", "https://openrouter.ai.evil.test/api/v1"):
+    for url in (
+        "http://example.invalid/v1",
+        "https://openrouter.ai.evil.test/api/v1",
+        "http://openrouter.ai/api/v1",
+        "https://user@[SECRETTOKEN123]/api/v1",
+    ):
         monkeypatch.setenv("OPENROUTER_BASE_URL", url)
         with pytest.raises(KnowledgeBaseError, match=r"must point at openrouter\.ai") as err:
             OpenRouterEmbedder(env_file=tmp_path / "none.env")

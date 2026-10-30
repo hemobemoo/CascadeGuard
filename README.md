@@ -30,6 +30,10 @@ give byte-identical output on every run):
    by `tests/integration/test_repairs.py`).
 4. `uv run cascadeguard run uae_health_access --repair <repair-id>` replays the same incident
    with one repair (ids from step 3).
+   `uv run cascadeguard run uae_health_access --governance off` shows the governed run beside an
+   ungoverned one (comparison only, never the result): actions the engine rejects only for
+   authority, a clause restriction or a missing prerequisite or information are applied and
+   listed as "would have been rejected". The UI shows it at step h.
 5. `uv run python -m cascadeguard.ui.app` opens the demo UI at http://localhost:8765.
 6. `uv run pytest` runs the tests (see Checks below).
 
@@ -47,8 +51,8 @@ give byte-identical output on every run):
 | Evaluation | `docs/evaluation/` |
 | Submission readiness audit | `docs/submission-readiness.md` |
 
-Still to be added before submission, each in its own pull request: the governed vs ungoverned
-comparison, the gap analysis (`docs/gap-analysis.md`), an example trace export
+Still to be added before submission, each in its own pull request: the gap analysis
+(`docs/gap-analysis.md`), an example trace export
 (`docs/evaluation/traces/`), and the technical report.
 
 **Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in

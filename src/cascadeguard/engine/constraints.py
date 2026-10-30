@@ -4,6 +4,7 @@ This is the only code that changes simulation state in response to agents. Check
 clause's `normalized` reading; `stated` and `interpreted` readings are treated the same.
 """
 
+import dataclasses
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -92,6 +93,29 @@ class Reason(StrEnum):
     MISSING_INFORMATION = "missing_information"
     NO_AUTHORITY = "no_authority"
     AUTHORITY_UNCERTAIN = "authority_uncertain"
+
+
+class Governance(StrEnum):
+    """ON (the default everywhere) enforces every check. OFF is a comparison mode only: an
+    action rejected for nothing but WAIVABLE reasons is applied anyway and logged as "would have
+    been rejected". Role permissions, information boundaries, integrity and evidence checks
+    (citations, gap wording) are enforced in both modes."""
+
+    ON = "on"
+    OFF = "off"
+
+
+# The clause and mandate checks --governance off waives (human decision 2026-10-31, option B).
+WAIVABLE = frozenset(
+    {
+        Reason.NO_AUTHORITY,
+        Reason.AUTHORITY_UNCERTAIN,
+        Reason.RESTRICTED_BY_CLAUSE,
+        Reason.MISSING_PREREQUISITE,
+        Reason.MISSING_INFORMATION,
+    }
+)
+WOULD_HAVE_BEEN_REJECTED = "would have been rejected: "
 
 
 class Authority(StrEnum):
@@ -241,10 +265,12 @@ class ConstraintEngine:
         state: SimulationState,
         clauses: dict[str, PolicyClause],
         corpus_clause_ids: frozenset[str],
+        governance: Governance = Governance.ON,
     ) -> None:
         self.state = state
         self.rules = RuleBook(clauses)
         self.corpus_clause_ids = corpus_clause_ids  # every clause id, any status
+        self.governance = governance
 
     # ----- timeline -----
 
@@ -528,6 +554,15 @@ class ConstraintEngine:
         role_ids = {r.id for r in state.roles.roles}
         for action in decision.proposed_actions:
             verdict = self.check(role, action)
+            waived = self._waived(verdict)
+            if waived:  # governance off: every check ran; only these reasons are set aside
+                why = WOULD_HAVE_BEEN_REJECTED + ", ".join(waived)
+                verdict = dataclasses.replace(
+                    verdict,
+                    accepted=True,
+                    reasons=(),
+                    detail=f"{why}; {verdict.detail}" if verdict.detail else why,
+                )
             target = action.target
             state.record(
                 "accepted" if verdict.accepted else "rejected",
@@ -538,9 +573,19 @@ class ConstraintEngine:
                 detail=verdict.detail,
                 reasons=tuple(r.value for r in verdict.reasons),
                 clause_ids=verdict.clause_ids,
+                waived=waived,
             )
             if verdict.accepted:
                 self._apply(role, action, verdict)
+
+    def _waived(self, verdict: Verdict) -> tuple[str, ...]:
+        """With governance off, the reasons of a rejection made only of WAIVABLE reasons. An
+        action with any other reason stays rejected with all its reasons, as when governed."""
+        if self.governance is Governance.ON or verdict.accepted:
+            return ()
+        if not set(verdict.reasons) <= WAIVABLE:
+            return ()
+        return tuple(r.value for r in verdict.reasons)
 
     def _reject_decision(
         self, role: str, reason: Reason, clause_ids: tuple[str, ...], detail: str

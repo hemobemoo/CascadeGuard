@@ -30,7 +30,8 @@ from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
 from cascadeguard.domain.repairs import RepairProposal
 from cascadeguard.domain.scenario import RoleSet, Scenario
-from cascadeguard.engine.constraints import RuleBook
+from cascadeguard.engine.constraints import Governance, RuleBook
+from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     MASKED_LABEL,
@@ -68,6 +69,8 @@ from cascadeguard.storage.export import (
     DISCLAIMER,
     comparison_export,
     comparison_markdown,
+    governance_export,
+    governance_markdown,
     run_export,
     search_export,
     write_exports,
@@ -102,6 +105,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--repair", default=None, help="replay the identical incident with this repair id"
     )
     run_cmd.add_argument("--export", type=Path, default=None, help="write JSON and Markdown here")
+    run_cmd.add_argument(
+        "--governance",
+        choices=tuple(g.value for g in Governance),
+        default=Governance.ON.value,
+        help="off: compare the governed run with an ungoverned one (comparison only; scripted "
+        "or offline LLM agents; not with --repair or --audit)",
+    )
     run_cmd.add_argument(
         "--live",
         action="store_true",
@@ -186,6 +196,22 @@ class World:
             self.scenario, self.roles, self.clauses, self.corpus_ids, self.agents, self.label
         )
         return replace(result, agents=self.agent_label)
+
+    def ungoverned(self) -> RunResult:
+        """The same incident with governance off: comparison only, never the result."""
+        result = run(
+            self.scenario,
+            self.roles,
+            self.clauses,
+            self.corpus_ids,
+            self.agents,
+            self.label,
+            Governance.OFF,
+        )
+        return replace(result, agents=self.agent_label)
+
+    def governance_comparison(self) -> GovernanceComparison:
+        return GovernanceComparison(self.baseline(), self.ungoverned())
 
     def replay(self, proposal: RepairProposal) -> RunResult:
         result = replay(
@@ -545,6 +571,21 @@ def search_markdown(scenario_id: str, result: SearchResult) -> str:
     return _text_markdown(f"Repairs: {scenario_id}", format_search(result))
 
 
+def governance_off_refusal(args: argparse.Namespace) -> str | None:
+    """Why `--governance off` cannot run with these options (checked before any agent or client
+    is built), or None."""
+    if args.repair is not None:
+        return "--governance off compares the unrepaired incident only; drop --repair"
+    if args.audit is not None:
+        return "--governance off is a comparison mode and is not recorded in the audit file"
+    if args.agents == LLM and not args.offline:
+        return (
+            "--governance off with LLM agents runs from the decision cache only; add --offline "
+            "(live calls need the human's approval, gate 4)"
+        )
+    return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -556,6 +597,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.kb_context and args.agents != LLM:  # human decision 2026-10-30: never silently ignored
         print("cascadeguard: --kb-context gives context to LLM agents only; use --agents llm")
         return 2
+    if getattr(args, "governance", Governance.ON.value) == Governance.OFF.value:
+        refused = governance_off_refusal(args)
+        if refused is not None:
+            print(f"cascadeguard: {refused}")
+            return 2
     choice = AgentChoice(
         args.agents, args.offline, args.cache, args.extracted_context, args.cap, args.kb_context
     )
@@ -662,6 +708,18 @@ def _main(args: argparse.Namespace, world: World) -> int:
             finally:
                 store.close()
             print(f"audit: baseline run {base}, replay run {rep} in {_display(args.audit)}")
+        return 0
+    if args.command == "run" and args.governance == Governance.OFF.value:
+        comparison = world.governance_comparison()
+        markdown = governance_markdown(comparison)
+        print(markdown)
+        if args.export is not None:
+            _export(
+                args.export,
+                f"{args.scenario}-governance-off",
+                governance_export(comparison),
+                markdown,
+            )
         return 0
     if args.command == "run":
         result = world.baseline()

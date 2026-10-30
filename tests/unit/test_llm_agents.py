@@ -351,9 +351,43 @@ def test_missing_configuration_names_variables_not_values(
     assert "sk-secret" not in message and "OPENROUTER_API_KEY" not in message
     with pytest.raises(LLMConfigError):
         LLMConfig.model_from_env(env)
-    env.write_text(env.read_text() + "OPENROUTER_BASE_URL=u\nCASCADEGUARD_MODEL=m\n")
+    env.write_text(
+        env.read_text() + "OPENROUTER_BASE_URL=https://openrouter.ai/api/v1\nCASCADEGUARD_MODEL=m\n"
+    )
     config = LLMConfig.from_env(env)
     assert "sk-secret" not in repr(config)
+
+
+def test_llm_config_refuses_a_host_other_than_openrouter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """AGENTS.md: the key and corpus text go only to openrouter.ai, as for the embedder. No
+    request is made: the configuration is refused before any client exists."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test-not-a-real-key")
+    monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+    absent = tmp_path / "absent.env"
+    for url in (
+        "http://example.invalid/v1",
+        "https://openrouter.ai.evil.test/api/v1",
+        "https://openrouter.ai@evil.test/api/v1",
+        "http://openrouter.ai/api/v1",
+        "https://user@[SECRETTOKEN123]/api/v1",
+        "https://evil.test/openrouter.ai",
+        "openrouter.ai/api/v1",
+        "https://",
+    ):
+        monkeypatch.setenv("OPENROUTER_BASE_URL", url)
+        with pytest.raises(LLMConfigError, match=r"must point at openrouter\.ai") as err:
+            LLMConfig.from_env(absent)
+        assert "sk-test" not in str(err.value) and url not in str(err.value)
+    monkeypatch.setattr("cascadeguard.agents.llm.ENV_FILE", absent)
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "http://example.invalid/v1")
+    assert main(["run", SCENARIO, "--agents", "llm", "--cap", "1", "--cache", str(tmp_path)]) == 2
+    out = capsys.readouterr().out
+    assert "must point at openrouter.ai" in out and "Traceback" not in out
+    for url in ("https://openrouter.ai/api/v1", "https://OpenRouter.ai/api/v1"):
+        monkeypatch.setenv("OPENROUTER_BASE_URL", url)
+        assert LLMConfig.from_env(absent).base_url == url
 
 
 def test_cli_offline_llm_run_needs_no_key_and_prints_no_model(
@@ -1269,8 +1303,13 @@ def test_live_cli_run_without_a_cap_is_refused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_BASE_URL", "http://127.0.0.1:9")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")  # never called
     monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+
+    def no_client(*_: object, **__: object) -> None:
+        raise AssertionError("the cap refusal must come before any client is built")
+
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", no_client)
     assert main(["run", SCENARIO, "--agents", "llm", "--cache", str(tmp_path)]) == 2
     assert "live LLM runs need a request cap" in capsys.readouterr().out
 
