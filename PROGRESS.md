@@ -10,37 +10,30 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
-**PR 3, vector knowledge base: branch `vector-kb`, PR open, not merged.** Stop there (human,
-2026-10-30: don't merge). What it delivers:
-- `knowledge/kb.py`: the keyword search's exact corpus (`retrieval.searchable_pages`, now shared
-  by both paths), 256-word chunks per page with spans (chunking adapted from
-  CrashingGuru/ITUAIReadiness, MIT, attributed), reviewed clauses mapped to the chunks holding
-  their quote with their `status_label`. 1,550 chunks; 19 hold a reviewed clause.
-- Embeddings: `nvidia/nemotron-3.5-embed-1b:free` through OpenRouter (human decision after the
-  laptop froze on the local fastembed build; fastembed dropped). Prefixes `passage: `/`query: `
-  client-side (two checks recorded in the kb.py docstring), truncated to 1,024 dimensions and
-  renormalised (model card). Built 2026-10-30: 49 requests, 167 s, paced under 20/minute with
-  backoff after a 429. Committed in `policies/kb/` (chunks.jsonl, vectors.npy, manifest.json);
-  digest `41775c1b8b6a` covers chunks, slug, dimensions, prefixes and chunk settings, never the
-  vectors (tested).
-- Search: numpy cosine over the committed vectors, scores rounded, ties by chunk id. Only the
-  query is embedded (needs the key; clear error without it). `cascadeguard kb query`,
-  `cascadeguard kb export <path>` (ChromaDB `kb_main` format; loaded with the reference's calls
-  in a test using the optional `chroma` extra, skipped without it; not run inside the
-  reference app). `--kb-context` (LLM only) adds `+kb:<digest>` to the prompt version; without it
-  prompts and cache keys are unchanged. Scripted demo and keyword path never touch the API
-  (tested).
-- Runtime pin check (round-5 MINOR, fixed): `loader.reviewed_transcriptions` refuses a reviewed
-  page whose text does not match its pin, for the search and the index alike.
-- `AGENTS.md` amended (human gate 6, 2026-10-30): extracted text and reviewed transcriptions may
-  go to the OpenRouter embeddings endpoint with the pinned model; the key only as the
-  authorization header; PDFs never uploaded.
-- Spot check (2026-10-30): "human oversight of AI decisions" puts Charter p.4 at rank 14 (top 3:
-  EU AI Act p.60 twice, MOCAI p.12); "removing AI systems that pose risks" puts Charter p.3 at
-  rank 313 (top 3: EU AI Act p.55, p.108, UAE Policy Foundation p.5); an Arabic query returns
-  relevant English chunks (UNESCO p.22, web/01 health policy p.2, EU AI Act p.19) at lower
-  scores (0.36-0.37). Both TDRA copies appear in the same top-k for telecom queries, often the
-  same page with equal scores: human to decide whether to drop one copy from both paths.
+**PR 3, vector knowledge base: PR #16 on `vector-kb`, open, not merged.** Stop once CI is green
+(human, 2026-10-30: don't merge). Round 2 (human, 2026-10-30) rebuilt the index for retrieval
+quality after Charter p.3 ranked 313th for a near-verbatim query.
+- **Done when (human, 2026-10-30):** "removing AI systems that pose risks" -> Charter p.3 in the
+  top 3; "human oversight of AI decisions" -> Charter p.4 in the top 3; three more queries with
+  an obvious page in the top 5; the Arabic query still relevant; scripted path and both expected
+  outputs byte-identical; all checks clean; CI green. Encoded in `policies/kb/acceptance.json`
+  and `tests/unit/test_kb_acceptance.py` (stored query vectors in `query_vectors.json`, no API).
+- **Results (round 2 index, digest 068b6780114a, 4,235 chunks, 133 requests, 425 s):**
+  Charter p.3 rank 313 -> 2; Charter p.4 14 -> 3 (on the limit); PDPL p.13 3 -> 1; FL 2/2019
+  p.4 1 -> 2; GDPR p.21 1 -> 2; Arabic query: a health source at rank 2 -> 1 (web/01 p.4).
+  "Before" is the round-1 index ranked by cosine alone, with the same stored query vectors.
+- **How:** `knowledge/kb.py` splits each page at numbered headings and blank lines (short
+  segments join the next), then 120/20-word windows: each Charter principle is its own chunk.
+  Search fuses cosine and the keyword search's score by reciprocal rank fusion (k=60), at most 2
+  chunks per document, ties by chunk id. The shared corpus (`retrieval.searchable_pages`) drops
+  web/06, web/07 and the TDRA original, strips web YAML headers (blanked, spans kept) and labels
+  OCR pages; `extracted_digest` now hashes the served text, so the keyword path's prompt version
+  changes too. A role sees only its own clause ids on a chunk.
+- **From round 1:** OpenRouter embeddings (`nvidia/nemotron-3.5-embed-1b:free`, prefixes
+  `passage: `/`query: ` client-side, 1,024 dimensions renormalised; prefix checks in the kb.py
+  docstring), numpy search, `cascadeguard kb query` / `kb export` (ChromaDB `kb_main` format,
+  optional `chroma` extra), `--kb-context` (LLM only, `+kb:<digest>`), runtime pin check on
+  reviewed transcriptions, `vectors.npy` SHA-256 checked on load, AGENTS.md amendment (93c266a).
 
 **Open items.**
 - **Paid recording run (gate 4):** the role views changed (labels; the safety clause now
@@ -48,7 +41,6 @@ with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
   LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
   merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
   after checking they hold no secrets. Whether that run uses `--kb-context` is the human's call.
-- **TDRA duplicate copy:** see the spot check above (human decision pending).
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**
   - the case-folded and string-type source checks in `transcription_key` have no test;
   - malformed transcription lines (blank, BOM, `null`, U+2028 inside text) raise
@@ -1145,27 +1137,18 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**PR 3 (vector knowledge base), open, not merged (2026-10-30):**
-- Confirm the `AGENTS.md` amendment (gate 6) as committed in 93c266a; the phase-auditor
-  asks for the confirmation in the PR.
-- Confirm the acceptance criteria: there is no spec or "Done when" for PR 3; the PR body
-  restates the hand-off rules it was audited against.
-- TDRA duplicate copy: both copies show up in the same top-k; drop one from both paths?
-- Evidence-auditor MINORs, human choice: OCR pages (TDRA `.ocr`) carry only "context only;
-  not citable" despite unchecked OCR errors; web/06 and web/07 are marked superseded in
-  MANIFEST.md but are still searched and indexed; web pages begin with their YAML headers.
-  Each changes the keyword path and the index together (rebuild: 49 free requests).
-- Whether the gate-4 recording run uses `--kb-context`.
-- Test-breaker QUESTION: a knowledge-base chunk shows every role the ids and status labels of
-  reviewed clauses on that text, including clauses outside the role's own clauses (the engine
-  still rejects such citations: `citation_out_of_scope`, probed). Keep, or list only the
-  role's own clauses?
-- Test-breaker MINORs deferred (PR 3 review, no guarantee broken): query embeddings are not
-  counted under `--cap` (free model, but `--cap` says "max requests"); nothing checks that
+**PR 3 (vector knowledge base, PR #16), open, not merged.** Human answers 2026-10-30 (round 2),
+all applied: AGENTS.md amendment (93c266a) confirmed; acceptance criteria = the "Done when" in
+"Start here"; one TDRA copy in both paths (the OCR copy kept: the original has no text layer on
+pp.13-47); web/06 and web/07 excluded from both paths; web YAML headers stripped; OCR pages
+labelled "OCR text, unchecked"; a role sees only its own clause ids on a chunk. Still open:
+- Whether the gate-4 recording run uses `--kb-context`: decided after PR 3 meets its "Done
+  when" (human: not yet).
+- Test-breaker MINORs deferred (round 1, no guarantee broken): query embeddings are not counted
+  under `--cap` (free model, but `--cap` says "max requests"); nothing checks that
   `OPENROUTER_BASE_URL` is an openrouter.ai host (LLM path alike; the amended AGENTS.md rule
   names openrouter.ai); `--kb-context` and `--extracted-context` are silently ignored with
-  scripted agents. Fixed in PR 3: `vectors.npy` SHA-256 checked on load; a malformed index is
-  a clear error; CLI tests for `kb export` and the `--kb-context` error paths.
+  scripted agents.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.

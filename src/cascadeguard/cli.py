@@ -578,7 +578,11 @@ def format_hits(hits: Sequence[Hit]) -> str:
     lines = [f"Knowledge base: {len(hits)} chunks ({CONTEXT_LABEL})"]
     for n, h in enumerate(hits, 1):
         c = h.chunk
-        lines.append(f"{n}. {h.score:.4f}  {c.source_file}  p.{c.page}  [{c.start}-{c.end}]")
+        keyword = f"#{h.keyword_rank}" if h.keyword_rank is not None else "-"
+        lines.append(
+            f"{n}. {h.score:.4f} (vector #{h.vector_rank}, keyword {keyword})  "
+            f"{c.source_file}  p.{c.page}  [{c.start}-{c.end}]"
+        )
         lines.append(f"   label: {c.label}")
         lines.extend(f"   clause {r.id}: {r.status_label}" for r in c.clauses)
         lines.append(f"   {c.text[:300]}{'...' if len(c.text) > 300 else ''}")

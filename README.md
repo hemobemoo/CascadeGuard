@@ -113,9 +113,11 @@ one call.
 
 **Vector knowledge base (context only, never citable).** `policies/kb/` holds the same pages the
 keyword search covers (extracted text outside the excluded sources, plus the reviewed Charter
-transcriptions), cut into 256-word chunks and embedded with `nvidia/nemotron-3.5-embed-1b:free`
-through OpenRouter's embeddings endpoint (1,024 dimensions). Search is cosine similarity over the
-committed vectors; only the query is embedded, which needs `OPENROUTER_API_KEY` and
+transcriptions), split at numbered headings into chunks of at most about 120 words and embedded
+with `nvidia/nemotron-3.5-embed-1b:free` through OpenRouter's embeddings endpoint (1,024
+dimensions). Search fuses cosine similarity over the committed vectors with the keyword search
+(reciprocal rank fusion), at most two chunks per document; only the query is embedded, which
+needs `OPENROUTER_API_KEY` and
 `OPENROUTER_BASE_URL` (free model, no cost). Each chunk shows its file, page and label, and any
 reviewed clause whose quote it holds, with that clause's own status label.
 

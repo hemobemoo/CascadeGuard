@@ -82,8 +82,11 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   corpus: extracted text outside `NOT_SEARCHED` and the books, then reviewed transcriptions that
   match their pin in `approvals.yaml` (`loader.reviewed_transcriptions`). `--extracted-context`
   searches it by keyword (`+extracted:<digest>`); `--kb-context` by vector (`knowledge/kb.py`,
-  `+kb:<digest>`): 256-word chunks per page with spans, embedded offline through OpenRouter
-  (`scripts/build_kb.py` → `policies/kb/`), searched by exact cosine over the committed vectors.
+  `+kb:<digest>`): chunks per page split at numbered headings (about 120 words, with spans),
+  embedded offline through OpenRouter (`scripts/build_kb.py` → `policies/kb/`), ranked by
+  reciprocal rank fusion of exact cosine over the committed vectors and the keyword score, at
+  most two per document. Acceptance queries and their stored vectors: `policies/kb/acceptance.json`,
+  `query_vectors.json`.
   The index digest covers chunks, model slug, dimensions, prefixes and chunk settings, not the
   vectors. Loading the index re-chunks the corpus and refuses a stale one. Neither path touches
   the scripted demo.

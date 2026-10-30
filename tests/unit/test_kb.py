@@ -82,12 +82,12 @@ def words(n: int) -> str:
 
 
 def test_chunks_are_word_windows_with_overlap_and_exact_spans() -> None:
-    text = "  " + words(600).replace(" w300 ", "\n\nw300\t")
+    text = "  " + words(300).replace(" w100 ", " w100\t ")
     chunks = chunk_page("x.pdf", 3, text, "label")
     step = CHUNK_WORDS - OVERLAP_WORDS
     assert [c.id for c in chunks] == ["x.pdf#p3#c0", "x.pdf#p3#c1", "x.pdf#p3#c2"]
     assert [c.text.split()[0] for c in chunks] == ["w0", f"w{step}", f"w{2 * step}"]
-    assert [len(c.text.split()) for c in chunks] == [CHUNK_WORDS, CHUNK_WORDS, 600 - 2 * step]
+    assert [len(c.text.split()) for c in chunks] == [CHUNK_WORDS, CHUNK_WORDS, 300 - 2 * step]
     for c in chunks:
         assert " ".join(text[c.start : c.end].split()) == c.text
 
@@ -101,10 +101,42 @@ def test_a_short_tail_joins_the_previous_chunk() -> None:
 
 
 def test_no_chunk_exceeds_the_character_cap() -> None:
-    text = " ".join("x" * 40 for _ in range(200))
+    text = " ".join("x" * 40 for _ in range(100))
     chunks = chunk_page("x.pdf", 1, text, "l")
     assert len(chunks) > 1 and all(len(c.text) <= MAX_CHARS for c in chunks)
-    assert sum(len(c.text.split()) for c in chunks) == 200
+    assert sum(len(c.text.split()) for c in chunks) == 100
+
+
+def test_numbered_headings_and_blank_lines_start_their_own_chunk() -> None:
+    """Human decision 2026-10-30: each numbered principle or article stands alone."""
+    body = " ".join(f"b{i}" for i in range(25))
+    text = (
+        f"Intro words {body}\n1. First: {body}\n2. Second: {body}\n(a) item {body}\n"
+        f"Article 9 heading {body}\n\nAfter a blank line {body}"
+    )
+    chunks = chunk_page("x.pdf", 1, text, "l")
+    assert [c.text.split()[0] for c in chunks] == ["Intro", "1.", "2.", "(a)", "Article", "After"]
+    for c in chunks:
+        assert " ".join(text[c.start : c.end].split()) == c.text
+
+
+def test_a_short_segment_joins_the_next_and_a_short_last_one_the_previous() -> None:
+    body = " ".join(f"b{i}" for i in range(25))
+    text = f"Heading:\n1. Short one.\n2. Long: {body}\n3. Tail."
+    chunks = chunk_page("x.pdf", 1, text, "l")
+    assert len(chunks) == 1 and chunks[0].text.startswith("Heading: 1. Short one. 2. Long:")
+    assert chunks[0].text.endswith("3. Tail.")
+
+
+def test_each_charter_principle_is_its_own_chunk(real_chunks: list[Chunk]) -> None:
+    pages = [c for c in real_chunks if c.source_file == CHARTER and c.page in (3, 4)]
+    charter = {c.text.split(":")[0]: c for c in pages}
+    assert "2. Safety" in charter and "6. Human Oversight" in charter
+    assert [r.id for r in charter["2. Safety"].clauses] == ["uae.ai-charter.safety"]
+    assert [r.id for r in charter["6. Human Oversight"].clauses] == [
+        "uae.ai-charter.human-oversight"
+    ]
+    assert "3. Fairness" not in charter["2. Safety"].text
 
 
 def test_the_index_covers_exactly_the_searchable_pages(real_chunks: list[Chunk]) -> None:
@@ -244,11 +276,50 @@ def test_search_is_deterministic_and_breaks_ties_by_chunk_id() -> None:
     index, embedder = fake_index(), FakeEmbedder()
     hits = search_kb("incident report", k=3, index=index, embedder=embedder)
     assert hits == search_kb("incident report", k=3, index=index, embedder=embedder)
-    # p1 and p2 hold the same words: equal scores, so the id decides.
-    assert [h.chunk.page for h in hits] == [1, 2, 3]
-    assert hits[0].score == hits[1].score > hits[2].score
+    # p1 and p2 hold the same words: equal in both rankings, so the id decides each rank; p3 is
+    # the same document's third chunk, beyond MAX_PER_SOURCE.
+    assert [h.chunk.page for h in hits] == [1, 2]
+    assert [(h.vector_rank, h.keyword_rank) for h in hits] == [(1, 1), (2, 2)]
+    assert hits[0].score > hits[1].score
     assert search_kb(" ", index=index, embedder=embedder) == ()
     assert search_kb("x", k=0, index=index, embedder=embedder) == ()
+
+
+def ranked_index(texts: dict[str, str]) -> Index:
+    chunks = [
+        Chunk(f"{src}#p1#c{n}", src, 1, 0, len(t), "context only; not citable", t)
+        for n, (src, t) in enumerate(texts.items())
+    ]
+    vectors = FakeEmbedder().documents([c.text for c in chunks])
+    return Index(tuple(chunks), vectors / np.linalg.norm(vectors, axis=1, keepdims=True), {})
+
+
+def test_hybrid_ranking_fuses_vector_and_keyword_ranks() -> None:
+    """Reciprocal rank fusion (k=60): a chunk ranked well by both lists beats one ranked first by
+    one list only; ranks are reported; every tie falls to the chunk id."""
+    index = ranked_index(
+        {
+            "a.pdf": "alpha beta gamma",  # same words as the query: vector #1, keyword #1
+            "b.pdf": "alpha alpha delta",  # two query-word hits: keyword #2
+            "c.pdf": "unrelated words entirely",  # no query word: keyword-unranked
+        }
+    )
+    hits = search_kb("alpha beta gamma", k=3, index=index, embedder=FakeEmbedder())
+    top = hits[0]
+    assert top.chunk.source_file == "a.pdf"
+    assert (top.vector_rank, top.keyword_rank) == (1, 1)
+    assert top.score == pytest.approx(2 / (kb.RRF_K + 1))
+    unranked = next(h for h in hits if h.chunk.source_file == "c.pdf")
+    assert unranked.keyword_rank is None
+    assert unranked.score == pytest.approx(1 / (kb.RRF_K + unranked.vector_rank))
+
+
+def test_at_most_two_chunks_per_source_reach_the_top_k() -> None:
+    index = ranked_index({f"big.pdf{n}": "alpha beta" for n in range(5)} | {"small.pdf": "alpha"})
+    chunks = tuple(replace(c, source_file="big.pdf") if "big" in c.id else c for c in index.chunks)
+    index = Index(chunks, index.vectors, {})
+    hits = search_kb("alpha beta", k=5, index=index, embedder=FakeEmbedder())
+    assert [h.chunk.source_file for h in hits] == ["big.pdf", "big.pdf", "small.pdf"]
 
 
 def test_kb_query_prints_file_page_label_and_clause_status(
@@ -347,11 +418,17 @@ def test_kb_context_enters_only_the_llm_prompt_and_its_version(
     monkeypatch.setattr("cascadeguard.agents.llm.search_kb", fake_search)
     data = json.loads(render_view(views[0], roles, kb=True))["knowledge_base_context"]
     assert data["label"] == "context only; not citable" and "Never cite it" in data["note"]
-    assert [c["page"] for c in data["chunks"]] == [1, 2, 3]
+    assert [c["page"] for c in data["chunks"]] == [1, 2]
+    # Human decision 2026-10-30: a role sees only its own citable clauses named on a chunk.
+    assert data["chunks"][0]["reviewed_clauses_on_this_text"] == []
+    own = next(c for c in views[0].role_clauses if c.citable)
+    mine = replace(index.chunks[0], clauses=(kb.ClauseRef(own.id, own.status_label), labelled))
+    index = Index((mine, *index.chunks[1:]), index.vectors, index.manifest)
+    data = json.loads(render_view(views[0], roles, kb=True))["knowledge_base_context"]
     assert data["chunks"][0]["reviewed_clauses_on_this_text"] == [
-        {"id": "some.clause", "status": "reviewed · not binding"}
+        {"id": own.id, "status": own.status_label}
     ]
-    assert queries == [" ".join((views[0].event_title, *views[0].decision_points))]
+    assert set(queries) == {" ".join((views[0].event_title, *views[0].decision_points))}
 
 
 def test_the_index_corpus_equals_the_search_corpus_on_disk_copies(
