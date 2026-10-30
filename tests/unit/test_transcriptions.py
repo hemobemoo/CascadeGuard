@@ -21,6 +21,7 @@ from cascadeguard.knowledge.loader import (
     load_clauses,
     load_transcription_approvals,
     quote_found_on_page,
+    reviewed_transcriptions,
     transcription_digest,
 )
 from cascadeguard.knowledge.retrieval import extracted_digest, search_extracted
@@ -181,3 +182,41 @@ def test_a_second_record_for_a_page_is_refused_however_it_is_spelled(
 
 def test_every_transcription_page_is_a_plain_int() -> None:
     assert all(type(r["page"]) is int and isinstance(r["source_file"], str) for r in all_records())
+
+
+def unpinned_or_edited(tmp_path: Path, how: str) -> Path:
+    """A copy of the committed Charter transcriptions where reviewed page 4 was edited after
+    approval, lost its pin, or is pinned to another page's digest. Returns the approvals file."""
+    stem = Path(CHARTER).stem
+    rows = [page_record(stem, p) for p in (1, 2, 3, 4, 5)]
+    approvals = load_transcription_approvals()
+    if how == "edited":
+        rows[3] = rows[3] | {"text": str(rows[3]["text"]) + " zzeditedword"}
+    elif how == "unpinned":
+        del approvals[f"{CHARTER}#4"]
+    else:
+        approvals[f"{CHARTER}#4"] = approvals[f"{CHARTER}#3"]
+    text = "".join(json.dumps(r) + "\n" for r in rows)
+    (tmp_path / f"{stem}.jsonl").write_text(text, encoding="utf-8")
+    data = {"approved": {}, "reapproval_needed": [], "approved_transcriptions": approvals}
+    path = tmp_path / "approvals.yaml"
+    path.write_text(json.dumps(data), encoding="utf-8")  # JSON is valid YAML
+    return path
+
+
+@pytest.mark.parametrize("how", ["edited", "unpinned", "pinned to another page"])
+def test_a_reviewed_page_that_does_not_match_its_pin_is_refused_at_runtime(
+    tmp_path: Path, how: str
+) -> None:
+    """test-breaker round 5 (deferred MINOR, fixed in PR 3): the search served any int page that
+    said "reviewed" without checking approved_transcriptions at runtime. The shared reader now
+    refuses it, for the search and its digest alike; the vector index uses the same reader."""
+    approvals = unpinned_or_edited(tmp_path, how)
+    with pytest.raises(ClauseLoadError, match="does not match its approval"):
+        search_extracted("zzeditedword", transcriptions_dir=tmp_path, approvals_file=approvals)
+    with pytest.raises(ClauseLoadError, match="does not match its approval"):
+        extracted_digest.__wrapped__(EXTRACTED_DIR, tmp_path, approvals)
+
+
+def test_the_committed_transcriptions_pass_the_runtime_pin_check() -> None:
+    assert [r["page"] for r in reviewed_transcriptions()] == [1, 2, 3, 4, 5]

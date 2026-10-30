@@ -7,7 +7,11 @@ from pathlib import Path
 
 from cascadeguard.cli import load_world, search_repairs
 from cascadeguard.engine.constraints import RuleBook
-from cascadeguard.knowledge.loader import EXTRACTED_DIR, TRANSCRIPTIONS_DIR
+from cascadeguard.knowledge.loader import (
+    EXTRACTED_DIR,
+    TRANSCRIPTIONS_DIR,
+    transcription_digest,
+)
 from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
     NOT_CITABLE_LABEL,
@@ -24,6 +28,15 @@ SUCCESS = (
     "owner.reverse_automated_lockouts.health_service_operator.30m"
     "+share.network_incident_status.telecom_operator.health_service_operator"
 )
+
+
+def pin_approvals(directory: Path, pages: dict[str, str]) -> Path:
+    """An approvals.yaml that pins each "<source_file>#<page>" to the digest of the given text."""
+    pins = {key: transcription_digest(text) for key, text in pages.items()}
+    data = {"approved": {}, "reapproval_needed": [], "approved_transcriptions": pins}
+    path = directory / "approvals.yaml"
+    path.write_text(json.dumps(data), encoding="utf-8")  # JSON is valid YAML
+    return path
 
 
 def test_role_clauses_are_exactly_what_the_role_may_cite() -> None:
@@ -260,7 +273,14 @@ def test_only_reviewed_transcriptions_are_searched(tmp_path: Path) -> None:
     (tmp_path / "x.jsonl").write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
     empty = tmp_path / "extracted"
     empty.mkdir()
-    found = search_extracted("incident report", extracted_dir=empty, transcriptions_dir=tmp_path)
+    # The reviewed page is served only while pinned (test-breaker round 5): pin this synthetic one.
+    approvals = pin_approvals(tmp_path, {f"{CHARTER}#1": "incident report"})
+    found = search_extracted(
+        "incident report",
+        extracted_dir=empty,
+        transcriptions_dir=tmp_path,
+        approvals_file=approvals,
+    )
     assert [(s.source_file, s.page) for s in found] == [(CHARTER, 1)]
 
 
