@@ -248,8 +248,13 @@ other file.
 - From Phase 4 on, after any UI change, use the Playwright MCP to run the demo flow end to end
   (scenario → timeline → diagnosis → repair → replay comparison) and report anything broken
   before calling the task done.
-- Do not use the Firecrawl MCP unless the human asks. Never send the local PDFs or any
-  `.env` value to an external service.
+- Do not use the Firecrawl MCP unless the human asks.
+- Never send the local PDFs or any `.env` value to an external service. Two exceptions:
+  (1) The OpenRouter API key may be sent only as the authorization header to openrouter.ai.
+  (2) Text extracted from the originals, and reviewed transcriptions, may be sent only to the
+  OpenRouter embeddings endpoint, using the model pinned in the manifest, to build the
+  knowledge base and embed queries.
+  The PDF files themselves are never uploaded.
 - Phoenix (Phase 7, optional): when enabled, cite trace IDs when reporting LLM-quality findings.
 - Do not edit `.mcp.json`, and never write a key or token into any file.
 - Optional tools in `REFERENCE_LINKS.md` stay unused unless they are clearly useful;
