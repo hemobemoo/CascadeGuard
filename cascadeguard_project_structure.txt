@@ -16,6 +16,7 @@ cascadeguard/
 │                                      no requirements.txt: pyproject.toml + uv.lock replace it)
 ├── .env.example                      [P0] OPENROUTER_API_KEY, OPENROUTER_BASE_URL,
 │                                     CASCADEGUARD_MODEL — names only (never commit .env)
+├── .gitattributes                    [PR 3] *.npy binary (no line-ending conversion)
 ├── .mcp.json                         [P0] MCP config for Claude Code — committed, no secrets
 │                                     (keys come from ${CONTEXT7_API_KEY} etc. set with setx)
 ├── README.md                         [P0] short; how to run the demo
@@ -107,7 +108,8 @@ cascadeguard/
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   ├── transcriptions/               [Charter PR] page-image transcriptions for sources with an unreliable text layer
 │   │                                 (TRANSCRIBED_SOURCES); quotes flagged so are checked here
-│   ├── kb/                           [PR 3] vector index: chunks.jsonl, vectors.npy, manifest.json (context only)
+│   ├── kb/                           [PR 3] vector index: chunks.jsonl, vectors.npy, manifest.json (context only);
+│   │                                 acceptance.json + query_vectors.json (acceptance queries, stored vectors)
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
 │

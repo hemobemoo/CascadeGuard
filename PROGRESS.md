@@ -1329,8 +1329,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 3, the vector knowledge base: see "Start here" for the branch, key files, first task and
-rules.
+PR 3 (#16, `vector-kb`): review round 2 pushed; wait for CI green on the latest head, then stop
+for the human (no merge; human, 2026-10-30). CI installs no `chroma` extra, so the test that
+loads the export into ChromaDB is skipped there and runs locally only (`uv sync --extra
+chroma`). Then PRs 4 and 5 (see "Current phase").
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.

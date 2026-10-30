@@ -36,7 +36,11 @@ each with its own status label.
 All four NEEDS-HUMAN-JUDGMENT items were already open or closed by the human before this
 branch; nothing new.
 
-## Findings beyond the clauses (MINOR, human choice; recorded in PROGRESS "Waiting on human")
+## Findings beyond the clauses (MINOR, round 1)
+
+All three were applied in review round 2 on the human's decision of 2026-10-30 (commit 57ec5be):
+OCR pages labelled "OCR text, unchecked", web/06 and web/07 excluded from both paths, web YAML
+headers stripped. Evidence-auditor round 2: PASS, no findings.
 
 - The 52 chunks from the TDRA OCR copy carry only "context only; not citable", though their OCR
   text has word-changing errors. Suggested: an OCR label.
