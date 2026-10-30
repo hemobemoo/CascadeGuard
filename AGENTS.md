@@ -251,9 +251,11 @@ other file.
 - Do not use the Firecrawl MCP unless the human asks.
 - Never send the local PDFs or any `.env` value to an external service. Two exceptions:
   (1) The OpenRouter API key may be sent only as the authorization header to openrouter.ai.
-  (2) Text extracted from the originals, and reviewed transcriptions, may be sent only to the
-  OpenRouter embeddings endpoint, using the model pinned in the manifest, to build the
-  knowledge base and embed queries.
+  (2) Text extracted from the originals, and reviewed transcriptions, may be sent only to
+  OpenRouter (openrouter.ai): to the embeddings endpoint, using the model pinned in the
+  manifest, to build the knowledge base and embed queries; and to the chat completions
+  endpoint, using the configured chat model, as context for LLM agents, limited to text the
+  search paths are allowed to return.
   The PDF files themselves are never uploaded.
 - Phoenix (Phase 7, optional): when enabled, cite trace IDs when reporting LLM-quality findings.
 - Do not edit `.mcp.json`, and never write a key or token into any file.
