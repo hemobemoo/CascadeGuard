@@ -1,0 +1,16 @@
+{
+ "model_slug": "nvidia/nemotron-3.5-embed-1b:free",
+ "native_dimensions": 2048,
+ "dimensions": 1024,
+ "prefix_rule": "text prefixed client-side: documents 'passage: ', queries 'query: '",
+ "document_prefix": "passage: ",
+ "query_prefix": "query: ",
+ "chunk_words": 256,
+ "overlap_words": 30,
+ "min_tail_words": 20,
+ "max_chars": 2000,
+ "build_date": "2026-10-30",
+ "chunks": 1550,
+ "digest": "41775c1b8b6a",
+ "attribution": "chunking and kb_main layout adapted from CrashingGuru/ITUAIReadiness (MIT, Copyright (c) 2026 Vishnu Ram OV)"
+}

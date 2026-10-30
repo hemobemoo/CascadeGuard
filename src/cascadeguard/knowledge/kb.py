@@ -57,7 +57,8 @@ import hashlib
 import json
 import os
 import re
-from collections.abc import Iterable, Sequence
+import time
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
@@ -86,6 +87,9 @@ QUERY_PREFIX = "query: "
 PREFIX_RULE = f"text prefixed client-side: documents {DOCUMENT_PREFIX!r}, queries {QUERY_PREFIX!r}"
 BATCH = 32  # chunks per request
 RETRIES = 3  # after the first attempt
+PACE_SECONDS = 3.2  # between requests: under 20 a minute, OpenRouter's free-model limit
+BACKOFF_SECONDS = 10.0  # before a retry, doubling: 10, 20, 40
+MAX_BACKOFF_SECONDS = 120.0
 EMBED_ENV = ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")
 # Chunk settings of the reference code (config.py: chunk_size, chunk_overlap; ingest.py).
 CHUNK_WORDS = 256
@@ -357,7 +361,8 @@ def truncate(vectors: Vectors) -> Vectors:
 
 class OpenRouterEmbedder:
     """MODEL_SLUG through OpenRouter's embeddings endpoint (the `openai` SDK with OpenRouter's
-    base URL), BATCH texts per request, each request retried up to RETRIES times. The key comes
+    base URL), BATCH texts per request at most one per PACE_SECONDS, each request retried up to
+    RETRIES times after a backoff (Retry-After when the server sends one). The key comes
     from .env or the environment and never appears in a message."""
 
     def __init__(self, env_file: Path | None = None) -> None:
@@ -381,6 +386,8 @@ class OpenRouterEmbedder:
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
         self.requests = 0
+        self.sleep: Callable[[float], None] = time.sleep  # replaced in tests
+        self._last = -PACE_SECONDS
 
     def _embed(self, texts: Sequence[str]) -> Vectors:
         rows: list[list[float]] = []
@@ -388,15 +395,30 @@ class OpenRouterEmbedder:
             rows.extend(self._request(list(texts[i : i + BATCH])))
         return truncate(np.array(rows, dtype=np.float32))
 
+    @staticmethod
+    def _backoff(attempt: int, retry_after: float | None) -> float:
+        """The server's Retry-After when given (capped), else BACKOFF_SECONDS doubling."""
+        if retry_after is not None:
+            return min(retry_after, MAX_BACKOFF_SECONDS)
+        return BACKOFF_SECONDS * 2 ** (attempt - 1)
+
     def _request(self, batch: list[str]) -> list[list[float]]:
         problem = ""
-        for _ in range(1 + RETRIES):
+        problem_wait: float | None = None
+        for attempt in range(1 + RETRIES):
+            if attempt:
+                self.sleep(self._backoff(attempt, problem_wait))
+            if (wait := self._last + PACE_SECONDS - time.monotonic()) > 0:
+                self.sleep(wait)  # stay under the free models' per-minute limit
+            self._last = time.monotonic()
             self.requests += 1
+            problem_wait = None
             try:
                 response = self._client.embeddings.create(model=MODEL_SLUG, input=batch)
             except Exception as exc:  # network, HTTP or decoding error: retried
                 status = getattr(exc, "status_code", None)
                 problem = type(exc).__name__ + (f" (HTTP {status})" if status else "")
+                problem_wait = _retry_after(exc)
                 continue
             data = sorted(response.data, key=lambda d: d.index)
             vectors = [list(d.embedding) for d in data]
@@ -413,6 +435,17 @@ class OpenRouterEmbedder:
 
     def query(self, text: str) -> Vectors:
         return self._embed([QUERY_PREFIX + text])
+
+
+def _retry_after(exc: Exception) -> float | None:
+    """Seconds from a Retry-After header on an HTTP error, if any."""
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    value = headers.get("retry-after") if headers is not None else None
+    try:
+        return float(value) if value is not None else None
+    except ValueError:
+        return None
 
 
 @cache
