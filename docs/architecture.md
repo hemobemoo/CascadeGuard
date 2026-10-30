@@ -38,6 +38,14 @@ simulation/orchestrator  (deterministic code, not an agent)
   identical incident through the same orchestrator. `storage/audit.py` (DuckDB) records runs
   and comparisons; `storage/export.py` writes JSON and Markdown.
 
+- **Governance off (PR 4, comparison only).** `run(..., governance=Governance.OFF)` makes the
+  engine run every check as usual, then apply an action whose only reasons are in `WAIVABLE`
+  (`no_authority`, `authority_uncertain`, `restricted_by_clause`, `missing_prerequisite`,
+  `missing_information`), logging them in `LogEntry.waived`. Role permissions, recipient
+  boundaries, integrity and evidence checks are unchanged. `engine/governance.py` compares the
+  two runs; the default is on everywhere, repair search and replay use only governed runs, and
+  `expected_ungoverned.yaml` is the mode's own expected output, not a golden.
+
 ```
 baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ──> hard filter
   └─> for each repair: replay.apply_repair ──> run(...) ──> ReplayComparison ──> rank

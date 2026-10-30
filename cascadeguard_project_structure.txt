@@ -32,7 +32,8 @@ cascadeguard/
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
 │   ├── policy-inventory.md           [P1] table of the 23 PDFs (pages, text, issuer, date)
-│   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor
+│   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor;
+│   │                                 [PR 4] governance-off/ (UI screenshot of step h)
 │   │                                 (also phase reports; [P6] phase-6-ui/ and [P6b]
 │   │                                 phase-6b-polish/ before/after reports and screenshots)
 │   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
@@ -77,6 +78,7 @@ cascadeguard/
 │   │   ├── constraints.py            accept / reject proposed actions against clauses
 │   │   ├── graph.py                  NetworkX dependency graph (roles, data flows, obligations)
 │   │   ├── diagnosis.py              locate the cross-agency coordination failure
+│   │   ├── governance.py             [PR 4] governed vs ungoverned comparison (--governance off; comparison only)
 │   │   └── repair_search.py          [P3] enumerate + rank repairs (lexicographic, see AGENTS.md)
 │   │
 │   ├── agents/
@@ -92,7 +94,8 @@ cascadeguard/
 │   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006);
 │   │                                 [P6b] display names from scenarios/<id>/display.yaml (spec 006b)
 │   │   ├── app.py                    one page: renders only (port 8765, CASCADEGUARD_UI_PORT);
-│   │   │                             [P6] precomputed results, guided/expert, sections a-g
+│   │   │                             [P6] precomputed results, guided/expert, sections a-g;
+│   │   │                             [PR 4] step h: governed vs ungoverned
 │   │   ├── theme.css                 [P6] design tokens (light/dark, clause status colours)
 │   │   └── view_model.py             formats engine results into labelled rows (no decisions);
 │   │                                 replaces the planned timeline/graph_view/replay_view
@@ -124,6 +127,7 @@ cascadeguard/
 │       ├── roles.yaml                the six institutional roles + information boundaries
 │       ├── scripted_decisions.yaml   [P2] decisions used by ScriptedAgent
 │       ├── expected_baseline.yaml    golden: the failure that MUST reproduce
+│       ├── expected_ungoverned.yaml  [PR 4] NOT a golden: expected output of --governance off
 │       ├── expected_repairs.yaml     [P3] golden: ranked search + one successful and one
 │       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
 │       ├── evaluation_findings.yaml  [P6] recorded scripted-vs-LLM findings shown in the UI

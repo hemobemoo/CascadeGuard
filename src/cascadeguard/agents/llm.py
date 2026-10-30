@@ -30,8 +30,8 @@ from cascadeguard.domain.decisions import (
     NoDecisionReason,
     ProposedAction,
 )
+from cascadeguard.knowledge.kb import KB_HOST, index_cache_key, is_openrouter_https, search_kb
 from cascadeguard.knowledge.kb import PROMPT_K as KB_PROMPT_K
-from cascadeguard.knowledge.kb import index_cache_key, search_kb
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
@@ -74,6 +74,15 @@ class LLMConfig:
     base_url: str
     model: str
     output_mode: str = DEFAULT_OUTPUT_MODE
+
+    def __post_init__(self) -> None:
+        # AGENTS.md: the key and corpus text go only to openrouter.ai, as for the embedder. The
+        # message never repeats the URL (it could hold a key).
+        if not is_openrouter_https(self.base_url):
+            raise LLMConfigError(
+                f"OPENROUTER_BASE_URL must point at {KB_HOST} over https (AGENTS.md: the key and "
+                "corpus text go only to OpenRouter)"
+            )
 
     @staticmethod
     def _values(env_file: Path | None, needed: tuple[str, ...]) -> dict[str, str]:

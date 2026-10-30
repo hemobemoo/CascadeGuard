@@ -1,0 +1,193 @@
+# EXPECTED OUTPUT OF THE UNGOVERNED COMPARISON RUN (`--governance off`). NOT A GOLDEN.
+# The governed baseline (expected_baseline.yaml) is the result. This file pins what the
+# comparison mode shows, so a change to it is visible: an action the governed engine rejects
+# only for no_authority, authority_uncertain, restricted_by_clause, missing_prerequisite or
+# missing_information is applied anyway and lists those reasons under would_have_been_rejected
+# (human decision 2026-10-31, option B). Generated from the run on 2026-10-31 and checked line by
+# line against expected_baseline.yaml; change it only with an explanation in the commit.
+# Hypothetical scenario, synthetic data.
+scenario: uae_health_access
+clause_set: 'policies/reviewed: reviewed + illustrative clauses'
+governance: 'off'
+actions:
+- minute: 0
+  role: telecom_operator
+  action: investigate_network_fault
+  verdict: accepted
+- minute: 15
+  role: health_service_operator
+  action: raise_security_incident
+  verdict: accepted
+- minute: 30
+  role: health_service_operator
+  action: request_information
+  target: telecom_operator
+  verdict: accepted
+- minute: 30
+  role: health_service_operator
+  action: share_incident_status
+  target: telecom_operator
+  verdict: rejected
+  reasons:
+  - outside_recipient_boundary
+  - authority_uncertain
+- minute: 30
+  role: telecom_operator
+  action: share_incident_status
+  target: health_service_operator
+  verdict: rejected
+  reasons:
+  - outside_recipient_boundary
+- minute: 45
+  role: health_service_operator
+  action: notify_health_data_oversight
+  verdict: accepted
+- minute: 45
+  role: health_service_operator
+  action: review_automated_lockouts
+  verdict: accepted
+- minute: 45
+  role: telecom_operator
+  action: report_to_telecom_regulator
+  verdict: accepted
+- minute: 45
+  role: telecom_regulator
+  action: request_information
+  target: telecom_operator
+  verdict: accepted
+- minute: 45
+  role: policy_legal_adviser
+  action: provide_policy_analysis
+  verdict: accepted
+- minute: 60
+  role: health_service_operator
+  action: reverse_automated_lockouts
+  verdict: accepted
+  would_have_been_rejected:
+  - missing_information
+  - no_authority
+- minute: 60
+  role: health_service_operator
+  action: activate_fallback_channel
+  verdict: accepted
+  would_have_been_rejected:
+  - authority_uncertain
+- minute: 60
+  role: telecom_operator
+  action: share_incident_status
+  target: telecom_regulator
+  verdict: accepted
+- minute: 60
+  role: health_data_oversight
+  action: issue_determination
+  verdict: accepted
+  would_have_been_rejected:
+  - authority_uncertain
+- minute: 60
+  role: public_access_inclusion
+  action: assess_access_impact
+  verdict: accepted
+- minute: 60
+  role: public_access_inclusion
+  action: recommend_measure
+  target: health_service_operator
+  verdict: accepted
+- minute: 60
+  role: policy_legal_adviser
+  action: provide_policy_analysis
+  verdict: accepted
+- minute: 75
+  role: telecom_regulator
+  action: share_incident_status
+  target: health_service_operator
+  verdict: rejected
+  reasons:
+  - outside_recipient_boundary
+rejected_decisions: []
+obligations:
+- clause: illus.telecom.incident-report
+  role: telecom_operator
+  action: report_to_telecom_regulator
+  due: 60
+  fulfilled: 45
+  missed: false
+  firm: true
+- clause: dha.pp11.4-18-2
+  role: health_service_operator
+  action: raise_security_incident
+  due: null
+  fulfilled: 15
+  missed: false
+  firm: false
+- clause: dha.pp11.4-18-4
+  role: health_service_operator
+  action: notify_health_data_oversight
+  due: null
+  fulfilled: 45
+  missed: false
+  firm: false
+facts_released:
+- minute: 0
+  role: telecom_operator
+  fact: sms_latency_spike
+- minute: 0
+  role: telecom_operator
+  fact: traffic_model_update
+- minute: 15
+  role: health_service_operator
+  fact: otp_failure_spike
+- minute: 15
+  role: health_service_operator
+  fact: fraud_alert_credential_stuffing
+- minute: 15
+  role: health_service_operator
+  fact: locked_account_records
+- minute: 30
+  role: telecom_operator
+  fact: network_fault_partial
+- minute: 30
+  role: telecom_operator
+  fact: otp_delivery_status
+- minute: 30
+  role: health_service_operator
+  fact: no_confirmed_intrusion
+- minute: 60
+  role: health_service_operator
+  fact: patients_still_locked_out
+- minute: 60
+  role: public_access_inclusion
+  fact: patients_still_locked_out
+- minute: 60
+  role: health_service_operator
+  fact: call_centre_not_authorised
+- minute: 60
+  role: public_access_inclusion
+  fact: call_centre_not_authorised
+- minute: 60
+  role: telecom_regulator
+  fact: otp_delivery_status
+goals:
+  patient_access_restored: met at T+60
+  alert_cause_known_to_health: unmet
+  network_incident_reported: met at T+45
+findings:
+- minute: 15
+  role: health_service_operator
+  kind: deadline_undetermined
+  clauses:
+  - dha.pp11.4-18-2
+- minute: 15
+  role: health_service_operator
+  kind: deadline_undetermined
+  clauses:
+  - dha.pp11.4-18-4
+failures:
+- id: information_deadlock:network_incident_status->health_service_operator
+  category: information_deadlock
+  goals:
+  - alert_cause_known_to_health
+  roles:
+  - health_service_operator
+  - telecom_operator
+  - telecom_regulator
+  clauses: []
