@@ -8,7 +8,8 @@ corpus (hypothetical repair rules in a replay) are shown so an agent can adapt t
 marked not citable. Extracted PDF text is unreviewed context: never a clause, never citable,
 and the two published books, the TRA-era cyber strategy, the news item on the 2025 strategy and
 the Charter's unreliable text layer (NOT_SEARCHED) are always excluded. For a source whose text
-layer is unreliable, only its reviewed page-image transcriptions are searched.
+layer is unreliable, only its reviewed page-image transcriptions are searched, and only while
+each matches the digest the human pinned (`reviewed_transcriptions`).
 """
 
 import hashlib
@@ -21,11 +22,11 @@ from pathlib import Path
 from cascadeguard.domain.policies import TRANSCRIBED_SOURCES, WEB_FLAG, PolicyClause
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.knowledge.loader import (
+    APPROVALS_FILE,
     BOOK_MARKERS,
     EXTRACTED_DIR,
     TRANSCRIPTIONS_DIR,
-    ClauseLoadError,
-    transcription_key,
+    reviewed_transcriptions,
 )
 
 NOT_CITABLE_LABEL = "hypothetical repair rule (not a source clause; not citable)"
@@ -133,33 +134,11 @@ def _not_searched(name: str) -> bool:
     return _is_book(name) or Path(name).stem.casefold() in NOT_SEARCHED_STEMS
 
 
-def _reviewed_transcriptions(transcriptions_dir: Path) -> list[dict[str, object]]:
-    """Reviewed page-image transcriptions of TRANSCRIBED_SOURCES, in file and page order. Draft
-    ones wait for the human's check against the image and are never searched. Two records for one
-    page are refused, so an unchecked one cannot ride along with the approved one."""
-    records: list[dict[str, object]] = []
-    seen: set[tuple[str, int]] = set()
-    for path in sorted(transcriptions_dir.glob("*.jsonl")):
-        for line in path.read_text("utf-8").splitlines():
-            if not line:
-                continue
-            record: dict[str, object] = json.loads(line)
-            key = transcription_key(record, path.name)
-            if key in seen:
-                raise ClauseLoadError(f"{path.name}: two records for page {key[1]}")
-            seen.add(key)
-            if (
-                record.get("transcribed") is True
-                and record.get("status") == "reviewed"
-                and record.get("source_file") in TRANSCRIBED_SOURCES
-            ):
-                records.append(record)
-    return records
-
-
 @cache
 def extracted_digest(
-    extracted_dir: Path = EXTRACTED_DIR, transcriptions_dir: Path = TRANSCRIPTIONS_DIR
+    extracted_dir: Path = EXTRACTED_DIR,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+    approvals_file: Path = APPROVALS_FILE,
 ) -> str:
     """Digest of the searchable text: extracted text (books and NOT_SEARCHED excluded) and the
     reviewed transcriptions. Snippets are not part of a view, so this goes into the prompt
@@ -170,7 +149,7 @@ def extracted_digest(
         if not _not_searched(path.name):
             records = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
             digest.update(json.dumps([path.name, records], sort_keys=True).encode() + b"\n")
-    transcribed = _reviewed_transcriptions(transcriptions_dir)
+    transcribed = reviewed_transcriptions(transcriptions_dir, approvals_file)
     if transcribed:  # with none, the digest is what it was before transcriptions existed
         digest.update(json.dumps(["transcriptions", transcribed], sort_keys=True).encode())
     return digest.hexdigest()[:12]
@@ -182,6 +161,7 @@ def search_extracted(
     extracted_dir: Path = EXTRACTED_DIR,
     width: int = 400,
     transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+    approvals_file: Path = APPROVALS_FILE,
 ) -> tuple[Snippet, ...]:
     """Pages of policies/extracted/ and reviewed transcriptions that contain the most query words
     (case-insensitive). Deterministic: ties are broken by file name and page. The books and
@@ -203,7 +183,7 @@ def search_extracted(
             if score:
                 label = WEB_CONTEXT_LABEL if page.get("web") is True else CONTEXT_LABEL
                 scored.append((-score, source, number, text, label))
-    for page in _reviewed_transcriptions(transcriptions_dir):
+    for page in reviewed_transcriptions(transcriptions_dir, approvals_file):
         source, number, text = str(page["source_file"]), int(str(page["page"])), str(page["text"])
         score = sum(text.casefold().count(w) for w in words)
         if score:
