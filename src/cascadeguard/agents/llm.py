@@ -16,7 +16,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, cast
-from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 from pydantic import Field, ValidationError
@@ -31,7 +30,7 @@ from cascadeguard.domain.decisions import (
     NoDecisionReason,
     ProposedAction,
 )
-from cascadeguard.knowledge.kb import KB_HOST, index_cache_key, search_kb
+from cascadeguard.knowledge.kb import KB_HOST, index_cache_key, is_openrouter_https, search_kb
 from cascadeguard.knowledge.kb import PROMPT_K as KB_PROMPT_K
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.knowledge.retrieval import (
@@ -79,8 +78,7 @@ class LLMConfig:
     def __post_init__(self) -> None:
         # AGENTS.md: the key and corpus text go only to openrouter.ai, as for the embedder. The
         # message never repeats the URL (it could hold a key).
-        url = urlsplit(self.base_url)
-        if url.scheme != "https" or url.hostname != KB_HOST:
+        if not is_openrouter_https(self.base_url):
             raise LLMConfigError(
                 f"OPENROUTER_BASE_URL must point at {KB_HOST} over https (AGENTS.md: the key and "
                 "corpus text go only to OpenRouter)"

@@ -37,6 +37,9 @@ class GovernanceComparison:
             raise ValueError("the governed run must have governance on")
         if self.ungoverned.governance is not Governance.OFF:
             raise ValueError("the ungoverned run must have governance off")
+        same = ("scenario_id", "clause_set", "agents", "scripted", "loaded_clauses")
+        if any(getattr(self.governed, f) != getattr(self.ungoverned, f) for f in same):
+            raise ValueError("both runs must use the same scenario, clauses and agents")
 
     @property
     def failed_steps(self) -> tuple[tuple[str, int, str, str], ...]:
@@ -73,14 +76,18 @@ class GovernanceComparison:
         return tuple(f.id for f in self.ungoverned.causes if f.id not in shown)
 
     def changed_actions(self) -> list[dict[str, Any]]:
-        """Actions whose verdict differs between the runs (same minute, role, action, target)."""
+        """Actions whose verdict differs between the runs: the n-th proposal of the same action
+        (minute, role, action, target, data category) in each run, so repeats are kept apart."""
 
-        def verdicts(result: RunResult) -> dict[tuple[int, str, str, str], str]:
-            return {
-                (e.minute, e.role or "", e.action, e.target or ""): e.kind
-                for e in result.log
-                if e.kind in ("accepted", "rejected") and e.action is not None
-            }
+        def verdicts(result: RunResult) -> dict[tuple[int, str, str, str, str, int], str]:
+            seen: dict[tuple[int, str, str, str, str], int] = {}
+            out: dict[tuple[int, str, str, str, str, int], str] = {}
+            for e in result.log:
+                if e.kind in ("accepted", "rejected") and e.action is not None:
+                    k = (e.minute, e.role or "", e.action, e.target or "", e.data_category or "")
+                    seen[k] = seen.get(k, 0) + 1
+                    out[(*k, seen[k])] = e.kind
+            return out
 
         before, after = verdicts(self.governed), verdicts(self.ungoverned)
         return [

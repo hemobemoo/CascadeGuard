@@ -653,6 +653,7 @@ def test_the_embedder_refuses_a_host_other_than_openrouter(
         "http://example.invalid/v1",
         "https://openrouter.ai.evil.test/api/v1",
         "http://openrouter.ai/api/v1",
+        "https://user@[SECRETTOKEN123]/api/v1",
     ):
         monkeypatch.setenv("OPENROUTER_BASE_URL", url)
         with pytest.raises(KnowledgeBaseError, match=r"must point at openrouter\.ai") as err:

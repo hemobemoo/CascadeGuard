@@ -2,6 +2,7 @@
 never the default, and refused where it could mislead or cost money."""
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -91,11 +92,74 @@ def test_agents_see_the_same_views_until_a_waived_action_changes_the_state(
     assert [v for v in comparison.governed.views if v.minute <= first] == [
         v for v in comparison.ungoverned.views if v.minute <= first
     ]
+    # Later, only the role's own history differs, and only by its waived actions.
+    waived = {(e.role, f"T+{e.minute} {e.action}") for e in comparison.ungoverned.log if e.waived}
+    for on, off in zip(comparison.governed.views, comparison.ungoverned.views, strict=True):
+        assert replace(on, own_history=()) == replace(off, own_history=())
+        extra = set(off.own_history) - set(on.own_history)
+        assert set(on.own_history) <= set(off.own_history)
+        assert extra == {h for r, h in waived if r == off.role_id and off.minute > first}
 
 
 def test_runs_must_be_given_in_order(comparison: GovernanceComparison) -> None:
     with pytest.raises(ValueError):
         GovernanceComparison(comparison.ungoverned, comparison.governed)
+    for field, value in (("scenario_id", "other"), ("clause_set", "other"), ("agents", "other")):
+        with pytest.raises(ValueError, match="same scenario"):
+            GovernanceComparison(
+                comparison.governed, replace(comparison.ungoverned, **{field: value})
+            )
+
+
+def test_repeated_proposals_are_compared_one_by_one() -> None:
+    """Each repeat of an action is its own row, so changed actions match the waived ones."""
+    from cascadeguard.agents.base import Agent
+    from cascadeguard.domain.decisions import AgentDecision
+    from cascadeguard.simulation.boundaries import RoleView
+    from cascadeguard.simulation.orchestrator import run
+
+    w = load_world(SCENARIO)
+    inner = w.agents["health_service_operator"]
+
+    class Repeats:
+        role_id = "health_service_operator"
+
+        def observe(self, view: RoleView) -> AgentDecision:
+            d = inner.observe(view)
+            if view.minute != 60:
+                return d
+            again = d.proposed_actions[:1] * 3  # reverse_automated_lockouts, three times
+            return d.model_copy(update={"proposed_actions": (*again, *d.proposed_actions[1:])})
+
+    agents: dict[str, Agent] = {**w.agents, "health_service_operator": Repeats()}
+    runs = [
+        run(w.scenario, w.roles, w.clauses, w.corpus_ids, agents, w.label, g)
+        for g in (Governance.ON, Governance.OFF)
+    ]
+    c = GovernanceComparison(*runs)
+    assert len(c.waived()) == 5
+    assert len(c.changed_actions()) == len(c.waived())
+
+
+def test_offline_llm_agents_build_no_client_and_say_when_not_comparable(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Human decision 2026-10-31: LLM agents with --governance off only from the cache. With an
+    empty cache no step has a decision, so the comparison is withheld; no client is built."""
+
+    def no_client(*_: object, **__: object) -> None:
+        raise AssertionError("no client may be built")
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("CASCADEGUARD_MODEL", "test/governance-no-such-model")
+    monkeypatch.setattr("cascadeguard.agents.llm.ENV_FILE", tmp_path / "absent.env")
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", no_client)
+    args = ["run", SCENARIO, "--governance", "off", "--agents", "llm", "--offline"]
+    assert main([*args, "--cache", str(tmp_path / "cache")]) == 0
+    out = capsys.readouterr().out
+    assert "## Not comparable" in out
+    assert "72 steps had no decision (36 in the governed run, 36 in the ungoverned run)" in out
+    assert "0 steps reused, 72 not cached" in out
 
 
 def test_cli_prints_and_exports_the_comparison(
