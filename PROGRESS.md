@@ -1145,6 +1145,28 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**PR 3 (vector knowledge base), open, not merged (2026-10-30):**
+- Confirm the `AGENTS.md` amendment (gate 6) as committed in 93c266a; the phase-auditor
+  asks for the confirmation in the PR.
+- Confirm the acceptance criteria: there is no spec or "Done when" for PR 3; the PR body
+  restates the hand-off rules it was audited against.
+- TDRA duplicate copy: both copies show up in the same top-k; drop one from both paths?
+- Evidence-auditor MINORs, human choice: OCR pages (TDRA `.ocr`) carry only "context only;
+  not citable" despite unchecked OCR errors; web/06 and web/07 are marked superseded in
+  MANIFEST.md but are still searched and indexed; web pages begin with their YAML headers.
+  Each changes the keyword path and the index together (rebuild: 49 free requests).
+- Whether the gate-4 recording run uses `--kb-context`.
+- Test-breaker QUESTION: a knowledge-base chunk shows every role the ids and status labels of
+  reviewed clauses on that text, including clauses outside the role's own clauses (the engine
+  still rejects such citations: `citation_out_of_scope`, probed). Keep, or list only the
+  role's own clauses?
+- Test-breaker MINORs deferred (PR 3 review, no guarantee broken): query embeddings are not
+  counted under `--cap` (free model, but `--cap` says "max requests"); nothing checks that
+  `OPENROUTER_BASE_URL` is an openrouter.ai host (LLM path alike; the amended AGENTS.md rule
+  names openrouter.ai); `--kb-context` and `--extracted-context` are silently ignored with
+  scripted agents. Fixed in PR 3: `vectors.npy` SHA-256 checked on load; a malformed index is
+  a clear error; CLI tests for `kb export` and the `--kb-context` error paths.
+
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
 

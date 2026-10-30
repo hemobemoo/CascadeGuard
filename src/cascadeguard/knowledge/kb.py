@@ -16,7 +16,7 @@ vectors can differ slightly between calls, and that must not change the `+kb:` p
 or the LLM cache keys. The build date is recorded but is not part of the digest.
 
 Search is exact cosine similarity over the committed vectors (numpy; no vector database at
-about 1,250 chunks), scores rounded to SCORE_DECIMALS and ties broken by chunk id, so the order
+1,550 chunks), scores rounded to SCORE_DECIMALS and ties broken by chunk id, so the order
 does not depend on the last bits of a query embedding. Only the query is embedded at search
 time; that needs OPENROUTER_API_KEY and OPENROUTER_BASE_URL (.env) and the network, and fails
 with a clear message without them. The scripted demo and the keyword path never touch it.
@@ -284,6 +284,8 @@ def write_index(
         "build_date": build_date,
         "chunks": len(chunks),
         "digest": digest,
+        # Integrity only, never part of the digest: a rebuild may change it (module docstring).
+        "vectors_sha256": _sha256(kb_dir / "vectors.npy"),
         "attribution": "chunking and kb_main layout adapted from CrashingGuru/ITUAIReadiness "
         "(MIT, Copyright (c) 2026 Vishnu Ram OV)",
     }
@@ -303,6 +305,10 @@ class Index:
         return str(self.manifest["digest"])
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _read_chunks(kb_dir: Path) -> list[Chunk]:
     lines = (kb_dir / "chunks.jsonl").read_text("utf-8").splitlines()
     return [Chunk.from_record(json.loads(line)) for line in lines if line]
@@ -316,18 +322,27 @@ def load_index(
 ) -> Index:
     """The committed index, refused unless its chunks equal the current corpus re-chunked
     (same page rules and runtime pin check as the search), its manifest matches the settings and
-    its digest, and it has one vector per chunk."""
+    its digest, and vectors.npy matches its recorded SHA-256 with one vector per chunk. A
+    malformed file is a KnowledgeBaseError, never a traceback."""
     if not (kb_dir / "manifest.json").exists():
         raise KnowledgeBaseError(f"no index in {kb_dir.name}/: run scripts/build_kb.py")
-    manifest: dict[str, Any] = json.loads((kb_dir / "manifest.json").read_text("utf-8"))
-    chunks = _read_chunks(kb_dir)
+    try:
+        manifest: dict[str, Any] = json.loads((kb_dir / "manifest.json").read_text("utf-8"))
+        chunks = _read_chunks(kb_dir)
+        digest, vectors_sha256 = str(manifest["digest"]), str(manifest["vectors_sha256"])
+        vectors: Vectors = np.load(kb_dir / "vectors.npy", allow_pickle=False).astype(np.float32)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise KnowledgeBaseError(
+            f"malformed index in {kb_dir.name}/ ({type(exc).__name__}): rebuild it"
+        ) from None
     if any(manifest.get(k) != v for k, v in settings().items()):
         raise KnowledgeBaseError("manifest settings differ from the code: rebuild the index")
-    if digest_of(chunks) != manifest["digest"]:
+    if digest_of(chunks) != digest:
         raise KnowledgeBaseError("chunks.jsonl does not match the manifest digest")
     if chunks != build_chunks(extracted_dir, transcriptions_dir, approvals_file):
         raise KnowledgeBaseError("the corpus changed since the index was built: rebuild it")
-    vectors: Vectors = np.load(kb_dir / "vectors.npy", allow_pickle=False).astype(np.float32)
+    if _sha256(kb_dir / "vectors.npy") != vectors_sha256:
+        raise KnowledgeBaseError("vectors.npy does not match the manifest: rebuild the index")
     if vectors.shape != (len(chunks), DIMENSIONS):
         raise KnowledgeBaseError("vectors.npy does not have one row per chunk")
     return Index(tuple(chunks), _unit(vectors), manifest)
