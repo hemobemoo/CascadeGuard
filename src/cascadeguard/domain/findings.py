@@ -28,6 +28,8 @@ class LogEntry(DomainModel):
     detail: str = ""
     reasons: tuple[str, ...] = ()  # rejection reason codes
     clause_ids: tuple[str, ...] = ()
+    # --governance off only: the reasons the governed engine would have rejected this action for
+    waived: tuple[str, ...] = ()
 
 
 class Finding(DomainModel):
