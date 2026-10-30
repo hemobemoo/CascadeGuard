@@ -7,6 +7,8 @@ cascadeguard kb query "<text>" [-k N] | cascadeguard kb export <path>
 """
 
 import argparse
+import io
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -594,6 +596,11 @@ def format_hits(hits: Sequence[Hit]) -> str:
 
 
 def _kb(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    # Chunk text holds characters a legacy console code page cannot encode (cp1252 on Windows):
+    # replace them rather than fail with a traceback (test-breaker round 3).
+    stdout: object = sys.stdout
+    if isinstance(stdout, io.TextIOWrapper):
+        stdout.reconfigure(errors="replace")
     try:
         if args.kb_command == "query":
             print(format_hits(search_kb(args.text, args.k)))

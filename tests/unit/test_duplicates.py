@@ -159,3 +159,15 @@ def test_kb_context_with_scripted_agents_stops_with_a_clear_error(
     out = capsys.readouterr().out
     assert "--kb-context gives context to LLM agents only" in out and "Traceback" not in out
     assert main(["repairs", "uae_health_access", "--kb-context"]) == 2
+
+
+def test_the_keyword_digest_follows_the_pages_reviewed_clauses_quote(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """phase-auditor round 3: quoted pages pick a duplicate group's primary, so a change to them
+    must change the +extracted: prompt version."""
+    from cascadeguard.knowledge import retrieval
+
+    before = retrieval.extracted_digest.__wrapped__()
+    monkeypatch.setattr(retrieval, "_quoted_pages", lambda: frozenset({("web/05_x.pdf", 1)}))
+    assert retrieval.extracted_digest.__wrapped__() != before

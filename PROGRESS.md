@@ -1153,6 +1153,18 @@ labelled "OCR text, unchecked"; a role sees only its own clause ids on a chunk. 
   host since round 2; the amended AGENTS.md rule names openrouter.ai).
 - Deferred MINOR (test-breaker round 1): query embeddings are not counted under `--cap` (free
   model, but `--cap` says "max requests").
+- **Gate 6 question (test-breaker round 3, the last review round):** the amended AGENTS.md
+  exception (2) says extracted text and reviewed transcriptions "may be sent only to the
+  OpenRouter embeddings endpoint". But `--kb-context`, and the earlier, approved
+  `--extracted-context`, put that text into chat prompts to the configured OpenRouter LLM
+  (`CASCADEGUARD_MODEL`). Widen the exception to the configured OpenRouter chat model, or drop
+  both context flags? Either way, add a test pinning which endpoint each kind of text reaches.
+  Same rule as the LLM-path host check below.
+- **Recorded (test-breaker round 3 asked):** the `+kb:` digest leaves out the vectors by the
+  human's round-1 instruction (2026-10-30: "not from vectors.npy ... must not change the `+kb:`
+  prompt version"). Swapping vector rows keeps the digest, and the probe showed such a swap
+  changes the top 3; small noise (sigma 0.01) never did. Adding `vectors_sha256` to the key is
+  the human's call.
 - Round 3 (human, 2026-10-30), applied: exact duplicates collapse to a primary in both paths
   (the Charter p.4 tie with UAE Policy Foundation p.2 is resolved, nothing removed); tied
   scores share a rank (variant B); `--kb-context` with scripted agents stops with an error. The
@@ -1337,8 +1349,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 3 (#16, `vector-kb`): review round 2 pushed; wait for CI green on the latest head, then stop
-for the human (no merge; human, 2026-10-30). CI installs no `chroma` extra, so the test that
+PR 3 (#16, `vector-kb`): review round 3 pushed; wait for CI green on the latest head, then stop
+for the human (no merge; human, 2026-10-30). The ranking is locked for this PR. CI installs no `chroma` extra, so the test that
 loads the export into ChromaDB is skipped there and runs locally only (`uv sync --extra
 chroma`). Then PRs 4 and 5 (see "Current phase").
 

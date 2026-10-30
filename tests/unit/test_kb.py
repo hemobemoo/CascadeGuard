@@ -667,3 +667,51 @@ def test_tied_scores_share_the_best_rank() -> None:
         1: 5,
     }
     assert kb.shared_ranks({}) == {}
+
+
+def test_kb_query_survives_a_legacy_console_code_page(monkeypatch: pytest.MonkeyPatch) -> None:
+    """test-breaker round 3: chunk text with U+F0B7 crashed `kb query` on a cp1252 stdout."""
+    import io
+    import sys
+
+    index = fake_index()
+    odd = replace(index.chunks[0], text="bullet \uf0b7 arrow \u25bc incident report")
+    index = Index((odd, *index.chunks[1:]), index.vectors, index.manifest)
+
+    def fake_search(text: str, k: int = 5) -> tuple[kb.Hit, ...]:
+        return search_kb(text, k, index=index, embedder=FakeEmbedder())
+
+    monkeypatch.setattr("cascadeguard.cli.search_kb", fake_search)
+    raw = io.BytesIO()
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(raw, encoding="cp1252"))
+    assert main(["kb", "query", "incident report"]) == 0
+    sys.stdout.flush()
+    assert b"incident report" in raw.getvalue()
+
+
+def test_a_deeply_nested_or_empty_file_is_a_clear_error(tmp_path: Path) -> None:
+    shutil.copytree(KB_DIR, tmp_path / "kb")
+    (tmp_path / "kb" / "chunks.jsonl").write_text("[" * 100000 + "]" * 100000, encoding="utf-8")
+    with pytest.raises(KnowledgeBaseError, match="malformed index"):
+        load_index(tmp_path / "kb")
+    (tmp_path / "kb" / "query_vectors.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(KnowledgeBaseError, match="malformed query_vectors"):
+        kb.StoredQueries("x", tmp_path / "kb")
+
+
+@pytest.mark.parametrize("bad", ["nan", "zero"])
+def test_a_nan_or_zero_query_vector_is_refused(bad: str) -> None:
+    """test-breaker round 3: NaN ranked arbitrarily; all zeros tied every chunk."""
+
+    class Bad:
+        def documents(self, texts: Sequence[str]) -> Vectors:
+            raise AssertionError
+
+        def query(self, text: str) -> Vectors:
+            vector = np.zeros((1, 64), dtype=np.float32)
+            if bad == "nan":
+                vector[0, 0] = np.nan
+            return vector
+
+    with pytest.raises(KnowledgeBaseError, match="not finite or is all zeros"):
+        search_kb("incident", index=fake_index(), embedder=Bad())
