@@ -380,6 +380,29 @@ def test_guided_flow_a_to_f(page: Page, tmp_path: Path) -> None:
         assert got == (cli / f"{name}.{suffix}").read_text(encoding="utf-8"), button
 
 
+def test_governance_off_step_shows_the_comparison(page: Page) -> None:
+    """PR 4: the governed and ungoverned runs side by side, the ungoverned one labelled
+    comparison only, with what was applied only because governance was off."""
+    page.locator('[data-testid="step-h"]').click()
+    h = section(page, "h")
+    expect(h).to_be_visible()
+    expect(section(page, "f")).to_be_hidden()
+    expect(h.locator('[data-testid="governance-banner"]')).to_have_text(
+        "Governance off: comparison only, not the governed result."
+    )
+    split = h.locator('[data-testid="governance"]')
+    expect(split.get_by_text("Governed (the result)")).to_be_visible()
+    expect(split.get_by_text("Ungoverned (comparison only)")).to_be_visible()
+    expect(split.get_by_text("Patient access restored: unmet")).to_be_visible()
+    expect(split.get_by_text("Patient access restored: met at T+60")).to_be_visible()
+    expect(split.get_by_text("goal met but the cause is still present").first).to_be_visible()
+    waived = h.locator('[data-testid="governance-waived"]')
+    expect(waived).to_contain_text("would have been rejected (missing_information, no_authority)")
+    expect(waived).to_contain_text("[reviewed (interpreted) · binding unknown]")
+    page.get_by_text("Expert", exact=True).click()
+    expect(h).to_be_visible()
+
+
 def test_expert_mode_shows_every_section(page: Page) -> None:
     page.get_by_text("Expert", exact=True).click()
     for key in "abcdefgx":
