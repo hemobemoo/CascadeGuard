@@ -6,13 +6,16 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
-**State of main.** Submission PRs 1 and 2 are merged (#14 labels/licence/README; #15 Charter).
+**State of main.** Submission PRs 1, 2 and 3 are merged (#14 labels/licence/README; #15 Charter;
+#16 vector knowledge base).
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
-**PR 3, vector knowledge base: PR #16 on `vector-kb`, open, not merged.** Stop once CI is green
-(human, 2026-10-30: don't merge). Round 2 (human, 2026-10-30) rebuilt the index for retrieval
-quality after Charter p.3 ranked 313th for a near-verbatim query.
+**PR 3, vector knowledge base: done, merged to main via PR #16** (2026-10-30, on the human's
+instruction, CI green; branch `vector-kb` deleted). Index digest 45714d5e2031 (4,235 chunks;
+the `+kb:` cache key adds the vectors' SHA-256). Round 2 (human, 2026-10-30) rebuilt the index
+for retrieval quality after Charter p.3 ranked 313th for a near-verbatim query; the ranking was
+then locked.
 - **Done when (human, 2026-10-30):** "removing AI systems that pose risks" -> Charter p.3 in the
   top 3; "human oversight of AI decisions" -> Charter p.4 in the top 3; three more queries with
   an obvious page in the top 5; the Arabic query still relevant; scripted path and both expected
@@ -36,22 +39,27 @@ quality after Charter p.3 ranked 313th for a near-verbatim query.
 - **From round 1:** OpenRouter embeddings (`nvidia/nemotron-3.5-embed-1b:free`, prefixes
   `passage: `/`query: ` client-side, 1,024 dimensions renormalised; prefix checks in the kb.py
   docstring), numpy search, `cascadeguard kb query` / `kb export` (ChromaDB `kb_main` format,
-  optional `chroma` extra), `--kb-context` (LLM only, `+kb:<digest>`), runtime pin check on
-  reviewed transcriptions, `vectors.npy` SHA-256 checked on load, AGENTS.md amendment (93c266a).
+  optional `chroma` extra), `--kb-context` (LLM only, `+kb:<digest>.<vectors sha>`), runtime pin
+  check on reviewed transcriptions, `vectors.npy` SHA-256 checked on load. AGENTS.md exceptions
+  (93c266a; exception (2) widened in cc8608a to LLM context via OpenRouter chat, human gate 6).
 
 **Open items.**
 - **Paid recording run (gate 4):** the role views changed (labels; the safety clause now
   reaches the `policy_legal_adviser`), so the local LLM cache no longer matches. One governed
   LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
   merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
-  after checking they hold no secrets. Whether that run uses `--kb-context` is the human's call.
+  after checking they hold no secrets. **It uses `--kb-context`** (human, 2026-10-30).
+- **Before gate 4:** the host check on the LLM path (nothing yet checks that the LLM client's
+  `OPENROUTER_BASE_URL` is an openrouter.ai host; the embedder already refuses another host).
+- **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
+  "max requests").
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**
   - the case-folded and string-type source checks in `transcription_key` have no test;
   - malformed transcription lines (blank, BOM, `null`, U+2028 inside text) raise
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- PRs 4 (`--governance off`) and 5 (gap analysis, traces) follow PR 3; see "Current phase".
+- Next: PR 4 (`--governance off`), then PR 5 (gap analysis, traces); see "Current phase".
 
 ## Current phase
 
@@ -61,7 +69,7 @@ PRs follow, one at a time; each stops once open with CI green:
 1. **Label refinements, web/03 exclusion, licence and README:** merged (PR #14).
 2. **Charter source and re-quote:** merged (PR #15), after test-breaker round 5 passed.
    Both Charter clauses reviewed; all five pages transcribed and reviewed.
-3. **Vector knowledge base:** PR open on `vector-kb` (see "Start here"). Gate 3 revised by the
+3. **Vector knowledge base:** merged (PR #16; see "Start here"). Gate 3 revised by the
    human on 2026-10-30: OpenRouter embeddings (`nvidia/nemotron-3.5-embed-1b:free`) instead of
    local fastembed, numpy search instead of ChromaDB at runtime (ChromaDB only as an optional
    extra for the export test).
@@ -1141,34 +1149,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**PR 3 (vector knowledge base, PR #16), open, not merged.** Human answers 2026-10-30 (round 2),
-all applied: AGENTS.md amendment (93c266a) confirmed; acceptance criteria = the "Done when" in
-"Start here"; one TDRA copy in both paths (the OCR copy kept: the original has no text layer on
-pp.13-47); web/06 and web/07 excluded from both paths; web YAML headers stripped; OCR pages
-labelled "OCR text, unchecked"; a role sees only its own clause ids on a chunk. Still open:
-- Whether the gate-4 recording run uses `--kb-context`: decided after PR 3 meets its "Done
-  when" (human: not yet).
-- **Before gate 4 (human, 2026-10-30): the host check on the LLM path.** Nothing checks that
-  the LLM client's `OPENROUTER_BASE_URL` is an openrouter.ai host (the embedder refuses another
-  host since round 2; the amended AGENTS.md rule names openrouter.ai).
-- Deferred MINOR (test-breaker round 1): query embeddings are not counted under `--cap` (free
-  model, but `--cap` says "max requests").
-- **Gate 6 question (test-breaker round 3, the last review round):** the amended AGENTS.md
-  exception (2) says extracted text and reviewed transcriptions "may be sent only to the
-  OpenRouter embeddings endpoint". But `--kb-context`, and the earlier, approved
-  `--extracted-context`, put that text into chat prompts to the configured OpenRouter LLM
-  (`CASCADEGUARD_MODEL`). Widen the exception to the configured OpenRouter chat model, or drop
-  both context flags? Either way, add a test pinning which endpoint each kind of text reaches.
-  Same rule as the LLM-path host check below.
-- **Recorded (test-breaker round 3 asked):** the `+kb:` digest leaves out the vectors by the
-  human's round-1 instruction (2026-10-30: "not from vectors.npy ... must not change the `+kb:`
-  prompt version"). Swapping vector rows keeps the digest, and the probe showed such a swap
-  changes the top 3; small noise (sigma 0.01) never did. Adding `vectors_sha256` to the key is
-  the human's call.
-- Round 3 (human, 2026-10-30), applied: exact duplicates collapse to a primary in both paths
-  (the Charter p.4 tie with UAE Policy Foundation p.2 is resolved, nothing removed); tied
-  scores share a rank (variant B); `--kb-context` with scripted agents stops with an error. The
-  ranking is locked for this PR: a query that misses later is recorded, not tuned for.
+**PR 3 (vector knowledge base, PR #16): merged 2026-10-30** on the human's instruction after
+three review rounds (round-3 human gates answered: AGENTS.md exception (2) widened, cc8608a; the
+`--kb-context` cache key includes the vectors' SHA-256). Carried forward, see "Open items":
+the LLM-path host check before gate 4; query embeddings not counted under `--cap`.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
@@ -1349,10 +1333,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 3 (#16, `vector-kb`): review round 3 pushed; wait for CI green on the latest head, then stop
-for the human (no merge; human, 2026-10-30). The ranking is locked for this PR. CI installs no `chroma` extra, so the test that
-loads the export into ChromaDB is skipped there and runs locally only (`uv sync --extra
-chroma`). Then PRs 4 and 5 (see "Current phase").
+PR 4: `--governance off` (see "Current phase", item 4). New branch from main after PR #16.
+Before gate 4: the LLM-path host check.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.

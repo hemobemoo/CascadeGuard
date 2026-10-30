@@ -11,9 +11,11 @@ The index is built offline (`scripts/build_kb.py`) into policies/kb/: chunks.jso
 build date, digest). Loading it re-chunks the current corpus and refuses an index that no longer
 matches, so the index follows the same page rules as the search, including the runtime pin
 check on reviewed transcriptions. The digest (`index_digest`) is computed from the chunks, the
-model slug, the dimensions, the prefix rule and the chunk settings, never from the vectors: API
-vectors can differ slightly between calls, and that must not change the `+kb:` prompt version
-or the LLM cache keys. The build date is recorded but is not part of the digest.
+model slug, the dimensions, the prefix rule, the chunk and ranking settings, not the vectors.
+The `+kb:` LLM prompt version (`Index.cache_key`) is the digest plus the vectors' SHA-256: new
+vectors can change the chunks in a prompt, so they refresh the cache (human decision
+2026-10-30, replacing the round-1 rule that kept the vectors out of the key). The build date is
+recorded but is in neither.
 
 Search (human decision 2026-10-30, after Charter p.3 ranked 313th for a near-verbatim query
 with 256-word chunks) fuses two rankings by reciprocal rank fusion (RRF_K = 60): exact cosine
@@ -415,6 +417,13 @@ class Index:
     def digest(self) -> str:
         return str(self.manifest["digest"])
 
+    @property
+    def cache_key(self) -> str:
+        """The `+kb:` part of the LLM prompt version: the digest and the vectors' SHA-256, so a
+        change to the vectors, which can change the chunks in a prompt, refreshes the cache
+        (human decision 2026-10-30, replacing the round-1 rule that left the vectors out)."""
+        return f"{self.digest}.{str(self.manifest['vectors_sha256'])[:12]}"
+
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -467,8 +476,13 @@ def committed_index() -> Index:
 
 
 def index_digest() -> str:
-    """Digest of the committed index, for the LLM prompt version (`+kb:<digest>`)."""
+    """Digest of the committed index (loading it refuses a stale or tampered index)."""
     return committed_index().digest
+
+
+def index_cache_key() -> str:
+    """`Index.cache_key` of the committed index, for the LLM prompt version (`+kb:<key>`)."""
+    return committed_index().cache_key
 
 
 def _unit(vectors: Vectors) -> Vectors:
