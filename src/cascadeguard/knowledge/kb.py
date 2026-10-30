@@ -442,7 +442,7 @@ def load_index(
         chunks = _read_chunks(kb_dir)
         digest, vectors_sha256 = str(manifest["digest"]), str(manifest["vectors_sha256"])
         vectors: Vectors = np.load(kb_dir / "vectors.npy", allow_pickle=False).astype(np.float32)
-    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, RecursionError) as exc:
         raise KnowledgeBaseError(
             f"malformed index in {kb_dir.name}/ ({type(exc).__name__}): rebuild it"
         ) from None
@@ -480,6 +480,13 @@ class Embedder(Protocol):
     def documents(self, texts: Sequence[str]) -> Vectors: ...
 
     def query(self, text: str) -> Vectors: ...
+
+
+def usable(vectors: npt.NDArray[Any]) -> None:
+    """Refuse a vector that is not finite or has no direction: it would rank chunks arbitrarily
+    (NaN) or tie them all (zero), leaving the order to file names (test-breaker round 3)."""
+    if not np.all(np.isfinite(vectors)) or np.any(np.linalg.norm(vectors, axis=1) == 0):
+        raise KnowledgeBaseError("an embedding is not finite or is all zeros: refused")
 
 
 def truncate(vectors: Vectors) -> Vectors:
@@ -556,6 +563,7 @@ class OpenRouterEmbedder:
             data = sorted(response.data, key=lambda d: d.index)
             vectors = [list(d.embedding) for d in data]
             if len(vectors) == len(batch) and all(len(v) >= DIMENSIONS for v in vectors):
+                usable(np.array([v[:DIMENSIONS] for v in vectors], dtype=np.float64))
                 return vectors
             problem = f"{len(vectors)} vectors for {len(batch)} texts, or too few dimensions"
         raise KnowledgeBaseError(
@@ -611,7 +619,9 @@ def search_kb(
     embedder = embedder or _embedder()  # a missing key is reported first
     index = index or committed_index()
     chunks = index.chunks
-    vector = _unit(embedder.query(query))[0]
+    queried = embedder.query(query)
+    usable(queried)
+    vector = _unit(queried)[0]
     raw: Vectors = index.vectors @ vector
     cosine = [round(float(x), SCORE_DECIMALS) for x in raw]
     ranked = [i for i, c in enumerate(chunks) if c.duplicate_of is None]  # copies never rank
@@ -662,10 +672,19 @@ class StoredQueries:
     file built for another index or model, and any query it does not hold."""
 
     def __init__(self, digest: str, kb_dir: Path = KB_DIR) -> None:
-        data = json.loads((kb_dir / "query_vectors.json").read_text("utf-8"))
-        if data["index_digest"] != digest or data["model_slug"] != MODEL_SLUG:
+        try:
+            data = json.loads((kb_dir / "query_vectors.json").read_text("utf-8"))
+            built_for = (data["index_digest"], data["model_slug"])
+            stored = {str(k): np.array(v, dtype=np.float32) for k, v in data["vectors"].items()}
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, RecursionError) as exc:
+            raise KnowledgeBaseError(
+                f"malformed query_vectors.json ({type(exc).__name__})"
+            ) from None
+        if built_for != (digest, MODEL_SLUG):
             raise KnowledgeBaseError("query_vectors.json was built for another index or model")
-        self.vectors = {str(k): np.array(v, dtype=np.float32) for k, v in data["vectors"].items()}
+        for vector in stored.values():
+            usable(vector[None, :])
+        self.vectors = stored
 
     def documents(self, texts: Sequence[str]) -> Vectors:
         raise KnowledgeBaseError("stored query vectors embed no documents")

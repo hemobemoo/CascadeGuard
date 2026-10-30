@@ -242,10 +242,13 @@ def extracted_digest(
     approvals_file: Path = APPROVALS_FILE,
 ) -> str:
     """Digest of the searchable text exactly as served (`searchable_pages`: source, page, text
-    and label), so a changed corpus or serving rule never reuses a decision. Snippets are not
-    part of a view, so this goes into the prompt version. Built from the parsed records, so line
-    endings (CRLF checkouts on Windows) do not change it."""
+    and label), so a changed corpus or serving rule never reuses a decision. It also covers the
+    pages reviewed clauses quote, which pick the primary of a duplicate group (phase-auditor
+    round 3). Snippets are not part of a view, so this goes into the prompt version. Built from
+    the parsed records, so line endings (CRLF checkouts on Windows) do not change it."""
     digest = hashlib.sha256(DEDUPE_RULE.encode("utf-8") + b"\n")
+    quoted = sorted([source, page] for source, page in _quoted_pages())
+    digest.update(json.dumps(quoted, ensure_ascii=False).encode("utf-8") + b"\n")
     for page in searchable_pages(extracted_dir, transcriptions_dir, approvals_file):
         record = [page.source_file, page.page, page.text, page.label]
         digest.update(json.dumps(record, ensure_ascii=False).encode("utf-8") + b"\n")
