@@ -213,8 +213,19 @@ def test_a_stale_or_tampered_index_is_refused(tmp_path: Path, real_chunks: list[
         load_index(tmp_path / "tampered")
     write_index(chunks, vectors, "2026-10-30", tmp_path / "rows")
     np.save(tmp_path / "rows" / "vectors.npy", vectors[:-1])
-    with pytest.raises(KnowledgeBaseError, match="one row per chunk"):
+    with pytest.raises(KnowledgeBaseError, match="does not match the manifest"):
         load_index(tmp_path / "rows")
+    # test-breaker PR 3: reordered rows of the right shape were accepted with the same digest.
+    write_index(
+        chunks,
+        np.random.default_rng(1).random(vectors.shape, dtype=np.float32),
+        "d",
+        tmp_path / "order",
+    )
+    stored = np.load(tmp_path / "order" / "vectors.npy")
+    np.save(tmp_path / "order" / "vectors.npy", stored[::-1].copy())
+    with pytest.raises(KnowledgeBaseError, match="does not match the manifest"):
+        load_index(tmp_path / "order")
     with pytest.raises(KnowledgeBaseError, match="1024-dimension"):
         write_index(chunks, vectors[:, :8], "2026-10-30", tmp_path / "dims")
 
@@ -457,3 +468,81 @@ def test_the_scripted_demo_and_keyword_path_never_touch_the_embedding_api(
     monkeypatch.setattr("cascadeguard.agents.llm.search_kb", refuse)
     assert main(["run", "uae_health_access"]) == 0
     assert search_extracted("incident report", limit=2)
+
+
+@pytest.mark.parametrize(
+    "corrupt",
+    ["manifest not json", "manifest without digest", "chunk without label", "vectors not npy"],
+)
+def test_a_malformed_index_is_a_clear_error_not_a_traceback(
+    tmp_path: Path,
+    corrupt: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """test-breaker PR 3: malformed files raised KeyError or JSONDecodeError through the CLI."""
+    shutil.copytree(KB_DIR, tmp_path / "kb")
+    kb_dir = tmp_path / "kb"
+    manifest = kb_dir / "manifest.json"
+    if corrupt == "manifest not json":
+        manifest.write_text("{not json", encoding="utf-8")
+    elif corrupt == "manifest without digest":
+        data = json.loads(manifest.read_text("utf-8"))
+        del data["digest"]
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+    elif corrupt == "chunk without label":
+        path = kb_dir / "chunks.jsonl"
+        lines = path.read_text("utf-8").splitlines()
+        first = json.loads(lines[0])
+        del first["label"]
+        path.write_text("\n".join([json.dumps(first), *lines[1:]]), encoding="utf-8")
+    else:
+        (kb_dir / "vectors.npy").write_bytes(b"not an npy file")
+    with pytest.raises(KnowledgeBaseError, match="malformed index"):
+        load_index(kb_dir)
+
+    def stale() -> Index:
+        return load_index(kb_dir)
+
+    monkeypatch.setattr(kb, "committed_index", stale)
+    assert main(["kb", "export", str(tmp_path / "out.jsonl")]) == 2
+    out = capsys.readouterr().out
+    assert "malformed index" in out and "Traceback" not in out
+
+
+def test_kb_export_writes_every_committed_chunk(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "export_kb_main.jsonl"
+    assert main(["kb", "export", str(path)]) == 0
+    records = [json.loads(line) for line in path.read_text("utf-8").splitlines()]
+    assert len(records) == len(load_index().chunks) and len(records[0]["embedding"]) == DIMENSIONS
+    assert "ChromaDB kb_main format" in capsys.readouterr().out
+
+
+def test_llm_run_with_kb_context_stops_cleanly_on_a_bad_index_or_lost_network(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    """test-breaker PR 3: the CLI pre-check and the mid-run handler for --kb-context had no test."""
+    monkeypatch.setenv("CASCADEGUARD_MODEL", "test/model")
+
+    def bad_index() -> str:
+        raise KnowledgeBaseError("the corpus changed since the index was built: rebuild it")
+
+    monkeypatch.setattr("cascadeguard.cli.index_digest", bad_index)
+    args = ["run", "uae_health_access", "--agents", "llm", "--offline", "--kb-context"]
+    assert main([*args, "--cache", str(tmp_path / "cache")]) == 2
+    out = capsys.readouterr().out
+    assert "rebuild it" in out and "Traceback" not in out
+    monkeypatch.undo()
+
+    # Mid-run: the query embedding fails after the run has started.
+    from cascadeguard.cli import World
+
+    def lost(self: World) -> None:
+        raise KnowledgeBaseError("OpenRouter embeddings failed 4 times: ConnectionError")
+
+    monkeypatch.setattr(World, "baseline", lost)
+    assert main(["run", "uae_health_access"]) == 2
+    out = capsys.readouterr().out
+    assert "failed 4 times" in out and "Traceback" not in out
