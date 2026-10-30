@@ -159,6 +159,7 @@ class SimulationState:
         detail: str = "",
         reasons: tuple[str, ...] = (),
         clause_ids: tuple[str, ...] = (),
+        waived: tuple[str, ...] = (),
     ) -> LogEntry:
         entry = LogEntry(
             seq=len(self._log),
@@ -171,6 +172,7 @@ class SimulationState:
             detail=detail,
             reasons=reasons,
             clause_ids=clause_ids,
+            waived=waived,
         )
         self._log.append(entry)
         return entry
