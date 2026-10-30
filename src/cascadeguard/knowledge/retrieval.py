@@ -14,7 +14,7 @@ each matches the digest the human pinned (`reviewed_transcriptions`).
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -134,6 +134,29 @@ def _not_searched(name: str) -> bool:
     return _is_book(name) or Path(name).stem.casefold() in NOT_SEARCHED_STEMS
 
 
+def searchable_pages(
+    extracted_dir: Path = EXTRACTED_DIR,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+    approvals_file: Path = APPROVALS_FILE,
+) -> Iterator[Snippet]:
+    """Every searchable page, whole, with its label: the extracted text in file and line order
+    (books and NOT_SEARCHED excluded), then the reviewed transcriptions. The one corpus for the
+    keyword search and the vector index (knowledge.kb)."""
+    for path in sorted(extracted_dir.glob("*.jsonl")):
+        if _not_searched(path.name):
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            page = json.loads(line)
+            source, number, text = str(page["source_file"]), int(page["page"]), str(page["text"])
+            if _not_searched(source):
+                continue
+            label = WEB_CONTEXT_LABEL if page.get("web") is True else CONTEXT_LABEL
+            yield Snippet(source, number, text, label)
+    for page in reviewed_transcriptions(transcriptions_dir, approvals_file):
+        source, number, text = str(page["source_file"]), int(str(page["page"])), str(page["text"])
+        yield Snippet(source, number, text, TRANSCRIPTION_CONTEXT_LABEL)
+
+
 @cache
 def extracted_digest(
     extracted_dir: Path = EXTRACTED_DIR,
@@ -170,24 +193,10 @@ def search_extracted(
     if not words or limit <= 0:
         return ()
     scored: list[tuple[int, str, int, str, str]] = []
-    for path in sorted(extracted_dir.glob("*.jsonl")):
-        if _not_searched(path.name):
-            continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            page = json.loads(line)
-            source, number, text = str(page["source_file"]), int(page["page"]), str(page["text"])
-            if _not_searched(source):
-                continue
-            folded = text.casefold()
-            score = sum(folded.count(w) for w in words)
-            if score:
-                label = WEB_CONTEXT_LABEL if page.get("web") is True else CONTEXT_LABEL
-                scored.append((-score, source, number, text, label))
-    for page in reviewed_transcriptions(transcriptions_dir, approvals_file):
-        source, number, text = str(page["source_file"]), int(str(page["page"])), str(page["text"])
-        score = sum(text.casefold().count(w) for w in words)
+    for page in searchable_pages(extracted_dir, transcriptions_dir, approvals_file):
+        score = sum(page.text.casefold().count(w) for w in words)
         if score:
-            scored.append((-score, source, number, text, TRANSCRIPTION_CONTEXT_LABEL))
+            scored.append((-score, page.source_file, page.page, page.text, page.label))
     scored.sort(key=lambda s: s[:3])
     snippets: list[Snippet] = []
     for _, source, number, text, label in scored[:limit]:

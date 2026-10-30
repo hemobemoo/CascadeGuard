@@ -146,6 +146,35 @@ def skipped_texts(
     transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
 ) -> list[str] | None:
     """The page text each ELISION skips, in order; None if the quote is not on its page."""
+    found = _quote_match(clause, extracted_dir, transcriptions_dir)
+    if found is None:
+        return None
+    page_text, kept, spans = found
+    return [
+        page_text[kept[end] : kept[start - 1] + 1] if start > end else ""
+        for (_, end), (start, _) in pairwise(spans)
+    ]
+
+
+def quote_span(
+    clause: PolicyClause,
+    extracted_dir: Path = EXTRACTED_DIR,
+    transcriptions_dir: Path = TRANSCRIPTIONS_DIR,
+) -> tuple[int, int] | None:
+    """Character span of the clause's quote in its page text, from its first to its last
+    character (elided text included); None if the quote is not on its page."""
+    found = _quote_match(clause, extracted_dir, transcriptions_dir)
+    if found is None:
+        return None
+    _, kept, spans = found
+    return kept[spans[0][0]], kept[spans[-1][1] - 1] + 1
+
+
+def _quote_match(
+    clause: PolicyClause, extracted_dir: Path, transcriptions_dir: Path
+) -> tuple[str, list[int], list[tuple[int, int]]] | None:
+    """The cited page's text, the positions of its non-space characters, and the span of each
+    ELISION piece among them; None if the quote is not on its page."""
     if TRANSCRIBED_FLAG in (clause.notes or ""):
         page_text = _page_text(clause, transcriptions_dir, transcribed=True)
     else:
@@ -163,10 +192,7 @@ def skipped_texts(
             return None
         spans.append((found, found + len(needle)))
         position = found + len(needle)
-    return [
-        page_text[kept[end] : kept[start - 1] + 1] if start > end else ""
-        for (_, end), (start, _) in pairwise(spans)
-    ]
+    return page_text, kept, spans
 
 
 def transcription_key(record: dict[str, Any], where: str) -> tuple[str, int]:
