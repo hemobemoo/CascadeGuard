@@ -16,11 +16,14 @@ from cascadeguard.knowledge.retrieval import (
     CONTEXT_LABEL,
     NOT_CITABLE_LABEL,
     NOT_SEARCHED,
+    OCR_CONTEXT_LABEL,
     TRANSCRIPTION_CONTEXT_LABEL,
     WEB_CONTEXT_LABEL,
     clauses_for_role,
     extracted_digest,
     search_extracted,
+    searchable_pages,
+    without_web_header,
 )
 from cascadeguard.simulation.replay import apply_repair
 
@@ -120,7 +123,9 @@ def test_real_web_pages_are_searched_and_labelled() -> None:
     found = search_extracted("smart health services cybersecurity", limit=50)
     web = [s for s in found if s.source_file.startswith("web/")]
     assert web and all(s.label == WEB_CONTEXT_LABEL for s in web)
-    assert all(s.label == CONTEXT_LABEL for s in found if s not in web)
+    ocr = [s for s in found if s.source_file.startswith("ocr/")]
+    assert all(s.label == OCR_CONTEXT_LABEL for s in ocr)  # human decision 2026-10-30
+    assert all(s.label == CONTEXT_LABEL for s in found if s not in web and s not in ocr)
 
 
 TRA_STRATEGY = "UAE_National_Cybersecurity_Strategy.pdf"
@@ -138,7 +143,7 @@ TRA_QUERIES = (
 def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
     """Human decision 2026-10-28: the TRA-era strategy is kept as provenance only. Its extracted
     text does match these queries, yet no snippet from it is ever returned."""
-    assert {TRA_STRATEGY, NEWS_ITEM, CHARTER} == NOT_SEARCHED
+    assert {TRA_STRATEGY, NEWS_ITEM, CHARTER, *EXCLUDED_2026_10_30} == NOT_SEARCHED
     jsonl = EXTRACTED_DIR / TRA_STRATEGY.replace(".pdf", ".jsonl")
     pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
     for query in TRA_QUERIES:
@@ -209,7 +214,8 @@ def test_extracted_digest_follows_the_corpus_and_ignores_the_books(tmp_path: Pat
         d = tmp_path / name
         d.mkdir()
         for f, text in files.items():
-            (d / f).write_text(json.dumps({"page": 1, "text": text}), encoding="utf-8")
+            record = {"source_file": f.replace(".jsonl", ".pdf"), "page": 1, "text": text}
+            (d / f).write_text(json.dumps(record), encoding="utf-8")
         return d
 
     base = {"Law.jsonl": "a"}
@@ -298,3 +304,58 @@ def test_extracted_digest_follows_reviewed_transcriptions_only(tmp_path: Path) -
     (draft / "c.jsonl").write_text(json.dumps(row), encoding="utf-8")
     assert extracted_digest(EXTRACTED_DIR, draft) == base
     assert extracted_digest(EXTRACTED_DIR, TRANSCRIPTIONS_DIR) != base  # p.4 is reviewed
+
+
+EXCLUDED_2026_10_30 = (
+    "web/06_unesco_ai_ethics_recommendation.pdf",
+    "web/07_oecd_ai_principles.pdf",
+    "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
+)
+
+
+def test_superseded_web_copies_and_the_tdra_original_are_never_searched() -> None:
+    """Human decision 2026-10-30 (PR 3 review): web/06 and web/07 are superseded by their
+    official originals; of the two TDRA copies only the OCR one is searched (the original has
+    no text layer on pp.13-47). The keyword search and the index share searchable_pages."""
+    sources = {p.source_file for p in searchable_pages()}
+    assert not sources & set(EXCLUDED_2026_10_30)
+    assert "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf" in sources
+    assert "UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf" in sources
+    found = search_extracted("telecommunications licence unesco oecd principles", limit=1000)
+    assert not {s.source_file for s in found} & set(EXCLUDED_2026_10_30)
+
+
+def test_tdra_ocr_pages_carry_the_ocr_label() -> None:
+    labels = {p.label for p in searchable_pages() if p.source_file.startswith("ocr/")}
+    assert labels == {OCR_CONTEXT_LABEL}
+
+
+def test_web_pages_are_served_without_their_yaml_header() -> None:
+    """Human decision 2026-10-30: the human's metadata block is not source text. It is blanked
+    with spaces, so character spans into the page still hold."""
+    first = [p for p in searchable_pages() if p.source_file.startswith("web/") and p.page == 1]
+    assert first
+    for page in first:
+        assert "knowledge_base_status" not in page.text and "YAML" not in page.text[:10]
+        assert "marking them reviewed" not in page.text
+    raw = 'YAML\ntitle: "T"\nbinding: "x"\nNote\nverify before marking them reviewed .\nBody'
+    served = without_web_header(raw)
+    assert len(served) == len(raw) and served.endswith("\nBody") and served.split() == ["Body"]
+    assert without_web_header("No header here") == "No header here"
+    found = search_extracted("knowledge_base_status new-source-candidate", limit=1000)
+    assert not [s for s in found if s.source_file.startswith("web/")]
+
+
+def test_extracted_digest_follows_the_served_text(tmp_path: Path) -> None:
+    """Stripping a header changes what agents are shown, so it must change the prompt version."""
+    page = {"source_file": "web/09_x.pdf", "page": 1, "web": True}
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    (plain / "w.jsonl").write_text(json.dumps(page | {"text": "Body"}), encoding="utf-8")
+    header = tmp_path / "header"
+    header.mkdir()
+    text = 'YAML\nk: "v"\nmarking them reviewed .\nBody'
+    (header / "w.jsonl").write_text(json.dumps(page | {"text": text}), encoding="utf-8")
+    empty = tmp_path / "none"
+    empty.mkdir()
+    assert extracted_digest(plain, empty) != extracted_digest(header, empty)
