@@ -5,7 +5,9 @@ description = "Cross-agency policy crash-testing for AI-dependent public service
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "chromadb>=1.5.9",
     "duckdb>=2.0.0",
+    "fastembed>=0.9.1",
     "networkx>=3.7",
     "nicegui>=3.18.0",
     "openai>=3.37.0",
