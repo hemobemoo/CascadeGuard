@@ -130,7 +130,36 @@ then locked.
   (The third, the runtime pin check, is fixed in PR 3.)
 - Next: gate 4 and gate 7 are done (#19, #20, #21 merged). The conclusion draft
   (`docs/review/pr5-conclusion-draft.md`) is approved but stays unlinked from the README and the
-  demo until the human decides separately. Remaining submission work: the technical report.
+  demo until the human decides separately. Remaining submission work: the technical report
+  (branch `report`, see "Technical report" below), then the demo video (the human's plan).
+
+**Technical report (branch `report`, 2026-10-31).** Human decisions 2026-10-31 (Ibrahim Melhem):
+- **Gate 3:** python-docx (>=1.2.0, with lxml) approved as a **dev-only** dependency, for the
+  report builder only. No pandoc. The PDF is exported locally through Word; CI reads the
+  committed PDF.
+- **Form:** fill the organizers' template (`../AI-for-Good-Sandbox-Hackathon-submission-template.docx`,
+  kept outside the repo), keeping its header and styles; at most 5 pages. Header: team leader and
+  member Ibrahim Melhem, Al Balqa Applied University, mentor Dr. Wafaa Almaaitah; the contact
+  email is in the report only, never in the README.
+- **Gate 7:** all eight governed-vs-ungoverned sentences of §5/§6 approved, with two changes
+  (applied in 7020545): sentence 5 adds "in this scripted replay where agents do not adapt"; the
+  undefined-trigger item says "it stays open for expert review" (the fallback-channel item keeps
+  "it stays open for the authorities to determine"). **The report, linked from the README, is the
+  published form of the conclusion.** The PR 5 conclusion draft stays unlinked.
+- **Rules:** like for like (every number labelled scripted or live; live T+15 is never set against
+  scripted T+60); rank 1 only masks `orphan_duty:activate_fallback_channel` and
+  `undefined_trigger:review_automated_lockouts`, said in §5 and §6.
+- **Done when:** PR open with CI green, PDF at most 5 pages and current, evidence-auditor and
+  phase-auditor run. Do not merge without the human. After any change to the .docx, the human
+  re-exports the PDF.
+- **Verify:** `uv run pytest tests/integration/test_technical_report.py` (numbers and ids traced to
+  the data, approved wording, .docx equal to the Markdown, PDF at most 5 pages and current);
+  rebuild with `uv run python scripts/report_docx.py` (needs the template next to the checkout);
+  export with `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/export_report_pdf.ps1`.
+- **Reviews:** evidence-auditor round 1 FAIL (six wording MAJORs, fixed), round 2 PASS (MINORs
+  applied in 1a8b839). phase-auditor round 1 FAIL: the PDF uncommitted and stale (waits on the
+  human's re-export), python-docx approval and this entry missing from PROGRESS, the PDF test
+  unable to see a stale PDF, the structure file; all addressed except the re-export.
 
 ## Current phase
 
@@ -1456,7 +1485,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
 `pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). Next: the
-technical report; linking the conclusion draft is a separate human decision. Verify:
+technical report on branch `report` (see "Technical report" under "Start here"): the human
+re-exports the PDF, then commit it, rerun phase-auditor, push, open the PR, CI green; do not merge.
+Then the demo video. Linking the conclusion draft is a separate human decision. Verify:
 `uv run python scripts/build_reports.py --check` (exit 0) and
 `uv run pytest tests/integration/test_reports.py`.
 Wording (human): "applied without the authority the governed engine requires", never

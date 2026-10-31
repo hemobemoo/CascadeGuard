@@ -33,6 +33,8 @@ cascadeguard/
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
 │   ├── policy-inventory.md           [P1] table of the 23 PDFs (pages, text, issuer, date)
 │   ├── gap-analysis.md               [PR 5] generated: failures, clauses, examples, repairs
+│   ├── report/                       [report] technical report: cascadeguard-report.md (source),
+│   │                                 .docx (built on the organizers' template), .pdf (Word export)
 │   ├── evaluation/                   [P5] LLM baseline reviews; [gate 4] gate4/ (live LLM
 │   │                                 recording: cache snapshot, exports, logs); [PR 5] traces/
 │   │                                 (generated scripted traces + how-to-read.md)
@@ -127,6 +129,8 @@ cascadeguard/
 │   ├── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
 │   ├── build_kb.py                   [PR 3] chunks + OpenRouter embeddings -> policies/kb/
 │   ├── build_reports.py              [PR 5] writes the generated evaluation documents (--check)
+│   ├── report_docx.py                [report] report Markdown -> .docx on the organizers' template
+│   ├── export_report_pdf.ps1         [report] .docx -> PDF with Word (local only; CI reads the PDF)
 │   └── llm_smoke_test.py             [P5] exactly one live LLM call; latency, tokens, cost
 │
 ├── scenarios/
