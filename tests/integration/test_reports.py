@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
-from cascadeguard.knowledge.loader import load_clauses
+from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
 from cascadeguard.storage import reports
 from cascadeguard.storage.reports import (
     CONCLUSION_DRAFT,
@@ -64,6 +64,10 @@ def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: Scripte
     assert {e.failure for e in examples.entries} <= failures
     for e in examples.entries:  # the relevance line is not itself a gap claim or overstated
         assert not GAP_CLAIM.search(e.relevance) and not OVERSTATED.search(e.relevance), e
+        # Any word on binding force agrees with the clause: only a binding clause may be called
+        # binding without "not" or "non-".
+        if corpus[e.clause].binding is not True and "binding" in e.relevance:
+            assert re.search(r"not binding|non-binding", e.relevance), e
     # A draft mapping has no approved entry and is labelled as a draft in the document.
     if examples.status == "draft":
         assert not any(e.approved for e in examples.entries)
@@ -75,13 +79,26 @@ def test_gap_analysis_quotes_verbatim_and_keeps_every_qualification(runs: Script
     corpus = {c.id: c for c in load_clauses()}
     for f in runs.baseline.failures:
         assert f"## `{f.id}`" in text and f"_{f.qualification}_" in text
-    quoted = [line.removeprefix("  > ") for line in text.splitlines() if line.startswith("  > ")]
-    assert quoted
-    texts = [c.text for c in corpus.values()]
-    for line in quoted:
-        assert any(line in t for t in texts), line
-    for cid in re.findall(r"`([a-z0-9.\-]+)` \[", text):
-        assert cid in corpus and f"`{cid}` [{corpus[cid].status_label}]" in text
+    # Each clause bullet is followed by exactly its own clause text, in full and in order, and
+    # carries its own status label.
+    lines = text.splitlines()
+    bullet = re.compile(r"^- `([a-z0-9.\-]+)` \[([^\]]+)\]")
+    quoted = 0
+    for i, line in enumerate(lines):
+        m = bullet.match(line)
+        if not m:
+            continue
+        cid, label = m.groups()
+        assert label == corpus[cid].status_label, cid
+        block: list[str] = []
+        for nxt in lines[i + 1 :]:
+            if not nxt.startswith("  >"):
+                break
+            block.append(nxt.removeprefix("  >").removeprefix(" "))
+        if block:  # "Other loaded clauses" bullets carry no quote
+            assert block == corpus[cid].text.strip().splitlines(), cid
+            quoted += 1
+    assert quoted >= len(runs.baseline.failures)
 
 
 def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> None:
@@ -102,11 +119,45 @@ def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> Non
     assert "No live repair replay was run" in live
 
 
-def test_no_generated_document_publishes_the_draft() -> None:
-    for path in (
-        Path("README.md"),
-        Path("docs/architecture.md"),
-        GAP_ANALYSIS,
-        *TRACES_DIR.iterdir(),
-    ):
+def test_no_document_or_ui_links_the_draft() -> None:
+    """Unpublished until the human approves it (gate 7): no Markdown file and no source file
+    names it, except PROGRESS (the hand-off), the draft itself and its generator."""
+    skip = {PROJECT_ROOT / "PROGRESS.md", CONCLUSION_DRAFT, Path(reports.__file__).resolve()}
+    paths = [PROJECT_ROOT / "README.md"] + [
+        p
+        for top in ("docs", "scenarios", "src")
+        for p in (PROJECT_ROOT / top).rglob("*")
+        if p.suffix in (".md", ".py") and "__pycache__" not in p.parts
+    ]
+    checked = [p for p in paths if p.resolve() not in skip]
+    assert len(checked) > 20
+    for path in checked:
         assert "pr5-conclusion-draft" not in path.read_text(encoding="utf-8"), path
+
+
+def test_a_reviewed_mapping_needs_every_entry_approved() -> None:
+    from pydantic import ValidationError
+
+    from cascadeguard.storage.reports import GapExamples
+
+    entries = load_gap_examples().entries
+    approved = tuple(e.model_copy(update={"approved": True}) for e in entries)
+    with pytest.raises(ValidationError):
+        GapExamples(status="reviewed", entries=entries)
+    with pytest.raises(ValidationError):
+        GapExamples(status="draft", entries=approved)
+    assert GapExamples(status="reviewed", entries=approved).status == "reviewed"
+
+
+def test_the_draft_claims_follow_the_data(runs: ScriptedRuns) -> None:
+    from cascadeguard.storage.reports import load_gate4, same_failures, waived_actions
+
+    live_base, _ = load_gate4()
+    live = [f["id"] for f in live_base["failures"]]
+    scripted = [f.id for f in runs.baseline.failures]
+    assert sorted(live) == sorted(scripted)  # so the draft may say "the same"
+    assert same_failures(live, scripted).startswith("the same")
+    assert not same_failures(live[:1], scripted).startswith("the same")
+    waived = [{"minute": 60, "action": "x", "would_have_been_rejected": ["missing_information"]}]
+    with pytest.raises(ValueError, match="without an authority reason"):
+        waived_actions(waived)
