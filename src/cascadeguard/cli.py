@@ -357,8 +357,9 @@ def replay_repair(
 
 
 def request_line(world: World) -> str | None:
-    """Live LLM runs only: requests sent under the cap, and any refused at it (a step refused at
-    the cap has no decision, so the run is inconclusive), counted over the whole command."""
+    """Live LLM runs only: requests sent under the cap, any refused at it (a step refused at the
+    cap has no decision, so the run is inconclusive), and every failed request by kind ("HTTP
+    429", "HTTP 502", an exception class name; never a message), counted over the command."""
     client = getattr(next(iter(world.agents.values()), None), "client", None)
     capped = getattr(client, "inner", None)
     if not isinstance(capped, CappedClient):
@@ -366,6 +367,10 @@ def request_line(world: World) -> str | None:
     line = f"Live requests: {capped.requests} sent (cap {capped.cap}, retries included)"
     if capped.refused:
         line += f"; {capped.refused} requests refused at the cap: inconclusive"
+    failures: dict[str, int] = getattr(client, "failures", {})
+    if failures:
+        kinds = ", ".join(f"{kind} x{n}" for kind, n in sorted(failures.items()))
+        line += f"; failed requests (retried or not): {kinds}"
     return line
 
 
@@ -433,6 +438,17 @@ def uncached_estimate(world: World, repair_id: str) -> tuple[int, int | None]:
     p = find_proposal(base, dry.scenario, dry.roles, RuleBook(dry.clauses), repair_id)
     dry.replay(p)
     return 0, dry_cache.stats.misses - baseline_missing
+
+
+# Exit codes: 0 done, 2 refused or not configured, 3 a live LLM run that is inconclusive (steps
+# with no decision for infrastructure reasons: cap spent, request failure, daily-limit stop).
+INCONCLUSIVE_EXIT = 3
+
+
+def exit_status(world: World, failed_steps: object) -> int:
+    """INCONCLUSIVE_EXIT for a live LLM run with failed steps, else 0 (offline dry runs and
+    scripted runs keep 0: their missing steps are expected, not a failure)."""
+    return INCONCLUSIVE_EXIT if failed_steps and live_llm(world) else 0
 
 
 def live_llm(world: World) -> bool:
@@ -634,10 +650,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = _main(args, world)
     except DailyLimitReached:  # fixed text: the provider's message is not printed here
         print(f"cascadeguard: {DAILY_LIMIT_STOP}")
-        status = 2
+        status = INCONCLUSIVE_EXIT  # a live run stopped part-way
     except KnowledgeBaseError as exc:  # --kb-context lost the network mid-run
         print(f"cascadeguard: {exc}")
-        status = 2
+        status = INCONCLUSIVE_EXIT
     # Also after a stop: how many steps and requests the stopped run had used.
     off = getattr(args, "governance", Governance.ON.value) == Governance.OFF.value
     runs = "governed and ungoverned runs" if off else "baseline and replays"
@@ -732,7 +748,7 @@ def _main(args: argparse.Namespace, world: World) -> int:
             finally:
                 store.close()
             print(f"audit: baseline run {base}, replay run {rep} in {_display(args.audit)}")
-        return 0
+        return exit_status(world, comparison.failed_steps)
     if args.command == "run" and args.governance == Governance.OFF.value:
         comparison = world.governance_comparison()
         markdown = governance_markdown(comparison)
@@ -744,7 +760,7 @@ def _main(args: argparse.Namespace, world: World) -> int:
                 governance_export(comparison),
                 markdown,
             )
-        return 0
+        return exit_status(world, comparison.failed_steps)
     if args.command == "run":
         result = world.baseline()
         excluded = excluded_drafts(result) if args.clauses is None else None
@@ -763,7 +779,7 @@ def _main(args: argparse.Namespace, world: World) -> int:
             finally:
                 store.close()
             print(f"audit: baseline run {run_id} in {_display(args.audit)}")
-        return 0
+        return exit_status(world, result.failed_steps)
     if args.command == "repairs":
         found = search_repairs(args.scenario, world=world)
         print(format_search(found))

@@ -990,7 +990,7 @@ def test_failed_steps_make_the_comparison_inconclusive_everywhere(
     # CLI: the same verdict.
     w2 = llm_world(scripted, FakeClient(reply), DecisionCache(tmp_path))
     _patch_world(monkeypatch, w2)
-    assert main(["run", SCENARIO, "--repair", SUCCESS, "--agents", "llm", "--live"]) == 0
+    assert main(["run", SCENARIO, "--repair", SUCCESS, "--agents", "llm", "--live"]) == 3
     assert expected in capsys.readouterr().out
     # A baseline with a failed step says so in the text and the JSON export.
     failing = llm_world(
@@ -1276,12 +1276,12 @@ def test_daily_limit_message_is_redacted_and_not_chained(
     assert err.value.__cause__ is None and err.value.__suppress_context__
     for leak in (DAILY_MODEL, "model-zz-9b", "X-RateLimit", "headers", "user_FAKE123"):
         assert leak not in text, leak
-    # The CLI turns it into one fixed line and exit code 2.
+    # The CLI turns it into one fixed line and exit code 3 (inconclusive live run).
     role_ids = tuple(r.id for r in scripted.roles.roles)
     cache = DecisionCache(tmp_path)
     agents = {r: LLMAgent(r, DAILY_MODEL, client, cache, role_ids) for r in role_ids}
     _patch_world(monkeypatch, replace(scripted, agents=dict(agents), cache=cache))
-    assert main(["run", SCENARIO, "--agents", "llm"]) == 2
+    assert main(["run", SCENARIO, "--agents", "llm"]) == 3
     out = capsys.readouterr()
     assert "daily request limit was reached" in out.out
     assert "X-RateLimit" not in out.out + out.err and DAILY_MODEL not in out.out + out.err
@@ -1472,7 +1472,7 @@ def test_one_cap_covers_the_governed_and_ungoverned_runs(
 
     monkeypatch.setattr("cascadeguard.agents.llm.make_client", wrapped)
     args = ["run", SCENARIO, "--governance", "off", "--agents", "llm", "--cap", str(cap)]
-    assert main([*args, "--cache", str(tmp_path / "c")]) == 0
+    assert main([*args, "--cache", str(tmp_path / "c")]) == (0 if comparable else 3)
     out = capsys.readouterr().out
     assert len(fake.requests) == sent
     assert ("## Not comparable" in out) is not comparable
@@ -1535,7 +1535,7 @@ def test_a_daily_limit_stop_still_reports_the_requests_sent(
 
     _capped_fake(monkeypatch, FakeClient(reply))
     args = ["run", SCENARIO, "--governance", "off", "--agents", "llm", "--cap", "50"]
-    assert main([*args, "--cache", str(tmp_path / "c")]) == 2
+    assert main([*args, "--cache", str(tmp_path / "c")]) == 3
     out = capsys.readouterr().out
     assert "daily request limit was reached" in out
     assert "Live requests: 10 sent (cap 50, retries included)" in out
@@ -1547,3 +1547,54 @@ def test_cap_must_be_positive(cap: str, capsys: pytest.CaptureFixture[str]) -> N
     with pytest.raises(SystemExit):
         main(["run", SCENARIO, "--agents", "llm", "--cap", cap])
     assert "must be a positive number of requests" in capsys.readouterr().err
+
+
+def test_an_incomplete_live_baseline_exits_3_and_an_offline_one_0(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Human decision 2026-10-31: an inconclusive live run exits 3, never 2 (refused); offline
+    dry runs and scripted runs keep 0. A complete live run exits 0."""
+    from cascadeguard.cli import INCONCLUSIVE_EXIT
+
+    assert INCONCLUSIVE_EXIT == 3
+    _live_env(monkeypatch, tmp_path)
+    _capped_fake(monkeypatch, FakeClient(scripted_replies(scripted)))
+    cache = str(tmp_path / "c")
+    assert main(["run", SCENARIO, "--agents", "llm", "--cap", "20", "--cache", cache]) == 3
+    assert "INCOMPLETE RUN" in capsys.readouterr().out
+    empty = str(tmp_path / "empty")
+    assert main(["run", SCENARIO, "--agents", "llm", "--offline", "--cache", empty]) == 0
+    assert main(["run", SCENARIO, "--agents", "llm", "--cap", "50", "--cache", cache]) == 0
+    assert "INCOMPLETE RUN" not in capsys.readouterr().out.split("Diagnosed")[-1]
+    assert main(["run", SCENARIO]) == 0
+
+
+def test_the_request_line_names_failed_requests_by_kind(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Gate 4: the variant runs only if the baseline had no 429, so a retried 429 must be
+    visible in the output (kind and count only, never the provider's message)."""
+
+    class RateLimited(Exception):
+        status_code = 429
+
+    _live_env(monkeypatch, tmp_path)
+    base = scripted_replies(scripted)
+    sent = [0]
+
+    def reply(request: dict[str, Any]) -> str | Exception:
+        sent[0] += 1
+        return RateLimited("slow down sk-test-not-a-real-key") if sent[0] == 3 else base(request)
+
+    _capped_fake(monkeypatch, FakeClient(reply))
+    args = ["run", SCENARIO, "--agents", "llm", "--cap", "50", "--cache", str(tmp_path / "c")]
+    assert main(args) == 0  # retried, so every step decided
+    out = capsys.readouterr().out
+    assert "Live requests: 37 sent (cap 50, retries included); failed requests" in out
+    assert "HTTP 429 x1" in out and "slow down" not in out and "sk-test" not in out

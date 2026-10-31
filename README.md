@@ -34,6 +34,11 @@ give byte-identical output on every run):
    ungoverned one (comparison only, never the result): actions the engine rejects only for
    authority, a clause restriction or a missing prerequisite or information are applied and
    listed as "would have been rejected". The UI shows it at step h.
+
+   Exit codes: 0 done; 2 refused or not configured (e.g. a missing variable, no request cap);
+   3 a live LLM run that is inconclusive (a step with no decision because the request cap ran
+   out, a request failed, or the provider's daily limit stopped the run). Offline and scripted
+   runs exit 0.
 5. `uv run python -m cascadeguard.ui.app` opens the demo UI at http://localhost:8765.
 6. `uv run pytest` runs the tests (see Checks below).
 
