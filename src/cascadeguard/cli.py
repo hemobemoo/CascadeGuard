@@ -111,7 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
         choices=tuple(g.value for g in Governance),
         default=Governance.ON.value,
         help="off: compare the governed run with an ungoverned one (comparison only; not with "
-        "--repair or --audit; live LLM agents need --cap as for any live run)",
+        "--repair or --audit; live LLM agents need a request cap: --cap or "
+        "CASCADEGUARD_REQUEST_CAP)",
     )
     run_cmd.add_argument(
         "--live",

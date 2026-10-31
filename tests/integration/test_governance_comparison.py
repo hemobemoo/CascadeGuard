@@ -144,8 +144,8 @@ def test_repeated_proposals_are_compared_one_by_one() -> None:
 def test_offline_llm_agents_build_no_client_and_say_when_not_comparable(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Human decision 2026-10-31: LLM agents with --governance off only from the cache. With an
-    empty cache no step has a decision, so the comparison is withheld; no client is built."""
+    """Offline LLM agents with --governance off: with an empty cache no step has a decision,
+    so the comparison is withheld; no client is built."""
 
     def no_client(*_: object, **__: object) -> None:
         raise AssertionError("no client may be built")
