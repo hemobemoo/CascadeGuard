@@ -17,6 +17,9 @@ not citable).
    4 + 50% = 6. The runner stopped a run on a fourth failed request (human rule); it did not
    trigger.
 
+Method: the ungoverned variant reused the 32 governed steps whose agent view did not change,
+and only the 4 health service operator steps (T+30 to T+75) were sent live.
+
 ## Files
 
 | File | What |
