@@ -62,7 +62,7 @@ class GapExamples(DomainModel):
 
     @model_validator(mode="after")
     def _status_matches_approvals(self) -> Self:
-        approved = all(e.approved for e in self.entries)
+        approved = bool(self.entries) and all(e.approved for e in self.entries)
         if (self.status == "reviewed") != approved:
             raise ValueError("status is reviewed exactly when every entry is approved")
         return self

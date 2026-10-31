@@ -102,7 +102,7 @@ then locked.
   3 actions applied only because governance was off; `patient_access_restored` met at T+15;
   the three failures behind it are "goal met but the cause is still present". Results table:
   `docs/evaluation/gate4/README.md` (results only; conclusions go through gate 7).
-- **PR (branch `governance-off-live`):** lifts the live-LLM refusal for `--governance off`
+- **PR (branch `governance-off-live`), merged as #19 (4e1a642):** lifts the live-LLM refusal for `--governance off`
   (keeps `--repair` and `--audit` refused; a live run still needs `--cap`). With LLM agents the
   ungoverned run reuses every cached step whose view no waived action changed. Dry run: an
   `--offline` run gives "N not cached", an estimate, not a bound. With an empty or stale cache
@@ -123,9 +123,8 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: the `governance-off-live` PR (review, CI, the human's merge), then gate 4 as approved
-  (dry run, then the governed baseline under `--cap`, then the variant); PR 5 after; see
-  "Current phase".
+- Next: PR 5 (`pr5-gap-analysis`): PR open, CI, then stop for the human's gate-7 decision (see
+  "Waiting on human"); do not merge. Gate 4 is done (#19, #20 merged); see "Current phase".
 
 ## Current phase
 
@@ -147,6 +146,11 @@ PRs follow, one at a time; each stops once open with CI green:
    replay), the gap analysis and `docs/review/pr5-conclusion-draft.md` (unpublished, gate 7);
    `scenarios/uae_health_access/gap_examples.yaml` is a draft mapping (8 entries, none
    approved; triage in `docs/review/pr5-clause-triage.md`). Waiting on the human: the approved mapping entries and the conclusion wording.
+   **Done when (plan approved 2026-10-31):** the three scripted traces equal the CLI's own exports;
+   `uv run python scripts/build_reports.py --check` exits 0; `tests/integration/test_reports.py`
+   passes; the mapping is a draft with no entry approved; the conclusion draft follows the human's
+   rules and is linked from nowhere; evidence-auditor, then phase-auditor and test-breaker with no
+   open BLOCKER or MAJOR; no API calls; all checks clean; PR open with CI green; stop for gate 7.
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
