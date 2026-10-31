@@ -7,7 +7,7 @@ Github link: https://github.com/hemobemoo/CascadeGuard
 
 ## 1. Introduction
 
-CascadeGuard finds where AI decisions and institutional rules collide, identifies the smallest safe repair, and replays the same incident to test whether the repair works. Six institutional roles are played by agents (scripted, or a live LLM); a deterministic engine, never an agent, accepts or rejects every proposed action against the loaded clause set: reviewed clauses quoted verbatim from UAE (in English translation), international and foreign documents, and two illustrative scenario rules. It is decision support, not legal interpretation: every diagnosed failure is a candidate gap for expert review, not a confirmed legal or standards gap. The scenario is hypothetical and all data is synthetic.
+CascadeGuard finds where AI decisions and institutional rules collide, identifies the smallest safe repair, and replays the same incident to test whether the repair works. Six institutional roles are played by agents (scripted, or a live LLM); a deterministic engine, never an agent, accepts or rejects every proposed action against the loaded clause set: reviewed clauses quoted verbatim from UAE documents (some in English translation), international and foreign documents, and two illustrative scenario rules. It is decision support, not legal interpretation: every diagnosed failure is a candidate gap for expert review, not a confirmed legal or standards gap. The scenario is hypothetical and all data is synthetic.
 
 ## 2. Description of the use case
 
