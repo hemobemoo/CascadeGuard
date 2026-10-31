@@ -141,8 +141,12 @@ PRs follow, one at a time; each stops once open with CI green:
    extra for the export test).
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
    golden) and the side-by-side comparison in the CLI and UI: merged (PR #17, 824b00a).
-5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`: in
-   progress on `pr5-gap-analysis` (plan approved 2026-10-31).
+5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`: built
+   on `pr5-gap-analysis` (plan approved 2026-10-31): `storage/reports.py` and
+   `scripts/build_reports.py` generate three scripted traces (baseline, governance off, rank-1
+   replay), the gap analysis and `docs/review/pr5-conclusion-draft.md` (unpublished, gate 7);
+   `scenarios/uae_health_access/gap_examples.yaml` is a draft mapping (9 entries, none
+   approved). Waiting on the human: the approved mapping entries and the conclusion wording.
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and

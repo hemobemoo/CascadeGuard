@@ -1,0 +1,132 @@
+{
+  "agents": "scripted agents (scripted_decisions.yaml)",
+  "changed_actions": [
+    {
+      "action": "share_incident_status",
+      "baseline": "rejected",
+      "minute": 30,
+      "replay": "accepted",
+      "role": "telecom_operator",
+      "target": "health_service_operator"
+    },
+    {
+      "action": "reverse_automated_lockouts",
+      "baseline": "rejected",
+      "minute": 60,
+      "replay": "accepted",
+      "role": "health_service_operator"
+    },
+    {
+      "action": "share_incident_status",
+      "baseline": "rejected",
+      "minute": 75,
+      "replay": "accepted",
+      "role": "telecom_regulator",
+      "target": "health_service_operator"
+    }
+  ],
+  "clause_set": "policies/reviewed: reviewed + illustrative clauses",
+  "edits": [
+    {
+      "action": "reverse_automated_lockouts",
+      "deadline_minutes": 30,
+      "operation": "assign_owner",
+      "role": "health_service_operator"
+    },
+    {
+      "counterpart": "health_service_operator",
+      "data_category": "network_incident_status",
+      "operation": "define_minimum_data_share",
+      "role": "telecom_operator"
+    }
+  ],
+  "failures_masked": [
+    {
+      "category": "orphan_duty",
+      "clauses": [
+        {
+          "id": "dha.pp11.4-18-1",
+          "status": "reviewed (interpreted) · binding unknown"
+        }
+      ],
+      "description": "No role has clear authority to activate_fallback_channel. Only uncertain authority was found (dha.pp11.4-18-1): binding unknown, conditional, or implied; it requires a determination.",
+      "goals": [
+        "patient_access_restored"
+      ],
+      "id": "orphan_duty:activate_fallback_channel",
+      "qualification": "Uncertain in the loaded clause set (policies/reviewed: reviewed + illustrative clauses): only uncertain authority was found (binding unknown, conditional, or implied); it requires a determination. This is not a confirmed legal or standards gap; it needs expert review.",
+      "roles": [
+        "health_service_operator"
+      ]
+    },
+    {
+      "category": "undefined_trigger",
+      "clauses": [],
+      "description": "No clause triggers review_automated_lockouts, which reverse_automated_lockouts depends on.",
+      "goals": [
+        "patient_access_restored"
+      ],
+      "id": "undefined_trigger:review_automated_lockouts",
+      "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+      "roles": [
+        "health_service_operator"
+      ]
+    }
+  ],
+  "failures_remaining": [],
+  "failures_removed": [
+    {
+      "category": "information_deadlock",
+      "clauses": [],
+      "description": "health_service_operator needs network_incident_status, held by telecom_operator, telecom_regulator, but network_incident_status is outside health_service_operator's information boundary. No clause authorising this share was found.",
+      "goals": [
+        "patient_access_restored",
+        "alert_cause_known_to_health"
+      ],
+      "id": "information_deadlock:network_incident_status->health_service_operator",
+      "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+      "roles": [
+        "health_service_operator",
+        "telecom_operator",
+        "telecom_regulator"
+      ]
+    },
+    {
+      "category": "orphan_duty",
+      "clauses": [],
+      "description": "No role has clear authority to reverse_automated_lockouts.",
+      "goals": [
+        "patient_access_restored"
+      ],
+      "id": "orphan_duty:reverse_automated_lockouts",
+      "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+      "roles": [
+        "health_service_operator"
+      ]
+    }
+  ],
+  "goals": {
+    "alert_cause_known_to_health": {
+      "baseline": "unmet",
+      "replay": "met at T+30"
+    },
+    "network_incident_reported": {
+      "baseline": "met at T+45",
+      "replay": "met at T+45"
+    },
+    "patient_access_restored": {
+      "baseline": "unmet",
+      "replay": "met at T+60"
+    }
+  },
+  "masked_note": "2 masked failures: cause still present",
+  "new_conflict_tags": {},
+  "new_conflicts": [],
+  "note": "Repair rules are hypothetical coordination rules for the simulation, not proposals of law. 'requires_authorization': no reviewed, binding clause supports the permission it creates; it needs human and institutional approval. Scripted agents replay the same decisions; they do not adapt to the repair. A new obligation that no scripted decision fulfils shows up as a missed obligation (for an owner obligation: the finding obligation_overdue, and its orphan duty remains).",
+  "outcome": "resolved",
+  "outcome_definition": "all critical goals met; masked failures may remain",
+  "repair": "owner.reverse_automated_lockouts.health_service_operator.30m+share.network_incident_status.telecom_operator.health_service_operator",
+  "requires_authorization": true,
+  "scenario": "uae_health_access",
+  "targets_clauses": []
+}

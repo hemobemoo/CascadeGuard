@@ -89,7 +89,8 @@ cascadeguard/
 │   │
 │   ├── storage/
 │   │   ├── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
-│   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
+│   │   ├── export.py                 [P3] JSON + Markdown exports (every clause labelled)
+│   │   └── reports.py                [PR 5] generated traces, gap analysis, conclusion draft
 │   │
 │   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006);
 │   │                                 [P6b] display names from scenarios/<id>/display.yaml (spec 006b)
@@ -119,6 +120,7 @@ cascadeguard/
 ├── scripts/
 │   ├── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
 │   ├── build_kb.py                   [PR 3] chunks + OpenRouter embeddings -> policies/kb/
+│   ├── build_reports.py              [PR 5] writes the generated evaluation documents (--check)
 │   └── llm_smoke_test.py             [P5] exactly one live LLM call; latency, tokens, cost
 │
 ├── scenarios/
@@ -131,6 +133,7 @@ cascadeguard/
 │       ├── expected_repairs.yaml     [P3] golden: ranked search + one successful and one
 │       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
 │       ├── evaluation_findings.yaml  [P6] recorded scripted-vs-LLM findings shown in the UI
+│       ├── gap_examples.yaml         [PR 5] DRAFT failure -> example-clause mapping (gate 7)
 │       ├── display.yaml              [P6b] UI-only display labels and incident summary
 │       └── README.md                 plain-language narrative of the incident
 │
