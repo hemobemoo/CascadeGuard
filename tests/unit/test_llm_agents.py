@@ -1567,8 +1567,9 @@ def test_an_incomplete_live_baseline_exits_3_and_an_offline_one_0(
     assert "INCOMPLETE RUN" in capsys.readouterr().out
     empty = str(tmp_path / "empty")
     assert main(["run", SCENARIO, "--agents", "llm", "--offline", "--cache", empty]) == 0
+    assert "INCOMPLETE RUN" in capsys.readouterr().out  # offline misses: incomplete, still 0
     assert main(["run", SCENARIO, "--agents", "llm", "--cap", "50", "--cache", cache]) == 0
-    assert "INCOMPLETE RUN" not in capsys.readouterr().out.split("Diagnosed")[-1]
+    assert "INCOMPLETE RUN" not in capsys.readouterr().out
     assert main(["run", SCENARIO]) == 0
 
 

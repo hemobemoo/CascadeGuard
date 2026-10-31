@@ -84,8 +84,9 @@ then locked.
   without asking. Snapshot and traces checked for secrets, committed in a PR. Any governed vs
   ungoverned conclusion in README or demo text goes through gate 7.
 - **Governed live baseline: run 2026-10-31** (code at 02a7a16; `--kb-context --cap 54`):
-  exit 0, complete: 36/36 steps decided, 37 requests (36 agent attempts, so 1 request-level
-  retry whose kind the CLI did not yet record: a 429 cannot be ruled out), 37 query embeddings,
+  exit 0, complete: 36/36 steps decided, 37 requests (the 36 cache entries' `usage.calls` sum
+  to 36 agent attempts, so 1 request-level retry whose kind that code did not record: a 429
+  cannot be ruled out), 37 query embeddings,
   235 s, 120.5k / 11.9k tokens, cost 0. 64 actions: 56 accepted, 8 rejected (5
   authority_uncertain, all activate_fallback_channel; 3 outside_recipient_boundary); 1 rejected
   decision (citation_out_of_scope). Goals: network_incident_reported met at T+0;
@@ -99,7 +100,8 @@ then locked.
   steps whose view did not change (38 with the scripted replies); and a live decision can change
   later views either way. So: dry-run and run the governed baseline first, then dry-run the
   variant from the filled cache. Each step can take up to `max_requests_per_step` requests
-  (2 x (1 + retries) = 8 by default). The live CLI prints "Live requests: N sent (cap C, retries included)", plus
+  (2 x (1 + retries) = 8 by default). The live CLI prints "Live requests: N sent (cap C, retries included)", then
+  "failed requests (retried or not): HTTP 429 x1, ..." when any request failed, plus
   "M requests refused at the cap: inconclusive" when the cap ran out (CLI only; the UI stays
   scripted for this comparison), for governed and off runs, and
   also after a daily-limit stop. `--cap` must be positive.
@@ -1218,6 +1220,11 @@ governance-off comparison, a daily-limit stop, or a knowledge-base failure mid-r
 scripted runs keep 0. In #19 with tests; README lists the codes. The request line also names
 failed requests by kind ("HTTP 429 x1"), so a 429 in a run is visible.
 
+**Waiting on the human: may the ungoverned variant run?** Gate 4 allows it only if the baseline
+had no 429. The baseline sent 37 requests for 36 steps; the cache entries' `usage.calls` sum to
+36 agent attempts (no invalid-output retry), so one request was a request-level retry (429, 5xx
+or connection error) whose kind that code did not record. A 429 cannot be ruled out.
+
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
 
@@ -1397,9 +1404,13 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 4 merged (PR #17, 824b00a). Gate 4 approved (2026-10-31): the `governance-off-live` PR, then
-the dry run, the governed baseline (`--kb-context`, `--cap`), the ungoverned variant (only
-without a 429 or daily-limit stop), and a PR with the checked snapshot and traces; then PR 5.
+PR 4 merged (PR #17, 824b00a). Gate 4 approved (2026-10-31). **Done:** the dry run and the
+governed live baseline (2026-10-31; do not rerun it without asking). **Next:** #19 (CI green,
+both reviewers PASS, then merge on the human's instruction); the human decides whether the
+variant may run (the baseline's one request retry may have been a 429; see "Waiting on
+human"); if yes, dry-run `--governance off` offline on the filled cache, run live if the
+estimate is at most 54 (cap = estimate + 50%), else ask; then a PR with the checked snapshot
+and traces; then PR 5.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.

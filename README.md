@@ -37,8 +37,8 @@ give byte-identical output on every run):
 
    Exit codes: 0 done; 2 refused or not configured (e.g. a missing variable, no request cap);
    3 a live LLM run that is inconclusive (a step with no decision because the request cap ran
-   out, a request failed, or the provider's daily limit stopped the run). Offline and scripted
-   runs exit 0.
+   out or a request failed, or the run stopped part-way at the provider's daily limit or a
+   knowledge-base failure). Offline and scripted runs never exit 3.
 5. `uv run python -m cascadeguard.ui.app` opens the demo UI at http://localhost:8765.
 6. `uv run pytest` runs the tests (see Checks below).
 
