@@ -8,11 +8,11 @@ status: draft
 entries:
   - failure: information_deadlock:network_incident_status->health_service_operator
     clause: eu.gdpr.art33-1
-    relevance: An incident-information duty with a named recipient and a time limit (72 hours).
+    relevance: A controller's duty to notify a personal data breach to the supervisory authority without undue delay and, where feasible, within 72 hours, unless the breach is unlikely to result in a risk (EU, not binding in the UAE).
     approved: false
   - failure: information_deadlock:network_incident_status->health_service_operator
     clause: oecd.ai-principles.accountability-cooperation
-    relevance: Co-operation between AI actors and system users to address risks related to AI systems.
+    relevance: Risk management by AI actors, including, as appropriate, co-operation between AI actors, AI system users and other stakeholders (a non-binding recommendation).
     approved: false
   - failure: orphan_duty:reverse_automated_lockouts
     clause: oecd.ai-principles.robustness-override
@@ -29,10 +29,6 @@ entries:
   - failure: orphan_duty:activate_fallback_channel
     clause: unesco.ai-ethics.responsibility-accountability
     relevance: Oversight and due-diligence mechanisms to ensure accountability for the impact of AI systems.
-    approved: false
-  - failure: orphan_duty:activate_fallback_channel
-    clause: uae.ai-charter.safety
-    relevance: A UAE principle (not binding) encouraging the modification or removal of systems that pose risks.
     approved: false
   - failure: undefined_trigger:review_automated_lockouts
     clause: unesco.ai-ethics.human-oversight

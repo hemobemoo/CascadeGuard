@@ -155,7 +155,7 @@ def gap_analysis_markdown(
         "",
     ]
     for f in base.failures:
-        lines += _failure_section(f, runs.search, examples, corpus)
+        lines += _failure_section(f, runs.search, examples, corpus, runs.world.clauses)
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
@@ -164,6 +164,7 @@ def _failure_section(
     search: SearchResult,
     examples: GapExamples,
     corpus: dict[str, PolicyClause],
+    loaded: dict[str, PolicyClause],
 ) -> list[str]:
     lines = [
         f"## `{f.id}`",
@@ -181,7 +182,22 @@ def _failure_section(
     for cid in f.clause_ids:
         c = corpus[cid]
         lines += [f"- {_label(c)}, {_source(c)}:", *_quote(c), ""]
-    lines += ["**Examples elsewhere (context, not UAE law):**", ""]
+    related = [
+        c
+        for c in loaded.values()
+        if c.normalized is not None
+        and c.normalized.action == f.subject
+        and c.id not in f.clause_ids
+    ]
+    if related:
+        lines += ["**Other loaded clauses on this action (not counted by the diagnosis):**", ""]
+        for c in related:
+            n = c.normalized
+            assert n is not None
+            condition = f"; condition: {n.condition}" if n.condition else ""
+            lines.append(f"- {_label(c)}: read as a `{n.kind.value}` for `{n.action}`{condition}.")
+        lines.append("")
+    lines += ["**Examples (context, not UAE law; UAE principles are not binding):**", ""]
     entries = [e for e in examples.entries if e.failure == f.id]
     if not entries:
         lines += ["- None mapped.", ""]
@@ -268,8 +284,8 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         f"**{rep.outcome}**. Goals: {_goals(rep.replay)}. Removed at their cause: "
         f"{_ids(rep.removed)}. **Masked, cause still present:** {_ids(rep.masked)}. "
         + (
-            f"The repair is marked {REQUIRES_AUTHORIZATION_LABEL}: it creates a permission with "
-            "no reviewed, binding basis."
+            f"The repair is marked {REQUIRES_AUTHORIZATION_LABEL}: it creates a permission that "
+            "no reviewed, binding clause in the loaded clause set supports."
             if p.requires_authorization
             else ""
         ),
@@ -287,7 +303,8 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         f"- **Governed** ({LIVE_LLM}): the engine diagnoses the same "
         f"{len(live_base['failures'])} failures as with scripted agents: "
         f"{_ids(f['id'] for f in live_base['failures'])}. Goals: "
-        f"{_gate4_goals(live_base['goals'])}.",
+        f"{_gate4_goals(live_base['goals'])}. Each failure is a candidate gap for expert "
+        "review, not a confirmed legal or standards gap.",
         f"- **Ungoverned** ({LIVE_LLM}): {len(live_waived)} actions were {WITHOUT_AUTHORITY}: "
         + "; ".join(
             f"T+{w['minute']} `{w['action']}` ({', '.join(w['would_have_been_rejected'])})"
