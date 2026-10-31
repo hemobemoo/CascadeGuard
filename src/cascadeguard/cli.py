@@ -650,10 +650,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = _main(args, world)
     except DailyLimitReached:  # fixed text: the provider's message is not printed here
         print(f"cascadeguard: {DAILY_LIMIT_STOP}")
-        status = INCONCLUSIVE_EXIT  # a live run stopped part-way
+        status = INCONCLUSIVE_EXIT if live_llm(world) else 2  # a live run stopped part-way
     except KnowledgeBaseError as exc:  # --kb-context lost the network mid-run
         print(f"cascadeguard: {exc}")
-        status = INCONCLUSIVE_EXIT
+        status = INCONCLUSIVE_EXIT if live_llm(world) else 2
     # Also after a stop: how many steps and requests the stopped run had used.
     off = getattr(args, "governance", Governance.ON.value) == Governance.OFF.value
     runs = "governed and ungoverned runs" if off else "baseline and replays"
