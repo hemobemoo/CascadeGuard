@@ -404,9 +404,10 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         ),
         "",
         "The ungoverned run is shown only together with the repair run: governance off meets "
-        f"{_ids(newly_met(dict(gov.goals), dict(off.ungoverned.goals)))} by setting the engine's "
-        "checks aside, while the repair meets every critical goal with the checks in force, "
-        "through edits that still need institutional approval.",
+        f"{_ids(newly_met(dict(gov.goals), dict(off.ungoverned.goals)))} by setting aside the "
+        "engine's authority, prerequisite and information checks, while the repair meets every "
+        "critical goal with the checks in force, through edits that still need institutional "
+        "approval.",
         "",
         "## Supporting evidence: the same incident with a live model (live LLM agents)",
         "",
