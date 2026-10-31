@@ -19,6 +19,7 @@ from cascadeguard.agents.base import Agent
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
 from cascadeguard.agents.llm import (
     CAP_VARIABLE,
+    CappedClient,
     DailyLimitReached,
     LLMAgent,
     LLMConfig,
@@ -89,6 +90,16 @@ def _display(path: Path) -> str:
         return path.as_posix()
 
 
+def positive_int(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be a positive number of requests")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cascadeguard")
     parser.add_argument("--version", action="version", version=f"cascadeguard {__version__}")
@@ -109,8 +120,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--governance",
         choices=tuple(g.value for g in Governance),
         default=Governance.ON.value,
-        help="off: compare the governed run with an ungoverned one (comparison only; scripted "
-        "or offline LLM agents; not with --repair or --audit)",
+        help="off: compare the governed run with an ungoverned one (comparison only; not with "
+        "--repair or --audit; live LLM agents need a request cap: --cap or "
+        "CASCADEGUARD_REQUEST_CAP)",
     )
     run_cmd.add_argument(
         "--live",
@@ -150,7 +162,7 @@ def build_parser() -> argparse.ArgumentParser:
         )
         cmd.add_argument(
             "--cap",
-            type=int,
+            type=positive_int,
             default=None,
             help=f"live LLM runs: max requests, retries included (or {CAP_VARIABLE} in .env)",
         )
@@ -344,17 +356,33 @@ def replay_repair(
     return found.comparison(repair_id)
 
 
-def cache_line(world: World) -> str | None:
+def request_line(world: World) -> str | None:
+    """Live LLM runs only: requests sent under the cap, any refused at it (a step refused at the
+    cap has no decision, so the run is inconclusive), and every failed request by kind ("HTTP
+    429", "HTTP 502", an exception class name; never a message), counted over the command."""
+    client = getattr(next(iter(world.agents.values()), None), "client", None)
+    capped = getattr(client, "inner", None)
+    if not isinstance(capped, CappedClient):
+        return None
+    line = f"Live requests: {capped.requests} sent (cap {capped.cap}, retries included)"
+    if capped.refused:
+        line += f"; {capped.refused} requests refused at the cap: inconclusive"
+    failures: dict[str, int] = getattr(client, "failures", {})
+    if failures:
+        kinds = ", ".join(f"{kind} x{n}" for kind, n in sorted(failures.items()))
+        line += f"; failed requests (retried or not): {kinds}"
+    return line
+
+
+def cache_line(world: World, runs: str = "baseline and replays") -> str | None:
     """LLM runs only: steps that came from the cache, needed a call, or repeated a request
-    failure, counted over everything this command ran (the baseline and any replays)."""
+    failure, counted over everything this command ran (`runs` names them)."""
     if world.cache is None:
         return None
     st = world.cache.stats
     if not (st.hits or st.misses or st.failures_repeated):  # nothing ran (e.g. a refusal)
         return None
-    line = (
-        f"LLM decision cache (baseline and replays): {st.hits} steps reused, {st.misses} not cached"
-    )
+    line = f"LLM decision cache ({runs}): {st.hits} steps reused, {st.misses} not cached"
     if st.failures_repeated:
         line += f", {st.failures_repeated} repeated an earlier request failure"
     return line
@@ -410,6 +438,17 @@ def uncached_estimate(world: World, repair_id: str) -> tuple[int, int | None]:
     p = find_proposal(base, dry.scenario, dry.roles, RuleBook(dry.clauses), repair_id)
     dry.replay(p)
     return 0, dry_cache.stats.misses - baseline_missing
+
+
+# Exit codes: 0 done, 2 refused or not configured, 3 a live LLM run that is inconclusive (steps
+# with no decision for infrastructure reasons: cap spent, request failure, daily-limit stop).
+INCONCLUSIVE_EXIT = 3
+
+
+def exit_status(world: World, failed_steps: object) -> int:
+    """INCONCLUSIVE_EXIT for a live LLM run with failed steps, else 0 (offline dry runs and
+    scripted runs keep 0: their missing steps are expected, not a failure)."""
+    return INCONCLUSIVE_EXIT if failed_steps and live_llm(world) else 0
 
 
 def live_llm(world: World) -> bool:
@@ -578,11 +617,8 @@ def governance_off_refusal(args: argparse.Namespace) -> str | None:
         return "--governance off compares the unrepaired incident only; drop --repair"
     if args.audit is not None:
         return "--governance off is a comparison mode and is not recorded in the audit file"
-    if args.agents == LLM and not args.offline:
-        return (
-            "--governance off with LLM agents runs from the decision cache only; add --offline "
-            "(live calls need the human's approval, gate 4)"
-        )
+    # Live LLM agents are allowed (gate 4, human 2026-10-31): the live-run rules (a request cap)
+    # apply as for any live run, and the ungoverned run reuses every cached unchanged step.
     return None
 
 
@@ -614,12 +650,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = _main(args, world)
     except DailyLimitReached:  # fixed text: the provider's message is not printed here
         print(f"cascadeguard: {DAILY_LIMIT_STOP}")
-        return 2
+        status = INCONCLUSIVE_EXIT if live_llm(world) else 2  # a live run stopped part-way
     except KnowledgeBaseError as exc:  # --kb-context lost the network mid-run
         print(f"cascadeguard: {exc}")
-        return 2
-    if (line := cache_line(world)) is not None:
-        print(line)
+        status = INCONCLUSIVE_EXIT if live_llm(world) else 2
+    # Also after a stop: how many steps and requests the stopped run had used.
+    off = getattr(args, "governance", Governance.ON.value) == Governance.OFF.value
+    runs = "governed and ungoverned runs" if off else "baseline and replays"
+    for line in (cache_line(world, runs), request_line(world)):
+        if line is not None:
+            print(line)
     return status
 
 
@@ -708,7 +748,7 @@ def _main(args: argparse.Namespace, world: World) -> int:
             finally:
                 store.close()
             print(f"audit: baseline run {base}, replay run {rep} in {_display(args.audit)}")
-        return 0
+        return exit_status(world, comparison.failed_steps)
     if args.command == "run" and args.governance == Governance.OFF.value:
         comparison = world.governance_comparison()
         markdown = governance_markdown(comparison)
@@ -720,7 +760,7 @@ def _main(args: argparse.Namespace, world: World) -> int:
                 governance_export(comparison),
                 markdown,
             )
-        return 0
+        return exit_status(world, comparison.failed_steps)
     if args.command == "run":
         result = world.baseline()
         excluded = excluded_drafts(result) if args.clauses is None else None
@@ -739,7 +779,7 @@ def _main(args: argparse.Namespace, world: World) -> int:
             finally:
                 store.close()
             print(f"audit: baseline run {run_id} in {_display(args.audit)}")
-        return 0
+        return exit_status(world, result.failed_steps)
     if args.command == "repairs":
         found = search_repairs(args.scenario, world=world)
         print(format_search(found))
