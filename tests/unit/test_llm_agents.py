@@ -1599,3 +1599,28 @@ def test_the_request_line_names_failed_requests_by_kind(
     out = capsys.readouterr().out
     assert "Live requests: 37 sent (cap 50, retries included); failed requests" in out
     assert "HTTP 429 x1" in out and "slow down" not in out and "sk-test" not in out
+    assert MODEL not in out
+
+
+def test_a_live_run_stopped_by_the_knowledge_base_exits_3(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A live run that loses the knowledge base part-way is inconclusive: exit 3, and the
+    request line still reports what was sent (a non-live run gets 2: tests/unit/test_kb.py)."""
+    from cascadeguard.cli import World as CliWorld
+    from cascadeguard.knowledge.kb import KnowledgeBaseError
+
+    _live_env(monkeypatch, tmp_path)
+    _capped_fake(monkeypatch, FakeClient(scripted_replies(scripted)))
+
+    def lost(self: CliWorld) -> None:
+        raise KnowledgeBaseError("OpenRouter embeddings failed 4 times: ConnectionError")
+
+    monkeypatch.setattr(CliWorld, "baseline", lost)
+    args = ["run", SCENARIO, "--agents", "llm", "--cap", "50", "--cache", str(tmp_path / "c")]
+    assert main(args) == 3
+    out = capsys.readouterr().out
+    assert "failed 4 times" in out and "Live requests: 0 sent (cap 50" in out
