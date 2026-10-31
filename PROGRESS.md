@@ -130,8 +130,8 @@ then locked.
   (The third, the runtime pin check, is fixed in PR 3.)
 - Next: gate 4 and gate 7 are done (#19, #20, #21 merged). The conclusion draft
   (`docs/review/pr5-conclusion-draft.md`) is approved but stays unlinked from the README and the
-  demo until the human decides separately. Remaining submission work: the technical report
-  (branch `report`, see "Technical report" below), then the demo video (the human's plan).
+  demo until the human decides separately. The technical report is merged (#23, 36324be; see
+  "Technical report" below). Remaining submission work: the demo video (the human's plan).
 
 **Technical report (branch `report`, 2026-10-31).** Human decisions 2026-10-31 (Ibrahim Melhem):
 - **Gate 3:** python-docx (>=1.2.0, with lxml) approved as a **dev-only** dependency, for the
@@ -173,6 +173,14 @@ then locked.
   the human checks the articles their notes cite (Art 14(4) chapeau; Art 75(1a); Art 3(49)(b);
   GDPR not amended) against EUR-Lex. Merge authorised by the human once evidence-auditor has run
   on the final PDF and every CI run on the final commit is green.
+- **PR #23 merged 2026-11-01 as 36324be** (evidence-auditor PASS on the final PDF; both CI runs
+  on b453f81 green; branch `report` kept). Follow-up PR on `report-followup` (human-approved
+  2026-11-01): §1 now says "quoted verbatim from UAE documents (some in English translation)"
+  (evidence-auditor MINOR: only FL 2/2019 and the PDPL are translations; DHA PP-11 and the AI
+  Charter were issued in English), plus this entry; the human re-exports the PDF once.
+  Draft clauses, no action (human 2026-11-01): `dha.pp11.4-18-5` and `mocai.ethics.fallback-plan`
+  stay closed as drafts; PDPL art9-1/art18-1 applicability stays open and out of the report; the
+  four EU clauses stay draft until the human checks their article numbers on EUR-Lex.
 
 ## Current phase
 
@@ -1497,10 +1505,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
-`pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). Next: the
-technical report on branch `report` (see "Technical report" under "Start here"): the human
-PDF is committed (8fb2608, 4 pages); push, open the PR, CI green; do not merge without the human.
-Then the demo video. Linking the conclusion draft is a separate human decision. Verify:
+`pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). The technical
+report is merged (#23, 36324be, 2026-11-01; see "Technical report" under "Start here"); its §1
+follow-up is on `report-followup`. Next: the demo video (the human's plan). Linking the conclusion draft is a separate human decision. Verify:
 `uv run python scripts/build_reports.py --check` (exit 0) and
 `uv run pytest tests/integration/test_reports.py`.
 Wording (human): "applied without the authority the governed engine requires", never
