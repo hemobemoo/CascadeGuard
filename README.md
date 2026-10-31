@@ -57,9 +57,11 @@ give byte-identical output on every run):
 | Evaluation | `docs/evaluation/` |
 | Submission readiness audit | `docs/submission-readiness.md` |
 
-Still to be added before submission, each in its own pull request: the gap analysis
-(`docs/gap-analysis.md`), an example trace export
-(`docs/evaluation/traces/`), and the technical report.
+Generated from the engine with scripted agents (`uv run python scripts/build_reports.py`):
+the gap analysis (`docs/gap-analysis.md`; its example mapping was reviewed at gate 7 on
+2026-10-31: six entries approved, two removed) and three example traces (`docs/evaluation/traces/`, with `how-to-read.md`).
+The gate-4 live LLM recording is in `docs/evaluation/gate4/`. Still to be added: the technical
+report.
 
 **Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in
 `policies/sources/` are not: they belong to their issuers (see Sources). The knowledge base's

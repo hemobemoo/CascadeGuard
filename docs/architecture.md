@@ -45,6 +45,11 @@ simulation/orchestrator  (deterministic code, not an agent)
   boundaries, integrity and evidence checks are unchanged. `engine/governance.py` compares the
   two runs; the default is on everywhere, repair search and replay use only governed runs, and
   `expected_ungoverned.yaml` is the mode's own expected output, not a golden.
+- **Generated documents (PR 5).** `storage/reports.py` builds the scripted traces
+  (`docs/evaluation/traces/`), `docs/gap-analysis.md` (failures, UAE clauses considered, the
+  examples mapped in `scenarios/<id>/gap_examples.yaml`, repairs that remove or mask each
+  failure) and an unpublished conclusion draft, from engine runs and committed exports only;
+  `scripts/build_reports.py` writes them and a test keeps the committed files equal.
 
 ```
 baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ──> hard filter

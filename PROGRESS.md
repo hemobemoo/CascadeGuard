@@ -7,7 +7,9 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
 **State of main.** Submission PRs 1 to 4 are merged (#14 labels/licence/README; #15 Charter;
-#16 vector knowledge base; #17 `--governance off`).
+#16 vector knowledge base; #17 `--governance off`). **Gate 4 done:** #19 (live LLM with
+`--governance off`, exit code 3; merge 4e1a642) and #20 (recording, `docs/evaluation/gate4/`;
+merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
@@ -100,7 +102,7 @@ then locked.
   3 actions applied only because governance was off; `patient_access_restored` met at T+15;
   the three failures behind it are "goal met but the cause is still present". Results table:
   `docs/evaluation/gate4/README.md` (results only; conclusions go through gate 7).
-- **PR (branch `governance-off-live`):** lifts the live-LLM refusal for `--governance off`
+- **PR (branch `governance-off-live`), merged as #19 (4e1a642):** lifts the live-LLM refusal for `--governance off`
   (keeps `--repair` and `--audit` refused; a live run still needs `--cap`). With LLM agents the
   ungoverned run reuses every cached step whose view no waived action changed. Dry run: an
   `--offline` run gives "N not cached", an estimate, not a bound. With an empty or stale cache
@@ -113,6 +115,10 @@ then locked.
   "M requests refused at the cap: inconclusive" when the cap ran out (CLI only; the UI stays
   scripted for this comparison), for governed and off runs, and
   also after a daily-limit stop. `--cap` must be positive.
+- **Follow-up (human, 2026-10-31):** the plain-language repair label in `storage/reports.py`
+  (`repair_label`) covers `assign_owner` and `define_minimum_data_share` only; the other three
+  operations (`add_escalation_trigger`, `add_fallback_channel_rule`,
+  `designate_decision_requester`) are named by code. Only rank 1 is labelled today.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
   "max requests").
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**
@@ -121,9 +127,8 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: the `governance-off-live` PR (review, CI, the human's merge), then gate 4 as approved
-  (dry run, then the governed baseline under `--cap`, then the variant); PR 5 after; see
-  "Current phase".
+- Next: PR 5 (#21): gate-7 decisions applied; evidence-auditor and test-breaker, CI, then the human approves the revised wording and merges (see
+  "Waiting on human"); do not merge. Gate 4 is done (#19, #20 merged); see "Current phase".
 
 ## Current phase
 
@@ -139,7 +144,18 @@ PRs follow, one at a time; each stops once open with CI green:
    extra for the export test).
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
    golden) and the side-by-side comparison in the CLI and UI: merged (PR #17, 824b00a).
-5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`.
+5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`: built
+   on `pr5-gap-analysis` (plan approved 2026-10-31): `storage/reports.py` and
+   `scripts/build_reports.py` generate three scripted traces (baseline, governance off, rank-1
+   replay), the gap analysis and `docs/review/pr5-conclusion-draft.md` (unpublished, gate 7);
+   `scenarios/uae_health_access/gap_examples.yaml` is reviewed (6 entries approved by the human
+   2026-10-31, 2 rejected; triage in `docs/review/pr5-clause-triage.md`). Waiting on the human:
+   the final approval of the revised conclusion wording, then the merge.
+   **Done when (plan approved 2026-10-31):** the three scripted traces equal the CLI's own exports;
+   `uv run python scripts/build_reports.py --check` exits 0; `tests/integration/test_reports.py`
+   passes; the mapping is a draft with no entry approved (until gate 7; now reviewed); the conclusion draft follows the human's
+   rules and is linked from nowhere; evidence-auditor, then phase-auditor and test-breaker with no
+   open BLOCKER or MAJOR; no API calls; all checks clean; PR open with CI green; stop for gate 7.
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
@@ -1219,9 +1235,29 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
 **PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
-**Gate 4 (recording run): approved 2026-10-31** under the conditions in "Open items" (model
-unchanged, dry run first, cap, variant only without a 429 or daily-limit stop). Waiting on the
-human: the merge of the `governance-off-live` PR, which the variant needs.
+**PR 5 (`pr5-gap-analysis`, #21): gate-7 decisions made 2026-10-31 (Ibrahim Melhem); waiting
+on the human's final wording approval of the revised conclusion draft and the merge.** Decided:
+mapping entries 2-5 approved, 7-8 approved with rewording, 1 (`eu.gdpr.art33-1`) and 6
+(`unesco.ai-ethics.responsibility-accountability`) rejected (triage
+`docs/review/pr5-clause-triage.md`); the Charter safeguard is not a trigger; the live section
+states the repair result; the draft stays off `main` until its wording is approved (the repo is
+public); conclusion wording changes applied (met "in this run but not in the governed
+baseline", outcome in words, plain-language repair label, closing sentence names the goal).
+Merge #21 only after the human approves the revised wording and CI is green. Earlier open items
+(now decided):
+- which entries of `scenarios/uae_health_access/gap_examples.yaml` to approve (8, none
+  approved; triage `docs/review/pr5-clause-triage.md`: entries 1, 6, 7, 8 NEEDS-HUMAN-JUDGMENT
+  on fit; entries 2-5 CLEAN);
+- the wording of `docs/review/pr5-conclusion-draft.md` (unpublished, linked from nowhere);
+- whether the Charter safeguard listed under "Other loaded clauses on this action" for
+  `undefined_trigger:review_automated_lockouts` counts as a trigger (evidence-auditor);
+- whether the live-LLM section may show governed vs ungoverned with only a pointer to the
+  scripted repair run (phase-auditor);
+- whether the committed but unlinked draft may be on main before approval, or should stay off
+  main until approved (test-breaker).
+
+**Gate 4 (recording run): done 2026-10-31** (#19 4e1a642, #20 a140c22), under the conditions in
+"Open items".
 Exit code (test-breaker QUESTION-FOR-HUMAN, decided 2026-10-31): an inconclusive live LLM run
 exits 3 (`INCONCLUSIVE_EXIT`), never 2 (refused): failed steps in a live baseline, replay or
 governance-off comparison, a daily-limit stop, or a knowledge-base failure mid-run. Offline and
@@ -1413,11 +1449,16 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Gate 4 done (2026-10-31): #19 merged (4e1a642); governed live baseline and ungoverned live
-variant recorded; snapshot and traces in `docs/evaluation/gate4/` (PR `gate4-recording`,
-waiting on the human). Do not rerun either run without asking. **Next:** the human reviews and
-merges that PR; then PR 5 (gap analysis, trace export). Any governed vs ungoverned conclusion in
-README or demo text goes through gate 7 first.
+Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
+traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
+`pr5-gap-analysis` (plan approved 2026-10-31) is built: evidence-auditor PASS (round 3),
+phase-auditor round 1 FAIL (structure file; fixed), test-breaker round 1 PASS (MINORs fixed);
+round 2 of both next, then the PR, CI, and the stop for the human's gate-7 decision (see
+"Waiting on human"); do not merge. Verify:
+`uv run python scripts/build_reports.py --check` (exit 0) and
+`uv run pytest tests/integration/test_reports.py`.
+Wording (human): "applied without the authority the governed engine requires", never
+"unauthorised". Any governed vs ungoverned conclusion goes through gate 7 first.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.

@@ -32,8 +32,14 @@ cascadeguard/
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
 │   ├── policy-inventory.md           [P1] table of the 23 PDFs (pages, text, issuer, date)
+│   ├── gap-analysis.md               [PR 5] generated: failures, clauses, examples, repairs
+│   ├── evaluation/                   [P5] LLM baseline reviews; [gate 4] gate4/ (live LLM
+│   │                                 recording: cache snapshot, exports, logs); [PR 5] traces/
+│   │                                 (generated scripted traces + how-to-read.md)
 │   ├── review/                       [P1] phase-N-clause-triage.md from evidence-auditor;
-│   │                                 [PR 4] governance-off/ (UI screenshot of step h)
+│   │                                 [PR 4] governance-off/ (UI screenshot of step h);
+│   │                                 [PR 5] pr5-clause-triage.md, pr5-conclusion-draft.md
+│   │                                 (generated, unpublished: gate 7)
 │   │                                 (also phase reports; [P6] phase-6-ui/ and [P6b]
 │   │                                 phase-6b-polish/ before/after reports and screenshots)
 │   └── decisions/                    [P1] short ADRs: 0001-*.md (one per real decision)
@@ -89,7 +95,8 @@ cascadeguard/
 │   │
 │   ├── storage/
 │   │   ├── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
-│   │   └── export.py                 [P3] JSON + Markdown exports (every clause labelled)
+│   │   ├── export.py                 [P3] JSON + Markdown exports (every clause labelled)
+│   │   └── reports.py                [PR 5] generated traces, gap analysis, conclusion draft
 │   │
 │   ├── ui/                           [P4] NiceGUI (no separate frontend); [P6] Demo UI v2 (spec 006);
 │   │                                 [P6b] display names from scenarios/<id>/display.yaml (spec 006b)
@@ -119,6 +126,7 @@ cascadeguard/
 ├── scripts/
 │   ├── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
 │   ├── build_kb.py                   [PR 3] chunks + OpenRouter embeddings -> policies/kb/
+│   ├── build_reports.py              [PR 5] writes the generated evaluation documents (--check)
 │   └── llm_smoke_test.py             [P5] exactly one live LLM call; latency, tokens, cost
 │
 ├── scenarios/
@@ -131,6 +139,7 @@ cascadeguard/
 │       ├── expected_repairs.yaml     [P3] golden: ranked search + one successful and one
 │       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
 │       ├── evaluation_findings.yaml  [P6] recorded scripted-vs-LLM findings shown in the UI
+│       ├── gap_examples.yaml         [PR 5] failure -> example-clause mapping (reviewed, gate 7)
 │       ├── display.yaml              [P6b] UI-only display labels and incident summary
 │       └── README.md                 plain-language narrative of the incident
 │
