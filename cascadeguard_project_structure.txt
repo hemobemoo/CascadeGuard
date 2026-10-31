@@ -139,7 +139,7 @@ cascadeguard/
 │       ├── expected_repairs.yaml     [P3] golden: ranked search + one successful and one
 │       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
 │       ├── evaluation_findings.yaml  [P6] recorded scripted-vs-LLM findings shown in the UI
-│       ├── gap_examples.yaml         [PR 5] DRAFT failure -> example-clause mapping (gate 7)
+│       ├── gap_examples.yaml         [PR 5] failure -> example-clause mapping (reviewed, gate 7)
 │       ├── display.yaml              [P6b] UI-only display labels and incident summary
 │       └── README.md                 plain-language narrative of the incident
 │

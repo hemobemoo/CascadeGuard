@@ -70,11 +70,21 @@ def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: Scripte
             for m in re.finditer(r"binding", e.relevance, re.IGNORECASE):
                 before = e.relevance[: m.start()].lower()
                 assert before.endswith(("not ", "non-")), e
-    # A draft mapping has no approved entry and is labelled as a draft in the document.
+    # The document states the mapping's state: a draft, or reviewed by the named human.
     text = committed(GAP_ANALYSIS)
     if examples.status == "draft":
         assert not any(e.approved for e in examples.entries)
         assert "DRAFT mapping awaiting the human's approval (gate 7)" in text
+    else:
+        assert examples.reviewed_by == "Ibrahim Melhem"  # gate 7, 2026-10-31
+        assert "DRAFT" not in text
+        assert (
+            f"mapping reviewed by the human ({examples.reviewed_by}, {examples.reviewed_on}, "
+            "gate 7)"
+        ) in text
+    # Rejected by the human (gate 7, 2026-10-31): never mapped again without a new decision.
+    rejected = {"eu.gdpr.art33-1", "unesco.ai-ethics.responsibility-accountability"}
+    assert not rejected & {e.clause for e in examples.entries}
     # Each example bullet shows its own entry's approval state.
     section = ""
     shown = 0
@@ -120,11 +130,32 @@ def test_gap_analysis_quotes_verbatim_and_keeps_every_qualification(runs: Script
     assert quoted >= len(runs.baseline.failures)
 
 
+def test_a_failure_with_no_example_says_so(runs: ScriptedRuns) -> None:
+    """Gate 7 (2026-10-31): a failure with no reviewed example keeps its section and states it,
+    in the committed document and for any mapping that leaves a failure out."""
+    from cascadeguard.storage.reports import NO_EXAMPLE, GapExamples, gap_analysis_markdown
+
+    examples = load_gap_examples()
+    mapped = {e.failure for e in examples.entries}
+    unmapped = [f.id for f in runs.baseline.failures if f.id not in mapped]
+    assert unmapped == ["orphan_duty:activate_fallback_channel"]
+    text = committed(GAP_ANALYSIS)
+    for fid in unmapped:
+        section = text.split(f"## `{fid}`", 1)[1].split("\n## ", 1)[0]
+        assert f"- {NO_EXAMPLE}" in section
+    # With no entries at all, every failure says so.
+    corpus = {c.id: c for c in load_clauses()}
+    empty = gap_analysis_markdown(runs, GapExamples(status="draft", entries=()), corpus)
+    assert empty.count(f"- {NO_EXAMPLE}") == len(runs.baseline.failures)
+
+
 def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> None:
     text = committed(CONCLUSION_DRAFT)
     assert text.startswith("# DRAFT conclusion wording (gate 7): not published")
     assert "unauthori" not in text.lower()
-    assert text.count(WITHOUT_AUTHORITY) == 2
+    # Twice per ungoverned run: the waived actions and the goal met at their minute.
+    assert text.count(WITHOUT_AUTHORITY) == 4
+    assert "met only in this run" not in text  # false: run 3 meets it too (gate 7)
     main, live = text.split("## Supporting evidence", 1)
     # The three scripted runs together, each labelled; governed vs ungoverned never alone.
     for run in ("**Governed** (", "**Ungoverned** (", "**Governed with the rank-1 repair** ("):
@@ -139,6 +170,34 @@ def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> Non
     assert rep.proposal.requires_authorization
     assert "no reviewed, binding clause in the loaded clause set supports" in run3
     assert rep.outcome == "resolved" and not rep.unmet_critical_goals
+    # Gate-7 wording (2026-10-31): the outcome in words, and a plain-language repair label.
+    assert (
+        "Outcome: **all critical goals met (engine status: resolved). 2 failures removed at "
+        "their cause, 2 masked with the cause still present**"
+    ) in run3
+    assert run3.startswith(
+        " (scripted agents; replay of the identical incident). Make `health_service_operator` "
+        "the owner of reversing automated lockouts within 30 minutes, and define a minimum share "
+        "of network incident status from `telecom_operator` to `health_service_operator` (repair "
+        f"`{rep.proposal.repair_id}`)"
+    )
+    run2 = main.split("2. **Ungoverned**", 1)[1].split("\n3. ", 1)[0]
+    assert (
+        "`patient_access_restored` is met in this run but not in the governed baseline, at "
+        f"T+60, the minute an action was {WITHOUT_AUTHORITY}."
+    ) in run2
+    closing = main.split("The ungoverned run is shown only together", 1)[1]
+    assert "governance off meets `patient_access_restored` by" in closing
+    assert "alert_cause_known_to_health" not in closing
+    # The live ungoverned bullet is followed directly by the repair result itself.
+    bullets = [b for b in live.split("\n- ") if b.strip()]
+    ungoverned = next(i for i, b in enumerate(bullets) if b.startswith("**Ungoverned**"))
+    assert "but not in the live governed run, at T+15" in bullets[ungoverned]
+    assert bullets[ungoverned + 1].startswith(
+        "Repair result (scripted agents, run 3 above): all critical goals were met with the "
+        "engine's checks in force, through two hypothetical policy edits that require "
+        "institutional authorization."
+    )
     # Every diagnosed failure list keeps its qualification, once per governed run.
     qualification = "a candidate gap for expert review, not a confirmed legal or standards gap"
     assert main.count(qualification) == 1 and live.count(qualification) == 1
@@ -148,15 +207,19 @@ def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> Non
     assert "No live repair replay was run" in live
 
 
-def test_met_only_here_names_a_waived_minute_only_when_it_is_one() -> None:
-    from cascadeguard.storage.reports import _met_only_here  # pyright: ignore[reportPrivateUsage]
+def test_met_here_not_in_compares_with_the_named_baseline() -> None:
+    from cascadeguard.storage.reports import met_here_not_in, newly_met
 
     waived = [{"minute": 60, "action": "x", "would_have_been_rejected": ["no_authority"]}]
-    at_waived = _met_only_here({"g": None}, {"g": 60}, waived)
-    elsewhere = _met_only_here({"g": None}, {"g": 30}, waived)
-    assert "the minute an action was applied" in at_waived
-    assert "the minute" not in elsewhere and "at T+30" in elsewhere
-    assert _met_only_here({"g": 10}, {"g": 60}, waived) == ""  # met in both runs
+    at_waived = met_here_not_in({"g": None}, {"g": 60}, waived, "governed baseline")
+    elsewhere = met_here_not_in({"g": None}, {"g": 30}, waived, "live governed run")
+    assert at_waived == (
+        f"`g` is met in this run but not in the governed baseline, at T+60, the minute an "
+        f"action was {WITHOUT_AUTHORITY}."
+    )
+    assert elsewhere == "`g` is met in this run but not in the live governed run, at T+30."
+    assert met_here_not_in({"g": 10}, {"g": 60}, waived, "governed baseline") == ""
+    assert newly_met({"a": None, "b": 5, "c": None}, {"a": 60, "b": 5, "c": None}) == ["a"]
 
 
 def test_no_document_or_ui_links_the_draft() -> None:
@@ -184,19 +247,29 @@ def test_no_document_or_ui_links_the_draft() -> None:
 
 
 def test_a_reviewed_mapping_needs_every_entry_approved() -> None:
+    from datetime import date
+
     from pydantic import ValidationError
 
     from cascadeguard.storage.reports import GapExamples
 
+    by, on = "Ibrahim Melhem", date(2026, 10, 31)
     entries = load_gap_examples().entries
     approved = tuple(e.model_copy(update={"approved": True}) for e in entries)
-    with pytest.raises(ValidationError):
-        GapExamples(status="reviewed", entries=entries)
-    with pytest.raises(ValidationError):
+    one_draft = (approved[0].model_copy(update={"approved": False}), *approved[1:])
+    with pytest.raises(ValidationError, match="every entry is approved"):
+        GapExamples(status="reviewed", entries=one_draft, reviewed_by=by, reviewed_on=on)
+    with pytest.raises(ValidationError, match="every entry is approved"):
         GapExamples(status="draft", entries=approved)
-    assert GapExamples(status="reviewed", entries=approved).status == "reviewed"
-    with pytest.raises(ValidationError):
-        GapExamples(status="reviewed", entries=())
+    with pytest.raises(ValidationError, match="every entry is approved"):
+        GapExamples(status="reviewed", entries=(), reviewed_by=by, reviewed_on=on)
+    with pytest.raises(ValidationError, match="names its reviewer and date"):
+        GapExamples(status="reviewed", entries=approved)
+    assert (
+        GapExamples(status="reviewed", entries=approved, reviewed_by=by, reviewed_on=on).status
+        == "reviewed"
+    )
+    assert load_gap_examples().status == "reviewed"  # the committed file (gate 7)
 
 
 def test_the_draft_claims_follow_the_data(runs: ScriptedRuns) -> None:

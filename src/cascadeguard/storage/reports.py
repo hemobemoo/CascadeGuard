@@ -10,6 +10,7 @@ its wording. The gap-example mapping is a draft too: only approved entries count
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal, Self
 
@@ -20,6 +21,7 @@ from cascadeguard.cli import World, baseline_markdown, excluded_drafts, load_wor
 from cascadeguard.domain.base import DomainModel
 from cascadeguard.domain.findings import CoordinationFailure
 from cascadeguard.domain.policies import ClauseStatus, PolicyClause
+from cascadeguard.domain.repairs import RepairProposal
 from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
     REQUIRES_AUTHORIZATION_LABEL,
@@ -46,6 +48,7 @@ GATE4_DIR = PROJECT_ROOT / "docs" / "evaluation" / "gate4"
 # Human wording (2026-10-31), used instead of "unauthorised" everywhere.
 WITHOUT_AUTHORITY = "applied without the authority the governed engine requires"
 SCRIPTED = "scripted agents"
+NO_EXAMPLE = "No reviewed example clause is mapped to this failure."
 LIVE_LLM = "live LLM agents, gate-4 recording"
 
 
@@ -59,12 +62,16 @@ class GapExample(DomainModel):
 class GapExamples(DomainModel):
     status: Literal["draft", "reviewed"]
     entries: tuple[GapExample, ...]
+    reviewed_by: str | None = None  # the human who approved the entries (gate 7)
+    reviewed_on: date | None = None
 
     @model_validator(mode="after")
     def _status_matches_approvals(self) -> Self:
         approved = bool(self.entries) and all(e.approved for e in self.entries)
         if (self.status == "reviewed") != approved:
             raise ValueError("status is reviewed exactly when every entry is approved")
+        if self.status == "reviewed" and not (self.reviewed_by and self.reviewed_on):
+            raise ValueError("a reviewed mapping names its reviewer and date")
         return self
 
 
@@ -155,7 +162,8 @@ def gap_analysis_markdown(
         + (
             "**DRAFT mapping awaiting the human's approval (gate 7)**"
             if examples.status == "draft"
-            else "reviewed mapping"
+            else f"mapping reviewed by the human ({examples.reviewed_by}, {examples.reviewed_on}, "
+            "gate 7)"
         )
         + " (`scenarios/uae_health_access/gap_examples.yaml`). An entry not yet approved is "
         "marked so. Foreign and international texts are shown as examples of practice "
@@ -208,7 +216,7 @@ def _failure_section(
     lines += ["**Examples (context, not UAE law; UAE principles are not binding):**", ""]
     entries = [e for e in examples.entries if e.failure == f.id]
     if not entries:
-        lines += ["- None mapped.", ""]
+        lines += [f"- {NO_EXAMPLE}", ""]
     for e in entries:
         c = corpus[e.clause]
         state = "approved" if e.approved else "DRAFT, not yet approved"
@@ -250,6 +258,10 @@ def load_gate4() -> tuple[dict[str, Any], dict[str, Any]]:
     return baseline, off
 
 
+def _count(n: int) -> str:
+    return {1: "one", 2: "two", 3: "three"}.get(n, str(n))
+
+
 def _gate4_goals(goals: dict[str, str]) -> str:
     return "; ".join(f"`{g}` {v}" for g, v in sorted(goals.items()))
 
@@ -276,21 +288,68 @@ def _minute(state: str) -> int | None:
     return int(state.removeprefix("met at T+")) if state.startswith("met at T+") else None
 
 
-def _met_only_here(
-    governed: dict[str, int | None], ungoverned: dict[str, int | None], waived: list[dict[str, Any]]
+def newly_met(governed: dict[str, int | None], ungoverned: dict[str, int | None]) -> list[str]:
+    """Goals met in the ungoverned run but not in the governed one."""
+    return [g for g, at in sorted(ungoverned.items()) if at is not None and governed.get(g) is None]
+
+
+def met_here_not_in(
+    governed: dict[str, int | None],
+    ungoverned: dict[str, int | None],
+    waived: list[dict[str, Any]],
+    baseline: str,
 ) -> str:
-    """A sentence for each goal met only in the ungoverned run, saying whether it was met at the
-    minute of a waived action (derived from the runs, never assumed)."""
+    """A sentence for each goal met in the ungoverned run but not in `baseline`, saying whether it
+    was met at the minute of a waived action (derived from the runs, never assumed)."""
     minutes = {w["minute"] for w in waived}
     parts: list[str] = []
-    for goal, at in sorted(ungoverned.items()):
-        if at is None or governed.get(goal) is not None:
-            continue
+    for goal in newly_met(governed, ungoverned):
+        at = ungoverned[goal]
         when = f"at T+{at}"
         if at in minutes:
-            when += ", the minute an action was applied without that authority"
-        parts.append(f"`{goal}` is met only in this run, {when}.")
+            when += f", the minute an action was {WITHOUT_AUTHORITY}"
+        parts.append(f"`{goal}` is met in this run but not in the {baseline}, {when}.")
     return " ".join(parts)
+
+
+def _gerund(action: str) -> str:
+    """reverse_automated_lockouts -> 'reversing automated lockouts'."""
+    verb, *rest = action.split("_")
+    stem = verb[:-1] if verb.endswith("e") and not verb.endswith("ee") else verb
+    return " ".join([stem + "ing", *rest])
+
+
+def repair_label(p: RepairProposal) -> str:
+    """The repair's edits in plain language, from their typed parameters only."""
+    parts: list[str] = []
+    for e in p.edits:
+        op = e.operation.value
+        if op == "assign_owner" and e.action:
+            parts.append(
+                f"make `{e.role}` the owner of {_gerund(e.action)} within "
+                f"{e.deadline_minutes} minutes"
+            )
+        elif op == "define_minimum_data_share" and e.data_category and e.counterpart:
+            category = e.data_category.replace("_", " ")
+            parts.append(
+                f"define a minimum share of {category} from `{e.role}` to `{e.counterpart}`"
+            )
+        else:  # the other grammar operations: named, never paraphrased
+            parts.append(f"`{op}` for `{e.role}`")
+    text = ", and ".join(parts)
+    return text[0].upper() + text[1:]
+
+
+def outcome_text(rep: ReplayComparison) -> str:
+    met = (
+        "all critical goals met"
+        if not rep.unmet_critical_goals
+        else f"critical goals unmet: {_ids(rep.unmet_critical_goals)}"
+    )
+    return (
+        f"{met} (engine status: {rep.outcome}). {len(rep.removed)} failures removed at their "
+        f"cause, {len(rep.masked)} masked with the cause still present"
+    )
 
 
 def same_failures(live: list[str], scripted: list[str]) -> str:
@@ -330,12 +389,12 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         f"2. **Ungoverned** ({SCRIPTED}; governance off, a comparison mode, never the result). "
         f"{len(waived)} actions were {WITHOUT_AUTHORITY}: {waived_actions(waived)}. Goals: "
         f"{_goals(off.ungoverned)}. "
-        + _met_only_here(dict(gov.goals), dict(off.ungoverned.goals), waived)
+        + met_here_not_in(dict(gov.goals), dict(off.ungoverned.goals), waived, "governed baseline")
         + f" The causes of {_ids(off.masked())} are still present (masked, not removed).",
         f"3. **Governed with the rank-1 repair** ({SCRIPTED}; replay of the identical incident). "
-        f"The repair `{p.repair_id}` makes {len(p.edits)} policy edits (hypothetical rules, not "
-        f"source clauses): {_ids(e.operation.value for e in p.edits)}. Outcome: "
-        f"**{rep.outcome}**. Goals: {_goals(rep.replay)}. Removed at their cause: "
+        f"{repair_label(p)} (repair `{p.repair_id}`): {len(p.edits)} policy edits "
+        f"(hypothetical rules, not source clauses: {_ids(e.operation.value for e in p.edits)}). "
+        f"Outcome: **{outcome_text(rep)}**. Goals: {_goals(rep.replay)}. Removed at their cause: "
         f"{_ids(rep.removed)}. **Masked, cause still present:** {_ids(rep.masked)}. "
         + (
             f"The repair is marked {REQUIRES_AUTHORIZATION_LABEL}: it creates a permission that "
@@ -345,8 +404,9 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         ),
         "",
         "The ungoverned run is shown only together with the repair run: governance off meets "
-        "the goal by setting the engine's checks aside, while the repair meets every critical "
-        "goal with the checks in force, through edits that still need institutional approval.",
+        f"{_ids(newly_met(dict(gov.goals), dict(off.ungoverned.goals)))} by setting the engine's "
+        "checks aside, while the repair meets every critical goal with the checks in force, "
+        "through edits that still need institutional approval.",
         "",
         "## Supporting evidence: the same incident with a live model (live LLM agents)",
         "",
@@ -363,15 +423,24 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         f"- **Ungoverned** ({LIVE_LLM}): {len(live_waived)} actions were {WITHOUT_AUTHORITY}: "
         f"{waived_actions(live_waived)}. Goals: "
         f"{_gate4_goals(live_off['ungoverned_run']['goals'])}. "
-        + _met_only_here(
+        + met_here_not_in(
             {g: _minute(v) for g, v in live_base["goals"].items()},
             {g: _minute(v) for g, v in live_off["ungoverned_run"]["goals"].items()},
             live_waived,
+            "live governed run",
         )
         + " Causes still present: "
         f"{_ids(live_off['failures']['ungoverned_cause_still_present'])}.",
-        "- The repair result is run 3 above (scripted agents). No live repair replay was run "
-        "(it would need a new gate-4 approval).",
+        "- Repair result (scripted agents, run 3 above): "
+        + (
+            "all critical goals were met"
+            if not rep.unmet_critical_goals
+            else f"critical goals unmet: {_ids(rep.unmet_critical_goals)}"
+        )
+        + f" with the engine's checks in force, through {_count(len(p.edits))} hypothetical "
+        "policy edits"
+        + (" that require institutional authorization" if p.requires_authorization else "")
+        + ". No live repair replay was run (it would need a new gate-4 approval).",
         "",
     ]
     return "\n".join(lines)
