@@ -1,0 +1,80 @@
+{
+  "key": "19e2e94352f1d898d7ca4495ba439d7a44cbbd567f7bd7d031d94350ad6b3c38",
+  "role_id": "health_service_operator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_service_operator",
+    "at": "2026-03-02T08:45:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "review_automated_lockouts",
+        "target": "health_service_operator",
+        "parameters": {}
+      },
+      {
+        "action_type": "notify_health_data_oversight",
+        "target": "health_data_oversight",
+        "parameters": {
+          "fact": "fraud_alert_credential_stuffing"
+        }
+      },
+      {
+        "action_type": "maintain_fallback_plan",
+        "target": "health_service_operator",
+        "parameters": {}
+      },
+      {
+        "action_type": "activate_fallback_channel",
+        "target": "health_service_operator",
+        "parameters": {}
+      }
+    ],
+    "rationale": "The fraud-model alert is suspected, not proven, and no successful unauthorised login has been confirmed. I will review the automated lockouts under human oversight, notify the health-data oversight role of the suspected incident, and maintain/activate a fallback channel so patients can keep accessing care while the investigation continues.",
+    "citations": [
+      {
+        "clause_id": "dha.pp11.4-18-2",
+        "quote_span": "4.18.2. Entities must thoroughly investigate the breaches/incidents starting from the point of discovery until closure: aa.. Determine if the breach is related to a violation of PHI.",
+        "relevance": "Supports reviewing the automated lockouts to investigate the suspected credential-stuffing incident from discovery."
+      },
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "quote_span": "6. Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and human oversight over AI, aligning with ethical values and social standards to correct any errors or biases that may arise.",
+        "relevance": "Supports human review of the fraud-model lockouts because the alert is suspected, not proven."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-4",
+        "quote_span": "4.18.4. The Entity is required to report breaches/incidents within the designated period defined by Executive Regulations of UAE Data Protection Law.",
+        "relevance": "Supports notifying the health-data oversight role of the suspected incident."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-1",
+        "quote_span": "4.18.1. Entities must establish breach/incidence response management (Incident Response and Business Continuity) and recovery (Incident Recovery and Disaster Recovery) plans that comprise of:",
+        "relevance": "Supports maintaining the fallback plan so patients can keep accessing care while lockouts are reviewed."
+      },
+      {
+        "clause_id": "uae.fl2-2019.art4",
+        "quote_span": "3. To ensure the availability of health data and information to the authorised thereof and facilitate the access thereto, if needed.",
+        "relevance": "Supports activating a fallback channel to preserve patient access to care during the incident."
+      }
+    ],
+    "uncertainty": [
+      "Whether any patient account was actually accessed without authorisation.",
+      "Whether the lockouts are correct or erroneous and who owns reversing them within the operator's remit.",
+      "The exact reporting period under the PDPL Executive Regulations, which is not in the reviewed corpus."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 3769,
+    "completion_tokens": 696,
+    "cost": 0.0,
+    "latency_seconds": 4.953762099990854,
+    "calls": 1
+  }
+}

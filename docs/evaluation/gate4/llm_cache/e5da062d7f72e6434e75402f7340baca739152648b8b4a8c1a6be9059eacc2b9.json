@@ -1,0 +1,35 @@
+{
+  "key": "e5da062d7f72e6434e75402f7340baca739152648b8b4a8c1a6be9059eacc2b9",
+  "role_id": "health_data_oversight",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_data_oversight",
+    "at": "2026-03-02T09:15:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "monitor",
+        "target": null,
+        "parameters": {}
+      }
+    ],
+    "rationale": "No new inject at T+75 and no decision points are presented. I have no facts to act on and no open obligations. I will continue monitoring without proposing any action at this time.",
+    "citations": [],
+    "uncertainty": [
+      "Whether any incident has occurred that falls within my health-data oversight authority is unknown; no facts have been provided."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 2557,
+    "completion_tokens": 110,
+    "cost": 0.0,
+    "latency_seconds": 1.4635520999872824,
+    "calls": 1
+  }
+}
