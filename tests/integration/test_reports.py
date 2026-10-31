@@ -66,12 +66,29 @@ def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: Scripte
         assert not GAP_CLAIM.search(e.relevance) and not OVERSTATED.search(e.relevance), e
         # Any word on binding force agrees with the clause: only a binding clause may be called
         # binding without "not" or "non-".
-        if corpus[e.clause].binding is not True and "binding" in e.relevance:
-            assert re.search(r"not binding|non-binding", e.relevance), e
+        if corpus[e.clause].binding is not True:
+            for m in re.finditer(r"binding", e.relevance, re.IGNORECASE):
+                before = e.relevance[: m.start()].lower()
+                assert before.endswith(("not ", "non-")), e
     # A draft mapping has no approved entry and is labelled as a draft in the document.
+    text = committed(GAP_ANALYSIS)
     if examples.status == "draft":
         assert not any(e.approved for e in examples.entries)
-        assert "DRAFT mapping awaiting the human's approval (gate 7)" in committed(GAP_ANALYSIS)
+        assert "DRAFT mapping awaiting the human's approval (gate 7)" in text
+    # Each example bullet shows its own entry's approval state.
+    section = ""
+    shown = 0
+    for line in text.splitlines():
+        if line.startswith("## `"):
+            section = line.removeprefix("## `").removesuffix("`")
+        m = re.match(
+            r"^- `([a-z0-9.\-]+)` \[.*\((approved|DRAFT, not yet approved)\)\. Relevance:", line
+        )
+        if m:
+            entry = next(e for e in examples.entries if e.failure == section and e.clause == m[1])
+            assert (m[2] == "approved") is entry.approved, line
+            shown += 1
+    assert shown == len(examples.entries)
 
 
 def test_gap_analysis_quotes_verbatim_and_keeps_every_qualification(runs: ScriptedRuns) -> None:
@@ -79,6 +96,8 @@ def test_gap_analysis_quotes_verbatim_and_keeps_every_qualification(runs: Script
     corpus = {c.id: c for c in load_clauses()}
     for f in runs.baseline.failures:
         assert f"## `{f.id}`" in text and f"_{f.qualification}_" in text
+    header = "**Examples (context, not UAE law; UAE principles are not binding):**"
+    assert text.count(header) == len(runs.baseline.failures)
     # Each clause bullet is followed by exactly its own clause text, in full and in order, and
     # carries its own status label.
     lines = text.splitlines()
@@ -111,25 +130,54 @@ def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> Non
     for run in ("**Governed** (", "**Ungoverned** (", "**Governed with the rank-1 repair** ("):
         assert f"{run}{SCRIPTED}" in main
     assert LIVE_LLM not in main and live.count(LIVE_LLM) == 2
-    # The repair's masked blockers and its authorization label are stated.
+    # Run 3's own paragraph states the removed and masked blockers and the authorization label.
     rep = runs.rank1
-    assert len(rep.masked) == 2 and all(f"`{m}`" in main for m in rep.masked)
-    assert "requires authorization" in main and rep.proposal.requires_authorization
+    run3 = main.split("3. **Governed with the rank-1 repair**", 1)[1].split("\n\n", 1)[0]
+    assert len(rep.masked) == 2
+    assert f"**Masked, cause still present:** {reports._ids(rep.masked)}." in run3  # pyright: ignore[reportPrivateUsage]
+    assert f"Removed at their cause: {reports._ids(rep.removed)}." in run3  # pyright: ignore[reportPrivateUsage]
+    assert rep.proposal.requires_authorization
+    assert "no reviewed, binding clause in the loaded clause set supports" in run3
     assert rep.outcome == "resolved" and not rep.unmet_critical_goals
+    # Every diagnosed failure list keeps its qualification, once per governed run.
+    qualification = "a candidate gap for expert review, not a confirmed legal or standards gap"
+    assert main.count(qualification) == 1 and live.count(qualification) == 1
+    # No overstatement outside the fixed, negated phrases ("not ... a confirmed ... gap").
+    free = text.replace("`", "").replace(reports.DISCLAIMER, "").replace(qualification, "")
+    assert not OVERSTATED.search(free), OVERSTATED.findall(free)
     assert "No live repair replay was run" in live
+
+
+def test_met_only_here_names_a_waived_minute_only_when_it_is_one() -> None:
+    from cascadeguard.storage.reports import _met_only_here  # pyright: ignore[reportPrivateUsage]
+
+    waived = [{"minute": 60, "action": "x", "would_have_been_rejected": ["no_authority"]}]
+    at_waived = _met_only_here({"g": None}, {"g": 60}, waived)
+    elsewhere = _met_only_here({"g": None}, {"g": 30}, waived)
+    assert "the minute an action was applied" in at_waived
+    assert "the minute" not in elsewhere and "at T+30" in elsewhere
+    assert _met_only_here({"g": 10}, {"g": 60}, waived) == ""  # met in both runs
 
 
 def test_no_document_or_ui_links_the_draft() -> None:
     """Unpublished until the human approves it (gate 7): no Markdown file and no source file
     names it, except PROGRESS (the hand-off), the draft itself and its generator."""
-    skip = {PROJECT_ROOT / "PROGRESS.md", CONCLUSION_DRAFT, Path(reports.__file__).resolve()}
-    paths = [PROJECT_ROOT / "README.md"] + [
-        p
-        for top in ("docs", "scenarios", "src")
-        for p in (PROJECT_ROOT / top).rglob("*")
-        if p.suffix in (".md", ".py") and "__pycache__" not in p.parts
-    ]
-    checked = [p for p in paths if p.resolve() not in skip]
+    import subprocess
+
+    # Every tracked text file; the structure file lists the project's files and is exempt.
+    skip = {
+        PROJECT_ROOT / "PROGRESS.md",
+        PROJECT_ROOT / "cascadeguard_project_structure.txt",
+        CONCLUSION_DRAFT,
+        Path(reports.__file__).resolve(),
+        Path(__file__).resolve(),
+    }
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=PROJECT_ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    text_suffixes = {".md", ".py", ".txt", ".yaml", ".yml", ".toml", ".json", ".css", ".html"}
+    paths = [PROJECT_ROOT / name for name in tracked if Path(name).suffix in text_suffixes]
+    checked = [p for p in paths if p.exists() and p.resolve() not in {s.resolve() for s in skip}]
     assert len(checked) > 20
     for path in checked:
         assert "pr5-conclusion-draft" not in path.read_text(encoding="utf-8"), path
@@ -147,6 +195,8 @@ def test_a_reviewed_mapping_needs_every_entry_approved() -> None:
     with pytest.raises(ValidationError):
         GapExamples(status="draft", entries=approved)
     assert GapExamples(status="reviewed", entries=approved).status == "reviewed"
+    with pytest.raises(ValidationError):
+        GapExamples(status="reviewed", entries=())
 
 
 def test_the_draft_claims_follow_the_data(runs: ScriptedRuns) -> None:
