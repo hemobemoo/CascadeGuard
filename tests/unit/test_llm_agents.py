@@ -1422,7 +1422,9 @@ def test_live_governance_off_reuses_every_unchanged_step(
     assert main([*args, "--cap", "100", "--cache", cache]) == 0
     live = capsys.readouterr().out
     assert len(client.requests) == 38
-    assert "LLM decision cache (baseline and replays): 34 steps reused, 38 not cached" in live
+    assert (
+        "LLM decision cache (governed and ungoverned runs): 34 steps reused, 38 not cached" in live
+    )
     assert "| patient_access_restored | unmet | met at T+60 |" in live
     assert "would have been rejected (missing_information, no_authority)" in live
     assert MODEL not in live and "sk-test" not in live
@@ -1437,3 +1439,41 @@ def test_live_governance_off_reuses_every_unchanged_step(
         line for line in offline.splitlines() if not line.startswith(("- Agents:", "LLM decision"))
     ]
     assert body == again
+
+
+@pytest.mark.parametrize(("cap", "sent", "comparable"), [(38, 38, True), (37, 37, False)])
+def test_one_cap_covers_the_governed_and_ungoverned_runs(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    cap: int,
+    sent: int,
+    comparable: bool,
+) -> None:
+    """Through the CappedClient and ResilientClient make_client builds (around a fake SDK): the
+    cap counts both runs, and a step refused at the cap makes the comparison not comparable and
+    is reported as inconclusive."""
+    from cascadeguard.agents.llm import CappedClient, LLMConfig, ResilientClient, RetryPolicy
+
+    _live_env(monkeypatch, tmp_path)
+    fake = FakeClient(scripted_replies(scripted))
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds  # pacing passes simulated time, no waiting
+
+    def wrapped(config: LLMConfig, cap: int | None = None, **_: object) -> ResilientClient:
+        assert cap is not None
+        inner = CappedClient(fake, cap)
+        redact = (config.api_key, config.model)
+        return ResilientClient(inner, RetryPolicy(), sleep, lambda: now[0], redact=redact)
+
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", wrapped)
+    args = ["run", SCENARIO, "--governance", "off", "--agents", "llm", "--cap", str(cap)]
+    assert main([*args, "--cache", str(tmp_path / "c")]) == 0
+    out = capsys.readouterr().out
+    assert len(fake.requests) == sent
+    assert ("## Not comparable" in out) is not comparable
+    assert f"Live requests: {sent} sent (cap {cap}, retries included)" in out
+    assert ("refused at the cap: inconclusive" in out) is not comparable
