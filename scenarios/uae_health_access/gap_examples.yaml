@@ -20,7 +20,7 @@ entries:
     approved: false
   - failure: orphan_duty:reverse_automated_lockouts
     clause: unesco.ai-ethics.review-and-correct
-    relevance: A designated staff member able to review and correct a decision affecting individuals.
+    relevance: A designated staff member to whom individuals can make submissions, able to review and correct a decision affecting their rights and freedoms (a non-binding recommendation).
     approved: false
   - failure: orphan_duty:reverse_automated_lockouts
     clause: uae.ai-charter.human-oversight
@@ -32,7 +32,7 @@ entries:
     approved: false
   - failure: undefined_trigger:review_automated_lockouts
     clause: unesco.ai-ethics.human-oversight
-    relevance: Ultimate human responsibility for decisions taken with AI systems.
+    relevance: Ultimate human responsibility for decisions taken with AI systems (a non-binding recommendation).
     approved: false
   - failure: undefined_trigger:review_automated_lockouts
     clause: uae.ai-charter.human-oversight
