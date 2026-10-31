@@ -228,12 +228,24 @@ def test_the_pdf_is_at_most_five_pages_and_current() -> None:
     with pdfplumber.open(PDF) as pdf:
         assert len(pdf.pages) <= MAX_PAGES, len(pdf.pages)
         pages = " ".join((p.extract_text() or "") for p in pdf.pages)
-    flat = " ".join(pages.split())
-    report = _builder().parse(text())
+
+    def flatten(s: str) -> str:  # a line break after a hyphen extracts as "- "
+        return re.sub(r"-\s+", "-", " ".join(s.split()))
+
+    flat = flatten(pages)
+    builder = _builder()
+    report = builder.parse(text())
     for section in report.sections:
         assert section.title.split(",")[0] in flat, section.title
     for value in ("4,812", "3,950", "T+15", "T+60", "T+30"):
         assert value in flat, value
+    # Current: every paragraph and bullet of the Markdown, word for word (table cells wrap in
+    # extraction, so they are left to the .docx test). A stale export fails here.
+    for section in report.sections:
+        for kind, content in section.blocks:
+            if kind != "table":
+                paragraph = flatten(builder.plain(str(content)))
+                assert paragraph in flat, f"PDF is stale; re-export it: {paragraph[:80]}"
 
 
 def test_the_report_is_linked_and_the_draft_is_not() -> None:
