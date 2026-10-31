@@ -77,3 +77,15 @@ Reviewer questions: Q1, the Charter safeguard on `review_automated_lockouts` is 
 action" and `undefined_trigger:review_automated_lockouts` stands. Q2, the live section must state
 the repair result itself, not only point to it (done). Q3, the draft stays off `main` until the
 human approves its wording; after approval it may land unlinked.
+
+## After gate 7: evidence-auditor (HEAD de40368): PASS
+
+Entry 7 CLEAN. Entry 8 NEEDS-HUMAN-JUDGMENT: its approved relevance line says "It sets no
+condition or threshold for review", while the gap analysis prints, a few lines above, the
+clause's interpreted condition ("an AI output may be erroneous"). Not a trigger (human Q1); the
+word "condition" is the conflict. For the human. Also raised, not applied (human-dictated
+wording): the repair label's "within 30 minutes" (the clock starts at the action's opening
+condition) and "from `telecom_operator`" (the rule also allows another holder); "require
+institutional authorization" vs the standard "needs human and institutional approval". Applied:
+the closing sentence now says governance off sets aside "the engine's authority, prerequisite and
+information checks", not all checks.
