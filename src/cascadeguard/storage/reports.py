@@ -70,8 +70,18 @@ class GapExamples(DomainModel):
         approved = bool(self.entries) and all(e.approved for e in self.entries)
         if (self.status == "reviewed") != approved:
             raise ValueError("status is reviewed exactly when every entry is approved")
-        if self.status == "reviewed" and not (self.reviewed_by and self.reviewed_on):
-            raise ValueError("a reviewed mapping names its reviewer and date")
+        if self.status == "reviewed":
+            if not (self.reviewed_by and self.reviewed_by.strip()):
+                raise ValueError("a reviewed mapping names its reviewer and date")
+            if self.reviewed_on is None:
+                raise ValueError("a reviewed mapping names its reviewer and date")
+            if self.reviewed_on > date.today():
+                raise ValueError("the review date cannot be in the future")
+        elif self.reviewed_by is not None or self.reviewed_on is not None:
+            raise ValueError("a draft mapping has no reviewer or review date")
+        pairs = [(e.failure, e.clause) for e in self.entries]
+        if len(pairs) != len(set(pairs)):
+            raise ValueError("each (failure, clause) pair is mapped once")
         return self
 
 
@@ -340,16 +350,28 @@ def repair_label(p: RepairProposal) -> str:
     return text[0].upper() + text[1:]
 
 
-def outcome_text(rep: ReplayComparison) -> str:
-    met = (
+def _n(count: int, noun: str) -> str:
+    return f"{count} {noun}" + ("" if count == 1 else "s")
+
+
+def critical_goals_text(rep: ReplayComparison) -> str:
+    return (
         "all critical goals met"
         if not rep.unmet_critical_goals
         else f"critical goals unmet: {_ids(rep.unmet_critical_goals)}"
     )
-    return (
-        f"{met} (engine status: {rep.outcome}). {len(rep.removed)} failures removed at their "
-        f"cause, {len(rep.masked)} masked with the cause still present"
-    )
+
+
+def outcome_text(rep: ReplayComparison) -> str:
+    parts = [
+        f"{_n(len(rep.removed), 'failure')} removed at their cause",
+        f"{len(rep.masked)} masked with the cause still present",
+    ]
+    if rep.remaining:
+        parts.append(f"{len(rep.remaining)} still blocking")
+    if rep.new_conflicts:
+        parts.append(f"{_n(len(rep.new_conflicts), 'new conflict')}")
+    return f"{critical_goals_text(rep)} (engine status: {rep.outcome}). " + ", ".join(parts)
 
 
 def same_failures(live: list[str], scripted: list[str]) -> str:
@@ -405,9 +427,15 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         "",
         "The ungoverned run is shown only together with the repair run: governance off meets "
         f"{_ids(newly_met(dict(gov.goals), dict(off.ungoverned.goals)))} by setting aside the "
-        "engine's authority, prerequisite and information checks, while the repair meets every "
-        "critical goal with the checks in force, through edits that still need institutional "
-        "approval.",
+        "engine's authority, prerequisite and information checks, while the repair "
+        + (
+            "meets every critical goal"
+            if not rep.unmet_critical_goals
+            else f"leaves {_ids(rep.unmet_critical_goals)} unmet"
+        )
+        + " with the checks in force, through edits"
+        + (" that still need institutional approval" if p.requires_authorization else "")
+        + ".",
         "",
         "## Supporting evidence: the same incident with a live model (live LLM agents)",
         "",
@@ -436,7 +464,7 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         + (
             "all critical goals were met"
             if not rep.unmet_critical_goals
-            else f"critical goals unmet: {_ids(rep.unmet_critical_goals)}"
+            else critical_goals_text(rep)
         )
         + f" with the engine's checks in force, through {_count(len(p.edits))} hypothetical "
         "policy edits"

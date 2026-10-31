@@ -89,3 +89,13 @@ condition) and "from `telecom_operator`" (the rule also allows another holder); 
 institutional authorization" vs the standard "needs human and institutional approval". Applied:
 the closing sentence now says governance off sets aside "the engine's authority, prerequisite and
 information checks", not all checks.
+
+## After gate 7: test-breaker (HEAD beeea91): PASS
+
+24 generator mutants, 20 killed. The four survivors are now caught: the "no example" line never
+appears in a section with examples; the validator requires the reviewer and the date separately,
+rejects a blank reviewer, a future date, a reviewer on a draft and duplicate pairs; the outcome
+text adds still-blocking failures and new conflicts, with singular/plural; the closing sentence is
+built from the repair (unmet goals, authorization), checked on every ranked candidate. Open for
+the human: the plain-language label covers `assign_owner` and `define_minimum_data_share` only
+(the other three operations are named by code; only rank 1 is labelled today).

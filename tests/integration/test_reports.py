@@ -143,6 +143,7 @@ def test_a_failure_with_no_example_says_so(runs: ScriptedRuns) -> None:
     for fid in unmapped:
         section = text.split(f"## `{fid}`", 1)[1].split("\n## ", 1)[0]
         assert f"- {NO_EXAMPLE}" in section
+    assert text.count(f"- {NO_EXAMPLE}") == len(unmapped)  # never in a section with examples
     # With no entries at all, every failure says so.
     corpus = {c.id: c for c in load_clauses()}
     empty = gap_analysis_markdown(runs, GapExamples(status="draft", entries=()), corpus)
@@ -265,6 +266,21 @@ def test_a_reviewed_mapping_needs_every_entry_approved() -> None:
         GapExamples(status="reviewed", entries=(), reviewed_by=by, reviewed_on=on)
     with pytest.raises(ValidationError, match="names its reviewer and date"):
         GapExamples(status="reviewed", entries=approved)
+    with pytest.raises(ValidationError, match="names its reviewer and date"):
+        GapExamples(status="reviewed", entries=approved, reviewed_by=by)
+    with pytest.raises(ValidationError, match="names its reviewer and date"):
+        GapExamples(status="reviewed", entries=approved, reviewed_on=on)
+    with pytest.raises(ValidationError, match="names its reviewer and date"):
+        GapExamples(status="reviewed", entries=approved, reviewed_by=" ", reviewed_on=on)
+    with pytest.raises(ValidationError, match="in the future"):
+        GapExamples(
+            status="reviewed", entries=approved, reviewed_by=by, reviewed_on=date(2999, 1, 1)
+        )
+    drafts = tuple(e.model_copy(update={"approved": False}) for e in entries)
+    with pytest.raises(ValidationError, match="no reviewer or review date"):
+        GapExamples(status="draft", entries=drafts, reviewed_by=by)
+    with pytest.raises(ValidationError, match="mapped once"):
+        GapExamples(status="draft", entries=(drafts[0], drafts[0]))
     assert (
         GapExamples(status="reviewed", entries=approved, reviewed_by=by, reviewed_on=on).status
         == "reviewed"
@@ -284,3 +300,32 @@ def test_the_draft_claims_follow_the_data(runs: ScriptedRuns) -> None:
     waived = [{"minute": 60, "action": "x", "would_have_been_rejected": ["missing_information"]}]
     with pytest.raises(ValueError, match="without an authority reason"):
         waived_actions(waived)
+
+
+def test_outcome_and_closing_follow_any_ranked_repair(runs: ScriptedRuns) -> None:
+    """The outcome text and the closing sentence are built from the repair, never fixed: checked
+    on every ranked candidate, not only on the rank-1 repair."""
+    from dataclasses import replace
+
+    from cascadeguard.storage.reports import conclusion_markdown, load_gate4, outcome_text
+
+    seen_unmet = seen_remaining = False
+    for c in runs.search.ranked:
+        text = outcome_text(c)
+        assert f"(engine status: {c.outcome})" in text
+        removed = len(c.removed)
+        assert f"{removed} failure{'' if removed == 1 else 's'} removed at their cause" in text
+        assert f"{len(c.masked)} masked with the cause still present" in text
+        if c.remaining:
+            seen_remaining = True
+            assert f"{len(c.remaining)} still blocking" in text
+        if c.unmet_critical_goals:
+            seen_unmet = True
+            assert text.startswith("critical goals unmet: ")
+            draft = conclusion_markdown(replace(runs, rank1=c), load_gate4())
+            closing = draft.split("The ungoverned run is shown only together", 1)[1]
+            closing = closing.split("\n\n", 1)[0]
+            assert "meets every critical goal" not in closing
+            assert all(f"`{g}`" in closing for g in c.unmet_critical_goals)
+            assert ("institutional approval" in closing) is c.proposal.requires_authorization
+    assert seen_unmet and seen_remaining  # the search has partial candidates to check against
