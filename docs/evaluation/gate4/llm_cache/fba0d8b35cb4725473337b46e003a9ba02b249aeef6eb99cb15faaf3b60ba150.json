@@ -1,0 +1,37 @@
+{
+  "key": "fba0d8b35cb4725473337b46e003a9ba02b249aeef6eb99cb15faaf3b60ba150",
+  "role_id": "public_access_inclusion",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "public_access_inclusion",
+    "at": "2026-03-02T08:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "request_information",
+        "target": "telecom_regulator",
+        "parameters": {
+          "data_category": "network_incident_status"
+        }
+      }
+    ],
+    "rationale": "No new inject and no facts are known yet. To identify who cannot access care and which alternative channels exist, I need information about the network incident affecting public telecommunications services. I will request that information from the telecom regulator, citing the illustrative regulator information-request clause as authority for the request.",
+    "citations": [],
+    "uncertainty": [
+      "I do not know whether a network incident has occurred, its scope, which users are affected, or what alternative care channels are available."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 2274,
+    "completion_tokens": 157,
+    "cost": 0.0,
+    "latency_seconds": 1.8827924000070198,
+    "calls": 1
+  }
+}

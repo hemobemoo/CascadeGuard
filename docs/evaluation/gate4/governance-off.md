@@ -1,0 +1,71 @@
+# Governed vs ungoverned: uae_health_access
+
+_Hypothetical scenario with synthetic data only. CascadeGuard is decision support, not legal interpretation: no output is a legal conclusion or a confirmed legal gap._
+
+**GOVERNANCE OFF: comparison only, not the governed result.**
+
+_Governance off is a comparison mode, not a result: an action the governed engine rejects only for missing authority, a clause restriction, a missing prerequisite or missing information is applied anyway and listed as 'would have been rejected'. Role permissions, information boundaries and the evidence checks (citations, gap wording) apply in both runs._
+
+- Scenario: `uae_health_access` (synthetic, hypothetical)
+- Clause set: policies/reviewed: reviewed + illustrative clauses
+- Agents: LLM agents (model from CASCADEGUARD_MODEL; output mode json_object; live calls through the decision cache, capped at 6 requests; vector knowledge-base chunks (context only; not citable))
+- Waived in the ungoverned run: `authority_uncertain`, `missing_information`, `missing_prerequisite`, `no_authority`, `restricted_by_clause`
+
+## Recovery goals
+
+| Goal | Governed | Ungoverned |
+|---|---|---|
+| patient_access_restored | unmet | met at T+15 |
+| alert_cause_known_to_health | unmet | unmet |
+| network_incident_reported | met at T+0 | met at T+0 |
+
+## Diagnosed failures
+
+**Governed:**
+- `information_deadlock:network_incident_status->health_service_operator`: health_service_operator needs network_incident_status, held by telecom_operator, but network_incident_status is outside health_service_operator's information boundary. No clause authorising this share was found. Clauses: none.
+  _Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review._
+- `orphan_duty:activate_fallback_channel`: No role has clear authority to activate_fallback_channel. Only uncertain authority was found (dha.pp11.4-18-1): binding unknown, conditional, or implied; it requires a determination. Clauses: `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown].
+  _Uncertain in the loaded clause set (policies/reviewed: reviewed + illustrative clauses): only uncertain authority was found (binding unknown, conditional, or implied); it requires a determination. This is not a confirmed legal or standards gap; it needs expert review._
+- `orphan_duty:reverse_automated_lockouts`: No role has clear authority to reverse_automated_lockouts. Clauses: none.
+  _Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review._
+- `undefined_trigger:review_automated_lockouts`: No clause triggers review_automated_lockouts, which reverse_automated_lockouts depends on. Clauses: none.
+  _Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review._
+
+**Ungoverned:**
+- `information_deadlock:network_incident_status->health_service_operator`: health_service_operator needs network_incident_status, held by telecom_operator, but network_incident_status is outside health_service_operator's information boundary. No clause authorising this share was found. Clauses: none.
+  _Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review._
+
+**Ungoverned, goal met but the cause is still present:**
+- `orphan_duty:activate_fallback_channel`: No role has clear authority to activate_fallback_channel. Only uncertain authority was found (dha.pp11.4-18-1): binding unknown, conditional, or implied; it requires a determination. Clauses: `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown].
+  _Uncertain in the loaded clause set (policies/reviewed: reviewed + illustrative clauses): only uncertain authority was found (binding unknown, conditional, or implied); it requires a determination. This is not a confirmed legal or standards gap; it needs expert review._
+- `orphan_duty:reverse_automated_lockouts`: No role has clear authority to reverse_automated_lockouts. Clauses: none.
+  _Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review._
+- `undefined_trigger:review_automated_lockouts`: No clause triggers review_automated_lockouts, which reverse_automated_lockouts depends on. Clauses: none.
+  _Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review._
+
+## Applied only because governance was off
+
+- T+15 health_service_operator: activate_fallback_channel: would have been rejected (authority_uncertain). Clauses: `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown].
+- T+60 health_service_operator: activate_fallback_channel -> health_service_operator: would have been rejected (authority_uncertain). Clauses: `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown].
+- T+75 health_service_operator: activate_fallback_channel: would have been rejected (authority_uncertain). Clauses: `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown].
+
+## Actions whose verdict changed
+
+- T+15 health_service_operator: activate_fallback_channel: rejected -> accepted
+- T+30 health_service_operator: activate_fallback_channel: rejected -> not proposed
+- T+30 health_service_operator: review_automated_lockouts: accepted -> not proposed
+- T+45 health_service_operator: activate_fallback_channel -> health_service_operator: rejected -> not proposed
+- T+60 health_service_operator: activate_fallback_channel -> health_service_operator: not proposed -> accepted
+- T+60 health_service_operator: activate_fallback_channel -> public_access_inclusion: rejected -> not proposed
+- T+60 health_service_operator: maintain_fallback_plan -> health_service_operator: not proposed -> accepted
+- T+60 health_service_operator: share_incident_status -> public_access_inclusion: accepted -> not proposed
+- T+75 health_service_operator: activate_fallback_channel: not proposed -> accepted
+- T+75 health_service_operator: activate_fallback_channel -> health_service_operator: rejected -> not proposed
+- T+75 health_service_operator: maintain_fallback_plan: not proposed -> accepted
+- T+75 health_service_operator: maintain_fallback_plan -> health_service_operator: accepted -> not proposed
+- T+75 health_service_operator: notify_health_data_oversight: not proposed -> accepted
+- T+75 health_service_operator: notify_health_data_oversight -> health_data_oversight: accepted -> not proposed
+- T+75 health_service_operator: request_information -> telecom_operator: accepted -> not proposed
+- T+75 health_service_operator: review_automated_lockouts: not proposed -> accepted
+- T+75 health_service_operator: review_automated_lockouts -> health_service_operator: accepted -> not proposed
+

@@ -1,0 +1,73 @@
+{
+  "key": "6307a57aa131d2aba6013692f9fd794d10bf5ff72f49b9c30dc1d22bc2243b23",
+  "role_id": "health_service_operator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_service_operator",
+    "at": "2026-03-02T08:15:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "raise_security_incident",
+        "target": null,
+        "parameters": {}
+      },
+      {
+        "action_type": "notify_health_data_oversight",
+        "target": null,
+        "parameters": {}
+      },
+      {
+        "action_type": "review_automated_lockouts",
+        "target": null,
+        "parameters": {}
+      },
+      {
+        "action_type": "activate_fallback_channel",
+        "target": null,
+        "parameters": {}
+      }
+    ],
+    "rationale": "The fraud-model alert is suspected, not proven, but the OTP failure spike and automatic lockout of 4,812 accounts constitute a discovered incident requiring investigation under dha.pp11.4-18-2 and notification under dha.pp11.4-18-4. Human oversight of the AI output is warranted under uae.ai-charter.human-oversight before any lockouts are reversed. A fallback channel should be activated to preserve patient access to care under uae.fl2-2019.art4 availability obligations.",
+    "citations": [
+      {
+        "clause_id": "dha.pp11.4-18-2",
+        "quote_span": "Entities must thoroughly investigate the breaches/incidents starting from the point of discovery until closure: aa.. Determine if the breach is related to a violation of PHI.",
+        "relevance": "Supports raising a security incident to investigate the suspected credential-stuffing alert and automated lockouts."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-4",
+        "quote_span": "The Entity is required to report breaches/incidents within the designated period defined by Executive Regulations of UAE Data Protection Law.",
+        "relevance": "Supports notifying health data oversight of the incident."
+      },
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "quote_span": "Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and human oversight over AI, aligning with ethical values and social standards to correct any errors or biases that may arise.",
+        "relevance": "Supports human review of the AI fraud-model lockouts before reversing them."
+      },
+      {
+        "clause_id": "uae.fl2-2019.art4",
+        "quote_span": "To ensure the availability of health data and information to the authorised thereof and facilitate the access thereto, if needed.",
+        "relevance": "Supports activating a fallback channel so patients can continue accessing care while accounts are locked."
+      }
+    ],
+    "uncertainty": [
+      "Whether the fraud alert reflects actual credential stuffing or a false positive from legitimate patient retries.",
+      "Whether any PHI was accessed or exfiltrated.",
+      "The designated reporting period under the UAE Data Protection Law Executive Regulations is not in the corpus."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 3827,
+    "completion_tokens": 597,
+    "cost": 0.0,
+    "latency_seconds": 3.917378500002087,
+    "calls": 1
+  }
+}

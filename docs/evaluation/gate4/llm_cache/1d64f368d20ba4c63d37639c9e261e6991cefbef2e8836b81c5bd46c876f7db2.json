@@ -1,0 +1,37 @@
+{
+  "key": "1d64f368d20ba4c63d37639c9e261e6991cefbef2e8836b81c5bd46c876f7db2",
+  "role_id": "telecom_regulator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "telecom_regulator",
+    "at": "2026-03-02T08:45:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "request_information",
+        "target": "telecom_operator",
+        "parameters": {
+          "data_category": "network_incident_status"
+        }
+      }
+    ],
+    "rationale": "The inject concerns institutional responsibilities across roles. Within the telecom remit, the regulator may request incident information from a licensed operator about a network incident affecting a public telecommunications service. No incident facts are currently known, so I am requesting information before determining any next step.",
+    "citations": [],
+    "uncertainty": [
+      "Whether a significant network incident has occurred, whether the telecom operator is aware of it, and whether any patient or health data is involved."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 3004,
+    "completion_tokens": 152,
+    "cost": 0.0,
+    "latency_seconds": 1.7851153000083286,
+    "calls": 1
+  }
+}

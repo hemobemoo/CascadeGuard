@@ -1,0 +1,38 @@
+{
+  "key": "b5dec93b575ae5fcade550baea485c92ede7531cdfa3c50f73c1f2955cecd8f2",
+  "role_id": "telecom_regulator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "telecom_regulator",
+    "at": "2026-03-02T09:15:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "request_information",
+        "target": "telecom_operator",
+        "parameters": {
+          "data_category": "network_incident_status"
+        }
+      }
+    ],
+    "rationale": "No new inject at T+75. I continue to seek telecom network incident information from the licensed telecom operator under the illustrative regulator information-request rule, as no telecom incident report has been received and no telecom-specific obligation has been triggered.",
+    "citations": [],
+    "uncertainty": [
+      "Whether a significant network incident affecting a public telecommunications service has occurred.",
+      "Whether the telecom operator is aware of any such incident and within what timeframe it would be required to report."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 2964,
+    "completion_tokens": 160,
+    "cost": 0.0,
+    "latency_seconds": 1.6056274000002304,
+    "calls": 1
+  }
+}
