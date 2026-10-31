@@ -221,12 +221,28 @@ def test_the_docx_says_what_the_markdown_says() -> None:
                 assert " ".join(builder.plain(str(content)).split()) in words, content
 
 
+def test_the_docx_is_a4_and_its_tables_fit_the_margins() -> None:
+    from docx import Document
+
+    builder = _builder()
+    doc = Document(str(DOCX))
+    page = doc.sections[0]
+    assert page.page_width and page.page_height
+    assert (page.page_width.twips, page.page_height.twips) == (11906, 16838)  # A4
+    width = builder.text_width(doc)
+    for table in doc.tables:
+        grid = sum(builder.grid_widths(table))
+        assert grid <= width + 4, (grid, width)  # rounding of the scaled columns
+
+
 def test_the_pdf_is_at_most_five_pages_and_current() -> None:
     import pdfplumber
 
     assert PDF.exists(), "export the PDF: scripts/export_report_pdf.ps1"
     with pdfplumber.open(PDF) as pdf:
         assert len(pdf.pages) <= MAX_PAGES, len(pdf.pages)
+        for p in pdf.pages:  # A4 in points, as exported from the A4 .docx
+            assert abs(p.width - 595.3) < 1 and abs(p.height - 841.9) < 1, (p.width, p.height)
         pages = " ".join((p.extract_text() or "") for p in pdf.pages)
 
     def flatten(s: str) -> str:  # a line break after a hyphen extracts as "- "
