@@ -83,6 +83,14 @@ then locked.
   first; `--cap` = estimate plus a margin; any infrastructure failure = inconclusive, no rerun
   without asking. Snapshot and traces checked for secrets, committed in a PR. Any governed vs
   ungoverned conclusion in README or demo text goes through gate 7.
+- **Governed live baseline: run 2026-10-31** (code at 02a7a16; `--kb-context --cap 54`):
+  exit 0, complete: 36/36 steps decided, 37 requests (36 agent attempts, so 1 request-level
+  retry whose kind the CLI did not yet record: a 429 cannot be ruled out), 37 query embeddings,
+  235 s, 120.5k / 11.9k tokens, cost 0. 64 actions: 56 accepted, 8 rejected (5
+  authority_uncertain, all activate_fallback_channel; 3 outside_recipient_boundary); 1 rejected
+  decision (citation_out_of_scope). Goals: network_incident_reported met at T+0;
+  patient_access_restored and alert_cause_known_to_health unmet. The same 4 diagnosed failures
+  as scripted. Export and log in `data/gate4/` (ignored).
 - **PR (branch `governance-off-live`):** lifts the live-LLM refusal for `--governance off`
   (keeps `--repair` and `--audit` refused; a live run still needs `--cap`). With LLM agents the
   ungoverned run reuses every cached step whose view no waived action changed. Dry run: an
@@ -1204,9 +1212,11 @@ query embeddings not counted under `--cap` (the LLM-path host check is done in P
 **Gate 4 (recording run): approved 2026-10-31** under the conditions in "Open items" (model
 unchanged, dry run first, cap, variant only without a 429 or daily-limit stop). Waiting on the
 human: the merge of the `governance-off-live` PR, which the variant needs.
-Question from test-breaker (round 2, QUESTION-FOR-HUMAN): a live run that ends "Not comparable"
-or INCOMPLETE (cap spent, request failure) exits 0, as the governed live baseline always has;
-only the printed text says inconclusive. Should it exit non-zero? Not changed until decided.
+Exit code (test-breaker QUESTION-FOR-HUMAN, decided 2026-10-31): an inconclusive live LLM run
+exits 3 (`INCONCLUSIVE_EXIT`), never 2 (refused): failed steps in a live baseline, replay or
+governance-off comparison, a daily-limit stop, or a knowledge-base failure mid-run. Offline and
+scripted runs keep 0. In #19 with tests; README lists the codes. The request line also names
+failed requests by kind ("HTTP 429 x1"), so a 429 in a run is visible.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
