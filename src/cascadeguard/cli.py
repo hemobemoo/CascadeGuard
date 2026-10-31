@@ -109,8 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--governance",
         choices=tuple(g.value for g in Governance),
         default=Governance.ON.value,
-        help="off: compare the governed run with an ungoverned one (comparison only; scripted "
-        "or offline LLM agents; not with --repair or --audit)",
+        help="off: compare the governed run with an ungoverned one (comparison only; not with "
+        "--repair or --audit; live LLM agents need --cap as for any live run)",
     )
     run_cmd.add_argument(
         "--live",
@@ -578,11 +578,8 @@ def governance_off_refusal(args: argparse.Namespace) -> str | None:
         return "--governance off compares the unrepaired incident only; drop --repair"
     if args.audit is not None:
         return "--governance off is a comparison mode and is not recorded in the audit file"
-    if args.agents == LLM and not args.offline:
-        return (
-            "--governance off with LLM agents runs from the decision cache only; add --offline "
-            "(live calls need the human's approval, gate 4)"
-        )
+    # Live LLM agents are allowed (gate 4, human 2026-10-31): the live-run rules (a request cap)
+    # apply as for any live run, and the ungoverned run reuses every cached unchanged step.
     return None
 
 

@@ -1374,3 +1374,66 @@ def test_invalid_output_is_flagged_everywhere_but_still_ranked(
     clean = search_repairs(SCENARIO).comparison(SUCCESS)
     assert "invalid_output_caveat" not in clean.summary()
     assert "Caveat" not in comparison_markdown(clean)
+
+
+# --- Live LLM agents with --governance off (gate 4, human decision 2026-10-31) ---------------
+
+
+def _live_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test-not-a-real-key")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")  # never called
+    monkeypatch.setenv("CASCADEGUARD_MODEL", MODEL)
+    monkeypatch.setattr("cascadeguard.agents.llm.ENV_FILE", tmp_path / "absent.env")
+
+
+def test_live_governance_off_still_needs_a_request_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _live_env(monkeypatch, tmp_path)
+    monkeypatch.delenv("CASCADEGUARD_REQUEST_CAP", raising=False)
+
+    def no_client(*_: object, **__: object) -> None:
+        raise AssertionError("the cap refusal must come before any client is built")
+
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", no_client)
+    args = ["run", SCENARIO, "--governance", "off", "--agents", "llm"]
+    assert main([*args, "--cache", str(tmp_path / "c")]) == 2
+    assert "live LLM runs need a request cap" in capsys.readouterr().out
+
+
+def test_live_governance_off_reuses_every_unchanged_step(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The governed run fills the cache; the ungoverned run asks only for steps whose view a
+    waived action changed (two at T+75 with the scripted replies). Offline, it then replays
+    exactly."""
+    _live_env(monkeypatch, tmp_path)
+    client = FakeClient(scripted_replies(scripted))
+
+    def fake_client(*_: object, **__: object) -> FakeClient:
+        return client
+
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", fake_client)
+    cache = str(tmp_path / "c")
+    args = ["run", SCENARIO, "--governance", "off", "--agents", "llm"]
+    assert main([*args, "--cap", "100", "--cache", cache]) == 0
+    live = capsys.readouterr().out
+    assert len(client.requests) == 38
+    assert "LLM decision cache (baseline and replays): 34 steps reused, 38 not cached" in live
+    assert "| patient_access_restored | unmet | met at T+60 |" in live
+    assert "would have been rejected (missing_information, no_authority)" in live
+    assert MODEL not in live and "sk-test" not in live
+    assert main([*args, "--offline", "--cache", cache]) == 0
+    offline = capsys.readouterr().out
+    assert "72 steps reused, 0 not cached" in offline
+    assert len(client.requests) == 38  # no request offline
+    body = [
+        line for line in live.splitlines() if not line.startswith(("- Agents:", "LLM decision"))
+    ]
+    again = [
+        line for line in offline.splitlines() if not line.startswith(("- Agents:", "LLM decision"))
+    ]
+    assert body == again

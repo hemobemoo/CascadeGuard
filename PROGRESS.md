@@ -74,10 +74,16 @@ then locked.
   LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
   merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
   after checking they hold no secrets. **It uses `--kb-context`** (human, 2026-10-30).
-- **Before gate 4:** done: PR 4 merged (824b00a; the LLM host check is in it). Gate 4 still needs
-  the human's separate go-ahead (live LLM calls and model choice). An ungoverned
-  LLM variant would need `--governance off` without `--offline`, which PR 4 refuses: lifting
-  that is part of the gate-4 decision.
+- **Gate 4 approved (human, 2026-10-31):** one governed live baseline with `--kb-context`, then
+  one ungoverned live variant (`--governance off`, no `--offline`) only if the baseline had no
+  429 or daily-limit stop (else stop, report, run the variant the next day). Model unchanged:
+  `nvidia/nemotron-3.5-super-vl:free`, `CASCADEGUARD_OUTPUT_MODE=json_object` (as v3). Dry run
+  first; `--cap` = estimate plus a margin; any infrastructure failure = inconclusive, no rerun
+  without asking. Snapshot and traces checked for secrets, committed in a PR. Any governed vs
+  ungoverned conclusion in README or demo text goes through gate 7.
+- **PR (branch `governance-off-live`):** lifts the live-LLM refusal for `--governance off`
+  (keeps `--repair` and `--audit` refused; a live run still needs `--cap`). With LLM agents the
+  ungoverned run reuses every cached step whose view no waived action changed.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
   "max requests").
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**
