@@ -1,0 +1,40 @@
+# DRAFT (gate 7): global and UAE-principle examples shown next to each diagnosed failure in
+# docs/gap-analysis.md. Drafted by the agent on 2026-10-31; an entry is set to approved: true only
+# on the human's explicit list of entries. Each entry names a reviewed clause and says, in one
+# line, what it is an example of. It never says the UAE corpus lacks a provision: every
+# diagnosed failure keeps its own qualification (not a confirmed legal or standards gap).
+# Hypothetical scenario, synthetic data.
+status: draft
+entries:
+  - failure: information_deadlock:network_incident_status->health_service_operator
+    clause: eu.gdpr.art33-1
+    relevance: A controller's duty to notify a personal data breach to the supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware of it, unless the breach is unlikely to result in a risk (EU, not binding in the UAE).
+    approved: false
+  - failure: information_deadlock:network_incident_status->health_service_operator
+    clause: oecd.ai-principles.accountability-cooperation
+    relevance: Risk management by AI actors, including, as appropriate, co-operation between AI actors, AI system users and other stakeholders (a non-binding recommendation).
+    approved: false
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: oecd.ai-principles.robustness-override
+    relevance: Mechanisms, as appropriate, so that an AI system that risks causing undue harm or behaves in an undesired way can be overridden, repaired or decommissioned safely (a non-binding recommendation).
+    approved: false
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: unesco.ai-ethics.review-and-correct
+    relevance: A designated staff member to whom individuals can make submissions, able to review and correct a decision affecting their rights and freedoms (a non-binding recommendation).
+    approved: false
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: uae.ai-charter.human-oversight
+    relevance: A UAE principle (not binding) on human oversight to correct errors of AI.
+    approved: false
+  - failure: orphan_duty:activate_fallback_channel
+    clause: unesco.ai-ethics.responsibility-accountability
+    relevance: Appropriate oversight, audit and due-diligence mechanisms to ensure accountability for AI systems and their impact (a non-binding recommendation).
+    approved: false
+  - failure: undefined_trigger:review_automated_lockouts
+    clause: unesco.ai-ethics.human-oversight
+    relevance: Ultimate human responsibility for decisions taken with AI systems (a non-binding recommendation).
+    approved: false
+  - failure: undefined_trigger:review_automated_lockouts
+    clause: uae.ai-charter.human-oversight
+    relevance: A UAE principle (not binding) on human oversight to correct errors of AI.
+    approved: false
