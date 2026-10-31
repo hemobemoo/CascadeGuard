@@ -83,7 +83,11 @@ then locked.
   ungoverned conclusion in README or demo text goes through gate 7.
 - **PR (branch `governance-off-live`):** lifts the live-LLM refusal for `--governance off`
   (keeps `--repair` and `--audit` refused; a live run still needs `--cap`). With LLM agents the
-  ungoverned run reuses every cached step whose view no waived action changed.
+  ungoverned run reuses every cached step whose view no waived action changed. The dry run is an
+  `--offline` run of the same command: its "N not cached" is a lower bound (a live decision can
+  change later views), and each step can take up to `max_requests_per_step` requests (2 x (1 +
+  retries)). The live CLI prints "Live requests: N sent (cap C, retries included)", plus
+  "M refused at the cap: inconclusive" when the cap ran out.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
   "max requests").
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**

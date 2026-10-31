@@ -19,6 +19,7 @@ from cascadeguard.agents.base import Agent
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
 from cascadeguard.agents.llm import (
     CAP_VARIABLE,
+    CappedClient,
     DailyLimitReached,
     LLMAgent,
     LLMConfig,
@@ -344,17 +345,28 @@ def replay_repair(
     return found.comparison(repair_id)
 
 
-def cache_line(world: World) -> str | None:
+def request_line(world: World) -> str | None:
+    """Live LLM runs only: requests sent under the cap, and any refused at it (a step refused at
+    the cap has no decision, so the run is inconclusive), counted over the whole command."""
+    client = getattr(next(iter(world.agents.values()), None), "client", None)
+    capped = getattr(client, "inner", None)
+    if not isinstance(capped, CappedClient):
+        return None
+    line = f"Live requests: {capped.requests} sent (cap {capped.cap}, retries included)"
+    if capped.refused:
+        line += f"; {capped.refused} refused at the cap: inconclusive"
+    return line
+
+
+def cache_line(world: World, runs: str = "baseline and replays") -> str | None:
     """LLM runs only: steps that came from the cache, needed a call, or repeated a request
-    failure, counted over everything this command ran (the baseline and any replays)."""
+    failure, counted over everything this command ran (`runs` names them)."""
     if world.cache is None:
         return None
     st = world.cache.stats
     if not (st.hits or st.misses or st.failures_repeated):  # nothing ran (e.g. a refusal)
         return None
-    line = (
-        f"LLM decision cache (baseline and replays): {st.hits} steps reused, {st.misses} not cached"
-    )
+    line = f"LLM decision cache ({runs}): {st.hits} steps reused, {st.misses} not cached"
     if st.failures_repeated:
         line += f", {st.failures_repeated} repeated an earlier request failure"
     return line
@@ -615,8 +627,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     except KnowledgeBaseError as exc:  # --kb-context lost the network mid-run
         print(f"cascadeguard: {exc}")
         return 2
-    if (line := cache_line(world)) is not None:
-        print(line)
+    off = getattr(args, "governance", Governance.ON.value) == Governance.OFF.value
+    runs = "governed and ungoverned runs" if off else "baseline and replays"
+    for line in (cache_line(world, runs), request_line(world)):
+        if line is not None:
+            print(line)
     return status
 
 
