@@ -91,7 +91,10 @@ def _display(path: Path) -> str:
 
 
 def positive_int(text: str) -> int:
-    value = int(text)
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
     if value < 1:
         raise argparse.ArgumentTypeError("must be a positive number of requests")
     return value
@@ -362,7 +365,7 @@ def request_line(world: World) -> str | None:
         return None
     line = f"Live requests: {capped.requests} sent (cap {capped.cap}, retries included)"
     if capped.refused:
-        line += f"; {capped.refused} refused at the cap: inconclusive"
+        line += f"; {capped.refused} requests refused at the cap: inconclusive"
     return line
 
 

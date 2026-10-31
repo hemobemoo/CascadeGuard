@@ -92,7 +92,8 @@ then locked.
   later views either way. So: dry-run and run the governed baseline first, then dry-run the
   variant from the filled cache. Each step can take up to `max_requests_per_step` requests
   (2 x (1 + retries) = 8 by default). The live CLI prints "Live requests: N sent (cap C, retries included)", plus
-  "M refused at the cap: inconclusive" when the cap ran out, for governed and off runs, and
+  "M requests refused at the cap: inconclusive" when the cap ran out (CLI only; the UI stays
+  scripted for this comparison), for governed and off runs, and
   also after a daily-limit stop. `--cap` must be positive.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
   "max requests").
@@ -1203,6 +1204,9 @@ query embeddings not counted under `--cap` (the LLM-path host check is done in P
 **Gate 4 (recording run): approved 2026-10-31** under the conditions in "Open items" (model
 unchanged, dry run first, cap, variant only without a 429 or daily-limit stop). Waiting on the
 human: the merge of the `governance-off-live` PR, which the variant needs.
+Question from test-breaker (round 2, QUESTION-FOR-HUMAN): a live run that ends "Not comparable"
+or INCOMPLETE (cap spent, request failure) exits 0, as the governed live baseline always has;
+only the printed text says inconclusive. Should it exit non-zero? Not changed until decided.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
