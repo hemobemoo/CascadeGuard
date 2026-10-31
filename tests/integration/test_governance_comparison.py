@@ -183,8 +183,8 @@ def test_cli_prints_and_exports_the_comparison(
     [
         (["--repair", "r1"], "drop --repair"),
         (["--audit"], "not recorded in the audit file"),
-        (["--agents", "llm"], "add --offline"),
-        (["--agents", "llm", "--cap", "1"], "add --offline"),
+        (["--repair", "r1", "--agents", "llm", "--cap", "1"], "drop --repair"),
+        (["--audit", "--agents", "llm", "--cap", "1"], "not recorded in the audit file"),
     ],
 )
 def test_refused_before_any_world_or_client_is_built(
