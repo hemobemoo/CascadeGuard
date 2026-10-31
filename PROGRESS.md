@@ -16,7 +16,8 @@ with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 passed, 1 skipped: the optional chroma extra). Branch `governance-off` kept (deletion is gate 5).** Human decisions 2026-10-31: option B (waive
 `no_authority`, `authority_uncertain`, `restricted_by_clause`, `missing_prerequisite`,
 `missing_information`); evidence checks (citations, gap wording) stay on; LLM agents with
-`--governance off` only with `--offline` (live is gate 4).
+`--governance off` only with `--offline` (live is gate 4; lifted on branch
+`governance-off-live` after the gate-4 approval of 2026-10-31).
 - **Done when (agreed 2026-10-31):** scripted path and both existing expected outputs
   byte-identical, `run` = `run --governance on`; `run --governance off` matches
   `scenarios/uae_health_access/expected_ungoverned.yaml` (header "NOT A GOLDEN"), deterministic;
@@ -72,7 +73,8 @@ then locked.
 - **Paid recording run (gate 4):** the role views changed (labels; the safety clause now
   reaches the `policy_legal_adviser`), so the local LLM cache no longer matches. One governed
   LLM baseline run, plus one ungoverned variant if cheap, after all view-changing work is
-  merged (target 4–5 Nov). Ask the human before running. Commit the cache snapshot and traces
+  merged (target 4–5 Nov). Ask the human before running (superseded: approved 2026-10-31, see
+  the next bullet). Commit the cache snapshot and traces
   after checking they hold no secrets. **It uses `--kb-context`** (human, 2026-10-30).
 - **Gate 4 approved (human, 2026-10-31):** one governed live baseline with `--kb-context`, then
   one ungoverned live variant (`--governance off`, no `--offline`) only if the baseline had no
@@ -96,7 +98,8 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: gate 4 only on the human's separate go-ahead; PR 5 (gap analysis, traces); see
+- Next: the `governance-off-live` PR (review, CI, the human's merge), then gate 4 as approved
+  (dry run, then the governed baseline under `--cap`, then the variant); PR 5 after; see
   "Current phase".
 
 ## Current phase
@@ -1193,8 +1196,9 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
 **PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
-**Gate 4 (recording run): waiting on the human's separate go-ahead** (live LLM calls and model
-choice); merging #17 is not that go-ahead.
+**Gate 4 (recording run): approved 2026-10-31** under the conditions in "Open items" (model
+unchanged, dry run first, cap, variant only without a 429 or daily-limit stop). Waiting on the
+human: the merge of the `governance-off-live` PR, which the variant needs.
 
 **Charter PR (gate 1): approved 2026-10-29** (Ibrahim Melhem): `uae.ai-charter.human-oversight`
 and the page-4 transcription, after checking both against the PDF image.
@@ -1375,8 +1379,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 4 merged (PR #17, 824b00a). Gate 4 (recording run, target 4–5 Nov) only after the human's
-separate go-ahead; then PR 5.
+PR 4 merged (PR #17, 824b00a). Gate 4 approved (2026-10-31): the `governance-off-live` PR, then
+the dry run, the governed baseline (`--kb-context`, `--cap`), the ungoverned variant (only
+without a 429 or daily-limit stop), and a PR with the checked snapshot and traces; then PR 5.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
