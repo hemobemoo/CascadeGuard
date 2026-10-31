@@ -1,0 +1,95 @@
+{
+  "key": "ee5402a12b5e6576b29ff8b5f7fd28eeceedbab09fd454046caed040a5a3f976",
+  "role_id": "health_service_operator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_service_operator",
+    "at": "2026-03-02T09:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "activate_fallback_channel",
+        "target": "health_service_operator",
+        "parameters": {
+          "channel": "call centre identity verification",
+          "authority": "health_service_operator under business continuity plan",
+          "scope": "patients locked out, especially SMS-only and over-65 users"
+        }
+      },
+      {
+        "action_type": "review_automated_lockouts",
+        "target": "health_service_operator",
+        "parameters": {
+          "scope": "4,812 automatically locked patient accounts",
+          "basis": "fraud-model alert suspected credential stuffing; no confirmed intrusion"
+        }
+      },
+      {
+        "action_type": "notify_health_data_oversight",
+        "target": "health_data_oversight",
+        "parameters": {
+          "incident": "portal OTP failure spike and mass automated lockouts affecting patient access"
+        }
+      },
+      {
+        "action_type": "maintain_fallback_plan",
+        "target": "health_service_operator",
+        "parameters": {
+          "plan": "incident response and business continuity plan",
+          "status": "active while portal access remains degraded"
+        }
+      }
+    ],
+    "rationale": "Patients remain locked out and the inject states public access is affected, with SMS-only and older patients facing extra barriers. I will activate a fallback access channel under my business-continuity authority, review the automated lockouts because the fraud alert is only suspected, notify health data oversight of the incident, and maintain the fallback plan. I do not know whether any unauthorised login succeeded, whether the call centre can scale to the demand, or whether reversing lockouts is safe pending review.",
+    "citations": [
+      {
+        "clause_id": "dha.pp11.4-18-1",
+        "quote_span": "4.18.1. Entities must establish breach/incidence response management (Incident Response and Business Continuity) and recovery (Incident Recovery and Disaster Recovery) plans that comprise of:",
+        "relevance": "Standing obligation to maintain incident response and business continuity plans, supporting activation of a fallback access channel while patients remain locked out."
+      },
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "quote_span": "6. Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and human oversight over AI, aligning with ethical values and social standards to correct any errors or biases that may arise.",
+        "relevance": "Supports human review of the automated lockouts before reversing them, because the fraud-model alert is suspected, not proven."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-2",
+        "quote_span": "4.18.2. Entities must thoroughly investigate the breaches/incidents starting from the point of discovery until closure: aa.. Determine if the breach is related to a violation of PHI.",
+        "relevance": "Supports reviewing automated lockouts as part of incident investigation from discovery until closure."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-4",
+        "quote_span": "4.18.4. The Entity is required to report breaches/incidents within the designated period defined by Executive Regulations of UAE Data Protection Law.",
+        "relevance": "Supports notifying health data oversight of the incident within the designated reporting period."
+      },
+      {
+        "clause_id": "uae.fl2-2019.art16",
+        "quote_span": "Without violation to any applicable legislations, whoever circulates information related to the patients must keep its confidentiality and not to use them except in the health purposes without written approval from the patient, except in any of the following cases:",
+        "relevance": "Confidentiality limits on sharing patient account records; relevant if incident status includes patient data."
+      },
+      {
+        "clause_id": "uae.fl2-2019.art4",
+        "quote_span": "3. To ensure the availability of health data and information to the authorised thereof and facilitate the access thereto, if needed.",
+        "relevance": "Supports maintaining availability of the health portal and facilitating access for authorised patients."
+      }
+    ],
+    "uncertainty": [
+      "Whether any successful unauthorised login has occurred (investigation incomplete).",
+      "Whether the call centre can handle the fallback volume given a 95-minute queue.",
+      "Whether reversing automated lockouts would reintroduce credential-stuffing risk."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 3850,
+    "completion_tokens": 981,
+    "cost": 0.0,
+    "latency_seconds": 24.500748799997382,
+    "calls": 1
+  }
+}

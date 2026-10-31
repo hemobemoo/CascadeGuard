@@ -1,0 +1,37 @@
+{
+  "key": "2302d8356766653404735452b7881c85e5515f668131ddf914f77c72733e9991",
+  "role_id": "health_data_oversight",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_data_oversight",
+    "at": "2026-03-02T09:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "request_information",
+        "target": "telecom_regulator",
+        "parameters": {
+          "data_category": "network_incident_status"
+        }
+      }
+    ],
+    "rationale": "No new inject at T+60. I have an open request_information action accepted at T+45; I am repeating it to obtain network incident status from the telecom regulator, which is within my allowed actions and supported by the illustrative clause for regulator information requests.",
+    "citations": [],
+    "uncertainty": [
+      "Whether a security alert constitutes a proven breach is unknown; I treat it as suspected only."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 2489,
+    "completion_tokens": 146,
+    "cost": 0.0,
+    "latency_seconds": 1.9215735000034329,
+    "calls": 1
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "key": "836380ba5c8ddd234385a902651199c65bad7813815917528c82676125735817",
+  "role_id": "health_service_operator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_service_operator",
+    "at": "2026-03-02T09:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "activate_fallback_channel",
+        "target": "public_access_inclusion",
+        "parameters": {
+          "channel": "call centre identity verification",
+          "authority": "health_service_operator under business continuity plan",
+          "reason": "3,950 patients remain locked out, with highest impact on SMS-only and over-65 users; call centre queue is 95 minutes and is not listed as a fallback in current procedures"
+        }
+      },
+      {
+        "action_type": "review_automated_lockouts",
+        "target": "health_service_operator",
+        "parameters": {
+          "scope": "4,812 automatically locked patient accounts",
+          "basis": "fraud-model alert flagging credential stuffing; no confirmed unauthorised login; investigation incomplete"
+        }
+      },
+      {
+        "action_type": "notify_health_data_oversight",
+        "target": "health_data_oversight",
+        "parameters": {
+          "incident": "OTP failure spike and mass automated lockouts affecting patient access",
+          "impact": "3,950 patients remain locked out; highest among SMS-only and over-65 users"
+        }
+      },
+      {
+        "action_type": "share_incident_status",
+        "target": "public_access_inclusion",
+        "parameters": {
+          "fact": "patients_still_locked_out"
+        }
+      }
+    ],
+    "rationale": "Patients remain unable to access the digital service, with disproportionate impact on SMS-only and older users. I propose activating a fallback channel through the call centre under my business-continuity authority, while noting the call centre is not currently listed as a fallback and queue time is 95 minutes. I also propose reviewing the automated lockouts because the fraud-model alert is suspected, not proven, and no unauthorised login has been confirmed. I will notify health data oversight and share the confirmed access-impact fact with the public access inclusion role.",
+    "citations": [
+      {
+        "clause_id": "dha.pp11.4-18-1",
+        "quote_span": "4.18.1. Entities must establish breach/incidence response management (Incident Response and Business Continuity) and recovery (Incident Recovery and Disaster Recovery) plans that comprise of:",
+        "relevance": "Standing obligation to maintain incident response and business continuity plans, supporting activation of a fallback access channel while patients remain locked out."
+      },
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "quote_span": "6. Human Oversight: The Charter emphasizes the irreplaceable value of human judgment and human oversight over AI, aligning with ethical values and social standards to correct any errors or biases that may arise.",
+        "relevance": "Supports human review of the fraud-model lockout alert before reversing automated lockouts, since the alert is suspected, not proven."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-2",
+        "quote_span": "4.18.2. Entities must thoroughly investigate the breaches/incidents starting from the point of discovery until closure: aa.. Determine if the breach is related to a violation of PHI.",
+        "relevance": "Supports reviewing automated lockouts as part of incident investigation from discovery until closure."
+      },
+      {
+        "clause_id": "dha.pp11.4-18-4",
+        "quote_span": "4.18.4. The Entity is required to report breaches/incidents within the designated period defined by Executive Regulations of UAE Data Protection Law.",
+        "relevance": "Supports notifying health data oversight of the incident and access impact."
+      }
+    ],
+    "uncertainty": [
+      "Whether the call centre has authority to act as an authentication fallback under portal procedures",
+      "Whether the fraud-model alert reflects an actual credential-stuffing attack",
+      "Whether any patient account was actually accessed without authorisation",
+      "The designated breach reporting period under the PDPL Executive Regulations, which is not in the reviewed corpus"
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 3853,
+    "completion_tokens": 889,
+    "cost": 0.0,
+    "latency_seconds": 6.753480400002445,
+    "calls": 1
+  }
+}

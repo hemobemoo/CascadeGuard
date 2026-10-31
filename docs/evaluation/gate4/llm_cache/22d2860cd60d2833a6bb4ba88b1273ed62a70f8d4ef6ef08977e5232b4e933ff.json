@@ -1,0 +1,36 @@
+{
+  "key": "22d2860cd60d2833a6bb4ba88b1273ed62a70f8d4ef6ef08977e5232b4e933ff",
+  "role_id": "health_service_operator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "health_service_operator",
+    "at": "2026-03-02T08:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "monitor",
+        "target": null,
+        "parameters": {}
+      }
+    ],
+    "rationale": "No new inject and no decision points at T+00. No facts are known yet, so there is no basis to raise an incident, notify oversight, review lockouts, activate fallback, share status, request information, or request a determination. I will continue monitoring for new information.",
+    "citations": [],
+    "uncertainty": [
+      "Whether any incident, breach, fraud alert, or lockout has occurred.",
+      "Whether any patient data or health service availability is affected."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 3156,
+    "completion_tokens": 134,
+    "cost": 0.0,
+    "latency_seconds": 2.263409299994237,
+    "calls": 1
+  }
+}

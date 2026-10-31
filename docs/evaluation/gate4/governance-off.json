@@ -1,0 +1,1669 @@
+{
+  "agents": "LLM agents (model from CASCADEGUARD_MODEL; output mode json_object; live calls through the decision cache, capped at 6 requests; vector knowledge-base chunks (context only; not citable))",
+  "changed_actions": [
+    {
+      "action": "activate_fallback_channel",
+      "governed": "rejected",
+      "minute": 15,
+      "role": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "activate_fallback_channel",
+      "governed": "rejected",
+      "minute": 30,
+      "role": "health_service_operator",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "review_automated_lockouts",
+      "governed": "accepted",
+      "minute": 30,
+      "role": "health_service_operator",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "activate_fallback_channel",
+      "governed": "rejected",
+      "minute": 45,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "activate_fallback_channel",
+      "governed": "not proposed",
+      "minute": 60,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "activate_fallback_channel",
+      "governed": "rejected",
+      "minute": 60,
+      "role": "health_service_operator",
+      "target": "public_access_inclusion",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "maintain_fallback_plan",
+      "governed": "not proposed",
+      "minute": 60,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "share_incident_status",
+      "governed": "accepted",
+      "minute": 60,
+      "role": "health_service_operator",
+      "target": "public_access_inclusion",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "activate_fallback_channel",
+      "governed": "not proposed",
+      "minute": 75,
+      "role": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "activate_fallback_channel",
+      "governed": "rejected",
+      "minute": 75,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "maintain_fallback_plan",
+      "governed": "not proposed",
+      "minute": 75,
+      "role": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "maintain_fallback_plan",
+      "governed": "accepted",
+      "minute": 75,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "notify_health_data_oversight",
+      "governed": "not proposed",
+      "minute": 75,
+      "role": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "notify_health_data_oversight",
+      "governed": "accepted",
+      "minute": 75,
+      "role": "health_service_operator",
+      "target": "health_data_oversight",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "request_information",
+      "governed": "accepted",
+      "minute": 75,
+      "role": "health_service_operator",
+      "target": "telecom_operator",
+      "ungoverned": "not proposed"
+    },
+    {
+      "action": "review_automated_lockouts",
+      "governed": "not proposed",
+      "minute": 75,
+      "role": "health_service_operator",
+      "ungoverned": "accepted"
+    },
+    {
+      "action": "review_automated_lockouts",
+      "governed": "accepted",
+      "minute": 75,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "ungoverned": "not proposed"
+    }
+  ],
+  "clause_set": "policies/reviewed: reviewed + illustrative clauses",
+  "failures": {
+    "governed": [
+      "information_deadlock:network_incident_status->health_service_operator",
+      "orphan_duty:activate_fallback_channel",
+      "orphan_duty:reverse_automated_lockouts",
+      "undefined_trigger:review_automated_lockouts"
+    ],
+    "ungoverned": [
+      "information_deadlock:network_incident_status->health_service_operator"
+    ],
+    "ungoverned_cause_still_present": [
+      "orphan_duty:activate_fallback_channel",
+      "orphan_duty:reverse_automated_lockouts",
+      "undefined_trigger:review_automated_lockouts"
+    ]
+  },
+  "goals": {
+    "alert_cause_known_to_health": {
+      "governed": "unmet",
+      "ungoverned": "unmet"
+    },
+    "network_incident_reported": {
+      "governed": "met at T+0",
+      "ungoverned": "met at T+0"
+    },
+    "patient_access_restored": {
+      "governed": "unmet",
+      "ungoverned": "met at T+15"
+    }
+  },
+  "governed_run": {
+    "actions": [
+      {
+        "action": "monitor",
+        "minute": 0,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 0,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 0,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 0,
+        "role": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 0,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 0,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 0,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "raise_security_incident",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 15,
+        "reasons": [
+          "authority_uncertain"
+        ],
+        "role": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 15,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 15,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 15,
+        "role": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 15,
+        "reasons": [
+          "outside_recipient_boundary"
+        ],
+        "role": "telecom_operator",
+        "target": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "request_information",
+        "minute": 15,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 15,
+        "role": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 15,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 15,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 30,
+        "reasons": [
+          "outside_recipient_boundary"
+        ],
+        "role": "health_service_operator",
+        "target": "telecom_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 30,
+        "reasons": [
+          "authority_uncertain"
+        ],
+        "role": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 30,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 30,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 30,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 30,
+        "role": "telecom_operator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 30,
+        "reasons": [
+          "outside_recipient_boundary"
+        ],
+        "role": "telecom_operator",
+        "target": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "request_information",
+        "minute": 30,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 30,
+        "role": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 30,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 30,
+        "role": "public_access_inclusion",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 30,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 45,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 45,
+        "role": "health_service_operator",
+        "target": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "maintain_fallback_plan",
+        "minute": 45,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 45,
+        "reasons": [
+          "authority_uncertain"
+        ],
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 45,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "health_data_oversight",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "public_access_inclusion",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 45,
+        "role": "public_access_inclusion",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 45,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 60,
+        "reasons": [
+          "authority_uncertain"
+        ],
+        "role": "health_service_operator",
+        "target": "public_access_inclusion",
+        "verdict": "rejected"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 60,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 60,
+        "role": "telecom_operator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "health_data_oversight",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 60,
+        "role": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 60,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 75,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "maintain_fallback_plan",
+        "minute": 75,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 75,
+        "role": "health_service_operator",
+        "target": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 75,
+        "reasons": [
+          "authority_uncertain"
+        ],
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "request_information",
+        "minute": 75,
+        "role": "health_service_operator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 75,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 75,
+        "role": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 75,
+        "role": "public_access_inclusion",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 75,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 75,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      }
+    ],
+    "agents": "LLM agents (model from CASCADEGUARD_MODEL; output mode json_object; live calls through the decision cache, capped at 6 requests; vector knowledge-base chunks (context only; not citable))",
+    "clause_set": "policies/reviewed: reviewed + illustrative clauses",
+    "facts_released": [
+      {
+        "fact": "sms_latency_spike",
+        "minute": 0,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "traffic_model_update",
+        "minute": 0,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "otp_failure_spike",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "fraud_alert_credential_stuffing",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "locked_account_records",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "network_fault_partial",
+        "minute": 30,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "otp_delivery_status",
+        "minute": 30,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "no_confirmed_intrusion",
+        "minute": 30,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "patients_still_locked_out",
+        "minute": 60,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "patients_still_locked_out",
+        "minute": 60,
+        "role": "public_access_inclusion"
+      },
+      {
+        "fact": "call_centre_not_authorised",
+        "minute": 60,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "call_centre_not_authorised",
+        "minute": 60,
+        "role": "public_access_inclusion"
+      }
+    ],
+    "failures": [
+      {
+        "category": "information_deadlock",
+        "clauses": [],
+        "description": "health_service_operator needs network_incident_status, held by telecom_operator, but network_incident_status is outside health_service_operator's information boundary. No clause authorising this share was found.",
+        "goals": [
+          "patient_access_restored",
+          "alert_cause_known_to_health"
+        ],
+        "id": "information_deadlock:network_incident_status->health_service_operator",
+        "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+        "roles": [
+          "health_service_operator",
+          "telecom_operator"
+        ]
+      },
+      {
+        "category": "orphan_duty",
+        "clauses": [
+          {
+            "id": "dha.pp11.4-18-1",
+            "status": "reviewed (interpreted) · binding unknown"
+          }
+        ],
+        "description": "No role has clear authority to activate_fallback_channel. Only uncertain authority was found (dha.pp11.4-18-1): binding unknown, conditional, or implied; it requires a determination.",
+        "goals": [
+          "patient_access_restored"
+        ],
+        "id": "orphan_duty:activate_fallback_channel",
+        "qualification": "Uncertain in the loaded clause set (policies/reviewed: reviewed + illustrative clauses): only uncertain authority was found (binding unknown, conditional, or implied); it requires a determination. This is not a confirmed legal or standards gap; it needs expert review.",
+        "roles": [
+          "health_service_operator"
+        ]
+      },
+      {
+        "category": "orphan_duty",
+        "clauses": [],
+        "description": "No role has clear authority to reverse_automated_lockouts.",
+        "goals": [
+          "patient_access_restored"
+        ],
+        "id": "orphan_duty:reverse_automated_lockouts",
+        "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+        "roles": [
+          "health_service_operator"
+        ]
+      },
+      {
+        "category": "undefined_trigger",
+        "clauses": [],
+        "description": "No clause triggers review_automated_lockouts, which reverse_automated_lockouts depends on.",
+        "goals": [
+          "patient_access_restored"
+        ],
+        "id": "undefined_trigger:review_automated_lockouts",
+        "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+        "roles": [
+          "health_service_operator"
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "clauses": [
+          {
+            "id": "dha.pp11.4-18-2",
+            "status": "reviewed (interpreted) · binding unknown"
+          }
+        ],
+        "detail": "the deadline for raise_security_incident cannot be determined from the loaded clauses",
+        "kind": "deadline_undetermined",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "clauses": [
+          {
+            "id": "dha.pp11.4-18-4",
+            "status": "reviewed (interpreted) · binding unknown"
+          }
+        ],
+        "detail": "the deadline for notify_health_data_oversight cannot be determined from the loaded clauses",
+        "kind": "deadline_undetermined",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "clauses": [
+          {
+            "id": "uae.fl2-2019.art4",
+            "status": "reviewed (interpreted) · binding · English translation"
+          }
+        ],
+        "detail": "telecom_operator cited uae.fl2-2019.art4, concerning neither the role nor its action",
+        "kind": "citation_out_of_scope",
+        "minute": 75,
+        "role": "telecom_operator"
+      }
+    ],
+    "goals": {
+      "alert_cause_known_to_health": "unmet",
+      "network_incident_reported": "met at T+0",
+      "patient_access_restored": "unmet"
+    },
+    "loaded_clauses": [
+      {
+        "id": "dha.pp11.4-18-1",
+        "status": "reviewed (interpreted) · binding unknown"
+      },
+      {
+        "id": "dha.pp11.4-18-2",
+        "status": "reviewed (interpreted) · binding unknown"
+      },
+      {
+        "id": "dha.pp11.4-18-4",
+        "status": "reviewed (interpreted) · binding unknown"
+      },
+      {
+        "id": "dha.pp11.applicability",
+        "status": "reviewed · binding unknown"
+      },
+      {
+        "id": "eu.gdpr.art33-1",
+        "status": "reviewed · not binding · foreign precedent"
+      },
+      {
+        "id": "illus.telecom.incident-report",
+        "status": "illustrative"
+      },
+      {
+        "id": "illus.telecom.regulator-information-request",
+        "status": "illustrative"
+      },
+      {
+        "id": "oecd.ai-principles.accountability-cooperation",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "oecd.ai-principles.robustness-override",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "uae.ai-charter.human-oversight",
+        "status": "reviewed (interpreted) · not binding"
+      },
+      {
+        "id": "uae.ai-charter.safety",
+        "status": "reviewed · not binding"
+      },
+      {
+        "id": "uae.fl2-2019.art16",
+        "status": "reviewed (interpreted) · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art16-exceptions",
+        "status": "reviewed · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art2",
+        "status": "reviewed · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art4",
+        "status": "reviewed (interpreted) · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art6",
+        "status": "reviewed (interpreted) · binding · English translation"
+      },
+      {
+        "id": "uae.mohap-smart-health.p7-liability",
+        "status": "reviewed · binding unknown · web transcription"
+      },
+      {
+        "id": "uae.pdpl.art2-2",
+        "status": "reviewed · binding · English translation"
+      },
+      {
+        "id": "unesco.ai-ethics.human-oversight",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "unesco.ai-ethics.responsibility-accountability",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "unesco.ai-ethics.review-and-correct",
+        "status": "reviewed · not binding · international precedent"
+      }
+    ],
+    "obligations": [
+      {
+        "action": "report_to_telecom_regulator",
+        "clause": {
+          "id": "illus.telecom.incident-report",
+          "status": "illustrative"
+        },
+        "due": 60,
+        "firm": true,
+        "fulfilled": 0,
+        "missed": false,
+        "role": "telecom_operator"
+      },
+      {
+        "action": "raise_security_incident",
+        "clause": {
+          "id": "dha.pp11.4-18-2",
+          "status": "reviewed (interpreted) · binding unknown"
+        },
+        "due": null,
+        "firm": false,
+        "fulfilled": 15,
+        "missed": false,
+        "role": "health_service_operator"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "clause": {
+          "id": "dha.pp11.4-18-4",
+          "status": "reviewed (interpreted) · binding unknown"
+        },
+        "due": null,
+        "firm": false,
+        "fulfilled": 15,
+        "missed": false,
+        "role": "health_service_operator"
+      }
+    ],
+    "rejected_decisions": [
+      {
+        "clauses": [
+          {
+            "id": "uae.fl2-2019.art4",
+            "status": "reviewed (interpreted) · binding · English translation"
+          }
+        ],
+        "minute": 75,
+        "reasons": [
+          "citation_out_of_scope"
+        ],
+        "role": "telecom_operator"
+      }
+    ],
+    "scenario": "uae_health_access"
+  },
+  "note": "Governance off is a comparison mode, not a result: an action the governed engine rejects only for missing authority, a clause restriction, a missing prerequisite or missing information is applied anyway and listed as 'would have been rejected'. Role permissions, information boundaries and the evidence checks (citations, gap wording) apply in both runs.",
+  "scenario": "uae_health_access",
+  "ungoverned_run": {
+    "actions": [
+      {
+        "action": "monitor",
+        "minute": 0,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 0,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 0,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 0,
+        "role": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 0,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 0,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 0,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "raise_security_incident",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 15,
+        "role": "health_service_operator",
+        "verdict": "accepted",
+        "would_have_been_rejected": [
+          "authority_uncertain"
+        ]
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 15,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 15,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 15,
+        "role": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 15,
+        "reasons": [
+          "outside_recipient_boundary"
+        ],
+        "role": "telecom_operator",
+        "target": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "request_information",
+        "minute": 15,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 15,
+        "role": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 15,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 15,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 30,
+        "reasons": [
+          "outside_recipient_boundary"
+        ],
+        "role": "health_service_operator",
+        "target": "telecom_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 30,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 30,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 30,
+        "role": "telecom_operator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "share_incident_status",
+        "minute": 30,
+        "reasons": [
+          "outside_recipient_boundary"
+        ],
+        "role": "telecom_operator",
+        "target": "health_service_operator",
+        "verdict": "rejected"
+      },
+      {
+        "action": "request_information",
+        "minute": 30,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 30,
+        "role": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 30,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 30,
+        "role": "public_access_inclusion",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 30,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 45,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 45,
+        "role": "health_service_operator",
+        "target": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "maintain_fallback_plan",
+        "minute": 45,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 45,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "health_data_oversight",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 45,
+        "role": "public_access_inclusion",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 45,
+        "role": "public_access_inclusion",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 45,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted",
+        "would_have_been_rejected": [
+          "authority_uncertain"
+        ]
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "maintain_fallback_plan",
+        "minute": 60,
+        "role": "health_service_operator",
+        "target": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "report_to_telecom_regulator",
+        "minute": 60,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "telecom_operator",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "investigate_network_fault",
+        "minute": 60,
+        "role": "telecom_operator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "health_data_oversight",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 60,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 60,
+        "role": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 60,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      },
+      {
+        "action": "review_automated_lockouts",
+        "minute": 75,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "maintain_fallback_plan",
+        "minute": 75,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "minute": 75,
+        "role": "health_service_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "activate_fallback_channel",
+        "minute": 75,
+        "role": "health_service_operator",
+        "verdict": "accepted",
+        "would_have_been_rejected": [
+          "authority_uncertain"
+        ]
+      },
+      {
+        "action": "request_information",
+        "minute": 75,
+        "role": "telecom_regulator",
+        "target": "telecom_operator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 75,
+        "role": "health_data_oversight",
+        "verdict": "accepted"
+      },
+      {
+        "action": "assess_access_impact",
+        "minute": 75,
+        "role": "public_access_inclusion",
+        "target": "public_access_inclusion",
+        "verdict": "accepted"
+      },
+      {
+        "action": "request_information",
+        "minute": 75,
+        "role": "public_access_inclusion",
+        "target": "telecom_regulator",
+        "verdict": "accepted"
+      },
+      {
+        "action": "monitor",
+        "minute": 75,
+        "role": "policy_legal_adviser",
+        "verdict": "accepted"
+      }
+    ],
+    "agents": "LLM agents (model from CASCADEGUARD_MODEL; output mode json_object; live calls through the decision cache, capped at 6 requests; vector knowledge-base chunks (context only; not citable))",
+    "clause_set": "policies/reviewed: reviewed + illustrative clauses",
+    "facts_released": [
+      {
+        "fact": "sms_latency_spike",
+        "minute": 0,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "traffic_model_update",
+        "minute": 0,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "otp_failure_spike",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "fraud_alert_credential_stuffing",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "locked_account_records",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "network_fault_partial",
+        "minute": 30,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "otp_delivery_status",
+        "minute": 30,
+        "role": "telecom_operator"
+      },
+      {
+        "fact": "no_confirmed_intrusion",
+        "minute": 30,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "patients_still_locked_out",
+        "minute": 60,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "patients_still_locked_out",
+        "minute": 60,
+        "role": "public_access_inclusion"
+      },
+      {
+        "fact": "call_centre_not_authorised",
+        "minute": 60,
+        "role": "health_service_operator"
+      },
+      {
+        "fact": "call_centre_not_authorised",
+        "minute": 60,
+        "role": "public_access_inclusion"
+      }
+    ],
+    "failures": [
+      {
+        "category": "information_deadlock",
+        "clauses": [],
+        "description": "health_service_operator needs network_incident_status, held by telecom_operator, but network_incident_status is outside health_service_operator's information boundary. No clause authorising this share was found.",
+        "goals": [
+          "alert_cause_known_to_health"
+        ],
+        "id": "information_deadlock:network_incident_status->health_service_operator",
+        "qualification": "Not found in the loaded clause set (policies/reviewed: reviewed + illustrative clauses). An absent provision is not a confirmed legal or standards gap; it needs expert review.",
+        "roles": [
+          "health_service_operator",
+          "telecom_operator"
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "clauses": [
+          {
+            "id": "dha.pp11.4-18-2",
+            "status": "reviewed (interpreted) · binding unknown"
+          }
+        ],
+        "detail": "the deadline for raise_security_incident cannot be determined from the loaded clauses",
+        "kind": "deadline_undetermined",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "clauses": [
+          {
+            "id": "dha.pp11.4-18-4",
+            "status": "reviewed (interpreted) · binding unknown"
+          }
+        ],
+        "detail": "the deadline for notify_health_data_oversight cannot be determined from the loaded clauses",
+        "kind": "deadline_undetermined",
+        "minute": 15,
+        "role": "health_service_operator"
+      },
+      {
+        "clauses": [
+          {
+            "id": "uae.fl2-2019.art4",
+            "status": "reviewed (interpreted) · binding · English translation"
+          }
+        ],
+        "detail": "telecom_operator cited uae.fl2-2019.art4, concerning neither the role nor its action",
+        "kind": "citation_out_of_scope",
+        "minute": 75,
+        "role": "telecom_operator"
+      }
+    ],
+    "goals": {
+      "alert_cause_known_to_health": "unmet",
+      "network_incident_reported": "met at T+0",
+      "patient_access_restored": "met at T+15"
+    },
+    "governance": "off",
+    "loaded_clauses": [
+      {
+        "id": "dha.pp11.4-18-1",
+        "status": "reviewed (interpreted) · binding unknown"
+      },
+      {
+        "id": "dha.pp11.4-18-2",
+        "status": "reviewed (interpreted) · binding unknown"
+      },
+      {
+        "id": "dha.pp11.4-18-4",
+        "status": "reviewed (interpreted) · binding unknown"
+      },
+      {
+        "id": "dha.pp11.applicability",
+        "status": "reviewed · binding unknown"
+      },
+      {
+        "id": "eu.gdpr.art33-1",
+        "status": "reviewed · not binding · foreign precedent"
+      },
+      {
+        "id": "illus.telecom.incident-report",
+        "status": "illustrative"
+      },
+      {
+        "id": "illus.telecom.regulator-information-request",
+        "status": "illustrative"
+      },
+      {
+        "id": "oecd.ai-principles.accountability-cooperation",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "oecd.ai-principles.robustness-override",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "uae.ai-charter.human-oversight",
+        "status": "reviewed (interpreted) · not binding"
+      },
+      {
+        "id": "uae.ai-charter.safety",
+        "status": "reviewed · not binding"
+      },
+      {
+        "id": "uae.fl2-2019.art16",
+        "status": "reviewed (interpreted) · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art16-exceptions",
+        "status": "reviewed · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art2",
+        "status": "reviewed · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art4",
+        "status": "reviewed (interpreted) · binding · English translation"
+      },
+      {
+        "id": "uae.fl2-2019.art6",
+        "status": "reviewed (interpreted) · binding · English translation"
+      },
+      {
+        "id": "uae.mohap-smart-health.p7-liability",
+        "status": "reviewed · binding unknown · web transcription"
+      },
+      {
+        "id": "uae.pdpl.art2-2",
+        "status": "reviewed · binding · English translation"
+      },
+      {
+        "id": "unesco.ai-ethics.human-oversight",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "unesco.ai-ethics.responsibility-accountability",
+        "status": "reviewed · not binding · international precedent"
+      },
+      {
+        "id": "unesco.ai-ethics.review-and-correct",
+        "status": "reviewed · not binding · international precedent"
+      }
+    ],
+    "obligations": [
+      {
+        "action": "report_to_telecom_regulator",
+        "clause": {
+          "id": "illus.telecom.incident-report",
+          "status": "illustrative"
+        },
+        "due": 60,
+        "firm": true,
+        "fulfilled": 0,
+        "missed": false,
+        "role": "telecom_operator"
+      },
+      {
+        "action": "raise_security_incident",
+        "clause": {
+          "id": "dha.pp11.4-18-2",
+          "status": "reviewed (interpreted) · binding unknown"
+        },
+        "due": null,
+        "firm": false,
+        "fulfilled": 15,
+        "missed": false,
+        "role": "health_service_operator"
+      },
+      {
+        "action": "notify_health_data_oversight",
+        "clause": {
+          "id": "dha.pp11.4-18-4",
+          "status": "reviewed (interpreted) · binding unknown"
+        },
+        "due": null,
+        "firm": false,
+        "fulfilled": 15,
+        "missed": false,
+        "role": "health_service_operator"
+      }
+    ],
+    "rejected_decisions": [
+      {
+        "clauses": [
+          {
+            "id": "uae.fl2-2019.art4",
+            "status": "reviewed (interpreted) · binding · English translation"
+          }
+        ],
+        "minute": 75,
+        "reasons": [
+          "citation_out_of_scope"
+        ],
+        "role": "telecom_operator"
+      }
+    ],
+    "scenario": "uae_health_access"
+  },
+  "waivable_reasons": [
+    "authority_uncertain",
+    "missing_information",
+    "missing_prerequisite",
+    "no_authority",
+    "restricted_by_clause"
+  ],
+  "would_have_been_rejected": [
+    {
+      "action": "activate_fallback_channel",
+      "clauses": [
+        {
+          "id": "dha.pp11.4-18-1",
+          "status": "reviewed (interpreted) · binding unknown"
+        }
+      ],
+      "minute": 15,
+      "role": "health_service_operator",
+      "would_have_been_rejected": [
+        "authority_uncertain"
+      ]
+    },
+    {
+      "action": "activate_fallback_channel",
+      "clauses": [
+        {
+          "id": "dha.pp11.4-18-1",
+          "status": "reviewed (interpreted) · binding unknown"
+        }
+      ],
+      "minute": 60,
+      "role": "health_service_operator",
+      "target": "health_service_operator",
+      "would_have_been_rejected": [
+        "authority_uncertain"
+      ]
+    },
+    {
+      "action": "activate_fallback_channel",
+      "clauses": [
+        {
+          "id": "dha.pp11.4-18-1",
+          "status": "reviewed (interpreted) · binding unknown"
+        }
+      ],
+      "minute": 75,
+      "role": "health_service_operator",
+      "would_have_been_rejected": [
+        "authority_uncertain"
+      ]
+    }
+  ]
+}
