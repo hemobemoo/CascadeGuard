@@ -177,6 +177,8 @@ def build(markdown: str, template: Path) -> DocumentType:
         for r in list(p.runs):
             r._r.getparent().remove(r._r)
         lines = [label for label in TEAM_LABELS if label in text]
+        if len(lines) > 1:  # a justified line ending in a break is stretched: align left
+            p.paragraph_format.alignment = None
         for n, label in enumerate(lines):
             if n:
                 p.add_run().add_break()

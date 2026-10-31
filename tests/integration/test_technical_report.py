@@ -10,7 +10,7 @@ import pytest
 from cascadeguard.domain.repairs import RepairOperationType
 from cascadeguard.engine.constraints import OVERSTATED
 from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
-from cascadeguard.storage.reports import ScriptedRuns, load_gate4, scripted_runs
+from cascadeguard.storage.reports import CONCLUSION_DRAFT, ScriptedRuns, load_gate4, scripted_runs
 
 REPORT = PROJECT_ROOT / "docs" / "report"
 SOURCE = REPORT / "cascadeguard-report.md"
@@ -239,4 +239,5 @@ def test_the_pdf_is_at_most_five_pages_and_current() -> None:
 def test_the_report_is_linked_and_the_draft_is_not() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
     assert "docs/report/cascadeguard-report.pdf" in readme
-    assert "pr5-conclusion-draft" not in readme and "pr5-conclusion-draft" not in text()
+    draft = CONCLUSION_DRAFT.stem  # not spelled out: no tracked file may name the draft
+    assert draft not in readme and draft not in text()
