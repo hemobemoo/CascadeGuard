@@ -1542,7 +1542,7 @@ def test_a_daily_limit_stop_still_reports_the_requests_sent(
     assert "LLM decision cache (governed and ungoverned runs): 0 steps reused, 10 not cached" in out
 
 
-@pytest.mark.parametrize("cap", ["0", "-1"])
+@pytest.mark.parametrize("cap", ["0", "-1", "abc"])
 def test_cap_must_be_positive(cap: str, capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         main(["run", SCENARIO, "--agents", "llm", "--cap", cap])
