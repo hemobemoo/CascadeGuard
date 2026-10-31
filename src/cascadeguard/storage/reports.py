@@ -330,19 +330,23 @@ def _gerund(action: str) -> str:
 
 
 def repair_label(p: RepairProposal) -> str:
-    """The repair's edits in plain language, from their typed parameters only."""
+    """The repair's edits in plain language, from the same typed parameters and terms as the
+    hypothetical rule each edit becomes (`simulation/replay.py` `_rule`): an owner's deadline
+    runs from the action's opening condition; a data share may come from the original holder or
+    any other role that holds the facts."""
     parts: list[str] = []
     for e in p.edits:
         op = e.operation.value
         if op == "assign_owner" and e.action:
             parts.append(
                 f"make `{e.role}` the owner of {_gerund(e.action)} within "
-                f"{e.deadline_minutes} minutes"
+                f"{e.deadline_minutes} minutes of the action's opening condition holding"
             )
         elif op == "define_minimum_data_share" and e.data_category and e.counterpart:
             category = e.data_category.replace("_", " ")
             parts.append(
-                f"define a minimum share of {category} from `{e.role}` to `{e.counterpart}`"
+                f"define a minimum share of {category} to `{e.counterpart}` (from `{e.role}` "
+                "or another holder)"
             )
         else:  # the other grammar operations: named, never paraphrased
             parts.append(f"`{op}` for `{e.role}`")
@@ -468,7 +472,7 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         )
         + f" with the engine's checks in force, through {_count(len(p.edits))} hypothetical "
         "policy edits"
-        + (" that require institutional authorization" if p.requires_authorization else "")
+        + (" that need human and institutional approval" if p.requires_authorization else "")
         + ". No live repair replay was run (it would need a new gate-4 approval).",
         "",
     ]
