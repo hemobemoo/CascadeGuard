@@ -7,7 +7,9 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
 **State of main.** Submission PRs 1 to 4 are merged (#14 labels/licence/README; #15 Charter;
-#16 vector knowledge base; #17 `--governance off`).
+#16 vector knowledge base; #17 `--governance off`). **Gate 4 done:** #19 (live LLM with
+`--governance off`, exit code 3; merge 4e1a642) and #20 (recording, `docs/evaluation/gate4/`;
+merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
@@ -139,7 +141,8 @@ PRs follow, one at a time; each stops once open with CI green:
    extra for the export test).
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
    golden) and the side-by-side comparison in the CLI and UI: merged (PR #17, 824b00a).
-5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`.
+5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`: in
+   progress on `pr5-gap-analysis` (plan approved 2026-10-31).
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
@@ -1219,9 +1222,8 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
 **PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
-**Gate 4 (recording run): approved 2026-10-31** under the conditions in "Open items" (model
-unchanged, dry run first, cap, variant only without a 429 or daily-limit stop). Waiting on the
-human: the merge of the `governance-off-live` PR, which the variant needs.
+**Gate 4 (recording run): done 2026-10-31** (#19 4e1a642, #20 a140c22), under the conditions in
+"Open items".
 Exit code (test-breaker QUESTION-FOR-HUMAN, decided 2026-10-31): an inconclusive live LLM run
 exits 3 (`INCONCLUSIVE_EXIT`), never 2 (refused): failed steps in a live baseline, replay or
 governance-off comparison, a daily-limit stop, or a knowledge-base failure mid-run. Offline and
@@ -1413,11 +1415,13 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-Gate 4 done (2026-10-31): #19 merged (4e1a642); governed live baseline and ungoverned live
-variant recorded; snapshot and traces in `docs/evaluation/gate4/` (PR `gate4-recording`,
-waiting on the human). Do not rerun either run without asking. **Next:** the human reviews and
-merges that PR; then PR 5 (gap analysis, trace export). Any governed vs ungoverned conclusion in
-README or demo text goes through gate 7 first.
+Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
+traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **Next:** PR 5
+on `pr5-gap-analysis` (plan approved 2026-10-31): three scripted traces, `docs/gap-analysis.md`,
+`gap_examples.yaml` as draft, an unpublished conclusion draft; evidence-auditor alone, then
+phase-auditor and test-breaker together; stop for the human's gate-7 decision; do not merge.
+Wording (human): "applied without the authority the governed engine requires", never
+"unauthorised". Any governed vs ungoverned conclusion goes through gate 7 first.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.
