@@ -6,8 +6,9 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
-**State of main.** Submission PRs 1 to 4 are merged (#14 labels/licence/README; #15 Charter;
-#16 vector knowledge base; #17 `--governance off`). **Gate 4 done:** #19 (live LLM with
+**State of main.** Submission PRs 1 to 5 are merged (#14 labels/licence/README; #15 Charter;
+#16 vector knowledge base; #17 `--governance off`; #21 gap analysis, traces, reviewed example
+mapping and the gate-7-approved conclusion draft, merge ad93ff6, 2026-10-31). **Gate 4 done:** #19 (live LLM with
 `--governance off`, exit code 3; merge 4e1a642) and #20 (recording, `docs/evaluation/gate4/`;
 merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
@@ -127,8 +128,9 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: PR 5 (#21): gate-7 decisions applied; evidence-auditor and test-breaker, CI, then the human approves the revised wording and merges (see
-  "Waiting on human"); do not merge. Gate 4 is done (#19, #20 merged); see "Current phase".
+- Next: gate 4 and gate 7 are done (#19, #20, #21 merged). The conclusion draft
+  (`docs/review/pr5-conclusion-draft.md`) is approved but stays unlinked from the README and the
+  demo until the human decides separately. Remaining submission work: the technical report.
 
 ## Current phase
 
@@ -144,8 +146,8 @@ PRs follow, one at a time; each stops once open with CI green:
    extra for the export test).
 4. `--governance off` (engine-owned, deterministic, never default, own expected output, never a
    golden) and the side-by-side comparison in the CLI and UI: merged (PR #17, 824b00a).
-5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`: built
-   on `pr5-gap-analysis` (plan approved 2026-10-31): `storage/reports.py` and
+5. `docs/gap-analysis.md` and one scripted-run trace export in `docs/evaluation/traces/`: merged
+   (#21, ad93ff6, gate 7 done 2026-10-31); built on `pr5-gap-analysis` (plan approved 2026-10-31): `storage/reports.py` and
    `scripts/build_reports.py` generate three scripted traces (baseline, governance off, rank-1
    replay), the gap analysis and `docs/review/pr5-conclusion-draft.md` (unpublished, gate 7);
    `scenarios/uae_health_access/gap_examples.yaml` is reviewed (6 entries approved by the human
@@ -1235,8 +1237,10 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
 **PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
-**PR 5 (`pr5-gap-analysis`, #21): gate-7 decisions made 2026-10-31 (Ibrahim Melhem); waiting
-on the human's final wording approval of the revised conclusion draft and the merge.** Decided:
+**PR 5 (#21): gate 7 done, merged 2026-10-31 as ad93ff6** (Ibrahim Melhem approved the revised
+wording with four final edits: entry 8, the repair label from the rule's terms, the standard
+approval phrase, the README line; CI green on 2de7401; merged by the agent on the human's
+instruction, branch kept). The draft stays unlinked until the human decides separately. Decided:
 mapping entries 2-5 approved, 7-8 approved with rewording, 1 (`eu.gdpr.art33-1`) and 6
 (`unesco.ai-ethics.responsibility-accountability`) rejected (triage
 `docs/review/pr5-clause-triage.md`); the Charter safeguard is not a trigger; the live section
@@ -1451,10 +1455,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
-`pr5-gap-analysis` (plan approved 2026-10-31) is built: evidence-auditor PASS (round 3),
-phase-auditor round 1 FAIL (structure file; fixed), test-breaker round 1 PASS (MINORs fixed);
-round 2 of both next, then the PR, CI, and the stop for the human's gate-7 decision (see
-"Waiting on human"); do not merge. Verify:
+`pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). Next: the
+technical report; linking the conclusion draft is a separate human decision. Verify:
 `uv run python scripts/build_reports.py --check` (exit 0) and
 `uv run pytest tests/integration/test_reports.py`.
 Wording (human): "applied without the authority the governed engine requires", never
