@@ -53,3 +53,27 @@ trigger.
 | 6 | orphan_duty:activate_fallback_channel -> `unesco.ai-ethics.responsibility-accountability` | NEEDS-HUMAN-JUDGMENT (fit) |
 | 7 | undefined_trigger:review_automated_lockouts -> `unesco.ai-ethics.human-oversight` | NEEDS-HUMAN-JUDGMENT (no trigger) |
 | 8 | undefined_trigger:review_automated_lockouts -> `uae.ai-charter.human-oversight` | NEEDS-HUMAN-JUDGMENT (no trigger) |
+
+## Gate 7: human decision (2026-10-31, Ibrahim Melhem)
+
+| # | Failure -> clause | Decision | Reason (human) |
+|---|---|---|---|
+| 1 | information_deadlock -> `eu.gdpr.art33-1` | **Rejected, removed** | A personal-data breach notice to a regulator is a different duty from an operational status share between operators; foreign and not binding, so it adds risk and no evidence. |
+| 2 | information_deadlock -> `oecd.ai-principles.accountability-cooperation` | **Approved** | CLEAN; the only example for the information deadlock. |
+| 3 | orphan_duty:reverse_automated_lockouts -> `oecd.ai-principles.robustness-override` | **Approved** | CLEAN |
+| 4 | orphan_duty:reverse_automated_lockouts -> `unesco.ai-ethics.review-and-correct` | **Approved** | CLEAN |
+| 5 | orphan_duty:reverse_automated_lockouts -> `uae.ai-charter.human-oversight` | **Approved** | CLEAN |
+| 6 | orphan_duty:activate_fallback_channel -> `unesco.ai-ethics.responsibility-accountability` | **Rejected, removed** | The clause's own note limits its use to tracing the lockouts to the traffic model (same reasoning as decision 4d). |
+| 7 | undefined_trigger:review_automated_lockouts -> `unesco.ai-ethics.human-oversight` | **Approved with rewording** | It fits because it states no trigger: the relevance line now says it sets no condition or threshold for review. |
+| 8 | undefined_trigger:review_automated_lockouts -> `uae.ai-charter.human-oversight` | **Approved with rewording** | As 7. |
+
+`gap_examples.yaml` is now `status: reviewed`, `reviewed_by: Ibrahim Melhem`, `reviewed_on:
+2026-10-31` (the validator requires all three once every entry is approved). After the two
+removals `orphan_duty:activate_fallback_channel` has no example: its section says "No reviewed
+example clause is mapped to this failure" (tested).
+
+Reviewer questions: Q1, the Charter safeguard on `review_automated_lockouts` is **not** a trigger
+(no condition, threshold or time; not binding); it stays under "Other loaded clauses on this
+action" and `undefined_trigger:review_automated_lockouts` stands. Q2, the live section must state
+the repair result itself, not only point to it (done). Q3, the draft stays off `main` until the
+human approves its wording; after approval it may land unlinked.

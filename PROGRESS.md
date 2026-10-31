@@ -123,7 +123,7 @@ then locked.
     `JSONDecodeError`/`AttributeError` instead of `ClauseLoadError`, and the two readers
     split lines differently.
   (The third, the runtime pin check, is fixed in PR 3.)
-- Next: PR 5 (`pr5-gap-analysis`): PR open, CI, then stop for the human's gate-7 decision (see
+- Next: PR 5 (#21): gate-7 decisions applied; evidence-auditor and test-breaker, CI, then the human approves the revised wording and merges (see
   "Waiting on human"); do not merge. Gate 4 is done (#19, #20 merged); see "Current phase".
 
 ## Current phase
@@ -144,11 +144,12 @@ PRs follow, one at a time; each stops once open with CI green:
    on `pr5-gap-analysis` (plan approved 2026-10-31): `storage/reports.py` and
    `scripts/build_reports.py` generate three scripted traces (baseline, governance off, rank-1
    replay), the gap analysis and `docs/review/pr5-conclusion-draft.md` (unpublished, gate 7);
-   `scenarios/uae_health_access/gap_examples.yaml` is a draft mapping (8 entries, none
-   approved; triage in `docs/review/pr5-clause-triage.md`). Waiting on the human: the approved mapping entries and the conclusion wording.
+   `scenarios/uae_health_access/gap_examples.yaml` is reviewed (6 entries approved by the human
+   2026-10-31, 2 rejected; triage in `docs/review/pr5-clause-triage.md`). Waiting on the human:
+   the final approval of the revised conclusion wording, then the merge.
    **Done when (plan approved 2026-10-31):** the three scripted traces equal the CLI's own exports;
    `uv run python scripts/build_reports.py --check` exits 0; `tests/integration/test_reports.py`
-   passes; the mapping is a draft with no entry approved; the conclusion draft follows the human's
+   passes; the mapping is a draft with no entry approved (until gate 7; now reviewed); the conclusion draft follows the human's
    rules and is linked from nowhere; evidence-auditor, then phase-auditor and test-breaker with no
    open BLOCKER or MAJOR; no API calls; all checks clean; PR open with CI green; stop for gate 7.
 
@@ -1230,8 +1231,16 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
 **PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
-**PR 5 (`pr5-gap-analysis`): waiting on the human's gate-7 decision** (not merged; the human
-merges). Open items for the human:
+**PR 5 (`pr5-gap-analysis`, #21): gate-7 decisions made 2026-10-31 (Ibrahim Melhem); waiting
+on the human's final wording approval of the revised conclusion draft and the merge.** Decided:
+mapping entries 2-5 approved, 7-8 approved with rewording, 1 (`eu.gdpr.art33-1`) and 6
+(`unesco.ai-ethics.responsibility-accountability`) rejected (triage
+`docs/review/pr5-clause-triage.md`); the Charter safeguard is not a trigger; the live section
+states the repair result; the draft stays off `main` until its wording is approved (the repo is
+public); conclusion wording changes applied (met "in this run but not in the governed
+baseline", outcome in words, plain-language repair label, closing sentence names the goal).
+Merge #21 only after the human approves the revised wording and CI is green. Earlier open items
+(now decided):
 - which entries of `scenarios/uae_health_access/gap_examples.yaml` to approve (8, none
   approved; triage `docs/review/pr5-clause-triage.md`: entries 1, 6, 7, 8 NEEDS-HUMAN-JUDGMENT
   on fit; entries 2-5 CLEAN);
