@@ -16,12 +16,12 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 
 - None found in the loaded clause set.
 
-**Examples elsewhere (context, not UAE law):**
+**Examples (context, not UAE law; UAE principles are not binding):**
 
-- `eu.gdpr.art33-1` [reviewed · not binding · foreign precedent], GDPR-Regulation (EU) 2016-679.pdf, p. 29, Article 33(1) (DRAFT, not yet approved). Relevance: An incident-information duty with a named recipient and a time limit (72 hours).
+- `eu.gdpr.art33-1` [reviewed · not binding · foreign precedent], GDPR-Regulation (EU) 2016-679.pdf, p. 29, Article 33(1) (DRAFT, not yet approved). Relevance: A controller's duty to notify a personal data breach to the supervisory authority without undue delay and, where feasible, within 72 hours, unless the breach is unlikely to result in a risk (EU, not binding in the UAE).
   > 1. In the case of a personal data breach, the controller shall without undue delay and, where feasible, not later than 72 hours after having become aware of it, notify the personal data breach to the supervisory authority competent in accordance with Article 55, unless the personal data breach is unlikely to result in a risk to the rights and freedoms of natural persons.
 
-- `oecd.ai-principles.accountability-cooperation` [reviewed · not binding · international precedent], OECD_Recommendation_AI.pdf, p. 9, Section 1, 1.5 Accountability, c) (DRAFT, not yet approved). Relevance: Co-operation between AI actors and system users to address risks related to AI systems.
+- `oecd.ai-principles.accountability-cooperation` [reviewed · not binding · international precedent], OECD_Recommendation_AI.pdf, p. 9, Section 1, 1.5 Accountability, c) (DRAFT, not yet approved). Relevance: Risk management by AI actors, including, as appropriate, co-operation between AI actors, AI system users and other stakeholders (a non-binding recommendation).
   > c) AI actors, should, based on their roles, the context, and their ability to act, apply a systematic risk management approach to each phase of the AI system lifecycle on an ongoing basis and adopt responsible business conduct to address risks related to AI systems, including, as appropriate, via co-operation between different AI actors, suppliers of AI knowledge and AI resources, AI system users, and other stakeholders.
 
 **Repairs tested by replay (hypothetical rules, scripted agents):**
@@ -40,13 +40,10 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 - `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown], Health Data Protection and Confidentiality Policy_EN2022810559.pdf, p. 30, 4.18.1:
   > 4.18.1. Entities must establish breach/incidence response management (Incident Response and Business Continuity) and recovery (Incident Recovery and Disaster Recovery) plans that comprise of:
 
-**Examples elsewhere (context, not UAE law):**
+**Examples (context, not UAE law; UAE principles are not binding):**
 
 - `unesco.ai-ethics.responsibility-accountability` [reviewed · not binding · international precedent], UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf, p. 23, III.2 Principles, Responsibility and accountability, para 43 (DRAFT, not yet approved). Relevance: Oversight and due-diligence mechanisms to ensure accountability for the impact of AI systems.
   > 43. Appropriate oversight, impact assessment, audit and due diligence mechanisms, including whistle-blowers’ protection, should be developed to ensure accountability for AI systems and their impact throughout their life cycle. Both technical and institutional designs should ensure auditability and traceability of (the working of) AI systems in particular to address any conflicts with human rights norms and standards and threats to environmental and ecosystem well-being.
-
-- `uae.ai-charter.safety` [reviewed · not binding], The UAE Charter for the Development and Use of Artificial Intelligence.pdf, p. 3, General Principles of the Charter, 2 (DRAFT, not yet approved). Relevance: A UAE principle (not binding) encouraging the modification or removal of systems that pose risks.
-  > 2. Safety: The UAE places great importance on safety, ensuring that all AI systems comply with the highest safety standards. The country encourages modifying or removing systems that pose risks.
 
 **Repairs tested by replay (hypothetical rules, scripted agents):**
 
@@ -63,7 +60,7 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 
 - None found in the loaded clause set.
 
-**Examples elsewhere (context, not UAE law):**
+**Examples (context, not UAE law; UAE principles are not binding):**
 
 - `oecd.ai-principles.robustness-override` [reviewed · not binding · international precedent], OECD_Recommendation_AI.pdf, p. 9, Section 1, 1.4 Robustness, security and safety, b) (DRAFT, not yet approved). Relevance: Mechanisms so that an AI system causing undue harm can be overridden or repaired.
   > b) Mechanisms should be in place, as appropriate, to ensure that if AI systems risk causing undue harm or exhibit undesired behaviour, they can be overridden, repaired, and/or decommissioned safely as needed.
@@ -89,7 +86,11 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 
 - None found in the loaded clause set.
 
-**Examples elsewhere (context, not UAE law):**
+**Other loaded clauses on this action (not counted by the diagnosis):**
+
+- `uae.ai-charter.human-oversight` [reviewed (interpreted) · not binding]: read as a `safeguard` for `review_automated_lockouts`; condition: an AI output may be erroneous.
+
+**Examples (context, not UAE law; UAE principles are not binding):**
 
 - `unesco.ai-ethics.human-oversight` [reviewed · not binding · international precedent], UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf, p. 22, III.2 Principles, Human oversight and determination, paras 35-36 (DRAFT, not yet approved). Relevance: Ultimate human responsibility for decisions taken with AI systems.
   > 35. Member States should ensure that it is always possible to attribute ethical and legal responsibility for any stage of the life cycle of AI systems, as well as in cases of remedy related to AI systems, to physical persons or to existing legal entities. Human oversight refers thus not only to individual human oversight, but to inclusive public oversight, as appropriate. 36. It may be the case that sometimes humans would choose to rely on AI systems for reasons of efficacy, but the decision to cede control in limited contexts remains that of humans, as humans can resort to AI systems in decision-making and acting, but an AI system can never replace ultimate human responsibility and accountability. As a rule, life and death decisions should not be ceded to AI systems.

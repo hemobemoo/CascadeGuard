@@ -145,8 +145,8 @@ PRs follow, one at a time; each stops once open with CI green:
    on `pr5-gap-analysis` (plan approved 2026-10-31): `storage/reports.py` and
    `scripts/build_reports.py` generate three scripted traces (baseline, governance off, rank-1
    replay), the gap analysis and `docs/review/pr5-conclusion-draft.md` (unpublished, gate 7);
-   `scenarios/uae_health_access/gap_examples.yaml` is a draft mapping (9 entries, none
-   approved). Waiting on the human: the approved mapping entries and the conclusion wording.
+   `scenarios/uae_health_access/gap_examples.yaml` is a draft mapping (8 entries, none
+   approved; triage in `docs/review/pr5-clause-triage.md`). Waiting on the human: the approved mapping entries and the conclusion wording.
 
 Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM baseline, plus one
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
