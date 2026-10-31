@@ -1409,7 +1409,8 @@ governed live baseline (2026-10-31; do not rerun it without asking). **Next:** #
 both reviewers PASS, then merge on the human's instruction); the human decides whether the
 variant may run (the baseline's one request retry may have been a 429; see "Waiting on
 human"); if yes, dry-run `--governance off` offline on the filled cache, run live if the
-estimate is at most 54 (cap = estimate + 50%), else ask; then a PR with the checked snapshot
+estimate is at most 54 requests (cap = estimate + 50%), else ask (both numbers set by the human,
+2026-10-31); then a PR with the checked snapshot
 and traces; then PR 5.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
