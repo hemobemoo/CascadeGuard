@@ -625,7 +625,7 @@ def test_llm_run_with_kb_context_stops_cleanly_on_a_bad_index_or_lost_network(
         raise KnowledgeBaseError("OpenRouter embeddings failed 4 times: ConnectionError")
 
     monkeypatch.setattr(World, "baseline", lost)
-    assert main(["run", "uae_health_access"]) == 2
+    assert main(["run", "uae_health_access"]) == 2  # not live: 3 is only for live runs
     out = capsys.readouterr().out
     assert "failed 4 times" in out and "Traceback" not in out
 
