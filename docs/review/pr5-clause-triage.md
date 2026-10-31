@@ -33,3 +33,23 @@ MINOR wording on entries 1 (GDPR: "not later than 72 hours after becoming aware 
 personal-data-breach notice to a supervisory authority with a cross-organisation share of network
 status; and, on entry 6, the clause's own note gives its use as tracing the lockouts to the
 traffic model, not activating a fallback channel. Both for the human (gate 7).
+
+## Round 3 (HEAD ac97aad): PASS
+
+Round-2 fixes for entries 1, 3 and 6 confirmed against the clause texts; all quotes, pages and
+labels verified again. No BLOCKER or MAJOR. Optional MINORs applied: entry 4 reworded to the
+clause's terms ("submissions", "rights and freedoms") and entries 4 and 7 tagged "(a non-binding
+recommendation)" like the others. Open for the human (gate 7): entries 1, 6, 7 and 8 (fit), and
+whether the Charter safeguard listed under "Other loaded clauses on this action" counts as a
+trigger.
+
+| # | Failure -> clause | Round 3 |
+|---|---|---|
+| 1 | information_deadlock -> `eu.gdpr.art33-1` | NEEDS-HUMAN-JUDGMENT (fit) |
+| 2 | information_deadlock -> `oecd.ai-principles.accountability-cooperation` | CLEAN |
+| 3 | orphan_duty:reverse_automated_lockouts -> `oecd.ai-principles.robustness-override` | CLEAN |
+| 4 | orphan_duty:reverse_automated_lockouts -> `unesco.ai-ethics.review-and-correct` | CLEAN |
+| 5 | orphan_duty:reverse_automated_lockouts -> `uae.ai-charter.human-oversight` | CLEAN |
+| 6 | orphan_duty:activate_fallback_channel -> `unesco.ai-ethics.responsibility-accountability` | NEEDS-HUMAN-JUDGMENT (fit) |
+| 7 | undefined_trigger:review_automated_lockouts -> `unesco.ai-ethics.human-oversight` | NEEDS-HUMAN-JUDGMENT (no trigger) |
+| 8 | undefined_trigger:review_automated_lockouts -> `uae.ai-charter.human-oversight` | NEEDS-HUMAN-JUDGMENT (no trigger) |
