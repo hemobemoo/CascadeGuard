@@ -90,6 +90,13 @@ def _display(path: Path) -> str:
         return path.as_posix()
 
 
+def positive_int(text: str) -> int:
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be a positive number of requests")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cascadeguard")
     parser.add_argument("--version", action="version", version=f"cascadeguard {__version__}")
@@ -152,7 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
         )
         cmd.add_argument(
             "--cap",
-            type=int,
+            type=positive_int,
             default=None,
             help=f"live LLM runs: max requests, retries included (or {CAP_VARIABLE} in .env)",
         )
@@ -624,10 +631,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = _main(args, world)
     except DailyLimitReached:  # fixed text: the provider's message is not printed here
         print(f"cascadeguard: {DAILY_LIMIT_STOP}")
-        return 2
+        status = 2
     except KnowledgeBaseError as exc:  # --kb-context lost the network mid-run
         print(f"cascadeguard: {exc}")
-        return 2
+        status = 2
+    # Also after a stop: how many steps and requests the stopped run had used.
     off = getattr(args, "governance", Governance.ON.value) == Governance.OFF.value
     runs = "governed and ungoverned runs" if off else "baseline and replays"
     for line in (cache_line(world, runs), request_line(world)):

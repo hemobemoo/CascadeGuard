@@ -1458,13 +1458,14 @@ def test_one_cap_covers_the_governed_and_ungoverned_runs(
 
     _live_env(monkeypatch, tmp_path)
     fake = FakeClient(scripted_replies(scripted))
+    expected_cap = cap
     now = [0.0]
 
     def sleep(seconds: float) -> None:
         now[0] += seconds  # pacing passes simulated time, no waiting
 
     def wrapped(config: LLMConfig, cap: int | None = None, **_: object) -> ResilientClient:
-        assert cap is not None
+        assert cap is not None and cap == expected_cap  # the CLI passes --cap through
         inner = CappedClient(fake, cap)
         redact = (config.api_key, config.model)
         return ResilientClient(inner, RetryPolicy(), sleep, lambda: now[0], redact=redact)
@@ -1477,3 +1478,72 @@ def test_one_cap_covers_the_governed_and_ungoverned_runs(
     assert ("## Not comparable" in out) is not comparable
     assert f"Live requests: {sent} sent (cap {cap}, retries included)" in out
     assert ("refused at the cap: inconclusive" in out) is not comparable
+
+
+def _capped_fake(monkeypatch: pytest.MonkeyPatch, fake: FakeClient) -> None:
+    from cascadeguard.agents.llm import CappedClient, LLMConfig, ResilientClient, RetryPolicy
+
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    def wrapped(config: LLMConfig, cap: int | None = None, **_: object) -> ResilientClient:
+        assert cap is not None
+        redact = (config.api_key, config.model)
+        return ResilientClient(
+            CappedClient(fake, cap), RetryPolicy(), sleep, lambda: now[0], redact=redact
+        )
+
+    monkeypatch.setattr("cascadeguard.agents.llm.make_client", wrapped)
+
+
+def test_a_governed_live_run_prints_its_requests(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _live_env(monkeypatch, tmp_path)
+    fake = FakeClient(scripted_replies(scripted))
+    _capped_fake(monkeypatch, fake)
+    args = ["run", SCENARIO, "--agents", "llm", "--cap", "50", "--cache", str(tmp_path / "c")]
+    assert main(args) == 0
+    out = capsys.readouterr().out
+    assert "LLM decision cache (baseline and replays): 0 steps reused, 36 not cached" in out
+    assert "Live requests: 36 sent (cap 50, retries included)" in out
+    assert "refused at the cap" not in out
+
+
+def test_a_daily_limit_stop_still_reports_the_requests_sent(
+    scripted: World,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from cascadeguard.agents.llm import DailyLimitReached
+
+    _live_env(monkeypatch, tmp_path)
+    base = scripted_replies(scripted)
+    sent = [0]
+
+    def reply(request: dict[str, Any]) -> str:
+        sent[0] += 1
+        if sent[0] == 10:
+            raise DailyLimitReached("daily limit")
+        return base(request)
+
+    _capped_fake(monkeypatch, FakeClient(reply))
+    args = ["run", SCENARIO, "--governance", "off", "--agents", "llm", "--cap", "50"]
+    assert main([*args, "--cache", str(tmp_path / "c")]) == 2
+    out = capsys.readouterr().out
+    assert "daily request limit was reached" in out
+    assert "Live requests: 10 sent (cap 50, retries included)" in out
+    assert "LLM decision cache (governed and ungoverned runs): 0 steps reused, 10 not cached" in out
+
+
+@pytest.mark.parametrize("cap", ["0", "-1"])
+def test_cap_must_be_positive(cap: str, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main(["run", SCENARIO, "--agents", "llm", "--cap", cap])
+    assert "must be a positive number of requests" in capsys.readouterr().err
