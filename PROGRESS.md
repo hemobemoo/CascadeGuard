@@ -164,6 +164,15 @@ then locked.
   round 2: everything proven except "PR open with CI green" (not pushed yet at that point); MINORs:
   this entry one commit stale (fixed here), evidence-auditor not re-run on the 7020545/79f7258
   edits (re-run on the PR).
+- **PR #23** opened 2026-11-01. evidence-auditor round 3 PASS. Human decisions 2026-11-01:
+  "(see section 6)" added in §2; the unloaded drafts (`uae.pdpl.art18-1`,
+  `mocai.ethics.contest-redress`) stay out of the report (drafts are never cited); A4 instead of
+  the template's US Letter (tables scaled to the A4 text width, e30d0cb); the human re-exported
+  the PDF (4 pages, A4). Regulation (EU) 2026/1744 confirmed by the human (Digital Omnibus on AI,
+  8 July 2026, amending the AI Act); the four EU clauses stay draft, and before any goes to review
+  the human checks the articles their notes cite (Art 14(4) chapeau; Art 75(1a); Art 3(49)(b);
+  GDPR not amended) against EUR-Lex. Merge authorised by the human once evidence-auditor has run
+  on the final PDF and every CI run on the final commit is green.
 
 ## Current phase
 
