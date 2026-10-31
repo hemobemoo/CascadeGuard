@@ -32,5 +32,5 @@ entries:
     approved: true
   - failure: undefined_trigger:review_automated_lockouts
     clause: uae.ai-charter.human-oversight
-    relevance: A UAE principle (not binding) on human oversight to correct errors of AI. It sets no condition or threshold for review. It illustrates the principle without a trigger.
+    relevance: A UAE principle (not binding) on human oversight to correct errors of AI. It sets no trigger for review (no threshold or time; its interpreted condition, that an AI output may be erroneous, is not a trigger). It illustrates the principle without a trigger.
     approved: true

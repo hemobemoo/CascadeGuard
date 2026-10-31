@@ -178,8 +178,9 @@ def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> Non
     ) in run3
     assert run3.startswith(
         " (scripted agents; replay of the identical incident). Make `health_service_operator` "
-        "the owner of reversing automated lockouts within 30 minutes, and define a minimum share "
-        "of network incident status from `telecom_operator` to `health_service_operator` (repair "
+        "the owner of reversing automated lockouts within 30 minutes of the action's opening "
+        "condition holding, and define a minimum share of network incident status to "
+        "`health_service_operator` (from `telecom_operator` or another holder) (repair "
         f"`{rep.proposal.repair_id}`)"
     )
     run2 = main.split("2. **Ungoverned**", 1)[1].split("\n3. ", 1)[0]
@@ -196,8 +197,8 @@ def test_the_conclusion_draft_follows_the_human_rules(runs: ScriptedRuns) -> Non
     assert "but not in the live governed run, at T+15" in bullets[ungoverned]
     assert bullets[ungoverned + 1].startswith(
         "Repair result (scripted agents, run 3 above): all critical goals were met with the "
-        "engine's checks in force, through two hypothetical policy edits that require "
-        "institutional authorization."
+        "engine's checks in force, through two hypothetical policy edits that need human and "
+        "institutional approval."
     )
     # Every diagnosed failure list keeps its qualification, once per governed run.
     qualification = "a candidate gap for expert review, not a confirmed legal or standards gap"

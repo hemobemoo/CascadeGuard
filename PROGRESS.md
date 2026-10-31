@@ -115,6 +115,10 @@ then locked.
   "M requests refused at the cap: inconclusive" when the cap ran out (CLI only; the UI stays
   scripted for this comparison), for governed and off runs, and
   also after a daily-limit stop. `--cap` must be positive.
+- **Follow-up (human, 2026-10-31):** the plain-language repair label in `storage/reports.py`
+  (`repair_label`) covers `assign_owner` and `define_minimum_data_share` only; the other three
+  operations (`add_escalation_trigger`, `add_fallback_channel_rule`,
+  `designate_decision_requester`) are named by code. Only rank 1 is labelled today.
 - **Still open:** query embeddings are not counted under `--cap` (free model, but `--cap` says
   "max requests").
 - **Deferred MINORs (test-breaker round 5, 2026-10-30; no bypass found; human: stay deferred):**
