@@ -1,0 +1,35 @@
+{
+  "key": "5e9082d5c10510ba552b4cc5e7e4f2602cdcabf0a04f9cdb8ff9d7f32918315c",
+  "role_id": "policy_legal_adviser",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "policy_legal_adviser",
+    "at": "2026-03-02T08:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "monitor",
+        "target": null,
+        "parameters": {}
+      }
+    ],
+    "rationale": "No new inject and no decision points at T+00. No facts are known yet, so there is nothing to analyze, cite, or request. I will monitor for the next inject.",
+    "citations": [],
+    "uncertainty": [
+      "Whether any incident has occurred or will be injected in this simulation."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 5244,
+    "completion_tokens": 101,
+    "cost": 0.0,
+    "latency_seconds": 1.8780466000025626,
+    "calls": 1
+  }
+}

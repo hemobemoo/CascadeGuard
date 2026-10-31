@@ -91,7 +91,15 @@ then locked.
   authority_uncertain, all activate_fallback_channel; 3 outside_recipient_boundary); 1 rejected
   decision (citation_out_of_scope). Goals: network_incident_reported met at T+0;
   patient_access_restored and alert_cause_known_to_health unmet. The same 4 diagnosed failures
-  as scripted. Export and log in `data/gate4/` (ignored).
+  as scripted. Export and log in `data/gate4/` (ignored), copied to `docs/evaluation/gate4/`.
+- **Ungoverned live variant: run 2026-10-31** (code at 4e1a642; `--governance off --kb-context
+  --cap 6`; dry run 4 of 72 steps uncached, cap 4 + 50%; runner stop on a 4th failed request,
+  not triggered): exit 0, complete, 4 requests, no failed request, 4 query embeddings, 45 s.
+  The health service operator's T+15 `activate_fallback_channel` was applied (waived
+  `authority_uncertain`, `dha.pp11.4-18-1`), so its views and later decisions changed;
+  3 actions applied only because governance was off; `patient_access_restored` met at T+15;
+  the three failures behind it are "goal met but the cause is still present". Results table:
+  `docs/evaluation/gate4/README.md` (results only; conclusions go through gate 7).
 - **PR (branch `governance-off-live`):** lifts the live-LLM refusal for `--governance off`
   (keeps `--repair` and `--audit` refused; a live run still needs `--cap`). With LLM agents the
   ungoverned run reuses every cached step whose view no waived action changed. Dry run: an
@@ -1220,8 +1228,9 @@ governance-off comparison, a daily-limit stop, or a knowledge-base failure mid-r
 scripted runs keep 0. In #19 with tests; README lists the codes. The request line also names
 failed requests by kind ("HTTP 429 x1"), so a 429 in a run is visible.
 
-**Waiting on the human: may the ungoverned variant run?** Gate 4 allows it only if the baseline
-had no 429. The baseline sent 37 requests for 36 steps; the cache entries' `usage.calls` sum to
+**Decided (human, 2026-10-31): the variant may run;** one recovered retry with 36/36 steps
+decided counts as complete and not rate-limited. Background: gate 4 allows it only if the
+baseline had no 429. The baseline sent 37 requests for 36 steps; the cache entries' `usage.calls` sum to
 36 agent attempts (no invalid-output retry), so one request was a request-level retry (429, 5xx
 or connection error) whose kind that code did not record. A 429 cannot be ruled out.
 
@@ -1404,14 +1413,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-PR 4 merged (PR #17, 824b00a). Gate 4 approved (2026-10-31). **Done:** the dry run and the
-governed live baseline (2026-10-31; do not rerun it without asking). **Next:** #19 (CI green,
-both reviewers PASS, then merge on the human's instruction); the human decides whether the
-variant may run (the baseline's one request retry may have been a 429; see "Waiting on
-human"); if yes, dry-run `--governance off` offline on the filled cache, run live if the
-estimate is at most 54 requests (cap = estimate + 50%), else ask (both numbers set by the human,
-2026-10-31); then a PR with the checked snapshot
-and traces; then PR 5.
+Gate 4 done (2026-10-31): #19 merged (4e1a642); governed live baseline and ungoverned live
+variant recorded; snapshot and traces in `docs/evaluation/gate4/` (PR `gate4-recording`,
+waiting on the human). Do not rerun either run without asking. **Next:** the human reviews and
+merges that PR; then PR 5 (gap analysis, trace export). Any governed vs ungoverned conclusion in
+README or demo text goes through gate 7 first.
 
 Still open from earlier: the deferred MINORs, the gap-wording known limitation and the
 two-owners limitation. Phase 7 (tracing, optional) is not planned before submission.

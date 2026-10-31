@@ -1,0 +1,39 @@
+{
+  "key": "819d07dbf4255beae5759b88e092bd47f66a34fc2b1f193224977b7ed13139d3",
+  "role_id": "telecom_regulator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "telecom_regulator",
+    "at": "2026-03-02T08:00:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "request_information",
+        "target": "telecom_operator",
+        "parameters": {
+          "data_category": "network_incident_status"
+        }
+      }
+    ],
+    "rationale": "No new inject at T+00 and no facts are known yet. As telecom regulator, I may request incident information from a licensed telecom operator about a network incident affecting a public telecommunications service. I do not know whether any incident has occurred, whether the operator is aware of one, or whether any health service is affected.",
+    "citations": [],
+    "uncertainty": [
+      "Whether any telecom network incident has occurred",
+      "Whether the telecom operator is aware of a significant degradation of a public telecommunications service",
+      "Whether any health service depends on the affected telecom service"
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 2858,
+    "completion_tokens": 179,
+    "cost": 0.0,
+    "latency_seconds": 1.6447397000010824,
+    "calls": 1
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "key": "f8921c5af82624bb4be4d5c094331b55d1c89c83b267ee7bbd8d699f3bae8efe",
+  "role_id": "telecom_regulator",
+  "model_sha256": "f96f1282cfcbf3902ba4695dc5b8e31a3e0c7a373c32e12e93d2f6847742405e",
+  "prompt_version": "phase5-v4+json_object+kb:45714d5e2031.c641d9d9398a",
+  "outcome": "decision",
+  "decision": {
+    "role_id": "telecom_regulator",
+    "at": "2026-03-02T08:15:00+04:00",
+    "proposed_actions": [
+      {
+        "action_type": "request_information",
+        "target": "telecom_operator",
+        "parameters": {
+          "data_category": "network_incident_status"
+        }
+      }
+    ],
+    "rationale": "No new inject at T+15. I have an open obligation from T+00 to request information from the telecom operator about network incident status, which is within my telecom remit and supported by the illustrative regulator-information-request clause.",
+    "citations": [],
+    "uncertainty": [
+      "I do not know whether a significant network incident has occurred or whether the telecom operator is aware of one."
+    ],
+    "gap_claims": [],
+    "no_decision": null,
+    "no_decision_detail": null
+  },
+  "no_decision": null,
+  "no_decision_detail": null,
+  "usage": {
+    "prompt_tokens": 2924,
+    "completion_tokens": 144,
+    "cost": 0.0,
+    "latency_seconds": 1.5301927999971667,
+    "calls": 1
+  }
+}
