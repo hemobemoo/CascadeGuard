@@ -11,9 +11,10 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 import yaml
+from pydantic import model_validator
 
 from cascadeguard.cli import World, baseline_markdown, excluded_drafts, load_world, search_repairs
 from cascadeguard.domain.base import DomainModel
@@ -58,6 +59,13 @@ class GapExample(DomainModel):
 class GapExamples(DomainModel):
     status: Literal["draft", "reviewed"]
     entries: tuple[GapExample, ...]
+
+    @model_validator(mode="after")
+    def _status_matches_approvals(self) -> Self:
+        approved = all(e.approved for e in self.entries)
+        if (self.status == "reviewed") != approved:
+            raise ValueError("status is reviewed exactly when every entry is approved")
+        return self
 
 
 def load_gap_examples(scenario: str = SCENARIO) -> GapExamples:
@@ -246,6 +254,55 @@ def _gate4_goals(goals: dict[str, str]) -> str:
     return "; ".join(f"`{g}` {v}" for g, v in sorted(goals.items()))
 
 
+AUTHORITY_REASONS = frozenset({"no_authority", "authority_uncertain"})
+
+
+def waived_actions(waived: list[dict[str, Any]]) -> str:
+    """The waived actions, each with its reasons. The fixed phrase WITHOUT_AUTHORITY is true only
+    if every one of them had an authority reason; anything else is an error, never a label."""
+    for w in waived:
+        if not AUTHORITY_REASONS & set(w["would_have_been_rejected"]):
+            raise ValueError(
+                f"{w['action']} at T+{w['minute']} was waived without an authority reason"
+            )
+    return "; ".join(
+        f"T+{w['minute']} `{w['action']}` ({', '.join(w['would_have_been_rejected'])})"
+        for w in waived
+    )
+
+
+def _minute(state: str) -> int | None:
+    """'met at T+15' -> 15; 'unmet' -> None (the exports' goal text)."""
+    return int(state.removeprefix("met at T+")) if state.startswith("met at T+") else None
+
+
+def _met_only_here(
+    governed: dict[str, int | None], ungoverned: dict[str, int | None], waived: list[dict[str, Any]]
+) -> str:
+    """A sentence for each goal met only in the ungoverned run, saying whether it was met at the
+    minute of a waived action (derived from the runs, never assumed)."""
+    minutes = {w["minute"] for w in waived}
+    parts: list[str] = []
+    for goal, at in sorted(ungoverned.items()):
+        if at is None or governed.get(goal) is not None:
+            continue
+        when = f"at T+{at}"
+        if at in minutes:
+            when += ", the minute an action was applied without that authority"
+        parts.append(f"`{goal}` is met only in this run, {when}.")
+    return " ".join(parts)
+
+
+def same_failures(live: list[str], scripted: list[str]) -> str:
+    if sorted(live) == sorted(scripted):
+        return f"the same {len(live)} failures as with scripted agents"
+    return (
+        f"{len(live)} failures (scripted agents: {len(scripted)}; only live: "
+        f"{_ids(sorted(set(live) - set(scripted)))}; only scripted: "
+        f"{_ids(sorted(set(scripted) - set(live)))})"
+    )
+
+
 def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[str, Any]]) -> str:
     gov, off, rep = runs.baseline, runs.governance, runs.rank1
     waived = off.waived()
@@ -271,13 +328,10 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         f"failures: {_ids(f.id for f in gov.failures)}. Goals: {_goals(gov)}. Each failure is "
         "a candidate gap for expert review, not a confirmed legal or standards gap.",
         f"2. **Ungoverned** ({SCRIPTED}; governance off, a comparison mode, never the result). "
-        f"{len(waived)} actions were {WITHOUT_AUTHORITY}: "
-        + "; ".join(
-            f"T+{w['minute']} `{w['action']}` ({', '.join(w['would_have_been_rejected'])})"
-            for w in waived
-        )
-        + f". Goals: {_goals(off.ungoverned)}. The goal is met only through those actions; "
-        f"the causes of {_ids(off.masked())} are still present (masked, not removed).",
+        f"{len(waived)} actions were {WITHOUT_AUTHORITY}: {waived_actions(waived)}. Goals: "
+        f"{_goals(off.ungoverned)}. "
+        + _met_only_here(dict(gov.goals), dict(off.ungoverned.goals), waived)
+        + f" The causes of {_ids(off.masked())} are still present (masked, not removed).",
         f"3. **Governed with the rank-1 repair** ({SCRIPTED}; replay of the identical incident). "
         f"The repair `{p.repair_id}` makes {len(p.edits)} policy edits (hypothetical rules, not "
         f"source clauses): {_ids(e.operation.value for e in p.edits)}. Outcome: "
@@ -300,19 +354,24 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
         "here; decisions replayable offline from `docs/evaluation/gate4/llm_cache/`). Not part "
         "of the comparison above: different agents.",
         "",
-        f"- **Governed** ({LIVE_LLM}): the engine diagnoses the same "
-        f"{len(live_base['failures'])} failures as with scripted agents: "
+        f"- **Governed** ({LIVE_LLM}): the engine diagnoses "
+        + same_failures([f["id"] for f in live_base["failures"]], [f.id for f in gov.failures])
+        + ": "
         f"{_ids(f['id'] for f in live_base['failures'])}. Goals: "
         f"{_gate4_goals(live_base['goals'])}. Each failure is a candidate gap for expert "
         "review, not a confirmed legal or standards gap.",
         f"- **Ungoverned** ({LIVE_LLM}): {len(live_waived)} actions were {WITHOUT_AUTHORITY}: "
-        + "; ".join(
-            f"T+{w['minute']} `{w['action']}` ({', '.join(w['would_have_been_rejected'])})"
-            for w in live_waived
+        f"{waived_actions(live_waived)}. Goals: "
+        f"{_gate4_goals(live_off['ungoverned_run']['goals'])}. "
+        + _met_only_here(
+            {g: _minute(v) for g, v in live_base["goals"].items()},
+            {g: _minute(v) for g, v in live_off["ungoverned_run"]["goals"].items()},
+            live_waived,
         )
-        + f". Goals: {_gate4_goals(live_off['ungoverned_run']['goals'])}. Causes still present: "
+        + " Causes still present: "
         f"{_ids(live_off['failures']['ungoverned_cause_still_present'])}.",
-        "- No live repair replay was run (it would need a new gate-4 approval).",
+        "- The repair result is run 3 above (scripted agents). No live repair replay was run "
+        "(it would need a new gate-4 approval).",
         "",
     ]
     return "\n".join(lines)

@@ -1226,6 +1226,19 @@ three review rounds (round-3 human gates answered: AGENTS.md exception (2) widen
 query embeddings not counted under `--cap` (the LLM-path host check is done in PR 4, 24ea1b4).
 
 **PR 4 (`--governance off`, PR #17): merged 2026-10-31** (824b00a) on the human's approval.
+**PR 5 (`pr5-gap-analysis`): waiting on the human's gate-7 decision** (not merged; the human
+merges). Open items for the human:
+- which entries of `scenarios/uae_health_access/gap_examples.yaml` to approve (8, none
+  approved; triage `docs/review/pr5-clause-triage.md`: entries 1, 6, 7, 8 NEEDS-HUMAN-JUDGMENT
+  on fit; entries 2-5 CLEAN);
+- the wording of `docs/review/pr5-conclusion-draft.md` (unpublished, linked from nowhere);
+- whether the Charter safeguard listed under "Other loaded clauses on this action" for
+  `undefined_trigger:review_automated_lockouts` counts as a trigger (evidence-auditor);
+- whether the live-LLM section may show governed vs ungoverned with only a pointer to the
+  scripted repair run (phase-auditor);
+- whether the committed but unlinked draft may be on main before approval, or should stay off
+  main until approved (test-breaker).
+
 **Gate 4 (recording run): done 2026-10-31** (#19 4e1a642, #20 a140c22), under the conditions in
 "Open items".
 Exit code (test-breaker QUESTION-FOR-HUMAN, decided 2026-10-31): an inconclusive live LLM run
@@ -1420,10 +1433,13 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 ## Next step
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
-traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **Next:** PR 5
-on `pr5-gap-analysis` (plan approved 2026-10-31): three scripted traces, `docs/gap-analysis.md`,
-`gap_examples.yaml` as draft, an unpublished conclusion draft; evidence-auditor alone, then
-phase-auditor and test-breaker together; stop for the human's gate-7 decision; do not merge.
+traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
+`pr5-gap-analysis` (plan approved 2026-10-31) is built: evidence-auditor PASS (round 3),
+phase-auditor round 1 FAIL (structure file; fixed), test-breaker round 1 PASS (MINORs fixed);
+round 2 of both next, then the PR, CI, and the stop for the human's gate-7 decision (see
+"Waiting on human"); do not merge. Verify:
+`uv run python scripts/build_reports.py --check` (exit 0) and
+`uv run pytest tests/integration/test_reports.py`.
 Wording (human): "applied without the authority the governed engine requires", never
 "unauthorised". Any governed vs ungoverned conclusion goes through gate 7 first.
 
