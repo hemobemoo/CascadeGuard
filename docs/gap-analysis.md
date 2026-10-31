@@ -18,7 +18,7 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 
 **Examples (context, not UAE law; UAE principles are not binding):**
 
-- `eu.gdpr.art33-1` [reviewed · not binding · foreign precedent], GDPR-Regulation (EU) 2016-679.pdf, p. 29, Article 33(1) (DRAFT, not yet approved). Relevance: A controller's duty to notify a personal data breach to the supervisory authority without undue delay and, where feasible, within 72 hours, unless the breach is unlikely to result in a risk (EU, not binding in the UAE).
+- `eu.gdpr.art33-1` [reviewed · not binding · foreign precedent], GDPR-Regulation (EU) 2016-679.pdf, p. 29, Article 33(1) (DRAFT, not yet approved). Relevance: A controller's duty to notify a personal data breach to the supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware of it, unless the breach is unlikely to result in a risk (EU, not binding in the UAE).
   > 1. In the case of a personal data breach, the controller shall without undue delay and, where feasible, not later than 72 hours after having become aware of it, notify the personal data breach to the supervisory authority competent in accordance with Article 55, unless the personal data breach is unlikely to result in a risk to the rights and freedoms of natural persons.
 
 - `oecd.ai-principles.accountability-cooperation` [reviewed · not binding · international precedent], OECD_Recommendation_AI.pdf, p. 9, Section 1, 1.5 Accountability, c) (DRAFT, not yet approved). Relevance: Risk management by AI actors, including, as appropriate, co-operation between AI actors, AI system users and other stakeholders (a non-binding recommendation).
@@ -42,7 +42,7 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 
 **Examples (context, not UAE law; UAE principles are not binding):**
 
-- `unesco.ai-ethics.responsibility-accountability` [reviewed · not binding · international precedent], UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf, p. 23, III.2 Principles, Responsibility and accountability, para 43 (DRAFT, not yet approved). Relevance: Oversight and due-diligence mechanisms to ensure accountability for the impact of AI systems.
+- `unesco.ai-ethics.responsibility-accountability` [reviewed · not binding · international precedent], UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf, p. 23, III.2 Principles, Responsibility and accountability, para 43 (DRAFT, not yet approved). Relevance: Appropriate oversight, audit and due-diligence mechanisms to ensure accountability for AI systems and their impact (a non-binding recommendation).
   > 43. Appropriate oversight, impact assessment, audit and due diligence mechanisms, including whistle-blowers’ protection, should be developed to ensure accountability for AI systems and their impact throughout their life cycle. Both technical and institutional designs should ensure auditability and traceability of (the working of) AI systems in particular to address any conflicts with human rights norms and standards and threats to environmental and ecosystem well-being.
 
 **Repairs tested by replay (hypothetical rules, scripted agents):**
@@ -62,7 +62,7 @@ The examples are a **DRAFT mapping awaiting the human's approval (gate 7)** (`sc
 
 **Examples (context, not UAE law; UAE principles are not binding):**
 
-- `oecd.ai-principles.robustness-override` [reviewed · not binding · international precedent], OECD_Recommendation_AI.pdf, p. 9, Section 1, 1.4 Robustness, security and safety, b) (DRAFT, not yet approved). Relevance: Mechanisms so that an AI system causing undue harm can be overridden or repaired.
+- `oecd.ai-principles.robustness-override` [reviewed · not binding · international precedent], OECD_Recommendation_AI.pdf, p. 9, Section 1, 1.4 Robustness, security and safety, b) (DRAFT, not yet approved). Relevance: Mechanisms, as appropriate, so that an AI system that risks causing undue harm or behaves in an undesired way can be overridden, repaired or decommissioned safely (a non-binding recommendation).
   > b) Mechanisms should be in place, as appropriate, to ensure that if AI systems risk causing undue harm or exhibit undesired behaviour, they can be overridden, repaired, and/or decommissioned safely as needed.
 
 - `unesco.ai-ethics.review-and-correct` [reviewed · not binding · international precedent], UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf, p. 22, III.2 Principles, Transparency and explainability, para 38 (DRAFT, not yet approved). Relevance: A designated staff member able to review and correct a decision affecting individuals.

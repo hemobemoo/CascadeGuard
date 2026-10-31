@@ -23,3 +23,13 @@ fact; whether it counts as a trigger is the human's call. MINORs fixed: the exam
 "binding basis" wording scoped to the loaded clause set, the qualification on the live-LLM
 bullets, the stale inventory note. Deferred: the engine's diagnosis text "No clause triggers ..."
 (engine wording; the qualification follows it on the next line).
+
+## Round 2 (HEAD 76d9eb6)
+
+All round-1 FIXes resolved; quotes, pages and labels verified again. New: MINOR FIX on entry 3
+(`oecd.ai-principles.robustness-override`: "as appropriate" and "risks causing" restored) and
+MINOR wording on entries 1 (GDPR: "not later than 72 hours after becoming aware of it") and 6
+(UNESCO para 43: "Appropriate"); all three applied. QUESTION-FOR-HUMAN on entry 1: the fit of a
+personal-data-breach notice to a supervisory authority with a cross-organisation share of network
+status; and, on entry 6, the clause's own note gives its use as tracing the lockouts to the
+traffic model, not activating a fallback channel. Both for the human (gate 7).
