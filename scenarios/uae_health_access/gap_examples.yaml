@@ -1,0 +1,44 @@
+# DRAFT (gate 7): global and UAE-principle examples shown next to each diagnosed failure in
+# docs/gap-analysis.md. Drafted by the agent on 2026-10-31; an entry is set to approved: true only
+# on the human's explicit list of entries. Each entry names a reviewed clause and says, in one
+# line, what it is an example of. It never says the UAE corpus lacks a provision: every
+# diagnosed failure keeps its own qualification (not a confirmed legal or standards gap).
+# Hypothetical scenario, synthetic data.
+status: draft
+entries:
+  - failure: information_deadlock:network_incident_status->health_service_operator
+    clause: eu.gdpr.art33-1
+    relevance: An incident-information duty with a named recipient and a time limit (72 hours).
+    approved: false
+  - failure: information_deadlock:network_incident_status->health_service_operator
+    clause: oecd.ai-principles.accountability-cooperation
+    relevance: Co-operation between AI actors and system users to address risks related to AI systems.
+    approved: false
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: oecd.ai-principles.robustness-override
+    relevance: Mechanisms so that an AI system causing undue harm can be overridden or repaired.
+    approved: false
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: unesco.ai-ethics.review-and-correct
+    relevance: A designated staff member able to review and correct a decision affecting individuals.
+    approved: false
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: uae.ai-charter.human-oversight
+    relevance: A UAE principle (not binding) on human oversight to correct errors of AI.
+    approved: false
+  - failure: orphan_duty:activate_fallback_channel
+    clause: unesco.ai-ethics.responsibility-accountability
+    relevance: Oversight and due-diligence mechanisms to ensure accountability for the impact of AI systems.
+    approved: false
+  - failure: orphan_duty:activate_fallback_channel
+    clause: uae.ai-charter.safety
+    relevance: A UAE principle (not binding) encouraging the modification or removal of systems that pose risks.
+    approved: false
+  - failure: undefined_trigger:review_automated_lockouts
+    clause: unesco.ai-ethics.human-oversight
+    relevance: Ultimate human responsibility for decisions taken with AI systems.
+    approved: false
+  - failure: undefined_trigger:review_automated_lockouts
+    clause: uae.ai-charter.human-oversight
+    relevance: A UAE principle (not binding) on human oversight to correct errors of AI.
+    approved: false
