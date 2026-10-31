@@ -159,7 +159,11 @@ then locked.
 - **Reviews:** evidence-auditor round 1 FAIL (six wording MAJORs, fixed), round 2 PASS (MINORs
   applied in 1a8b839). phase-auditor round 1 FAIL: the PDF uncommitted and stale (waits on the
   human's re-export), python-docx approval and this entry missing from PROGRESS, the PDF test
-  unable to see a stale PDF, the structure file; all addressed except the re-export.
+  unable to see a stale PDF, the structure file; all addressed in 79f7258. The human re-exported
+  the PDF from that .docx (4 pages), committed in 8fb2608; full suite 695 passed. phase-auditor
+  round 2: everything proven except "PR open with CI green" (not pushed yet at that point); MINORs:
+  this entry one commit stale (fixed here), evidence-auditor not re-run on the 7020545/79f7258
+  edits (re-run on the PR).
 
 ## Current phase
 
@@ -1486,7 +1490,7 @@ Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the sn
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
 `pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). Next: the
 technical report on branch `report` (see "Technical report" under "Start here"): the human
-re-exports the PDF, then commit it, rerun phase-auditor, push, open the PR, CI green; do not merge.
+PDF is committed (8fb2608, 4 pages); push, open the PR, CI green; do not merge without the human.
 Then the demo video. Linking the conclusion draft is a separate human decision. Verify:
 `uv run python scripts/build_reports.py --check` (exit 0) and
 `uv run pytest tests/integration/test_reports.py`.
