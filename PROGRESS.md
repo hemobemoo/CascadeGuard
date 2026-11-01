@@ -190,7 +190,14 @@ then locked.
   .docx (`scripts/export_report_pdf.ps1` reproduces the earlier template layout, not this one);
   the PDF test still checks it word for word against the .md. evidence-auditor checks the header
   figures and diagram labels, which restate numbers from the text. Merge authorised by the human
-  once every CI run on the final commit is green.
+  once every CI run on the final commit is green. evidence-auditor (PR #25): PASS; every header
+  figure, timeline label and diagram label matches the .md, and every clause label matches the
+  YAML. Deferred MINORs, for the human's next export: the header caption "2 of 21 ranked repairs
+  meet every critical goal" lacks "(scripted agents)" (like-for-like rule; no live repair was run,
+  so nothing to confuse it with); "4 coordination failures diagnosed in the baseline" could add
+  "(candidate gaps)" (§1 below it says so). **Waiting on human (QUESTION-FOR-HUMAN):** the PDF test
+  checks that the .md text is in the PDF, not the text the PDF adds (header figures, timeline,
+  diagram labels); should a test cover those, or is review enough?
 
 ## Current phase
 
