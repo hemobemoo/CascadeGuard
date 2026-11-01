@@ -181,6 +181,23 @@ then locked.
   Draft clauses, no action (human 2026-11-01): `dha.pp11.4-18-5` and `mocai.ethics.fallback-plan`
   stay closed as drafts; PDPL art9-1/art18-1 applicability stays open and out of the report; the
   four EU clauses stay draft until the human checks their article numbers on EUR-Lex.
+- **PR #24 merged 2026-11-01 as 9c9c5ed** (evidence-auditor PASS on the final PDF; both CI runs
+  on d70692f green; branch `report-followup` kept).
+- **Redesigned PDF (branch `report-pdf-redesign`, human 2026-11-01).** The human replaced
+  `docs/report/cascadeguard-report.pdf` with a redesigned export (Chromium, A4, 4 pages): same
+  wording as the .md, new layout with header figures, a timeline and a Y.3172 pipeline diagram.
+  The .md and .docx are unchanged. The committed PDF is therefore no longer the Word export of the
+  .docx (`scripts/export_report_pdf.ps1` reproduces the earlier template layout, not this one);
+  the PDF test still checks it word for word against the .md. evidence-auditor checks the header
+  figures and diagram labels, which restate numbers from the text. Merge authorised by the human
+  once every CI run on the final commit is green. evidence-auditor (PR #25): PASS; every header
+  figure, timeline label and diagram label matches the .md, and every clause label matches the
+  YAML. Deferred MINORs, for the human's next export: the header caption "2 of 21 ranked repairs
+  meet every critical goal" lacks "(scripted agents)" (like-for-like rule; no live repair was run,
+  so nothing to confuse it with); "4 coordination failures diagnosed in the baseline" could add
+  "(candidate gaps)" (§1 below it says so). **Waiting on human (QUESTION-FOR-HUMAN):** the PDF test
+  checks that the .md text is in the PDF, not the text the PDF adds (header figures, timeline,
+  diagram labels); should a test cover those, or is review enough?
 
 ## Current phase
 
