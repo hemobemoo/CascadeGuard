@@ -155,7 +155,9 @@ then locked.
 - **Verify:** `uv run pytest tests/integration/test_technical_report.py` (numbers and ids traced to
   the data, approved wording, .docx equal to the Markdown, PDF at most 5 pages and current);
   rebuild with `uv run python scripts/report_docx.py` (needs the template next to the checkout);
-  export with `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/export_report_pdf.ps1`.
+  build the PDF with `uv run python scripts/report_pdf/build.py` (Chromium via Playwright; the
+  Inter and DejaVu Sans Mono fonts must be installed, or Chromium substitutes others and the line
+  wraps change). The old Word export (`scripts/export_report_pdf.ps1`) was retired 2026-11-01.
 - **Reviews:** evidence-auditor round 1 FAIL (six wording MAJORs, fixed), round 2 PASS (MINORs
   applied in 1a8b839). phase-auditor round 1 FAIL: the PDF uncommitted and stale (waits on the
   human's re-export), python-docx approval and this entry missing from PROGRESS, the PDF test
@@ -187,7 +189,7 @@ then locked.
   `docs/report/cascadeguard-report.pdf` with a redesigned export (Chromium, A4, 4 pages): same
   wording as the .md, new layout with header figures, a timeline and a Y.3172 pipeline diagram.
   The .md and .docx are unchanged. The committed PDF is therefore no longer the Word export of the
-  .docx (`scripts/export_report_pdf.ps1` reproduces the earlier template layout, not this one);
+  .docx (the Word path, since retired, reproduced the earlier template layout, not this one);
   the PDF test still checks it word for word against the .md. evidence-auditor checks the header
   figures and diagram labels, which restate numbers from the text. Merge authorised by the human
   once every CI run on the final commit is green. evidence-auditor (PR #25): PASS; every header
@@ -195,9 +197,30 @@ then locked.
   YAML. Deferred MINORs, for the human's next export: the header caption "2 of 21 ranked repairs
   meet every critical goal" lacks "(scripted agents)" (like-for-like rule; no live repair was run,
   so nothing to confuse it with); "4 coordination failures diagnosed in the baseline" could add
-  "(candidate gaps)" (§1 below it says so). **Waiting on human (QUESTION-FOR-HUMAN):** the PDF test
-  checks that the .md text is in the PDF, not the text the PDF adds (header figures, timeline,
-  diagram labels); should a test cover those, or is review enough?
+  "(candidate gaps)" (§1 below it says so). Question to the human: should a test cover the text
+  the PDF adds (header figures, timeline, diagram labels)? Answered 2026-11-01: yes (see below).
+- **PR #25 merged 2026-11-01 as 4e63d88** (evidence-auditor PASS; both CI runs on fc142ce green;
+  branch `report-pdf-redesign` kept).
+- **PDF build script and figure test (branch `report-pdf-build`, human 2026-11-01).**
+  - The PDF is replaced by the human's corrected export: the only change is the two header
+    captions, now "(candidate gaps)" on the "4" figure and "(scripted agents)" on "2 of 21",
+    closing the two deferred MINORs. The .md and .docx are unchanged.
+  - `scripts/report_pdf/build.py` + `style.css` (the human's script; restructured only so it can
+    be imported without building, type-checked under strict pyright, and writing its HTML to a
+    temp dir; the generated HTML is byte-identical to the original script's). They build the PDF
+    from the .md with Chromium; Playwright is already a dev dependency. A local build here
+    (without the Inter fonts) has the same words as the committed PDF.
+  - `scripts/export_report_pdf.ps1` (the Word path) is retired: nothing used it but docs.
+  - New test `test_the_pdf_figures_restate_the_data`: reads KEY_FIGURES, TIMELINE, PIPELINE and
+    the band labels from build.py; traces every number with `traced()` (which now also lists the
+    six roles) and each figure to its own source (inject facts at T+15/T+60, failures, loaded
+    clauses by status, resolved/ranked repairs, inject minutes, the §4 table's nodes); checks
+    each figure in its own column of the committed PDF. Checked to fail on the previous PDF
+    (missing caption) and on a changed figure in build.py.
+  - evidence-auditor (PR #26): PASS. Deferred MINOR, for the human's next export: the T+45
+    timeline label "Six roles decide: report, share, authorise" drops the "must" of §2 ("six roles
+    must decide what to report, share and authorise"); suggested "Six roles must decide: report,
+    share, authorise" in `TIMELINE` in build.py, then rebuild the PDF.
 
 ## Current phase
 
