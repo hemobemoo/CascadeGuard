@@ -40,7 +40,7 @@ TIMELINE = [
     ("T+00", "Telecom AI deprioritises authentication SMS", "tel"),
     ("T+15", "Health AI locks 4,812 accounts", "hea"),
     ("T+30", "Each operator sees only its own side", "neu"),
-    ("T+45", "Six roles decide: report, share, authorise", "neu"),
+    ("T+45", "Six roles must decide: report, share, authorise", "neu"),
     ("T+60", "3,950 patients still locked out", "hea"),
     ("T+75", "Window closes", "end"),
 ]
