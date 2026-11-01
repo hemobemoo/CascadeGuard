@@ -15,8 +15,8 @@ value" header lines, paragraphs, "- " bullets, pipe tables, **bold** and `code`.
 
 The organizers' template is not in the repository: it is read from the folder that contains the
 checkout (pass --template otherwise), so a clone can check the committed .docx but not rebuild it.
-Writes docs/report/cascadeguard-report.docx. The PDF is exported from it with Word
-(scripts/export_report_pdf.ps1). python-docx is a dev-only dependency (human gate 3).
+Writes docs/report/cascadeguard-report.docx. The PDF is built from the Markdown separately, with
+Chromium (scripts/report_pdf/build.py). python-docx is a dev-only dependency (human gate 3).
 """
 
 import argparse

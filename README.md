@@ -12,7 +12,8 @@ concept, `AGENTS.md` for the rules, and `PROGRESS.md` for current status.
 ITU AI for Good Sandbox Hackathon (UAE), submitted by sending this repository's link.
 
 **Technical report:** [docs/report/cascadeguard-report.pdf](docs/report/cascadeguard-report.pdf)
-(Word: `docs/report/cascadeguard-report.docx`; source: `docs/report/cascadeguard-report.md`).
+(Word: `docs/report/cascadeguard-report.docx`; source: `docs/report/cascadeguard-report.md`; the
+PDF is built from the source with `uv run python scripts/report_pdf/build.py`).
 
 | | |
 |---|---|

@@ -2,6 +2,7 @@
 approved wording kept, the .docx equal to the Markdown, the committed PDF at most 5 pages."""
 
 import importlib.util
+import itertools
 import re
 from typing import Any
 
@@ -84,6 +85,7 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
             add(edit.deadline_minutes, "rank-1 owner deadline")
     add(len(off.ungoverned.failures), "ungoverned failures")
     add(len(off.masked()), "ungoverned masked")
+    add(len(runs.world.roles.roles), "institutional roles")
     add(len(live_base["failures"]), "live governed failures")
     for w in live_off["would_have_been_rejected"]:
         add(w["minute"], "live waived minute")
@@ -238,10 +240,10 @@ def test_the_docx_is_a4_and_its_tables_fit_the_margins() -> None:
 def test_the_pdf_is_at_most_five_pages_and_current() -> None:
     import pdfplumber
 
-    assert PDF.exists(), "export the PDF: scripts/export_report_pdf.ps1"
+    assert PDF.exists(), "build the PDF: uv run python scripts/report_pdf/build.py"
     with pdfplumber.open(PDF) as pdf:
         assert len(pdf.pages) <= MAX_PAGES, len(pdf.pages)
-        for p in pdf.pages:  # A4 in points, as exported from the A4 .docx
+        for p in pdf.pages:  # A4 in points
             assert abs(p.width - 595.3) < 1 and abs(p.height - 841.9) < 1, (p.width, p.height)
         pages = " ".join((p.extract_text() or "") for p in pdf.pages)
 
@@ -262,6 +264,143 @@ def test_the_pdf_is_at_most_five_pages_and_current() -> None:
             if kind != "table":
                 paragraph = flatten(builder.plain(str(content)))
                 assert paragraph in flat, f"PDF is stale; re-export it: {paragraph[:80]}"
+
+
+def _pdf_builder() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "report_pdf_build", PROJECT_ROOT / "scripts" / "report_pdf" / "build.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _flatten(s: str) -> str:  # a line break after a hyphen extracts as "- "
+    return re.sub(r"-\s+", "-", " ".join(s.split()))
+
+
+def _columns(anchors: list[str], depth: float, centred: bool) -> list[str]:
+    """The PDF text under each anchor word of one row, one string per column.
+
+    Figures set side by side extract line by line across all of them, so each column is cropped
+    on its own: from the anchor's top down `depth` points, split halfway between centred anchors
+    or at the next left-aligned anchor.
+    """
+    import pdfplumber
+
+    with pdfplumber.open(PDF) as pdf:
+        for page in pdf.pages:
+            words = page.extract_words()
+            for first in (w for w in words if w["text"] == anchors[0]):
+                row = [first]
+                for anchor in anchors[1:]:
+                    nxt = next(
+                        (
+                            w
+                            for w in words
+                            if w["text"] == anchor
+                            and abs(w["top"] - first["top"]) < 2
+                            and w["x0"] > row[-1]["x0"]
+                        ),
+                        None,
+                    )
+                    if nxt is None:
+                        break
+                    row.append(nxt)
+                if len(row) < len(anchors):
+                    continue
+                if centred:
+                    mids = [(w["x0"] + w["x1"]) / 2 for w in row]
+                    cuts = [(a + b) / 2 for a, b in itertools.pairwise(mids)]
+                    edges = [mids[0] - (cuts[0] - mids[0]), *cuts, mids[-1] + mids[-1] - cuts[-1]]
+                else:
+                    edges = [w["x0"] - 2 for w in row] + [float(page.width)]
+                top = first["top"] - 1
+                return [
+                    _flatten(page.crop((left, top, right, top + depth)).extract_text() or "")
+                    for left, right in itertools.pairwise(edges)
+                ]
+    raise AssertionError(f"row not found in the PDF: {anchors}")
+
+
+def test_the_pdf_figures_restate_the_data(runs: ScriptedRuns) -> None:
+    """The text the PDF adds to the Markdown (key figures, timeline, Y.3172 diagram) is read from
+    scripts/report_pdf/build.py, traced to the data, and found in the committed PDF, so the
+    script, the data and the PDF cannot drift apart."""
+    build = _pdf_builder()
+    allowed = traced(runs)
+    b = runs.baseline
+    t = text()
+    labels = [f"{n} {c}" for n, c in build.KEY_FIGURES]
+    labels += [f"{time} {label}" for time, label, _ in build.TIMELINE]
+    labels += [f"{node} {label}" for node, label, _ in build.PIPELINE]
+    labels += [build.MLFO_BAND, build.SANDBOX_BAND, build.PROPOSAL_NOTE]
+    for label in labels:  # every number traced, as in the Markdown
+        for n in re.findall(r"(?<![\w.+])\d[\d,]*\d|(?<![\w.+])\d", label):
+            assert n in allowed, (n, label)
+
+    # Key figures: each number with its own source and its qualification.
+    figures = dict(build.KEY_FIGURES)
+    events = {e.at_minute: e.model_dump_json() for e in runs.world.scenario.events}
+    assert "4,812" in events[15] and "(T+15)" in figures["4,812"]
+    assert "3,950" in events[60] and "T+60" in figures["3,950"]
+    assert figures[str(len(b.failures))].endswith("in the baseline (candidate gaps)")
+    statuses = [label.split(" ")[0] for _, label in b.loaded_clauses]
+    assert figures[str(len(b.loaded_clauses))] == (
+        f"clauses loaded: {statuses.count('reviewed')} reviewed, "
+        f"{statuses.count('illustrative')} illustrative, drafts never"
+    )
+    assert "draft" not in statuses
+    resolved = sum(1 for c in runs.search.ranked if not c.unmet_critical_goals)
+    assert figures[f"{resolved} of {len(runs.search.ranked)}"] == (
+        "ranked repairs meet every critical goal (scripted agents)"
+    )
+
+    # Timeline: one stop per inject, in order; each label's numbers are in the §2 sentence that
+    # ends at that time.
+    times = [time for time, _, _ in build.TIMELINE]
+    assert times == [f"T+{e.at_minute:02d}" for e in runs.world.scenario.events]
+    use_case = t.split("## 2.", 1)[1].split("**Gaps", 1)[0]
+    for time, label, _ in build.TIMELINE:
+        before = use_case.split(f"({time})", 1)[0].rsplit(")", 1)[-1]
+        assert time in use_case, time
+        for n in re.findall(r"\d[\d,]*\d", label):
+            assert n in before, (n, label)
+
+    # Y.3172 diagram: the §4 table's nodes in order, MLFO and Sandbox as the two bands.
+    table = [line.split("|")[1].strip() for line in t.splitlines() if line.startswith("| ")]
+    nodes = table[1 : table.index("MLFO")]
+    assert [node for node, _, _ in build.PIPELINE] == nodes
+    assert dict((n, label) for n, label, _ in build.PIPELINE)["M"] == (
+        f"{len(runs.world.roles.roles)} role agents"
+    )
+    assert table[table.index("MLFO") : table.index("Sandbox") + 1] == ["MLFO", "Sandbox"]
+    assert build.MLFO_BAND.startswith("MLFO · ") and build.SANDBOX_BAND.startswith("Sandbox · ")
+    for phrase in (
+        "deterministic orchestrator (not an agent)",
+        "repair search over the closed grammar",
+        "replay of the identical incident with a candidate repair",
+        "never applied to the baseline",
+    ):
+        assert phrase in t.lower(), phrase
+
+    # And all of it is in the committed PDF, each figure read in its own column.
+    figure_cols = _columns([n.split()[0] for n, _ in build.KEY_FIGURES], 58, centred=False)
+    for (n, caption), col in zip(build.KEY_FIGURES, figure_cols, strict=True):
+        assert _flatten(f"{n} {caption}") in col, (n, col)
+    timeline_cols = _columns(times, 56, centred=True)
+    for (time, label, _), col in zip(build.TIMELINE, timeline_cols, strict=True):
+        assert _flatten(f"{time} {label}") in col, (time, col)
+    pipeline_cols = _columns([n for n, _, _ in build.PIPELINE], 25, centred=True)
+    for (node, label, _), col in zip(build.PIPELINE, pipeline_cols, strict=True):
+        assert _flatten(f"{node} {label}") in col, (node, col)
+    import pdfplumber
+
+    with pdfplumber.open(PDF) as pdf:
+        flat = _flatten(" ".join((p.extract_text() or "") for p in pdf.pages))
+    for band in (build.MLFO_BAND, build.SANDBOX_BAND, build.PROPOSAL_NOTE):
+        assert _flatten(band) in flat, band
 
 
 def test_the_report_is_linked_and_the_draft_is_not() -> None:
