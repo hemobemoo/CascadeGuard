@@ -217,10 +217,16 @@ then locked.
     clauses by status, resolved/ranked repairs, inject minutes, the §4 table's nodes); checks
     each figure in its own column of the committed PDF. Checked to fail on the previous PDF
     (missing caption) and on a changed figure in build.py.
-  - evidence-auditor (PR #26): PASS. Deferred MINOR, for the human's next export: the T+45
-    timeline label "Six roles decide: report, share, authorise" drops the "must" of §2 ("six roles
-    must decide what to report, share and authorise"); suggested "Six roles must decide: report,
-    share, authorise" in `TIMELINE` in build.py, then rebuild the PDF.
+  - evidence-auditor (PR #26): PASS. One MINOR: the T+45 timeline label "Six roles decide:
+    report, share, authorise" dropped the "must" of §2 ("six roles must decide what to report,
+    share and authorise"). **Closed** in the next PR (below).
+- **PR #26 merged 2026-11-01 as 7fe1b1c** (evidence-auditor PASS; both CI runs green on 5e22f98
+  and on the final commit 7252757; branch `report-pdf-build` kept).
+- **T+45 label fix (branch `report-t45-label`, human 2026-11-01):** `TIMELINE` in build.py now
+  reads "Six roles must decide: report, share, authorise", and the PDF is the human's rebuild from
+  that script (Inter and DejaVu Sans Mono installed; 4 pages, A4). The only text change in the PDF
+  is that label. The human's stated intent: this is the last change to the report before
+  submission.
 
 ## Current phase
 
