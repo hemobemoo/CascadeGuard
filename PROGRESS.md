@@ -217,6 +217,10 @@ then locked.
     clauses by status, resolved/ranked repairs, inject minutes, the §4 table's nodes); checks
     each figure in its own column of the committed PDF. Checked to fail on the previous PDF
     (missing caption) and on a changed figure in build.py.
+  - evidence-auditor (PR #26): PASS. Deferred MINOR, for the human's next export: the T+45
+    timeline label "Six roles decide: report, share, authorise" drops the "must" of §2 ("six roles
+    must decide what to report, share and authorise"); suggested "Six roles must decide: report,
+    share, authorise" in `TIMELINE` in build.py, then rebuild the PDF.
 
 ## Current phase
 
