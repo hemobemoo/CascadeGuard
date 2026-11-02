@@ -26,9 +26,13 @@ PDF is built from the source with `uv run python scripts/report_pdf/build.py`).
 
 ## What it found
 
+In the hypothetical `uae_health_access` scenario (synthetic data; clause set: reviewed +
+illustrative clauses):
+
 - **4 coordination failures diagnosed** (scripted agents): an information deadlock (network
   status to the health operator), two orphan duties and an undefined trigger. Each is a
-  candidate gap for expert review, not a confirmed legal or standards gap.
+  candidate gap for expert review, not a confirmed legal or standards gap (clauses behind each:
+  [docs/gap-analysis.md](docs/gap-analysis.md)).
 - **The rank-1 repair meets both critical goals, with the engine's checks in force** (scripted
   agents). It needs human and institutional approval: it creates a permission that no reviewed,
   binding clause in the loaded clause set supports.
