@@ -234,8 +234,10 @@ then locked.
   - README: the stale "Still to be added: the technical report." is removed.
   - `docs/submission-readiness.md`: the 2026-10-29 audit is kept as written. A dated status note
     (2026-11-02) at the top and a "Status 2026-11-02" column in the ranked table now show what is
-    closed: gaps 1, 2, 4, 5, 6 and 8 closed, gap 3 partly closed, gaps 7 and 9 open and stated as
-    limits in the report.
+    closed: gaps 1, 2, 4, 5, 6 and 8 closed, gap 3 partly closed (the Cyber Security Council's
+    2025 strategy PDF is still missing), gaps 7 and 9 open and stated as limits in the report.
+    evidence-auditor round 1 FAIL (MAJOR: the note first called the TRA-era strategy PDF, already
+    in the repo before the audit, progress on gap 3), fixed with its MINORs.
   - `docs/report/cascadeguard-report-template.pdf`: the template-based .docx saved as PDF by the
     human from Word (4 pages, A4). The designed PDF stays the main one linked in the README. The
     PDF test now covers both files (A4, at most 5 pages, every paragraph word for word); checked to
@@ -1574,7 +1576,7 @@ traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking.
 `pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). The technical
 report is merged (#23 to #27, last 04d3151; see "Technical report" under "Start here"), with the
 submission docs on `submission-docs`. Next: the demo video (the human's plan), and submitting by
-10 Nov 2026 (registration closes 5 Nov). Linking the conclusion draft is a separate human decision. Verify:
+10 Nov 2026 (registration closes 5 Nov; both dates from the event page, read 2026-11-01). Linking the conclusion draft is a separate human decision. Verify:
 `uv run python scripts/build_reports.py --check` (exit 0) and
 `uv run pytest tests/integration/test_reports.py`.
 Wording (human): "applied without the authority the governed engine requires", never
