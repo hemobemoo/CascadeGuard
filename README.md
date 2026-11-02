@@ -5,11 +5,13 @@ and replay the same incident to test whether the repair works.
 
 Prototype for the ITU AI for Good Sandbox Hackathon (UAE). Decision support only: it does not
 issue legal interpretations. All scenario data is synthetic. See `CascadeGuard.md` for the
-concept, `AGENTS.md` for the rules, and `PROGRESS.md` for current status.
+concept.
+
+![CascadeGuard demo UI: baseline vs replay of the identical incident with the rank-1 repair](docs/images/cascadeguard-ui.png)
 
 ## Submission
 
-ITU AI for Good Sandbox Hackathon (UAE), submitted by sending this repository's link.
+Submission for the ITU AI for Good Sandbox Hackathon (UAE).
 
 **Technical report:** [docs/report/cascadeguard-report.pdf](docs/report/cascadeguard-report.pdf)
 (Word: `docs/report/cascadeguard-report.docx`; source: `docs/report/cascadeguard-report.md`; the
@@ -22,57 +24,76 @@ PDF is built from the source with `uv run python scripts/report_pdf/build.py`).
 | Affiliation | Al Balqa Applied University |
 | Mentor | Dr. Wafaa Almaaitah |
 
-**Reproduce step by step** (no API key and no LLM calls; scripted agents are the default and
-give byte-identical output on every run):
+## What it found
 
-1. `uv sync` installs Python 3.12 and the pinned dependencies (`uv.lock`).
-2. `uv run cascadeguard run uae_health_access` runs the incident without a repair. Its result
-   is pinned in `scenarios/uae_health_access/expected_baseline.yaml` (checked by
-   `tests/integration/test_real_baseline.py`).
-3. `uv run cascadeguard repairs uae_health_access` searches, replays and ranks every candidate
-   repair. The ranking is pinned in `scenarios/uae_health_access/expected_repairs.yaml` (checked
-   by `tests/integration/test_repairs.py`).
-4. `uv run cascadeguard run uae_health_access --repair <repair-id>` replays the same incident
-   with one repair (ids from step 3).
-   `uv run cascadeguard run uae_health_access --governance off` shows the governed run beside an
-   ungoverned one (comparison only, never the result): actions the engine rejects only for
-   authority, a clause restriction or a missing prerequisite or information are applied and
-   listed as "would have been rejected". The UI shows it at step h.
+In the hypothetical `uae_health_access` scenario (synthetic data; clause set: reviewed +
+illustrative clauses):
 
-   Exit codes: 0 done; 2 refused, not configured or stopped outside a live run (e.g. a missing
-   variable, no request cap);
-   3 a live LLM run that is inconclusive (a step with no decision because the request cap ran
-   out or a request failed, or the run stopped part-way at the provider's daily limit or a
-   knowledge-base failure). Offline and scripted runs never exit 3.
-5. `uv run python -m cascadeguard.ui.app` opens the demo UI at http://localhost:8765.
-6. `uv run pytest` runs the tests (see Checks below).
+- **4 coordination failures diagnosed** (scripted agents): an information deadlock (network
+  status to the health operator), two orphan duties and an undefined trigger. Each is a
+  candidate gap for expert review, not a confirmed legal or standards gap (clauses behind each:
+  [docs/gap-analysis.md](docs/gap-analysis.md)).
+- **The rank-1 repair meets both critical goals, with the engine's checks in force** (scripted
+  agents). It needs human and institutional approval: it creates a permission that no reviewed,
+  binding clause in the loaded clause set supports.
+- **2 masked items stay open for expert review:** in the scripted replay the incident resolves
+  without settling who may activate a fallback channel or what triggers a review of an
+  automated lockout.
 
-**Where things are**
+## How it works
+
+1. Six institutional roles are played by agents (scripted, or a live LLM); they only propose actions.
+2. A deterministic engine, never an agent, accepts or rejects every action against the loaded clause set.
+3. The engine diagnoses coordination failures: information deadlocks, orphan duties, undefined triggers.
+4. Repairs come only from a closed grammar of five policy edit types, ranked deterministically.
+5. Each repair is tested by replaying the identical incident and comparing it with the baseline.
+
+## Quick start
+
+Requires [uv](https://docs.astral.sh/uv/). Python 3.12 is installed by uv if missing. No API key
+and no LLM calls: scripted agents are the default and give byte-identical output on every run.
+
+```bash
+uv sync                                                          # install (pinned in uv.lock)
+uv run cascadeguard run uae_health_access                        # the incident, no repair
+uv run cascadeguard repairs uae_health_access                    # search, replay and rank every repair
+uv run cascadeguard run uae_health_access --repair <repair-id>   # replay with one repair (ids from repairs)
+uv run python -m cascadeguard.ui.app                             # demo UI at http://localhost:8765
+```
+
+## Knowledge base and Sources
 
 | What | Where |
 |---|---|
-| Concept and requirements | `CascadeGuard.md`, `specs/` |
-| Knowledge base: original sources | `policies/sources/` (SHA-256 and status in `docs/policy-inventory.md`) |
-| Knowledge base: cited clauses | `policies/reviewed/*.yaml` (verbatim text, file, page, status; human approvals in `policies/approvals.yaml`) |
+| Original sources | `policies/sources/` (SHA-256 and status in `docs/policy-inventory.md`) |
+| Cited clauses | `policies/reviewed/*.yaml` (verbatim text, file, page, status; human approvals in `policies/approvals.yaml`) |
 | How clauses are extracted and reviewed | `docs/policy-methodology.md` |
-| Knowledge base: vector index (context only) | `policies/kb/` (chunks, vectors, manifest; built by `scripts/build_kb.py`) |
-| Scenario, roles and expected outputs | `scenarios/uae_health_access/` |
-| Architecture | `docs/architecture.md`, `docs/decisions/` |
-| Evaluation | `docs/evaluation/` |
-| Submission readiness audit | `docs/submission-readiness.md` |
+| Vector index (context only) | `policies/kb/` (chunks, vectors, manifest; built by `scripts/build_kb.py`) |
 
-Generated from the engine with scripted agents (`uv run python scripts/build_reports.py`):
-the gap analysis (`docs/gap-analysis.md`; its example mapping was reviewed at gate 7 on
-2026-10-31: six entries approved, two removed) and three example traces (`docs/evaluation/traces/`, with `how-to-read.md`).
-The gate-4 live LLM recording is in `docs/evaluation/gate4/`.
+**Vector knowledge base (context only, never citable).** `policies/kb/` holds the same pages the
+keyword search covers (extracted text outside the excluded sources, plus the reviewed Charter
+transcriptions), split at numbered headings into chunks of at most about 120 words and embedded
+with `nvidia/nemotron-3.5-embed-1b:free` through OpenRouter's embeddings endpoint (1,024
+dimensions). Search fuses cosine similarity over the committed vectors with the keyword search
+(reciprocal rank fusion; tied scores share a rank), at most two chunks per document, exact
+duplicates shown once with the pages that repeat them; only the query is embedded, which
+needs `OPENROUTER_API_KEY` and
+`OPENROUTER_BASE_URL` (free model, no cost). Each chunk shows its file, page and label, and any
+reviewed clause whose quote it holds, with that clause's own status label.
 
-**Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in
-`policies/sources/` are not: they belong to their issuers (see Sources). The knowledge base's
-chunking and `kb_main` export layout are adapted from the ITU AI Readiness simulation
-([CrashingGuru/ITUAIReadiness](https://github.com/CrashingGuru/ITUAIReadiness), MIT,
-Copyright (c) 2026 Vishnu Ram OV).
+```bash
+uv run cascadeguard kb query "human oversight of AI decisions" -k 3
+uv run cascadeguard run uae_health_access --agents llm --offline --kb-context  # LLM context only
+uv run cascadeguard kb export data/export_kb_main.jsonl
+```
 
-## Sources
+The export writes every chunk with its vector and string metadata in a ChromaDB-compatible
+format that the ITU reference code's ingestion loads into its `kb_main` collection
+(`get_or_create_collection` with cosine distance, then `add` with the pre-computed embeddings).
+ChromaDB is not needed to run CascadeGuard; the test that loads the export uses the optional
+extra: `uv sync --extra chroma`. The scripted demo and the keyword search never use the API.
+
+### Sources
 
 The documents in `policies/sources/` belong to their issuers and are used here for research
 only; official sources:
@@ -102,20 +123,60 @@ only; official sources:
 | `UAE_National_Cybersecurity_Strategy.pdf` | Telecommunications Regulatory Authority (TRA era; undated) | Official source not located; historical context, superseded by the 2025 National Cybersecurity Strategy |
 | Two published books (not committed; context only) | Abhivardhan (BPB); Bullock, Chen et al. (eds., OUP) | [bpbonline.com](https://bpbonline.com/products/artificial-intelligence-ethics-and-international-law-2nd-edition); [academic.oup.com](https://academic.oup.com/edited-volume/41989) |
 
-## Setup
+The seven files in `policies/sources/web/` are transcriptions of official web pages, printed to
+PDF, not the original documents; each is unverified until checked against the official page
+(details in `policies/sources/web/MANIFEST.md`):
 
-Requires [uv](https://docs.astral.sh/uv/). Python 3.12 is installed by uv if missing.
+| File | Issuer | Official source |
+|---|---|---|
+| `web/01_uae_smart_health_ai_policy.pdf` | Ministry of Health and Prevention (lead entity, as printed) | [uaelegislation.gov.ae](https://uaelegislation.gov.ae/en/policy/details/national-policy-for-the-promotion-of-smart-health-services-and-artificial-intelligence-in-the-uae-health-sector) |
+| `web/02_uae_international_ai_policy.pdf` | UAE Government (lead entity not printed on the page) | [uaelegislation.gov.ae](https://uaelegislation.gov.ae/en/policy/details/uae-s-international-stance-on-artificial-intelligence-policy) |
+| `web/03_uae_national_cybersecurity_strategy.pdf` | UAE Cabinet (approval announcement); also transcribes the WAM launch report | [uaecabinet.ae](https://uaecabinet.ae/en/news/uae-cabinet-approves-national-cybersecurity-strategy-api-first-policy); [wam.ae](https://www.wam.ae/en/article/bi5dfsr-uae-launch-national-cybersecurity-strategy) |
+| `web/04_uae_digital_government_strategy_2025.pdf` | UAE Government (u.ae portal; issuing entity not printed) | [u.ae](https://u.ae/en/about-the-uae/strategies-initiatives-and-awards/strategies-plans-and-visions/government-services-and-digital-transformation/uae-national-digital-government-strategy) |
+| `web/05_uae_ai_government_policies.pdf` | UAE Government (u.ae portal; issuing entity not printed) | [u.ae](https://u.ae/en/about-the-uae/digital-uae/digital-technology/artificial-intelligence/artificial-intelligence-in-government-policies) |
+| `web/06_unesco_ai_ethics_recommendation.pdf` | UNESCO (superseded by the official original above) | [unesco.org](https://www.unesco.org/en/artificial-intelligence/recommendation-ethics) |
+| `web/07_oecd_ai_principles.pdf` | OECD (superseded by the official original above) | [oecd.org](https://www.oecd.org/en/topics/sub-issues/ai-principles.html) |
+
+## Developer notes
+
+Rules for coding agents are in `AGENTS.md`; current status and hand-off notes in `PROGRESS.md`.
+
+**Where things are**
+
+| What | Where |
+|---|---|
+| Concept and requirements | `CascadeGuard.md`, `specs/` |
+| Scenario, roles and expected outputs | `scenarios/uae_health_access/` |
+| Architecture | `docs/architecture.md`, `docs/decisions/` |
+| Evaluation | `docs/evaluation/` |
+| Submission readiness audit | `docs/submission-readiness.md` |
+
+**Pinned outputs.** The result of `run uae_health_access` is pinned in
+`scenarios/uae_health_access/expected_baseline.yaml` (checked by
+`tests/integration/test_real_baseline.py`); the ranking from `repairs uae_health_access` in
+`scenarios/uae_health_access/expected_repairs.yaml` (checked by
+`tests/integration/test_repairs.py`).
+
+**Governance off (comparison only, never the result).**
+`uv run cascadeguard run uae_health_access --governance off` shows the governed run beside an
+ungoverned one: actions the engine rejects only for authority, a clause restriction or a missing
+prerequisite or information are applied and listed as "would have been rejected". The UI shows
+it at step h.
+
+**Exit codes:** 0 done; 2 refused, not configured or stopped outside a live run (e.g. a missing
+variable, no request cap); 3 a live LLM run that is inconclusive (a step with no decision
+because the request cap ran out or a request failed, or the run stopped part-way at the
+provider's daily limit or a knowledge-base failure). Offline and scripted runs never exit 3.
+
+**Generated documents.** Generated from the engine with scripted agents
+(`uv run python scripts/build_reports.py`): the gap analysis (`docs/gap-analysis.md`; its example
+mapping was reviewed at gate 7 on 2026-10-31: six entries approved, two removed) and three
+example traces (`docs/evaluation/traces/`, with `how-to-read.md`). The gate-4 live LLM recording
+is in `docs/evaluation/gate4/`.
+
+**LLM agents.**
 
 ```bash
-uv sync
-```
-
-## Run
-
-```bash
-uv run cascadeguard run uae_health_access                        # baseline (from Phase 2)
-uv run cascadeguard run uae_health_access --repair <repair-id>   # replay (from Phase 3)
-uv run python -m cascadeguard.ui.app                             # demo UI (from Phase 4)
 uv run cascadeguard run uae_health_access --agents llm --offline # LLM agents, cache only (Phase 5)
 ```
 
@@ -126,30 +187,14 @@ structured outputs (`response_format` with `json_schema`). Live calls cost money
 cached in `data/llm_cache/` and replays reuse them. `scripts/llm_smoke_test.py` makes exactly
 one call.
 
-**Vector knowledge base (context only, never citable).** `policies/kb/` holds the same pages the
-keyword search covers (extracted text outside the excluded sources, plus the reviewed Charter
-transcriptions), split at numbered headings into chunks of at most about 120 words and embedded
-with `nvidia/nemotron-3.5-embed-1b:free` through OpenRouter's embeddings endpoint (1,024
-dimensions). Search fuses cosine similarity over the committed vectors with the keyword search
-(reciprocal rank fusion; tied scores share a rank), at most two chunks per document, exact
-duplicates shown once with the pages that repeat them; only the query is embedded, which
-needs `OPENROUTER_API_KEY` and
-`OPENROUTER_BASE_URL` (free model, no cost). Each chunk shows its file, page and label, and any
-reviewed clause whose quote it holds, with that clause's own status label.
+**Demo UI.** The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use
+another port.
+
+**Checks.**
 
 ```bash
-uv run cascadeguard kb query "human oversight of AI decisions" -k 3
-uv run cascadeguard run uae_health_access --agents llm --offline --kb-context  # LLM context only
-uv run cascadeguard kb export data/export_kb_main.jsonl
+uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
 ```
-
-The export writes every chunk with its vector and string metadata in a ChromaDB-compatible
-format that the ITU reference code's ingestion loads into its `kb_main` collection
-(`get_or_create_collection` with cosine distance, then `add` with the pre-computed embeddings).
-ChromaDB is not needed to run CascadeGuard; the test that loads the export uses the optional
-extra: `uv sync --extra chroma`. The scripted demo and the keyword search never use the API.
-
-The demo UI runs at http://localhost:8765. Set `CASCADEGUARD_UI_PORT` to use another port.
 
 The browser smoke test (`tests/e2e`, marker `e2e`) needs Chromium once:
 `uv run playwright install chromium`. Skip it locally with `uv run pytest -m "not e2e"`;
@@ -158,8 +203,10 @@ after one warm-up, a click over budget re-measured once and failing only if both
 over) are marked `perf`: they run in the full check, CI applies
 `CASCADEGUARD_PERF_FACTOR=3`, and `uv run pytest -m "not perf"` skips them locally.
 
-## Checks
+## Licence
 
-```bash
-uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run pytest
-```
+The code and documentation are under the MIT licence (`LICENSE`). The documents in
+`policies/sources/` are not: they belong to their issuers (see Sources). The knowledge base's
+chunking and `kb_main` export layout are adapted from the ITU AI Readiness simulation
+([CrashingGuru/ITUAIReadiness](https://github.com/CrashingGuru/ITUAIReadiness), MIT,
+Copyright (c) 2026 Vishnu Ram OV).
