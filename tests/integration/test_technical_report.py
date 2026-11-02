@@ -4,6 +4,7 @@ approved wording kept, the .docx equal to the Markdown, the committed PDF at mos
 import importlib.util
 import itertools
 import re
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -16,7 +17,10 @@ from cascadeguard.storage.reports import CONCLUSION_DRAFT, ScriptedRuns, load_ga
 REPORT = PROJECT_ROOT / "docs" / "report"
 SOURCE = REPORT / "cascadeguard-report.md"
 DOCX = REPORT / "cascadeguard-report.docx"
-PDF = REPORT / "cascadeguard-report.pdf"
+PDF = (
+    REPORT / "cascadeguard-report.pdf"
+)  # the designed PDF (scripts/report_pdf), linked in the README
+TEMPLATE_PDF = REPORT / "cascadeguard-report-template.pdf"  # the .docx saved as PDF from Word
 MAX_PAGES = 5  # the organizers' limit
 # Approved phrases (gate 7, human 2026-10-31), reused word for word.
 KEY_PHRASES = (
@@ -237,11 +241,19 @@ def test_the_docx_is_a4_and_its_tables_fit_the_margins() -> None:
         assert grid <= width + 4, (grid, width)  # rounding of the scaled columns
 
 
-def test_the_pdf_is_at_most_five_pages_and_current() -> None:
+@pytest.mark.parametrize(
+    ("pdf_path", "how"),
+    [
+        (PDF, "build it: uv run python scripts/report_pdf/build.py"),
+        (TEMPLATE_PDF, "save the .docx as PDF from Word"),
+    ],
+    ids=["designed", "template"],
+)
+def test_the_pdf_is_at_most_five_pages_and_current(pdf_path: Path, how: str) -> None:
     import pdfplumber
 
-    assert PDF.exists(), "build the PDF: uv run python scripts/report_pdf/build.py"
-    with pdfplumber.open(PDF) as pdf:
+    assert pdf_path.exists(), f"{pdf_path.name} is missing; {how}"
+    with pdfplumber.open(pdf_path) as pdf:
         assert len(pdf.pages) <= MAX_PAGES, len(pdf.pages)
         for p in pdf.pages:  # A4 in points
             assert abs(p.width - 595.3) < 1 and abs(p.height - 841.9) < 1, (p.width, p.height)
@@ -263,7 +275,7 @@ def test_the_pdf_is_at_most_five_pages_and_current() -> None:
         for kind, content in section.blocks:
             if kind != "table":
                 paragraph = flatten(builder.plain(str(content)))
-                assert paragraph in flat, f"PDF is stale; re-export it: {paragraph[:80]}"
+                assert paragraph in flat, f"{pdf_path.name} is stale ({how}): {paragraph[:60]}"
 
 
 def _pdf_builder() -> Any:
