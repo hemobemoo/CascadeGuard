@@ -31,8 +31,9 @@
 >   (PR #15) and the news item (`web/03`) is no longer searched (PR #14). Still open: the
 >   Cyber Security Council's 2025 strategy PDF is not in the repository, so the two
 >   `uae.cyber-strategy-2025.*` drafts (not loaded) still rest on the `web/03` announcement
->   summary; and `uae.mohap-smart-health.p7-liability` is still reviewed against a transcription
->   of the official portal page.
+>   summary; and `uae.mohap-smart-health.p7-liability` still quotes a printed transcription
+>   (`web/01`) of the official portal page (the human checked the sentence against the page
+>   itself; whether the portal offers a PDF is not checked).
 > - **Open, stated as limits in the report (§6):** the policy adviser cannot be queried live
 >   (gap 7); no fine-tuning and no Sandbox credits (gap 9).
 
@@ -63,7 +64,7 @@ showed it.
 | 2 | **No technical report** (a–h) and no Y.3172 or readiness mapping in prose | Alignment criterion; submission item 1 | High | Medium (writing) | §9: a 5-page report on the official template, from the drafts in §7–§8 | **Closed** (PRs #23–#27) |
 | 3 | **Non-official sources** behind one reviewed clause and two drafts, and news pages searched as context | Req. 2; mentoring "official documents; no news or press releases" | High | Low–medium (human downloads) | §2: add the official CSC 2025 strategy and Charter PDFs, and keep news pages out of the search | Partly closed (PRs #14, #15) |
 | 4 | **Gap analysis with global examples** is not one open table | Gap-identification criterion (page: "critical part of the evaluation") | High | Low | §6: one generated table, failure → UAE clause evidence → global example clause, each with its qualification | **Closed** (PR #21) |
-| 5 | **Governed vs ungoverned comparison** (PR 4, branch `governance-off`, pending merge: `run --governance off`, UI step h) | Bonus (mentoring) | Medium | Medium | §3: an engine-owned `--governance off` run beside the governed one | **Closed** (PRs #17, #19, #20) |
+| 5 | **Governed vs ungoverned comparison** (PR 4, branch `governance-off`, pending merge: `run --governance off`, UI step h) | Bonus (mentoring) | Medium | Medium | §3: an engine-owned `--governance off` run beside the governed one | **Closed** for §3 items 1–2 (PRs #17, #19, #20); item 3 not claimed |
 | 6 | **Reasoning traces and audit logs are not in the repository** (`data/` is gitignored) | Auditability; Req. 6 | Medium | Low | §4: commit one exported scripted run and one cached LLM run with rationales and citations | **Closed** (PRs #20, #21) |
 | 7 | **Policy adviser cannot be queried** by a participant during the scenario | Req. 4 roles ("an agent that participants can query") | Medium | Medium (LLM cost, gate 4) | §5: "ask the adviser at T+n" using that step's boundary view | Open (a limit in the report) |
 | 8 | **No licence, no team contacts, no submission section in the README** | Openness; submission | Low (but required) | Low | §9: add a LICENSE (human's choice), the contacts, and a README "Submission" section | **Closed** (PR #14) |
