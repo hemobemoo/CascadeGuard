@@ -240,11 +240,12 @@ then locked.
     in the repo before the audit, progress on gap 3), fixed with its MINORs.
   - `docs/report/cascadeguard-report-template.pdf`: the template-based .docx saved as PDF by the
     human from Word (4 pages, A4). The designed PDF stays the main one linked in the README. The
-    PDF test now covers both files (A4, at most 5 pages, every paragraph word for word); checked to
-    fail on a stale template export.
+    PDF test now covers both files (A4, at most 5 pages, every paragraph word for word); the agent
+    checked in this session that it fails on a stale template export.
   - **ChromaDB load test, run locally on 2026-11-02:** with chromadb 1.5.9 from the `chroma`
     extra, `tests/unit/test_kb.py::test_the_export_loads_into_a_kb_main_collection_like_the_reference`
-    passed. That test loads a small fake index. A one-off check outside the suite also loaded
+    passed (run by the agent in this session). That test loads a small fake index. A one-off check
+    by the agent, outside the suite, also loaded
     the real export (`uv run cascadeguard kb export`, 4,235 chunks, 1,024 dimensions) into a
     `kb_main` collection with the reference code's calls: count 4,235, and a self-query returned
     the right chunk. CI keeps skipping the test (the extra is not installed there). Not checked:
