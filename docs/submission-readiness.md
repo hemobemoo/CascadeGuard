@@ -1,5 +1,34 @@
 # Submission readiness audit (AI for Good Sandbox Hackathon, UAE)
 
+> **Status note, 2026-11-02.** The audit below is the original of 2026-10-29 and is kept as
+> written; this note and the "Status 2026-11-02" column in the ranked table record what has
+> changed since.
+>
+> - **Closed:**
+>   - **Technical report** (gap 2, §9): [docs/report/cascadeguard-report.pdf](report/cascadeguard-report.pdf),
+>     4 pages, A4, with sections a–h and the Y.3172, Readiness 2.0 and local-policy mappings
+>     (PRs #23–#27). The same text on the official template:
+>     [docs/report/cascadeguard-report-template.pdf](report/cascadeguard-report-template.pdf)
+>     (from [cascadeguard-report.docx](report/cascadeguard-report.docx)).
+>   - **Vector knowledge base with the ITU reference layout** (gap 1, §1, requirement 3):
+>     [policies/kb/](../policies/kb/) (4,235 chunks with embeddings and a manifest, PR #16);
+>     `uv run cascadeguard kb export <path>` writes them in the reference code's `kb_main` format.
+>     Hosting in the ITU AI for Good Lab is up to the organizers.
+>   - **Gap analysis with global examples** (gap 4): [docs/gap-analysis.md](gap-analysis.md),
+>     example mapping reviewed by the human (PR #21).
+>   - **Governed vs ungoverned comparison** (gap 5, §3): `--governance off` (PR #17), live LLM
+>     recording in [docs/evaluation/gate4/](evaluation/gate4/) (PRs #19, #20).
+>   - **Traces in the repository** (gap 6): [docs/evaluation/traces/](evaluation/traces/) with
+>     `how-to-read.md` (PR #21) and the cached live run in `docs/evaluation/gate4/`.
+>   - **Licence, team details, README "Submission" section** (gap 8): `LICENSE` (MIT) and the
+>     README (PR #14).
+> - **Partly closed:** non-official sources (gap 3). The Charter is quoted from the official PDF
+>   (PR #15), the official cybersecurity strategy PDF is in `policies/sources/`, and the news item
+>   (`web/03`) is no longer searched (PR #14); `uae.mohap-smart-health.p7-liability` is still
+>   reviewed against a transcription of the official portal page.
+> - **Open, stated as limits in the report (§6):** the policy adviser cannot be queried live
+>   (gap 7); no fine-tuning and no Sandbox credits (gap 9).
+
 Audit of 2026-10-29. **Deadline: 10 November 2026.** Scope: the repository with the gate-1 PR #12
 and the qualifier-label change (branch `clause-qualifier-labels`) on top of `main` (`phase-6d`). No code was changed for this audit and no LLM call was made.
 
@@ -21,21 +50,21 @@ showed it.
 
 ## Ranked gaps (by effect on scoring, then effort)
 
-| Rank | Gap | Criteria / requirements hit | Effect | Effort | Smallest change |
-|---|---|---|---|---|---|
-| 1 | **Knowledge base is not vectorized and does not use the ITU reference code** | KB quality; Req. 3; mentoring "RAG or graph DB, chunked, vectorized, cited by exact text" | High | Medium (+ dependency gate 3) | §1: chunk the corpus with provenance, embed it once, and serve vector retrieval on the LLM context path only |
-| 2 | **No technical report** (a–h) and no Y.3172 or readiness mapping in prose | Alignment criterion; submission item 1 | High | Medium (writing) | §9: a 5-page report on the official template, from the drafts in §7–§8 |
-| 3 | **Non-official sources** behind one reviewed clause and two drafts, and news pages searched as context | Req. 2; mentoring "official documents; no news or press releases" | High | Low–medium (human downloads) | §2: add the official CSC 2025 strategy and Charter PDFs, and keep news pages out of the search |
-| 4 | **Gap analysis with global examples** is not one open table | Gap-identification criterion (page: "critical part of the evaluation") | High | Low | §6: one generated table, failure → UAE clause evidence → global example clause, each with its qualification |
-| 5 | **Governed vs ungoverned comparison** (PR 4, branch `governance-off`, pending merge: `run --governance off`, UI step h) | Bonus (mentoring) | Medium | Medium | §3: an engine-owned `--governance off` run beside the governed one |
-| 6 | **Reasoning traces and audit logs are not in the repository** (`data/` is gitignored) | Auditability; Req. 6 | Medium | Low | §4: commit one exported scripted run and one cached LLM run with rationales and citations |
-| 7 | **Policy adviser cannot be queried** by a participant during the scenario | Req. 4 roles ("an agent that participants can query") | Medium | Medium (LLM cost, gate 4) | §5: "ask the adviser at T+n" using that step's boundary view |
-| 8 | **No licence, no team contacts, no submission section in the README** | Openness; submission | Low (but required) | Low | §9: add a LICENSE (human's choice), the contacts, and a README "Submission" section |
-| 9 | **No fine-tuning** with Sandbox cloud credits | Req. 4 | Low | High | §4: state that it was not done, and why (determinism, scripted baseline) |
+| Rank | Gap | Criteria / requirements hit | Effect | Effort | Smallest change | Status 2026-11-02 |
+|---|---|---|---|---|---|---|
+| 1 | **Knowledge base is not vectorized and does not use the ITU reference code** | KB quality; Req. 3; mentoring "RAG or graph DB, chunked, vectorized, cited by exact text" | High | Medium (+ dependency gate 3) | §1: chunk the corpus with provenance, embed it once, and serve vector retrieval on the LLM context path only | **Closed** (PR #16) |
+| 2 | **No technical report** (a–h) and no Y.3172 or readiness mapping in prose | Alignment criterion; submission item 1 | High | Medium (writing) | §9: a 5-page report on the official template, from the drafts in §7–§8 | **Closed** (PRs #23–#27) |
+| 3 | **Non-official sources** behind one reviewed clause and two drafts, and news pages searched as context | Req. 2; mentoring "official documents; no news or press releases" | High | Low–medium (human downloads) | §2: add the official CSC 2025 strategy and Charter PDFs, and keep news pages out of the search | Partly closed (PRs #14, #15) |
+| 4 | **Gap analysis with global examples** is not one open table | Gap-identification criterion (page: "critical part of the evaluation") | High | Low | §6: one generated table, failure → UAE clause evidence → global example clause, each with its qualification | **Closed** (PR #21) |
+| 5 | **Governed vs ungoverned comparison** (PR 4, branch `governance-off`, pending merge: `run --governance off`, UI step h) | Bonus (mentoring) | Medium | Medium | §3: an engine-owned `--governance off` run beside the governed one | **Closed** (PRs #17, #19, #20) |
+| 6 | **Reasoning traces and audit logs are not in the repository** (`data/` is gitignored) | Auditability; Req. 6 | Medium | Low | §4: commit one exported scripted run and one cached LLM run with rationales and citations | **Closed** (PRs #20, #21) |
+| 7 | **Policy adviser cannot be queried** by a participant during the scenario | Req. 4 roles ("an agent that participants can query") | Medium | Medium (LLM cost, gate 4) | §5: "ask the adviser at T+n" using that step's boundary view | Open (a limit in the report) |
+| 8 | **No licence, no team contacts, no submission section in the README** | Openness; submission | Low (but required) | Low | §9: add a LICENSE (human's choice), the contacts, and a README "Submission" section | **Closed** (PR #14) |
+| 9 | **No fine-tuning** with Sandbox cloud credits | Req. 4 | Low | High | §4: state that it was not done, and why (determinism, scripted baseline) | Open (a limit in the report) |
 
 ---
 
-## 1. Knowledge base — **partial**
+## 1. Knowledge base — **partial** (closed 2026-11-02, see the status note)
 
 **What we have**
 - **Clause store:** `policies/reviewed/*.yaml` holds 42 clauses: 18 reviewed, 2 illustrative
@@ -135,7 +164,7 @@ acceptable".
   - The GDPR PDF is the EUR-Lex consolidated text, which states it has no legal effect.
     Acceptable as an international example; noted in the clause.
 
-## 3. Governed vs ungoverned — **PR 4, pending merge** (scripted; LLM behaviour comparison is gate 4)
+## 3. Governed vs ungoverned — **PR 4, pending merge** (closed 2026-11-02, see the status note) (scripted; LLM behaviour comparison is gate 4)
 
 > PR 4 (2026-10-31) implemented items 1 and 2 below with option B (clause and mandate checks
 > waived; evidence checks kept). Item 3 is still open. The text below is the original audit.
@@ -257,7 +286,7 @@ The table lists every dimension; only the first five rows can honestly be claime
 | 12 | Granular Priorities | No | — | — |
 | 13 | Digital Infrastructure | No | — | — |
 
-## 9. Technical report (FAQ a–h) and team contacts — **missing**
+## 9. Technical report (FAQ a–h) and team contacts — **missing** (closed 2026-11-02, see the status note)
 
 There is no technical report in the repository. The page requires at most 5 pages on the
 official template, linked from the page; the template was not downloaded. Source material per

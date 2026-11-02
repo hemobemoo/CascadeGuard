@@ -64,8 +64,7 @@ give byte-identical output on every run):
 Generated from the engine with scripted agents (`uv run python scripts/build_reports.py`):
 the gap analysis (`docs/gap-analysis.md`; its example mapping was reviewed at gate 7 on
 2026-10-31: six entries approved, two removed) and three example traces (`docs/evaluation/traces/`, with `how-to-read.md`).
-The gate-4 live LLM recording is in `docs/evaluation/gate4/`. Still to be added: the technical
-report.
+The gate-4 live LLM recording is in `docs/evaluation/gate4/`.
 
 **Licence.** The code and documentation are under the MIT licence (`LICENSE`). The documents in
 `policies/sources/` are not: they belong to their issuers (see Sources). The knowledge base's

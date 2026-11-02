@@ -227,6 +227,26 @@ then locked.
   that script (Inter and DejaVu Sans Mono installed; 4 pages, A4). The only text change in the PDF
   is that label. The human's stated intent: this is the last change to the report before
   submission.
+- **PR #27 merged 2026-11-01 as 04d3151** (evidence-auditor PASS, no findings; both CI runs on
+  f8143b4 green; branch `report-t45-label` kept).
+- **Submission docs (branch `submission-docs`, human 2026-11-02),** after a readiness check
+  against the event page:
+  - README: the stale "Still to be added: the technical report." is removed.
+  - `docs/submission-readiness.md`: the 2026-10-29 audit is kept as written. A dated status note
+    (2026-11-02) at the top and a "Status 2026-11-02" column in the ranked table now show what is
+    closed: gaps 1, 2, 4, 5, 6 and 8 closed, gap 3 partly closed, gaps 7 and 9 open and stated as
+    limits in the report.
+  - `docs/report/cascadeguard-report-template.pdf`: the template-based .docx saved as PDF by the
+    human from Word (4 pages, A4). The designed PDF stays the main one linked in the README. The
+    PDF test now covers both files (A4, at most 5 pages, every paragraph word for word); checked to
+    fail on a stale template export.
+  - **ChromaDB load test, run locally on 2026-11-02:** with chromadb 1.5.9 from the `chroma`
+    extra, `tests/unit/test_kb.py::test_the_export_loads_into_a_kb_main_collection_like_the_reference`
+    passed. That test loads a small fake index. A one-off check outside the suite also loaded
+    the real export (`uv run cascadeguard kb export`, 4,235 chunks, 1,024 dimensions) into a
+    `kb_main` collection with the reference code's calls: count 4,235, and a self-query returned
+    the right chunk. CI keeps skipping the test (the extra is not installed there). Not checked:
+    loading inside the reference application itself.
 
 ## Current phase
 
@@ -1552,8 +1572,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
 `pr5-gap-analysis` is merged (#21, ad93ff6; gate 7 done 2026-10-31; branch kept). The technical
-report is merged (#23, 36324be, 2026-11-01; see "Technical report" under "Start here"); its §1
-follow-up is on `report-followup`. Next: the demo video (the human's plan). Linking the conclusion draft is a separate human decision. Verify:
+report is merged (#23 to #27, last 04d3151; see "Technical report" under "Start here"), with the
+submission docs on `submission-docs`. Next: the demo video (the human's plan), and submitting by
+10 Nov 2026 (registration closes 5 Nov). Linking the conclusion draft is a separate human decision. Verify:
 `uv run python scripts/build_reports.py --check` (exit 0) and
 `uv run pytest tests/integration/test_reports.py`.
 Wording (human): "applied without the authority the governed engine requires", never
