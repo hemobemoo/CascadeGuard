@@ -9,8 +9,7 @@
 >     4 pages, A4, covering FAQ a–h in the template's sections 1–6 (§4 holds the Y.3172,
 >     Readiness 2.0 and local-policy mappings)
 >     (PRs #23–#27). The same text on the official template:
->     [docs/report/cascadeguard-report-template.pdf](report/cascadeguard-report-template.pdf)
->     (from [cascadeguard-report.docx](report/cascadeguard-report.docx)).
+>     [cascadeguard-report.docx](report/cascadeguard-report.docx).
 >   - **Vector knowledge base with the ITU reference layout** (gap 1, §1, requirement 3):
 >     [policies/kb/](../policies/kb/) (4,235 chunks with embeddings and a manifest, PR #16);
 >     `uv run cascadeguard kb export <path>` writes them in the reference code's `kb_main` format,

@@ -20,7 +20,6 @@ DOCX = REPORT / "cascadeguard-report.docx"
 PDF = (
     REPORT / "cascadeguard-report.pdf"
 )  # the designed PDF (scripts/report_pdf), linked in the README
-TEMPLATE_PDF = REPORT / "cascadeguard-report-template.pdf"  # the .docx saved as PDF from Word
 MAX_PAGES = 5  # the organizers' limit
 # Approved phrases (gate 7, human 2026-10-31), reused word for word.
 KEY_PHRASES = (
@@ -245,9 +244,8 @@ def test_the_docx_is_a4_and_its_tables_fit_the_margins() -> None:
     ("pdf_path", "how"),
     [
         (PDF, "build it: uv run python scripts/report_pdf/build.py"),
-        (TEMPLATE_PDF, "save the .docx as PDF from Word"),
     ],
-    ids=["designed", "template"],
+    ids=["designed"],
 )
 def test_the_pdf_is_at_most_five_pages_and_current(pdf_path: Path, how: str) -> None:
     import pdfplumber
