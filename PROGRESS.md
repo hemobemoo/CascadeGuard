@@ -265,6 +265,7 @@ then locked.
   replaces it. The README's new "Architecture" section (between "How it works" and "Quick
   start", human-approved placement) embeds the corrected `docs/architecture.mmd` (rendered to
   `docs/architecture.svg` with mermaid-cli 11.4.2).
+- 2026-11-04: removed docs/report/cascadeguard-report-template.pdf; the .docx is the template version. The PDF test now covers the designed PDF only.
 
 ## Current phase
 
