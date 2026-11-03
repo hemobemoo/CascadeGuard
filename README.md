@@ -9,6 +9,8 @@ concept.
 
 ![CascadeGuard demo UI: baseline vs replay of the identical incident with the rank-1 repair](docs/images/cascadeguard-ui.png)
 
+▶ Demo video: [cascadeguard-demo.mp4](cascadeguard-demo.mp4)
+
 ## Submission
 
 Submission for the ITU AI for Good Sandbox Hackathon (UAE).
