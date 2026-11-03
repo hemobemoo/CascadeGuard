@@ -259,11 +259,12 @@ then locked.
   found" sentences approved as written, including the scope line, the gap-analysis link and
   "both critical goals"; keeping the `--repair` line in Quick start also approved.
 - **Architecture diagram (branch `docs/architecture-diagram`, human 2026-11-03):** the
-  gitdiagram.com draft moved to `docs/architecture.png` and checked against the imports and calls
-  in `src/cascadeguard/`; it has wrong, misleading and missing arrows (listed in the PR), so the
-  README does not link it. The README's new "Architecture" section embeds the corrected
-  `docs/architecture.mmd` (rendered to `docs/architecture.svg` with mermaid-cli 11.4.2). Stops
-  after the PR is opened, for the human to decide.
+  gitdiagram.com draft (`architecture.png`) was checked against the imports and calls in
+  `src/cascadeguard/`; it has wrong, misleading and missing arrows (listed in PR #30). On the
+  human's instruction (2026-11-03) it is not kept in the repository: `docs/architecture.svg`
+  replaces it. The README's new "Architecture" section (between "How it works" and "Quick
+  start", human-approved placement) embeds the corrected `docs/architecture.mmd` (rendered to
+  `docs/architecture.svg` with mermaid-cli 11.4.2).
 
 ## Current phase
 
