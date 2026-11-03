@@ -48,6 +48,125 @@ illustrative clauses):
 4. Repairs come only from a closed grammar of five policy edit types, ranked deterministically.
 5. Each repair is tested by replaying the identical incident and comparing it with the baseline.
 
+## Architecture
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background": "#f8fafc", "primaryColor": "#ffffff", "primaryTextColor": "#1f2937", "lineColor": "#475569", "clusterBkg": "#f1f5f9", "clusterBorder": "#cbd5e1", "fontFamily": "Inter, Segoe UI, sans-serif", "fontSize": "15px"}}}%%
+flowchart TB
+    %% Solid line: used every time that path runs. Dotted line: used only with an optional
+    %% flag or command (LLM agents, --kb-context, --audit, --governance off, kb query/export).
+    %% Checked against the imports and calls in src/cascadeguard/.
+
+    user((User))
+
+    subgraph UI["User interfaces"]
+        cli["CLI<br/>cli.py"]
+        app["Demo UI<br/>ui/app.py"]
+        vm["UI view model<br/>ui/view_model.py"]
+    end
+
+    subgraph SIM["Incident simulation"]
+        sload["Scenario loader<br/>simulation/loader.py"]
+        orch["Orchestrator<br/>simulation/orchestrator.py"]
+        bound["Role views<br/>simulation/boundaries.py"]
+        scripted["Scripted agents<br/>agents/scripted.py"]
+        llm["LLM agents<br/>agents/llm.py"]
+        cache[("Decision cache<br/>agents/cache.py")]
+        state[("Simulation state<br/>simulation/state.py")]
+        replay["Incident replay<br/>simulation/replay.py"]
+    end
+
+    subgraph GOV["Governance and repair"]
+        cons["Constraint engine<br/>engine/constraints.py"]
+        diag["Failure diagnosis<br/>engine/diagnosis.py<br/>engine/graph.py"]
+        rsearch["Repair search<br/>engine/repair_search.py"]
+        gov["Governance comparison<br/>engine/governance.py"]
+    end
+
+    subgraph POL["Policy knowledge"]
+        cload["Clause loader<br/>knowledge/loader.py"]
+        pol["Policy clauses<br/>domain/policies.py"]
+        retr["Clause retrieval<br/>knowledge/retrieval.py"]
+        kb[("Vector index<br/>knowledge/kb.py")]
+    end
+
+    subgraph RES["Results and exports"]
+        export["Data export<br/>storage/export.py"]
+        audit[("Audit log, DuckDB<br/>storage/audit.py")]
+        reports["Reports<br/>storage/reports.py<br/>run by scripts/build_reports.py"]
+    end
+
+    user -->|runs commands| cli
+    user -->|opens demo| app
+    app -->|load_world, search_repairs| cli
+    app -->|formats results| vm
+    vm -->|export data| export
+    reports -->|load_world, search_repairs| cli
+
+    cli -->|loads scenario| sload
+    cli -->|loads clauses| cload
+    cload -->|validates| pol
+    cli -->|loads| scripted
+    cli -.->|creates| llm
+    cli -->|run| orch
+    cli -->|search| rsearch
+    cli -->|writes| export
+    cli -.->|--audit| audit
+    cli -.->|--governance off| gov
+    cli -.->|kb query, kb export| kb
+
+    orch -->|builds role views| bound
+    bound -->|role clauses| retr
+    orch -->|"observe(view)"| scripted
+    orch -.->|"observe(view)"| llm
+    llm -.-> cache
+    llm -.->|--kb-context| kb
+    orch -->|submits decisions| cons
+    cons -->|checks rules| pol
+    cons -->|applies accepted actions| state
+    orch -->|diagnose| diag
+    diag -->|reads| state
+
+    rsearch -->|replay callback from CLI| replay
+    replay -->|reruns identical incident| orch
+
+    classDef ui fill:#ffffff,stroke:#0f4c81,stroke-width:2px,color:#0f4c81
+    classDef sim fill:#ffffff,stroke:#1b7f79,stroke-width:2px,color:#1b7f79
+    classDef gov fill:#ffffff,stroke:#b91c1c,stroke-width:2px,color:#b91c1c
+    classDef pol fill:#ffffff,stroke:#15803d,stroke-width:2px,color:#15803d
+    classDef res fill:#ffffff,stroke:#c2410c,stroke-width:2px,color:#c2410c
+    classDef person fill:#0f4c81,stroke:#0f4c81,color:#ffffff
+
+    class cli,app,vm ui
+    class sload,orch,bound,scripted,llm,cache,state,replay sim
+    class cons,diag,rsearch,gov gov
+    class cload,pol,retr,kb pol
+    class export,audit,reports res
+    class user person
+
+    style UI fill:#eef4fa,stroke:#0f4c81
+    style SIM fill:#edf6f5,stroke:#1b7f79
+    style GOV fill:#fbefef,stroke:#b91c1c
+    style POL fill:#eef7f1,stroke:#15803d
+    style RES fill:#fcf1ea,stroke:#c2410c
+```
+
+A user starts a run from the CLI (`cli.py`) or the demo UI (`ui/app.py`); the UI loads the
+scenario and searches repairs through the same CLI functions. The orchestrator
+(`simulation/orchestrator.py`) advances the timeline, builds each role's boundary-filtered view
+(`simulation/boundaries.py`) and asks that role's agent, scripted or LLM, for a decision. The
+constraint engine (`engine/constraints.py`) checks every proposed action against the loaded
+policy clauses and applies only accepted actions to the simulation state
+(`simulation/state.py`); at the end, diagnosis (`engine/diagnosis.py`) names the coordination
+failures. Repair search (`engine/repair_search.py`) screens candidate edits from the closed
+repair grammar, replays the identical incident with each one (`simulation/replay.py`) and ranks
+the results. The CLI writes exports (`storage/export.py`) and, with `--audit`, a DuckDB audit
+log (`storage/audit.py`); `scripts/build_reports.py` builds the generated reports
+(`storage/reports.py`).
+
+Solid lines are used every time that path runs; dotted lines only with an optional flag or
+command (LLM agents, `--kb-context`, `--audit`, `--governance off`, `kb query`/`kb export`).
+
 ## Quick start
 
 Requires [uv](https://docs.astral.sh/uv/). Python 3.12 is installed by uv if missing. No API key
