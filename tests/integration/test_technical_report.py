@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
+from cascadeguard.domain.policies import is_uae_jurisdiction
 from cascadeguard.domain.repairs import RepairOperationType
-from cascadeguard.engine.constraints import OVERSTATED
+from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
 from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
 from cascadeguard.storage.reports import CONCLUSION_DRAFT, ScriptedRuns, load_gate4, scripted_runs
 
@@ -46,8 +48,28 @@ LABEL_NUMBERS = {
 }
 
 
+NUMBER = r"(?<![\w.])\d[\d,.]*\d|(?<![\w.])\d"
+# The precedents paragraph (organizer question "Was there such an incident before?"): its numbers
+# describe real, analogous incidents, so they trace to docs/report/background-sources.yaml, not
+# to the scenario data. Approved by the human (gates 7/8, 2026-11-04); the draft file keeps a copy.
+BACKGROUND_MARKER = "**Precedents.**"
+BACKGROUND_SOURCES = REPORT / "background-sources.yaml"
+BACKGROUND_DRAFT = PROJECT_ROOT / "docs" / "review" / "report-background-draft.md"
+# The brief said "max ~120 words"; the human-approved paragraph (2026-11-04) is 122.
+BACKGROUND_MAX_WORDS = 125
+MAX_QUOTE_WORDS = 15
+
+
 def text() -> str:
     return SOURCE.read_text(encoding="utf-8")
+
+
+def background_paragraphs(t: str) -> list[str]:
+    return [p for p in t.replace("\r\n", "\n").split("\n\n") if p.startswith(BACKGROUND_MARKER)]
+
+
+def background_facts() -> list[dict[str, Any]]:
+    return yaml.safe_load(BACKGROUND_SOURCES.read_text(encoding="utf-8"))["facts"]
 
 
 @pytest.fixture(scope="module")
@@ -95,17 +117,227 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
     return out
 
 
+CITED_TABLE_START = "**Policy documents loaded and cited by the agents.**"
+
+
+def cited_block(t: str) -> str:
+    """§4's cited-documents block: its lead paragraph, table and note, up to section 5."""
+    if CITED_TABLE_START not in t:
+        return ""
+    return CITED_TABLE_START + t.split(CITED_TABLE_START, 1)[1].split("## 5.", 1)[0]
+
+
+def cited_numbers() -> dict[str, str]:
+    """Numbers the cited-documents block may state, from the citation map only."""
+    cmap = _citation_map()
+    out: dict[str, str] = {}
+    for counts in cmap.document_counts().values():
+        for run in cmap.RUNS:
+            out[str(counts[run])] = f"citation map: {run} citations of a document"
+    out[str(cmap.shared_live_steps()[0])] = "citation map: decisions shared by the live runs"
+    for n in _rejected_per_live_run(cmap).values():
+        out[str(n)] = "citation map: rejected decisions per live run"
+    return out
+
+
+def _rejected_per_live_run(cmap: Any) -> dict[str, int]:
+    steps: dict[str, set[tuple[str, int]]] = {
+        cmap.LIVE_GOVERNED: set(),
+        cmap.LIVE_UNGOVERNED: set(),
+    }
+    for c in cmap.all_citations():
+        if c.verdict != "accepted" and c.run in steps:
+            steps[c.run].add((c.role, c.minute))
+    return {run: len(s) for run, s in steps.items()}
+
+
+# §4 "Policy documents loaded and cited by the agents": report row -> source file (None =
+# illustrative).
+CITED_DOCUMENTS: dict[str, str | None] = {
+    "UAE Federal Law on ICT in Health Fields (English translation)": (
+        "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf"
+    ),
+    "DHA Health Data Protection and Confidentiality Policy": (
+        "Health Data Protection and Confidentiality Policy_EN2022810559.pdf"
+    ),
+    "Illustrative telecom rules (synthetic, no source document)": None,
+    "UAE Charter for the Development and Use of AI": (
+        "The UAE Charter for the Development and Use of Artificial Intelligence.pdf"
+    ),
+    "UAE Personal Data Protection Law (PDPL, English translation)": (
+        "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf"
+    ),
+    "EU General Data Protection Regulation (GDPR)": "GDPR-Regulation (EU) 2016-679.pdf",
+    "OECD Recommendation on Artificial Intelligence": "OECD_Recommendation_AI.pdf",
+    "UNESCO Recommendation on the Ethics of AI": (
+        "UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf"
+    ),
+    "MOHAP smart health and AI policy (web transcription)": (
+        "web/01_uae_smart_health_ai_policy.pdf"
+    ),
+}
+
+
+def _citation_map() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "citation_map", PROJECT_ROOT / "scripts" / "citation_map.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_cited_documents_table_matches_the_citation_map() -> None:
+    """Every document with loaded clauses has one row; its binding cell, use and three per-run
+    counts equal the citation map (never a single total); the live runs' shared decisions and the
+    one rejected decision are stated as such."""
+    cmap = _citation_map()
+    counts = cmap.document_counts()
+    assert set(CITED_DOCUMENTS.values()) == set(counts)
+    section4 = text().split("## 4.", 1)[1].split("## 5.", 1)[0]
+    rows = {
+        cells[0]: cells
+        for line in section4.splitlines()
+        if line.startswith("| ")
+        for cells in [[c.strip() for c in line.strip().strip("|").split("|")]]
+    }
+    header = rows.pop("Document")
+    assert header[2:] == [
+        "Binding in the UAE",
+        "How it is used",
+        "Scripted",
+        "Live governed",
+        "Live ungoverned",
+    ]
+    examples = {
+        str(e["clause"])
+        for e in yaml.safe_load(
+            (PROJECT_ROOT / "scenarios" / "uae_health_access" / "gap_examples.yaml").read_text(
+                encoding="utf-8"
+            )
+        )["entries"]
+    }
+    loaded = load_clauses()
+    for name, source in CITED_DOCUMENTS.items():
+        cells = rows[name]
+        n = counts[source]
+        assert cells[4:] == [str(n[r]) for r in cmap.RUNS], name
+        assert cells[2] == cmap.document_binding(source), name
+        uses: list[str] = []
+        if sum(n.values()):
+            uses.append("cited by agents")
+        mapped = [c for c in loaded if c.id in examples and c.source_file == source]
+        if mapped:  # gap_examples.yaml: "global and UAE-principle examples"
+            uae = all(is_uae_jurisdiction(c.jurisdiction) for c in mapped)
+            kind = "UAE-principle" if uae else "global"
+            uses.append(f"{kind} example in the gap analysis")
+        assert cells[3] == ("; ".join(uses) or "loaded, not cited"), name
+    shared, _ = cmap.shared_live_steps()
+    assert f"The two live runs share {shared} decisions" in section4
+    per_run = set(_rejected_per_live_run(cmap).values())
+    assert len(per_run) == 1, per_run
+    assert f"{per_run.pop()} decision rejected (citation out of scope)" in section4
+    assert "docs/citation-map.md" in section4
+    assert (
+        "binding means binding in the UAE, as recorded on each clause; it does not mean the "
+        "document applies to this scenario." in section4
+    )
+    rejected = {(c.run, c.role, c.minute) for c in cmap.all_citations() if c.verdict != "accepted"}
+    assert rejected == {
+        (cmap.LIVE_GOVERNED, "telecom_operator", 75),
+        (cmap.LIVE_UNGOVERNED, "telecom_operator", 75),
+    }
+
+
 def test_every_number_is_traced_to_the_data(runs: ScriptedRuns) -> None:
     allowed = traced(runs)
-    body = re.sub(r"`[^`]+`", "", text())  # ids are checked separately
+    body = text().replace("\r\n", "\n")
+    for paragraph in background_paragraphs(body):  # checked against its sources instead
+        body = body.replace(paragraph, "")
+    block = cited_block(body)  # checked against the citation map only
+    if block:
+        body = body.replace(block, "")
+        others = {
+            **cited_numbers(),
+            **{f"{e.at_minute}": "inject minute" for e in runs.world.scenario.events},
+        }
+        stray = [
+            n
+            for n in re.findall(NUMBER, re.sub(r"`[^`]+`", "", block))
+            if n.rstrip(".,") not in others and n.rstrip(".,") not in LABEL_NUMBERS
+        ]
+        assert not stray, f"cited-documents numbers not from the citation map: {sorted(set(stray))}"
+    body = re.sub(r"`[^`]+`", "", body)  # ids are checked separately
     body = re.sub(r"\S+@\S+|https?://\S+", "", body)  # contact address and links
     body = body.replace("2026-10-31", "")
     untraced = [
         n
-        for n in re.findall(r"(?<![\w.])\d[\d,.]*\d|(?<![\w.])\d", body)
+        for n in re.findall(NUMBER, body)
         if n.rstrip(".,") not in allowed and n.rstrip(".,") not in LABEL_NUMBERS
     ]
     assert not untraced, f"numbers not traced to the data: {sorted(set(untraced))}"
+
+
+def _unsourced(paragraph: str, facts: list[dict[str, Any]]) -> list[str]:
+    """Numbers in the paragraph not listed for any fact whose markers all appear in it."""
+    present = [f for f in facts if all(m in paragraph for m in f["markers"])]
+    sourced = {str(n) for f in present for n in f["numbers"]}
+    return [n for n in re.findall(NUMBER, paragraph) if n.rstrip(".,") not in sourced]
+
+
+def test_background_numbers_come_from_the_background_sources() -> None:
+    facts = background_facts()
+    drafts = background_paragraphs(BACKGROUND_DRAFT.read_text(encoding="utf-8"))
+    assert len(drafts) == 1, "the draft holds exactly one precedents paragraph"
+    assert len(background_paragraphs(text())) <= 1
+    for paragraph in drafts + background_paragraphs(text()):
+        assert re.findall(NUMBER, paragraph), "the check must see the paragraph's numbers"
+        assert not _unsourced(paragraph, facts), _unsourced(paragraph, facts)
+
+
+def test_a_number_without_its_claim_is_refused() -> None:
+    """The rule is per claim: a sourced number fails once its claim's markers are absent, and an
+    unlisted number fails even next to a sourced claim."""
+    facts = background_facts()
+    assert _unsourced(f"{BACKGROUND_MARKER} Optus 2023: 10.2 million.", facts) == []
+    assert _unsourced(f"{BACKGROUND_MARKER} An outage hit 10.2 million.", facts) == ["10.2"]
+    assert _unsourced(f"{BACKGROUND_MARKER} Optus 2023: 11 million.", facts) == ["11"]
+    # Every fact needs at least two markers, so a bare name does not unlock its numbers.
+    assert all(len(f["markers"]) >= 2 for f in facts)
+    assert _unsourced(f"{BACKGROUND_MARKER} Bank of America lost 100 days.", facts) == ["100"]
+
+
+def test_background_sources_are_complete() -> None:
+    facts = background_facts()
+    ids = [f["id"] for f in facts]
+    assert len(ids) == len(set(ids))
+    for f in facts:
+        for key in ("claim", "source_title", "publisher", "source_type", "read_via"):
+            assert str(f[key]).strip(), (f["id"], key)
+        assert f["url"].startswith("https://"), f["id"]
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", f["retrieved"]), f["id"]
+        assert f["markers"], f["id"]
+        for n in f["numbers"]:  # every listed number is stated in the claim itself
+            assert re.search(rf"(?<![\w.]){re.escape(str(n))}(?![\d])", f["claim"]), (f["id"], n)
+    # Background only: never a clause, never read by the engine.
+    assert not BACKGROUND_SOURCES.is_relative_to(PROJECT_ROOT / "policies")
+    for path in (PROJECT_ROOT / "src").rglob("*.py"):
+        assert "background-sources" not in path.read_text(encoding="utf-8"), path
+
+
+def test_the_background_wording_follows_the_rules() -> None:
+    for paragraph in background_paragraphs(BACKGROUND_DRAFT.read_text(encoding="utf-8")) + (
+        background_paragraphs(text())
+    ):
+        assert len(paragraph.split()) <= BACKGROUND_MAX_WORDS, len(paragraph.split())
+        lower = paragraph.lower()
+        assert "analogous" in lower and "not this scenario" in lower
+        assert "hypothetical" in lower and "synthetic" in lower
+        assert not GAP_CLAIM.search(paragraph), GAP_CLAIM.findall(paragraph)
+        assert not OVERSTATED.search(paragraph), OVERSTATED.findall(paragraph)
+        for quote in re.findall(r"[\"“]([^\"”]+)[\"”]", paragraph):  # not apostrophes
+            assert len(quote.split()) <= MAX_QUOTE_WORDS, quote
 
 
 def test_the_stated_facts_match_the_runs(runs: ScriptedRuns) -> None:

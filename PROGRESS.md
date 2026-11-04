@@ -14,6 +14,55 @@ merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
+**Branch `report-feedback` (2026-11-04): organizer feedback on the technical report. Pushed; PR
+opened for review, NOT MERGED. WAITING ON HUMAN (gate 7): approval of the final report wording (the new "How it
+works" paragraph and the §4 cited-documents table, as rebuilt in the .docx and PDF).**
+Feedback asked for (1) "a mapping of the policy documents the agents cited" and (2) "Was there
+such an incident before? Explain the use case background." engine/, simulation/, agents/,
+policies/, scenarios/ unchanged; no API call.
+- **Citation map.** `scripts/citation_map.py` builds `docs/citation-map.md` from committed data
+  only (scripted decisions + scripted trace; gate-4 LLM cache + `baseline.json` /
+  `governance-off.json`). Table (a): 9 rows (8 documents + the illustrative group); 120 citations
+  (15 scripted, 55 live governed, 50 live ungoverned; the live runs share 32 decisions); 12 of 21
+  loaded clauses cited; 1 rejected decision per live run (telecom_operator T+75,
+  `citation_out_of_scope`). Review: evidence-auditor PASS, test-breaker PASS, MINORs fixed. The
+  auditor's older QUESTION-FOR-HUMAN items (dha.pp11.4-18-5, mocai.ethics.fallback-plan, the two
+  cyber-strategy-2025 drafts): **human decision 2026-11-04: no change; already decided.**
+- **Precedents.** `docs/report/background-sources.yaml`: 9 facts, background only (never clauses,
+  not in policies/, not read by the engine; a test checks src/). Optus 2023 (Senate committee
+  report ch. 1-2, ACMA, Bean review page), CrowdStrike 2024 (CrowdStrike hub, Microsoft, JAMA Netw
+  Open 2025;8(7):e2530226), Bank of America fraud filter (CFPB, 14 Jul 2022). Dropped on the
+  human's instruction: the Dutch risk system. Not used: Rogers 2022 (CRTC page behind a bot
+  check). Not found: any documented incident combining the whole chain; any network AI model
+  deprioritising OTP SMS. aph.gov.au, ACMA, infrastructure.gov.au and the CFPB date were read in
+  the in-app browser (human-approved fallback) after WebFetch was refused or timed out.
+  **Paragraph approved by the human (gates 7/8, 2026-11-04) with three edits; commit eda7822
+  "Approved by human: precedents paragraph"**; 122 words (test limit raised 120 -> 125, brief
+  said "max ~120"). Copy kept in `docs/review/report-background-draft.md`. Open
+  QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): reviewers could not fetch the web pages;
+  spot-check the figures against the ACMA, Senate committee and JAMA pages.
+- **Report (commit 21e3781 and the review fixes), as the human specified:** §2 starts with the
+  approved Precedents paragraph, then "How it works" (5 numbered sentences, no new numbers), then
+  the existing text; §4 adds "Policy documents loaded and cited by the agents" after the mapping table
+  (separate scripted / live governed / live ungoverned columns; shared-decision note;
+  "1 decision rejected (citation out of scope)"; link to docs/citation-map.md). Charter row says
+  "UAE-principle example in the gap analysis" (phase-auditor MINOR: gap_examples.yaml calls it a
+  UAE principle, not a global example). docx and PDF rebuilt; **PDF 5 pages**; nothing cut.
+  Build: timeline figure follows the scenario paragraph; only the first §4 table gets the Y.3172
+  diagram; paragraphs no longer split across pages. README links the citation map.
+- **Tests:** `test_technical_report.py` traces the §4 counts to the citation map and checks each
+  row (binding, use, three counts); the Precedents paragraph is checked against
+  background-sources.yaml, not the scenario data; LABEL_NUMBERS unchanged.
+- **Verify:** `uv run python scripts/citation_map.py --check`;
+  `uv run pytest tests/integration/test_citation_map.py tests/integration/test_technical_report.py`
+  (22 tests); full suite 709 passed at bd55a89 (phase-auditor round 3).
+- **Review of the report changes:** phase-auditor round 1 FAIL (PROGRESS stale; structure file
+  missing the new files) -> fixed; evidence-auditor PASS (MINOR: Charter issuer, fixed); phase-auditor round 2 FAIL (PROGRESS
+  claimed a PR before it existed; gate 7 missing from "Waiting on human" / "Next step"; MINORs:
+  §4 numbers allowed report-wide, fixed string "1 decision", issuer short form) -> all fixed;
+  phase-auditor round 3 PASS (PR #31; MINOR: test-count note, fixed).
+- **Next:** the human approves the final report wording (gate 7); then merge. Do not merge before.
+
 **PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
 2026-10-31) on the human's approval of the PR and `expected_ungoverned.yaml`, CI green (663
 passed, 1 skipped: the optional chroma extra). Branch `governance-off` kept (deletion is gate 5).** Human decisions 2026-10-31: option B (waive
@@ -1366,6 +1415,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**report-feedback (2026-11-04), gate 7:** the human approves the final report wording (the
+"How it works" paragraph and the §4 "Policy documents loaded and cited by the agents" table, in the .md, .docx
+and PDF) before the PR is merged. Open QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): no
+reviewer could fetch the precedent sources; spot-check the figures against the ACMA, Senate
+committee, JAMA and CFPB pages (`docs/report/background-sources.yaml` has the URLs).
+
 **PR 3 (vector knowledge base, PR #16): merged 2026-10-30** on the human's instruction after
 three review rounds (round-3 human gates answered: AGENTS.md exception (2) widened, cc8608a; the
 `--kb-context` cache key includes the vectors' SHA-256). Carried forward, see "Open items":
@@ -1587,6 +1642,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+**Now:** branch `report-feedback` (organizer feedback: citation map, precedents, report §2/§4).
+Waiting on the human's gate-7 approval of the final report wording; then merge the PR. Do not
+merge before. See "Start here".
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
