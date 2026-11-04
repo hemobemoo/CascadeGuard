@@ -190,6 +190,7 @@ uv run python -m cascadeguard.ui.app                             # demo UI at ht
 | Cited clauses | `policies/reviewed/*.yaml` (verbatim text, file, page, status; human approvals in `policies/approvals.yaml`) |
 | How clauses are extracted and reviewed | `docs/policy-methodology.md` |
 | Vector index (context only) | `policies/kb/` (chunks, vectors, manifest; built by `scripts/build_kb.py`) |
+| Which documents and clauses the agents cited | [`docs/citation-map.md`](docs/citation-map.md) (scripted and live runs; built by `scripts/citation_map.py`) |
 
 **Vector knowledge base (context only, never citable).** `policies/kb/` holds the same pages the
 keyword search covers (extracted text outside the excluded sources, plus the reviewed Charter

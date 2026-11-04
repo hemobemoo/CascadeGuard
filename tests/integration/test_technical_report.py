@@ -113,7 +113,101 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
     add(len(live_base["failures"]), "live governed failures")
     for w in live_off["would_have_been_rejected"]:
         add(w["minute"], "live waived minute")
+    cmap = _citation_map()
+    for counts in cmap.document_counts().values():
+        for run in cmap.RUNS:
+            add(counts[run], f"citation map: {run} citations of a document")
+    add(cmap.shared_live_steps()[0], "citation map: decisions shared by the live runs")
     return out
+
+
+# §4 "Policy documents the agents cited": report row label -> source file (None = illustrative).
+CITED_DOCUMENTS: dict[str, str | None] = {
+    "UAE Federal Law on ICT in Health Fields (English translation)": (
+        "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf"
+    ),
+    "DHA Health Data Protection and Confidentiality Policy": (
+        "Health Data Protection and Confidentiality Policy_EN2022810559.pdf"
+    ),
+    "Illustrative telecom rules (synthetic, no source document)": None,
+    "UAE Charter for the Development and Use of AI": (
+        "The UAE Charter for the Development and Use of Artificial Intelligence.pdf"
+    ),
+    "UAE Personal Data Protection Law (PDPL, English translation)": (
+        "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf"
+    ),
+    "EU General Data Protection Regulation (GDPR)": "GDPR-Regulation (EU) 2016-679.pdf",
+    "OECD Recommendation on Artificial Intelligence": "OECD_Recommendation_AI.pdf",
+    "UNESCO Recommendation on the Ethics of AI": (
+        "UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf"
+    ),
+    "MOHAP smart health and AI policy (web transcription)": (
+        "web/01_uae_smart_health_ai_policy.pdf"
+    ),
+}
+
+
+def _citation_map() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "citation_map", PROJECT_ROOT / "scripts" / "citation_map.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_cited_documents_table_matches_the_citation_map() -> None:
+    """Every document with loaded clauses has one row; its binding cell, use and three per-run
+    counts equal the citation map (never a single total); the live runs' shared decisions and the
+    one rejected decision are stated as such."""
+    cmap = _citation_map()
+    counts = cmap.document_counts()
+    assert set(CITED_DOCUMENTS.values()) == set(counts)
+    section4 = text().split("## 4.", 1)[1].split("## 5.", 1)[0]
+    rows = {
+        cells[0]: cells
+        for line in section4.splitlines()
+        if line.startswith("| ")
+        for cells in [[c.strip() for c in line.strip().strip("|").split("|")]]
+    }
+    header = rows.pop("Document")
+    assert header[2:] == [
+        "Binding (in its own jurisdiction)",
+        "How it is used",
+        "Scripted",
+        "Live governed",
+        "Live ungoverned",
+    ]
+    examples = {
+        str(e["clause"])
+        for e in yaml.safe_load(
+            (PROJECT_ROOT / "scenarios" / "uae_health_access" / "gap_examples.yaml").read_text(
+                encoding="utf-8"
+            )
+        )["entries"]
+    }
+    loaded = load_clauses()
+    for name, source in CITED_DOCUMENTS.items():
+        cells = rows[name]
+        n = counts[source]
+        assert cells[4:] == [str(n[r]) for r in cmap.RUNS], name
+        assert cells[2] == cmap.document_binding(source), name
+        uses: list[str] = []
+        if sum(n.values()):
+            uses.append("cited by agents")
+        if any(c.id in examples and c.source_file == source for c in loaded):
+            uses.append("global example in the gap analysis")
+        assert cells[3] == ("; ".join(uses) or "loaded, not cited"), name
+    shared, _ = cmap.shared_live_steps()
+    assert f"The two live runs share {shared} decisions" in section4
+    assert "1 decision rejected (citation out of scope)" in section4
+    assert "docs/citation-map.md" in section4
+    rejected = {(c.run, c.role, c.minute) for c in cmap.all_citations() if c.verdict != "accepted"}
+    assert rejected == {
+        (cmap.LIVE_GOVERNED, "telecom_operator", 75),
+        (cmap.LIVE_UNGOVERNED, "telecom_operator", 75),
+    }
 
 
 def test_every_number_is_traced_to_the_data(runs: ScriptedRuns) -> None:

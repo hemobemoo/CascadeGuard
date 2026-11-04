@@ -11,6 +11,10 @@ CascadeGuard finds where AI decisions and institutional rules collide, identifie
 
 ## 2. Description of the use case
 
+**Precedents.** We found no documented incident combining this whole chain; the scenario stays hypothetical, with synthetic data. Several links have analogous real incidents, not this scenario. In 2023 Optus attributed a 12-hour Australian outage to a routing change after a software upgrade; it affected an estimated 10.2 million subscribers, hospitals, banking and payments, and 2,145 people could not call emergency services. In 2024 a faulty CrowdStrike update affected an estimated 8.5 million Windows devices; a peer-reviewed study measured coinciding disruptions at 759 US hospitals, including patient portals. Automated fraud flags have also locked out legitimate users: in 2020–21, Bank of America's fraud filter froze thousands of unemployment-benefit accounts. CascadeGuard rehearses how such links could combine across sectors, before a real incident does.
+
+**How it works.** (1) A hypothetical incident is played minute by minute. (2) Each of six institutional roles sees only what it would really know at that moment. (3) A rule engine, not the AI, checks every proposed action against quoted policy clauses. (4) It names where coordination breaks down. (5) It tests small rule changes by replaying the same incident.
+
 A telecom AI traffic-management model, newly updated, deprioritises authentication SMS (T+00). Patients retry their one-time passwords; the health portal's AI fraud-risk model reads the retries as credential stuffing and locks 4,812 accounts (T+15). Each operator sees only its own side (T+30); six roles must decide what to report, share and authorise (T+45); 3,950 patients are still locked out, the share highest among SMS-only users and users over 65 (T+60); the window closes at T+75.
 
 **Gaps in existing approaches.** The incident crosses two AI systems in two sectors, so a review of either organisation alone sees only half of it. In this hypothetical scenario the health operator needs the network status, but the scenario places it outside the operator's information boundary; no clause in the loaded clause set authorises that share, assigns an owner for reversing the automated lockouts, or triggers a review of the automated lockouts (which may stem from another organisation's AI error) (see section 6). Each is a candidate gap for expert review, not a confirmed legal or standards gap.
@@ -45,6 +49,22 @@ Y.3172 is used as an architecture pattern for an institutional decision pipeline
 | Sandbox | Replay of the identical incident with a candidate repair | AI & Policies; Impacts of Humans in AI Integration | — (repair edits are hypothetical rules, not source clauses) |
 
 Every clause is shown with its status label (e.g. "reviewed (interpreted) · binding unknown", "illustrative", "not binding · international precedent"); 21 clauses are loaded (19 reviewed, 2 illustrative), drafts never.
+
+**Policy documents the agents cited.** Citations per run, counted once per decision; binding means binding in its own jurisdiction, not that the document applies to this scenario. The clause-level map is in docs/citation-map.md.
+
+| Document | Issuer | Binding (in its own jurisdiction) | How it is used | Scripted | Live governed | Live ungoverned |
+|---|---|---|---|---|---|---|
+| UAE Federal Law on ICT in Health Fields (English translation) | UAE (federal) | binding | cited by agents | 3 | 19 | 18 |
+| DHA Health Data Protection and Confidentiality Policy | Dubai Health Authority | binding unknown | cited by agents | 4 | 13 | 11 |
+| Illustrative telecom rules (synthetic, no source document) | CascadeGuard scenario | no (illustrative) | cited by agents | 4 | 18 | 17 |
+| UAE Charter for the Development and Use of AI | UAE AI, Digital Economy and Remote Work Applications Office | not binding | cited by agents; global example in the gap analysis | 2 | 5 | 4 |
+| UAE Personal Data Protection Law (PDPL, English translation) | UAE (federal) | binding | cited by agents | 1 | 0 | 0 |
+| EU General Data Protection Regulation (GDPR) | European Union | not binding | cited by agents | 1 | 0 | 0 |
+| OECD Recommendation on Artificial Intelligence | OECD Council | not binding | global example in the gap analysis | 0 | 0 | 0 |
+| UNESCO Recommendation on the Ethics of AI | UNESCO General Conference | not binding | global example in the gap analysis | 0 | 0 | 0 |
+| MOHAP smart health and AI policy (web transcription) | Ministry of Health and Prevention | binding unknown | loaded, not cited | 0 | 0 | 0 |
+
+The two live runs share 32 decisions, so their counts overlap; scripted and live counts are not compared. In each live run, 1 decision rejected (citation out of scope): the telecom operator's at T+75.
 
 ## 5. Error scenarios
 
