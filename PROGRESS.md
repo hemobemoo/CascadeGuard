@@ -34,13 +34,13 @@ rows (8 source documents + the illustrative group); 120 citations (15 scripted, 
 
 **Same branch, precedents (organizer question "Was there such an incident before?"),
 2026-11-04. WAITING ON HUMAN (gates 7/8): approval of the paragraph wording.**
-- `docs/report/background-sources.yaml`: 10 facts, background only (never clauses, not in
+- `docs/report/background-sources.yaml`: 9 facts, background only (never clauses, not in
   policies/, not read by the engine; a test checks src/). Optus 2023 (Senate committee report
   ch. 1-2, ACMA, Bean review page), CrowdStrike 2024 (CrowdStrike hub, Microsoft, JAMA Netw Open
-  2025;8(7):e2530226), Bank of America fraud filter (CFPB, 14 Jul 2022), Dutch risk system
-  (Dutch DPA, 7 Dec 2021). Not found: any documented incident combining the whole chain; any
+  2025;8(7):e2530226), Bank of America fraud filter (CFPB, 14 Jul 2022); the Dutch
+  risk-system precedent was dropped on the human's instruction (2026-11-04). Not found: any documented incident combining the whole chain; any
   case of a network AI model deprioritising OTP SMS. Not used: Rogers 2022 (CRTC page behind a
-  bot check). aph.gov.au, ACMA, infrastructure.gov.au, the Dutch DPA and the CFPB date were read
+  bot check). aph.gov.au, ACMA, infrastructure.gov.au and the CFPB date were read
   in the in-app browser (human-approved fallback) after WebFetch was refused or timed out.
 - `docs/review/report-background-draft.md`: 120-word `**Precedents.**` paragraph, not in the
   report.
