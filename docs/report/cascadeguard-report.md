@@ -57,7 +57,7 @@ Every clause is shown with its status label (e.g. "reviewed (interpreted) · bin
 | UAE Federal Law on ICT in Health Fields (English translation) | UAE (federal) | binding | cited by agents | 3 | 19 | 18 |
 | DHA Health Data Protection and Confidentiality Policy | Dubai Health Authority | binding unknown | cited by agents | 4 | 13 | 11 |
 | Illustrative telecom rules (synthetic, no source document) | CascadeGuard scenario | no (illustrative) | cited by agents | 4 | 18 | 17 |
-| UAE Charter for the Development and Use of AI | UAE Minister of State for AI, Digital Economy & Remote Work Applications Office | not binding | cited by agents; UAE-principle example in the gap analysis | 2 | 5 | 4 |
+| UAE Charter for the Development and Use of AI | UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office | not binding | cited by agents; UAE-principle example in the gap analysis | 2 | 5 | 4 |
 | UAE Personal Data Protection Law (PDPL, English translation) | UAE (federal) | binding | cited by agents | 1 | 0 | 0 |
 | EU General Data Protection Regulation (GDPR) | European Union | not binding | cited by agents | 1 | 0 | 0 |
 | OECD Recommendation on Artificial Intelligence | OECD Council | not binding | global example in the gap analysis | 0 | 0 | 0 |
