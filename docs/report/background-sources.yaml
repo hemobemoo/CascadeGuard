@@ -157,22 +157,6 @@ facts:
     retrieved: "2026-11-04"
     read_via: WebFetch and in-app browser (date checked)
 
-  - id: dutch-risk-system
-    chain_link: an automated risk system flags people wrongly
-    claim: >-
-      The Dutch Data Protection Authority fined the Tax Administration EUR 2.75 million
-      (7 December 2021), finding among other things that it used applicants' nationality as an
-      indicator in a system that automatically designated childcare-benefit applications as
-      risky.
-    numbers: ["2.75", "2021"]
-    markers: ["Dutch", "nationality"]
-    source_title: "Tax Administration fined for discriminatory and unlawful data processing (7 December 2021)"
-    url: https://www.autoriteitpersoonsgegevens.nl/en/current/tax-administration-fined-for-discriminatory-and-unlawful-data-processing
-    publisher: Autoriteit Persoonsgegevens (Dutch Data Protection Authority)
-    source_type: data protection authority decision (news release)
-    retrieved: "2026-11-04"
-    read_via: in-app browser (WebFetch returned HTTP 403)
-
 # What the search did not find (stated plainly, not a gap conclusion).
 not_found:
   - >-
