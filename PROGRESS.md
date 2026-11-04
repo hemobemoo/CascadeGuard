@@ -14,9 +14,11 @@ merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
-**Branch `report-feedback` (2026-11-04): organizer feedback on the technical report. Pushed; PR
-opened for review, NOT MERGED. WAITING ON HUMAN (gate 7): approval of the final report wording (the new "How it
-works" paragraph and the §4 cited-documents table, as rebuilt in the .docx and PDF).**
+**Organizer feedback on the technical report: merged to main via PR #31 (merge commit bdf1013,
+2026-11-04), CI green, on the human's gate-7 approval of the report wording with two fixes:
+the §4 column is "Binding in the UAE" (clause `binding` records whether a text binds in the UAE,
+not in its own jurisdiction; no clause YAML edited), and the §4 heading is "Policy documents
+loaded and cited by the agents". Final PDF: 5 pages. Branch `report-feedback` kept.**
 Feedback asked for (1) "a mapping of the policy documents the agents cited" and (2) "Was there
 such an incident before? Explain the use case background." engine/, simulation/, agents/,
 policies/, scenarios/ unchanged; no API call.
@@ -1415,9 +1417,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**report-feedback (2026-11-04), gate 7:** the human approves the final report wording (the
-"How it works" paragraph and the §4 "Policy documents loaded and cited by the agents" table, in the .md, .docx
-and PDF) before the PR is merged. Open QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): no
+**report-feedback (PR #31, merged 2026-11-04, bdf1013):** gate 7 done (wording approved with
+two fixes). Still open QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): no
 reviewer could fetch the precedent sources; spot-check the figures against the ACMA, Senate
 committee, JAMA and CFPB pages (`docs/report/background-sources.yaml` has the URLs).
 
@@ -1643,9 +1644,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**Now:** branch `report-feedback` (organizer feedback: citation map, precedents, report §2/§4).
-Waiting on the human's gate-7 approval of the final report wording; then merge the PR. Do not
-merge before. See "Start here".
+**Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
+PR #31 (bdf1013); final PDF 5 pages. Open: the human's spot-check of the precedent figures (see
+"Waiting on human"). See "Start here".
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
