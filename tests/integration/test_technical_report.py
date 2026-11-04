@@ -155,6 +155,9 @@ def test_a_number_without_its_claim_is_refused() -> None:
     assert _unsourced(f"{BACKGROUND_MARKER} Optus 2023: 10.2 million.", facts) == []
     assert _unsourced(f"{BACKGROUND_MARKER} An outage hit 10.2 million.", facts) == ["10.2"]
     assert _unsourced(f"{BACKGROUND_MARKER} Optus 2023: 11 million.", facts) == ["11"]
+    # Every fact needs at least two markers, so a bare name does not unlock its numbers.
+    assert all(len(f["markers"]) >= 2 for f in facts)
+    assert _unsourced(f"{BACKGROUND_MARKER} Bank of America lost 100 days.", facts) == ["100"]
 
 
 def test_background_sources_are_complete() -> None:
