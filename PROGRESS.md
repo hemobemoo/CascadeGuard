@@ -28,6 +28,7 @@ rows (8 source documents + the illustrative group); 120 citations (15 scripted, 
   computed, not typed; "Binding" caveat line; pinned totals/assignment and `--check` tests).
   The auditor's QUESTION-FOR-HUMAN items are older, unchanged clauses (dha.pp11.4-18-5,
   mocai.ethics.fallback-plan, the two cyber-strategy-2025 drafts), none cited in the map.
+  **Human decision 2026-11-04: no change to any of them; already decided earlier.**
 - **Next:** the human reviews the map; then (separately) the technical report may link it.
   The report is not touched yet.
 
