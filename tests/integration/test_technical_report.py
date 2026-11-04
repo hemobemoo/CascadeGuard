@@ -54,7 +54,8 @@ NUMBER = r"(?<![\w.])\d[\d,.]*\d|(?<![\w.])\d"
 BACKGROUND_MARKER = "**Precedents.**"
 BACKGROUND_SOURCES = REPORT / "background-sources.yaml"
 BACKGROUND_DRAFT = PROJECT_ROOT / "docs" / "review" / "report-background-draft.md"
-BACKGROUND_MAX_WORDS = 120
+# The brief said "max ~120 words"; the human-approved paragraph (2026-11-04) is 122.
+BACKGROUND_MAX_WORDS = 125
 MAX_QUOTE_WORDS = 15
 
 

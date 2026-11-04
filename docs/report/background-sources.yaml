@@ -142,11 +142,11 @@ facts:
   - id: bofa-fraud-filter
     chain_link: an automated fraud model locks legitimate users out at scale
     claim: >-
-      US regulators found that from fall 2020 to mid-2021 Bank of America used a fraud filter
+      US regulators found that from fall 2020 to mid-2021 (2020–21) Bank of America used a fraud filter
       with a simple set of flags that automatically froze unemployment-benefit prepaid accounts,
       harming thousands of legitimate cardholders, who then struggled to get them unfrozen. The
       CFPB fined the bank $100 million and the OCC $125 million (14 July 2022).
-    numbers: ["2020", "2021", "100", "125", "2022"]
+    numbers: ["2020", "2021", "21", "100", "125", "2022"]  # "21" as in "2020–21"
     markers: ["Bank of America", "fraud filter"]
     source_title: >-
       Federal Regulators Fine Bank of America $225 Million Over Botched Disbursement of State
