@@ -14,6 +14,23 @@ merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
+**Branch `report-feedback` (2026-11-04, not pushed, no PR yet): citation map.** Organizer
+feedback on the technical report asked for "a mapping of the policy documents the agents cited".
+`scripts/citation_map.py` builds `docs/citation-map.md` from committed data only (scripted
+decisions + scripted trace; gate-4 LLM cache + `baseline.json`/`governance-off.json`); no engine
+run, no API call; engine/, simulation/, agents/, policies/, scenarios/ unchanged. Table (a) has 9
+rows (8 source documents + the illustrative group); 120 citations (15 scripted, 55 live governed,
+50 live ungoverned), 12 of 21 loaded clauses cited, 8 citations in the one rejected decision
+(telecom_operator T+75, `citation_out_of_scope` on `uae.fl2-2019.art4`, both live runs).
+- **Verify:** `uv run python scripts/citation_map.py --check`;
+  `uv run pytest tests/integration/test_citation_map.py` (7 tests). Full suite 704 passed.
+- **Review:** evidence-auditor PASS, test-breaker PASS; their MINORs fixed (shared-step count
+  computed, not typed; "Binding" caveat line; pinned totals/assignment and `--check` tests).
+  The auditor's QUESTION-FOR-HUMAN items are older, unchanged clauses (dha.pp11.4-18-5,
+  mocai.ethics.fallback-plan, the two cyber-strategy-2025 drafts), none cited in the map.
+- **Next:** the human reviews the map; then (separately) the technical report may link it.
+  The report is not touched yet.
+
 **PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
 2026-10-31) on the human's approval of the PR and `expected_ungoverned.yaml`, CI green (663
 passed, 1 skipped: the optional chroma extra). Branch `governance-off` kept (deletion is gate 5).** Human decisions 2026-10-31: option B (waive

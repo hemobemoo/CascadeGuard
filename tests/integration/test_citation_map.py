@@ -3,6 +3,8 @@ and every clause an agent cited is in the loaded clause set."""
 
 import importlib.util
 import json
+from collections import Counter
+from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -82,3 +84,33 @@ def test_each_live_run_maps_every_cached_step(cmap: ModuleType) -> None:
     differing = by_run[cmap.LIVE_GOVERNED] ^ by_run[cmap.LIVE_UNGOVERNED]
     assert differing
     assert all(role == "health_service_operator" and m >= 30 for role, m, _ in differing)
+
+
+def test_live_totals_and_assignment_are_pinned(cmap: ModuleType) -> None:
+    """Counted by hand from the cache files and docs/evaluation/gate4/README.md (36 steps per
+    live run, 32 shared; the health service operator's T+30 to T+75 steps have two entries)."""
+    counts = Counter(c.run for c in cmap.all_citations())
+    assert counts == {cmap.SCRIPTED: 15, cmap.LIVE_GOVERNED: 55, cmap.LIVE_UNGOVERNED: 50}
+    assert cmap.shared_live_steps() == (32, 36)
+    assignment = cmap.live_assignment()
+    expected = {
+        cmap.LIVE_GOVERNED: {30: "a0215ea8", 45: "19e2e943", 60: "836380ba", 75: "66511bb1"},
+        cmap.LIVE_UNGOVERNED: {30: "904b459b", 45: "f01285f6", 60: "ee5402a1", 75: "039ceb36"},
+    }
+    for run, by_minute in expected.items():
+        assert len(assignment[run]) == 36
+        for minute, prefix in by_minute.items():
+            name, _ = assignment[run][("health_service_operator", minute)]
+            assert name.startswith(prefix), (run, minute, name)
+
+
+def test_check_reports_a_stale_file_and_writes_nothing(
+    cmap: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stale = tmp_path / "citation-map.md"
+    stale.write_text("old\n", encoding="utf-8")
+    assert cmap.main(["--check"], output=stale) == 1
+    assert stale.read_text(encoding="utf-8") == "old\n"
+    assert "stale:" in capsys.readouterr().out
+    assert cmap.main([], output=stale) == 0
+    assert cmap.main(["--check"], output=stale) == 0
