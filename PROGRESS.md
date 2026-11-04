@@ -32,6 +32,30 @@ rows (8 source documents + the illustrative group); 120 citations (15 scripted, 
 - **Next:** the human reviews the map; then (separately) the technical report may link it.
   The report is not touched yet.
 
+**Same branch, precedents (organizer question "Was there such an incident before?"),
+2026-11-04. WAITING ON HUMAN (gates 7/8): approval of the paragraph wording.**
+- `docs/report/background-sources.yaml`: 10 facts, background only (never clauses, not in
+  policies/, not read by the engine; a test checks src/). Optus 2023 (Senate committee report
+  ch. 1-2, ACMA, Bean review page), CrowdStrike 2024 (CrowdStrike hub, Microsoft, JAMA Netw Open
+  2025;8(7):e2530226), Bank of America fraud filter (CFPB, 14 Jul 2022), Dutch risk system
+  (Dutch DPA, 7 Dec 2021). Not found: any documented incident combining the whole chain; any
+  case of a network AI model deprioritising OTP SMS. Not used: Rogers 2022 (CRTC page behind a
+  bot check). aph.gov.au, ACMA, infrastructure.gov.au, the Dutch DPA and the CFPB date were read
+  in the in-app browser (human-approved fallback) after WebFetch was refused or timed out.
+- `docs/review/report-background-draft.md`: 120-word `**Precedents.**` paragraph, not in the
+  report.
+- Test change (`test_technical_report.py`): the `**Precedents.**` paragraph is excluded from
+  the scenario-data trace and checked instead against the YAML (a number passes only if listed
+  for a fact whose markers, at least two, all appear in the paragraph); YAML completeness;
+  wording rules (<= 120 words, analogous / not this scenario / hypothetical / synthetic, no gap
+  or overstated wording, no quote over 15 words). LABEL_NUMBERS unchanged. Full suite 708 passed
+  (before the review fixes; the report test file passed 14/14 after them).
+- **Review:** evidence-auditor PASS; its 6 MINORs fixed (wording: "Several links", Optus cause
+  attributed to Optus, "affected" not "crashed", no "at scale"; CrowdStrike dispute and JAMA
+  limitations moved out of the claim into a note; two markers per fact). Its
+  QUESTION-FOR-HUMAN: the auditor could not fetch the web pages, so the human should spot-check
+  the numbers against the ACMA, Senate committee and JAMA pages before approving.
+
 **PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
 2026-10-31) on the human's approval of the PR and `expected_ungoverned.yaml`, CI green (663
 passed, 1 skipped: the optional chroma extra). Branch `governance-off` kept (deletion is gate 5).** Human decisions 2026-10-31: option B (waive
