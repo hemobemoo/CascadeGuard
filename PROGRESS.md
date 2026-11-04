@@ -14,8 +14,8 @@ merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
-**Branch `report-feedback` (2026-11-04): organizer feedback on the technical report. PR open,
-NOT MERGED. WAITING ON HUMAN (gate 7): approval of the final report wording (the new "How it
+**Branch `report-feedback` (2026-11-04): organizer feedback on the technical report. Pushed; PR
+opened for review, NOT MERGED. WAITING ON HUMAN (gate 7): approval of the final report wording (the new "How it
 works" paragraph and the §4 cited-documents table, as rebuilt in the .docx and PDF).**
 Feedback asked for (1) "a mapping of the policy documents the agents cited" and (2) "Was there
 such an incident before? Explain the use case background." engine/, simulation/, agents/,
@@ -57,7 +57,10 @@ policies/, scenarios/ unchanged; no API call.
   `uv run pytest tests/integration/test_citation_map.py tests/integration/test_technical_report.py`
   (22 tests); full suite 709 passed (before the phase-auditor fixes).
 - **Review of the report changes:** phase-auditor round 1 FAIL (PROGRESS stale; structure file
-  missing the new files) -> fixed; evidence-auditor and phase-auditor round 2: see the PR.
+  missing the new files) -> fixed; evidence-auditor PASS (MINOR: Charter issuer, fixed); phase-auditor round 2 FAIL (PROGRESS
+  claimed a PR before it existed; gate 7 missing from "Waiting on human" / "Next step"; MINORs:
+  §4 numbers allowed report-wide, fixed string "1 decision", issuer short form) -> all fixed;
+  round 3 verdict in the PR body.
 - **Next:** the human approves the final report wording (gate 7); then merge. Do not merge before.
 
 **PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
@@ -1412,6 +1415,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**report-feedback (2026-11-04), gate 7:** the human approves the final report wording (the
+"How it works" paragraph and the §4 "Policy documents the agents cited" table, in the .md, .docx
+and PDF) before the PR is merged. Open QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): no
+reviewer could fetch the precedent sources; spot-check the figures against the ACMA, Senate
+committee, JAMA and CFPB pages (`docs/report/background-sources.yaml` has the URLs).
+
 **PR 3 (vector knowledge base, PR #16): merged 2026-10-30** on the human's instruction after
 three review rounds (round-3 human gates answered: AGENTS.md exception (2) widened, cc8608a; the
 `--kb-context` cache key includes the vectors' SHA-256). Carried forward, see "Open items":
@@ -1633,6 +1642,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+**Now:** branch `report-feedback` (organizer feedback: citation map, precedents, report §2/§4).
+Waiting on the human's gate-7 approval of the final report wording; then merge the PR. Do not
+merge before. See "Start here".
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on

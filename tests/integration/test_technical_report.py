@@ -114,12 +114,41 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
     add(len(live_base["failures"]), "live governed failures")
     for w in live_off["would_have_been_rejected"]:
         add(w["minute"], "live waived minute")
+    return out
+
+
+CITED_TABLE_START = "**Policy documents the agents cited.**"
+
+
+def cited_block(t: str) -> str:
+    """§4's cited-documents block: its lead paragraph, table and note, up to section 5."""
+    if CITED_TABLE_START not in t:
+        return ""
+    return CITED_TABLE_START + t.split(CITED_TABLE_START, 1)[1].split("## 5.", 1)[0]
+
+
+def cited_numbers() -> dict[str, str]:
+    """Numbers the cited-documents block may state, from the citation map only."""
     cmap = _citation_map()
+    out: dict[str, str] = {}
     for counts in cmap.document_counts().values():
         for run in cmap.RUNS:
-            add(counts[run], f"citation map: {run} citations of a document")
-    add(cmap.shared_live_steps()[0], "citation map: decisions shared by the live runs")
+            out[str(counts[run])] = f"citation map: {run} citations of a document"
+    out[str(cmap.shared_live_steps()[0])] = "citation map: decisions shared by the live runs"
+    for n in _rejected_per_live_run(cmap).values():
+        out[str(n)] = "citation map: rejected decisions per live run"
     return out
+
+
+def _rejected_per_live_run(cmap: Any) -> dict[str, int]:
+    steps: dict[str, set[tuple[str, int]]] = {
+        cmap.LIVE_GOVERNED: set(),
+        cmap.LIVE_UNGOVERNED: set(),
+    }
+    for c in cmap.all_citations():
+        if c.verdict != "accepted" and c.run in steps:
+            steps[c.run].add((c.role, c.minute))
+    return {run: len(s) for run, s in steps.items()}
 
 
 # §4 "Policy documents the agents cited": report row label -> source file (None = illustrative).
@@ -205,7 +234,9 @@ def test_the_cited_documents_table_matches_the_citation_map() -> None:
         assert cells[3] == ("; ".join(uses) or "loaded, not cited"), name
     shared, _ = cmap.shared_live_steps()
     assert f"The two live runs share {shared} decisions" in section4
-    assert "1 decision rejected (citation out of scope)" in section4
+    per_run = set(_rejected_per_live_run(cmap).values())
+    assert len(per_run) == 1, per_run
+    assert f"{per_run.pop()} decision rejected (citation out of scope)" in section4
     assert "docs/citation-map.md" in section4
     rejected = {(c.run, c.role, c.minute) for c in cmap.all_citations() if c.verdict != "accepted"}
     assert rejected == {
@@ -219,6 +250,19 @@ def test_every_number_is_traced_to_the_data(runs: ScriptedRuns) -> None:
     body = text().replace("\r\n", "\n")
     for paragraph in background_paragraphs(body):  # checked against its sources instead
         body = body.replace(paragraph, "")
+    block = cited_block(body)  # checked against the citation map only
+    if block:
+        body = body.replace(block, "")
+        others = {
+            **cited_numbers(),
+            **{f"{e.at_minute}": "inject minute" for e in runs.world.scenario.events},
+        }
+        stray = [
+            n
+            for n in re.findall(NUMBER, re.sub(r"`[^`]+`", "", block))
+            if n.rstrip(".,") not in others and n.rstrip(".,") not in LABEL_NUMBERS
+        ]
+        assert not stray, f"cited-documents numbers not from the citation map: {sorted(set(stray))}"
     body = re.sub(r"`[^`]+`", "", body)  # ids are checked separately
     body = re.sub(r"\S+@\S+|https?://\S+", "", body)  # contact address and links
     body = body.replace("2026-10-31", "")
