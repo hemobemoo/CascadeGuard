@@ -23,7 +23,7 @@ PDF is built from the source with `uv run python scripts/report_pdf/build.py`).
 |---|---|
 | Team | GM of AI |
 | Member | Ibrahim Melhem |
-| Affiliation | Al Balqa Applied University, Faculty of AI |
+| Affiliation | Al Balqa Applied University, Faculty of Artificial Intelligence |
 | Mentor | Dr. Wafaa Almaaitah |
 
 ## What it found

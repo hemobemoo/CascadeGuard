@@ -139,8 +139,8 @@ then locked.
   committed PDF.
 - **Form:** fill the organizers' template (`../AI-for-Good-Sandbox-Hackathon-submission-template.docx`,
   kept outside the repo), keeping its header and styles; at most 5 pages. Header: team leader and
-  member Ibrahim Melhem, Al Balqa Applied University, Faculty of AI, mentor Dr. Wafaa Almaaitah; the contact
-  email is in the report only, never in the README.
+  member Ibrahim Melhem, Al Balqa Applied University, Faculty of Artificial Intelligence, mentor
+  Dr. Wafaa Almaaitah; the contact email is in the report only, never in the README.
 - **Gate 7:** all eight governed-vs-ungoverned sentences of §5/§6 approved, with two changes
   (applied in 7020545): sentence 5 adds "in this scripted replay where agents do not adapt"; the
   undefined-trigger item says "it stays open for expert review" (the fallback-channel item keeps
