@@ -150,12 +150,15 @@ def _proposed(decision: Any) -> Counter[tuple[str, str | None]]:
     return Counter((str(a["action_type"]), a.get("target")) for a in decision["proposed_actions"])
 
 
-def live_citations() -> list[Citation]:
-    """Each cache entry is assigned to the live run(s) that used it. A (role, minute) step with
-    one entry was used by both runs; with several, each run's entry is the one whose proposed
-    actions equal that run's exported actions for the step."""
+Step = tuple[str, int]  # (role, minute)
+
+
+def live_assignment() -> dict[str, dict[Step, tuple[str, Any]]]:
+    """run -> step -> (cache file name, decision). A step with one cache entry was used by both
+    live runs; with several, each run's entry is the one whose proposed actions equal that run's
+    exported actions for the step."""
     start = datetime.fromisoformat(str(_read_yaml(SCENARIO_FILE)["start_time"]))
-    steps: dict[tuple[str, int], list[Any]] = defaultdict(list)
+    steps: dict[Step, list[tuple[str, Any]]] = defaultdict(list)
     for path in sorted(LLM_CACHE.glob("*.json")):
         entry = _read_json(path)
         if entry["outcome"] != "decision":
@@ -164,22 +167,43 @@ def live_citations() -> list[Citation]:
         seconds = (datetime.fromisoformat(str(decision["at"])) - start).total_seconds()
         if seconds % 60 or decision["role_id"] != entry["role_id"]:
             raise CitationMapError(f"{path.name}: unexpected time or role")
-        steps[(str(entry["role_id"]), int(seconds // 60))].append(decision)
+        steps[(str(entry["role_id"]), int(seconds // 60))].append((path.name, decision))
     governed = _read_json(LIVE_BASELINE)
     ungoverned = _read_json(LIVE_GOVERNANCE_OFF)["ungoverned_run"]
-    out: list[Citation] = []
+    out: dict[str, dict[Step, tuple[str, Any]]] = {}
     for run, export in ((LIVE_GOVERNED, governed), (LIVE_UNGOVERNED, ungoverned)):
         rejected = _rejections(export)
+        out[run] = {}
         for key in sorted(steps):
             entries = steps[key]
             if key in rejected:  # a rejected decision's actions are not exported
                 chosen = entries
             else:
                 exported = _actions(export["actions"], *key)
-                chosen = [d for d in entries if _proposed(d) == exported]
+                chosen = [e for e in entries if _proposed(e[1]) == exported]
             if len(chosen) != 1:
                 raise CitationMapError(f"{run} {key}: {len(chosen)} matching cache entries")
-            for cid in _unique_ids(chosen[0]["citations"]):
+            out[run][key] = chosen[0]
+    return out
+
+
+def shared_live_steps() -> tuple[int, int]:
+    """(steps whose cache entry both live runs used, steps in the ungoverned run)."""
+    a = live_assignment()
+    gov, ungov = a[LIVE_GOVERNED], a[LIVE_UNGOVERNED]
+    return sum(1 for k in ungov if gov.get(k, ("",))[0] == ungov[k][0]), len(ungov)
+
+
+def live_citations() -> list[Citation]:
+    out: list[Citation] = []
+    exports = {
+        LIVE_GOVERNED: _read_json(LIVE_BASELINE),
+        LIVE_UNGOVERNED: _read_json(LIVE_GOVERNANCE_OFF)["ungoverned_run"],
+    }
+    for run, steps in live_assignment().items():
+        rejected = _rejections(exports[run])
+        for key, (_, decision) in steps.items():
+            for cid in _unique_ids(decision["citations"]):
                 out.append(Citation(cid, key[0], key[1], run, _verdict(cid, key, rejected)))
     return out
 
@@ -228,6 +252,7 @@ def build(clauses: dict[str, PolicyClause] | None = None) -> str:
     def doc_order(doc: str) -> tuple[bool, str]:
         return (doc == ILLUSTRATIVE_DOC, doc)
 
+    shared, ungoverned_steps = shared_live_steps()
     n_runs = Counter(c.run for c in citations)
     rejected = [c for c in citations if c.verdict != "accepted"]
     cited_docs = [d for d in by_doc if any(c.id in by_clause for c in by_doc[d])]
@@ -247,8 +272,8 @@ def build(clauses: dict[str, PolicyClause] | None = None) -> str:
         "from `docs/evaluation/traces/uae_health_access-baseline.json`. _Live governed_ and "
         "_live ungoverned_: the gate-4 LLM recording (`docs/evaluation/gate4/llm_cache/`, "
         "verdicts from `baseline.json` and `governance-off.json` there). The ungoverned run "
-        "reused 32 of its 36 decisions from the governed run, so those citations are counted "
-        "in both live runs.",
+        f"reused {shared} of its {ungoverned_steps} decisions from the governed run, so those "
+        "citations are counted in both live runs.",
         "- **Counted once per decision.** A clause cited twice in one decision counts once.",
         "- **Accepted** means the engine accepted the decision's citations (every cited clause "
         "loaded and in scope); each proposed action is still judged on its own. **Rejected** "
@@ -258,6 +283,9 @@ def build(clauses: dict[str, PolicyClause] | None = None) -> str:
         "- **Status label** as shown by the engine and UI: `reviewed` = checked by the human "
         "against the source; `(interpreted)` = the machine-readable reading is an "
         "interpretation; `illustrative` = scenario-only, not from any source.",
+        "- **Binding** describes the instrument in its own jurisdiction, not whether it applies "
+        "to this scenario; each clause's scope and applicability notes are in its YAML file in "
+        "`policies/reviewed/`.",
         "",
         f"Totals: {len(citations)} citations ({n_runs[SCRIPTED]} scripted governed, "
         f"{n_runs[LIVE_GOVERNED]} live governed, {n_runs[LIVE_UNGOVERNED]} live ungoverned), "
@@ -331,19 +359,21 @@ def build(clauses: dict[str, PolicyClause] | None = None) -> str:
     return "\n".join(lines)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None, output: Path = OUTPUT) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="compare only; write nothing")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     text = build()
-    old = OUTPUT.read_text(encoding="utf-8").replace("\r\n", "\n") if OUTPUT.exists() else None
-    shown = OUTPUT.relative_to(PROJECT_ROOT).as_posix()
+    old = output.read_text(encoding="utf-8").replace("\r\n", "\n") if output.exists() else None
+    shown = output.as_posix()
+    if output.is_relative_to(PROJECT_ROOT):
+        shown = output.relative_to(PROJECT_ROOT).as_posix()
     if old == text:
         return 0
     if args.check:
         print(f"stale: {shown}")
         return 1
-    OUTPUT.write_text(text, encoding="utf-8", newline="\n")
+    output.write_text(text, encoding="utf-8", newline="\n")
     print(f"wrote {shown}")
     return 0
 
