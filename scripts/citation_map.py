@@ -212,6 +212,23 @@ def all_citations() -> list[Citation]:
     return scripted_citations() + live_citations()
 
 
+def document_counts(
+    clauses: dict[str, PolicyClause] | None = None,
+) -> dict[str | None, Counter[str]]:
+    """Citations per run for each source file with loaded clauses (None = illustrative)."""
+    clauses = load_engine_clauses() if clauses is None else clauses
+    out: dict[str | None, Counter[str]] = {c.source_file: Counter() for c in clauses.values()}
+    for c in all_citations():
+        out[clauses[c.clause_id].source_file][c.run] += 1
+    return out
+
+
+def document_binding(source_file: str | None) -> str:
+    """The binding cell of table (a) for one source file."""
+    clauses = [c for c in load_engine_clauses().values() if c.source_file == source_file]
+    return _binding(clauses)
+
+
 def document_of(clause: PolicyClause) -> str:
     if clause.source_file is None:
         return ILLUSTRATIVE_DOC

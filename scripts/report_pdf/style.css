@@ -90,6 +90,7 @@ h2 .num {
 }
 h2 .num::after { content: "."; }
 p.lead strong:first-child, p.run strong:first-child { color: var(--accent); }
+p { break-inside: avoid; }  /* a split paragraph puts the page footer inside it */
 
 figure { margin: 3pt 0 7pt; break-inside: avoid; }
 svg.fig { width: 100%; height: auto; display: block; font-family: "Inter"; }
@@ -126,6 +127,9 @@ table.map td.node { font-weight: 700; color: var(--accent); }
 table.map td code { font-size: 0.9em; }
 table.results td:first-child { width: 30%; font-weight: 550; color: var(--ink); }
 table.results tr.rep td { background: #f0fdf4; }
+table.cited th, table.cited td { padding: 2.6pt 5pt; font-size: 7.6pt; line-height: 1.28; }
+table.cited td:first-child { width: 27%; font-weight: 550; color: var(--ink); }
+table.cited td:nth-child(n+5), table.cited th:nth-child(n+5) { width: 7%; text-align: right; }
 .pill { display: inline-block; padding: 0.6pt 6pt; border-radius: 9px; font-weight: 600; font-size: 7.4pt; }
 .pill.ok { background: var(--ok-soft); color: var(--ok); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); }
