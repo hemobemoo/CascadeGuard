@@ -300,9 +300,9 @@ def build(clauses: dict[str, PolicyClause] | None = None) -> str:
         "- **Status label** as shown by the engine and UI: `reviewed` = checked by the human "
         "against the source; `(interpreted)` = the machine-readable reading is an "
         "interpretation; `illustrative` = scenario-only, not from any source.",
-        "- **Binding** describes the instrument in its own jurisdiction, not whether it applies "
-        "to this scenario; each clause's scope and applicability notes are in its YAML file in "
-        "`policies/reviewed/`.",
+        "- **Binding:** binding means binding in the UAE, as recorded on each clause; it does "
+        "not mean the document applies to this scenario. Each clause's scope and applicability "
+        "notes are in its YAML file in `policies/reviewed/`.",
         "",
         f"Totals: {len(citations)} citations ({n_runs[SCRIPTED]} scripted governed, "
         f"{n_runs[LIVE_GOVERNED]} live governed, {n_runs[LIVE_UNGOVERNED]} live ungoverned), "
