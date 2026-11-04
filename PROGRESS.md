@@ -55,12 +55,12 @@ policies/, scenarios/ unchanged; no API call.
   background-sources.yaml, not the scenario data; LABEL_NUMBERS unchanged.
 - **Verify:** `uv run python scripts/citation_map.py --check`;
   `uv run pytest tests/integration/test_citation_map.py tests/integration/test_technical_report.py`
-  (22 tests); full suite 709 passed (before the phase-auditor fixes).
+  (22 tests); full suite 709 passed at bd55a89 (phase-auditor round 3).
 - **Review of the report changes:** phase-auditor round 1 FAIL (PROGRESS stale; structure file
   missing the new files) -> fixed; evidence-auditor PASS (MINOR: Charter issuer, fixed); phase-auditor round 2 FAIL (PROGRESS
   claimed a PR before it existed; gate 7 missing from "Waiting on human" / "Next step"; MINORs:
   §4 numbers allowed report-wide, fixed string "1 decision", issuer short form) -> all fixed;
-  round 3 verdict in the PR body.
+  phase-auditor round 3 PASS (PR #31; MINOR: test-count note, fixed).
 - **Next:** the human approves the final report wording (gate 7); then merge. Do not merge before.
 
 **PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
