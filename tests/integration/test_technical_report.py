@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 import yaml
 
+from cascadeguard.domain.policies import is_uae_jurisdiction
 from cascadeguard.domain.repairs import RepairOperationType
 from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
 from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
@@ -50,7 +51,7 @@ LABEL_NUMBERS = {
 NUMBER = r"(?<![\w.])\d[\d,.]*\d|(?<![\w.])\d"
 # The precedents paragraph (organizer question "Was there such an incident before?"): its numbers
 # describe real, analogous incidents, so they trace to docs/report/background-sources.yaml, not
-# to the scenario data. The draft awaits human approval (gates 7/8) before it enters the report.
+# to the scenario data. Approved by the human (gates 7/8, 2026-11-04); the draft file keeps a copy.
 BACKGROUND_MARKER = "**Precedents.**"
 BACKGROUND_SOURCES = REPORT / "background-sources.yaml"
 BACKGROUND_DRAFT = PROJECT_ROOT / "docs" / "review" / "report-background-draft.md"
@@ -196,8 +197,11 @@ def test_the_cited_documents_table_matches_the_citation_map() -> None:
         uses: list[str] = []
         if sum(n.values()):
             uses.append("cited by agents")
-        if any(c.id in examples and c.source_file == source for c in loaded):
-            uses.append("global example in the gap analysis")
+        mapped = [c for c in loaded if c.id in examples and c.source_file == source]
+        if mapped:  # gap_examples.yaml: "global and UAE-principle examples"
+            uae = all(is_uae_jurisdiction(c.jurisdiction) for c in mapped)
+            kind = "UAE-principle" if uae else "global"
+            uses.append(f"{kind} example in the gap analysis")
         assert cells[3] == ("; ".join(uses) or "loaded, not cited"), name
     shared, _ = cmap.shared_live_steps()
     assert f"The two live runs share {shared} decisions" in section4

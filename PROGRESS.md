@@ -14,47 +14,51 @@ merge a140c22), both 2026-10-31.
 The submission deadline is 10 Nov 2026 (repo link by email). The demo runs on scripted agents
 with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access`.
 
-**Branch `report-feedback` (2026-11-04, not pushed, no PR yet): citation map.** Organizer
-feedback on the technical report asked for "a mapping of the policy documents the agents cited".
-`scripts/citation_map.py` builds `docs/citation-map.md` from committed data only (scripted
-decisions + scripted trace; gate-4 LLM cache + `baseline.json`/`governance-off.json`); no engine
-run, no API call; engine/, simulation/, agents/, policies/, scenarios/ unchanged. Table (a) has 9
-rows (8 source documents + the illustrative group); 120 citations (15 scripted, 55 live governed,
-50 live ungoverned), 12 of 21 loaded clauses cited, 8 citations in the one rejected decision
-(telecom_operator T+75, `citation_out_of_scope` on `uae.fl2-2019.art4`, both live runs).
+**Branch `report-feedback` (2026-11-04): organizer feedback on the technical report. PR open,
+NOT MERGED. WAITING ON HUMAN (gate 7): approval of the final report wording (the new "How it
+works" paragraph and the §4 cited-documents table, as rebuilt in the .docx and PDF).**
+Feedback asked for (1) "a mapping of the policy documents the agents cited" and (2) "Was there
+such an incident before? Explain the use case background." engine/, simulation/, agents/,
+policies/, scenarios/ unchanged; no API call.
+- **Citation map.** `scripts/citation_map.py` builds `docs/citation-map.md` from committed data
+  only (scripted decisions + scripted trace; gate-4 LLM cache + `baseline.json` /
+  `governance-off.json`). Table (a): 9 rows (8 documents + the illustrative group); 120 citations
+  (15 scripted, 55 live governed, 50 live ungoverned; the live runs share 32 decisions); 12 of 21
+  loaded clauses cited; 1 rejected decision per live run (telecom_operator T+75,
+  `citation_out_of_scope`). Review: evidence-auditor PASS, test-breaker PASS, MINORs fixed. The
+  auditor's older QUESTION-FOR-HUMAN items (dha.pp11.4-18-5, mocai.ethics.fallback-plan, the two
+  cyber-strategy-2025 drafts): **human decision 2026-11-04: no change; already decided.**
+- **Precedents.** `docs/report/background-sources.yaml`: 9 facts, background only (never clauses,
+  not in policies/, not read by the engine; a test checks src/). Optus 2023 (Senate committee
+  report ch. 1-2, ACMA, Bean review page), CrowdStrike 2024 (CrowdStrike hub, Microsoft, JAMA Netw
+  Open 2025;8(7):e2530226), Bank of America fraud filter (CFPB, 14 Jul 2022). Dropped on the
+  human's instruction: the Dutch risk system. Not used: Rogers 2022 (CRTC page behind a bot
+  check). Not found: any documented incident combining the whole chain; any network AI model
+  deprioritising OTP SMS. aph.gov.au, ACMA, infrastructure.gov.au and the CFPB date were read in
+  the in-app browser (human-approved fallback) after WebFetch was refused or timed out.
+  **Paragraph approved by the human (gates 7/8, 2026-11-04) with three edits; commit eda7822
+  "Approved by human: precedents paragraph"**; 122 words (test limit raised 120 -> 125, brief
+  said "max ~120"). Copy kept in `docs/review/report-background-draft.md`. Open
+  QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): reviewers could not fetch the web pages;
+  spot-check the figures against the ACMA, Senate committee and JAMA pages.
+- **Report (commit 21e3781 and the review fixes), as the human specified:** §2 starts with the
+  approved Precedents paragraph, then "How it works" (5 numbered sentences, no new numbers), then
+  the existing text; §4 adds "Policy documents the agents cited" after the mapping table
+  (separate scripted / live governed / live ungoverned columns; shared-decision note;
+  "1 decision rejected (citation out of scope)"; link to docs/citation-map.md). Charter row says
+  "UAE-principle example in the gap analysis" (phase-auditor MINOR: gap_examples.yaml calls it a
+  UAE principle, not a global example). docx and PDF rebuilt; **PDF 5 pages**; nothing cut.
+  Build: timeline figure follows the scenario paragraph; only the first §4 table gets the Y.3172
+  diagram; paragraphs no longer split across pages. README links the citation map.
+- **Tests:** `test_technical_report.py` traces the §4 counts to the citation map and checks each
+  row (binding, use, three counts); the Precedents paragraph is checked against
+  background-sources.yaml, not the scenario data; LABEL_NUMBERS unchanged.
 - **Verify:** `uv run python scripts/citation_map.py --check`;
-  `uv run pytest tests/integration/test_citation_map.py` (7 tests). Full suite 704 passed.
-- **Review:** evidence-auditor PASS, test-breaker PASS; their MINORs fixed (shared-step count
-  computed, not typed; "Binding" caveat line; pinned totals/assignment and `--check` tests).
-  The auditor's QUESTION-FOR-HUMAN items are older, unchanged clauses (dha.pp11.4-18-5,
-  mocai.ethics.fallback-plan, the two cyber-strategy-2025 drafts), none cited in the map.
-  **Human decision 2026-11-04: no change to any of them; already decided earlier.**
-- **Next:** the human reviews the map; then (separately) the technical report may link it.
-  The report is not touched yet.
-
-**Same branch, precedents (organizer question "Was there such an incident before?"),
-2026-11-04. WAITING ON HUMAN (gates 7/8): approval of the paragraph wording.**
-- `docs/report/background-sources.yaml`: 9 facts, background only (never clauses, not in
-  policies/, not read by the engine; a test checks src/). Optus 2023 (Senate committee report
-  ch. 1-2, ACMA, Bean review page), CrowdStrike 2024 (CrowdStrike hub, Microsoft, JAMA Netw Open
-  2025;8(7):e2530226), Bank of America fraud filter (CFPB, 14 Jul 2022); the Dutch
-  risk-system precedent was dropped on the human's instruction (2026-11-04). Not found: any documented incident combining the whole chain; any
-  case of a network AI model deprioritising OTP SMS. Not used: Rogers 2022 (CRTC page behind a
-  bot check). aph.gov.au, ACMA, infrastructure.gov.au and the CFPB date were read
-  in the in-app browser (human-approved fallback) after WebFetch was refused or timed out.
-- `docs/review/report-background-draft.md`: 120-word `**Precedents.**` paragraph, not in the
-  report.
-- Test change (`test_technical_report.py`): the `**Precedents.**` paragraph is excluded from
-  the scenario-data trace and checked instead against the YAML (a number passes only if listed
-  for a fact whose markers, at least two, all appear in the paragraph); YAML completeness;
-  wording rules (<= 120 words, analogous / not this scenario / hypothetical / synthetic, no gap
-  or overstated wording, no quote over 15 words). LABEL_NUMBERS unchanged. Full suite 708 passed
-  (before the review fixes; the report test file passed 14/14 after them).
-- **Review:** evidence-auditor PASS; its 6 MINORs fixed (wording: "Several links", Optus cause
-  attributed to Optus, "affected" not "crashed", no "at scale"; CrowdStrike dispute and JAMA
-  limitations moved out of the claim into a note; two markers per fact). Its
-  QUESTION-FOR-HUMAN: the auditor could not fetch the web pages, so the human should spot-check
-  the numbers against the ACMA, Senate committee and JAMA pages before approving.
+  `uv run pytest tests/integration/test_citation_map.py tests/integration/test_technical_report.py`
+  (22 tests); full suite 709 passed (before the phase-auditor fixes).
+- **Review of the report changes:** phase-auditor round 1 FAIL (PROGRESS stale; structure file
+  missing the new files) -> fixed; evidence-auditor and phase-auditor round 2: see the PR.
+- **Next:** the human approves the final report wording (gate 7); then merge. Do not merge before.
 
 **PR 4, `--governance off`: done, merged to main via PR #17 (merge commit 824b00a,
 2026-10-31) on the human's approval of the PR and `expected_ungoverned.yaml`, CI green (663
