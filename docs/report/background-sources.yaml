@@ -1,0 +1,177 @@
+# Background references for the technical report's precedents paragraph (organizer question:
+# "Was there such an incident before? Explain the use case background.").
+#
+# Background only: these are analogous real incidents, NOT this scenario, which stays
+# hypothetical with synthetic data. They are never policy clauses, never in policies/, never
+# read by the engine, and never evidence of a legal or standards gap.
+#
+# One entry per fact. `claim` is in our words (no quote over 15 words). `numbers` lists every
+# number the claim uses, exactly as the report paragraph writes it; a number in that paragraph
+# passes tests/integration/test_technical_report.py only if it is listed here for a fact whose
+# `markers` all appear in the paragraph. `read_via` records how the page was read (WebFetch, or
+# the in-app browser where WebFetch was refused or timed out; read only, no forms, no sign-in).
+retrieved: "2026-11-04"
+facts:
+  - id: optus-outage-scope
+    chain_link: telecom network failure cuts essential services
+    claim: >-
+      On 8 November 2023 Optus, Australia's second largest network provider, had an unplanned
+      nationwide outage of about 12 hours that cut internet, mobile and fixed-line services and
+      disrupted online banking, emergency calls, government services and business payments.
+    numbers: ["2023", "12"]
+    markers: ["Optus", "2023"]
+    source_title: "Optus Network Outage, Chapter 1 - Introduction (final report, 27 September 2024)"
+    url: https://www.aph.gov.au/Parliamentary_Business/Committees/Senate/Environment_and_Communications/OptusNetworkOutage/Report/Chapter_1_-_Introduction
+    publisher: Parliament of Australia, Senate Environment and Communications References Committee
+    source_type: parliamentary committee report
+    retrieved: "2026-11-04"
+    read_via: in-app browser (WebFetch returned HTTP 403)
+
+  - id: optus-outage-subscribers-cause
+    chain_link: a change in a network's automated systems propagates into an outage
+    claim: >-
+      An estimated 10.2 million Optus subscribers were affected. Optus attributed the outage to
+      routing-information changes received from an international peering network after a
+      routine software upgrade, which exceeded preset safety limits on key routers.
+    numbers: ["10.2"]
+    markers: ["Optus", "10.2"]
+    source_title: "Optus Network Outage, Chapter 2 - The Optus network outage (final report, 27 September 2024)"
+    url: https://www.aph.gov.au/Parliamentary_Business/Committees/Senate/Environment_and_Communications/OptusNetworkOutage/Report/Chapter_2_-_The_Optus_network_outage
+    publisher: Parliament of Australia, Senate Environment and Communications References Committee
+    source_type: parliamentary committee report
+    retrieved: "2026-11-04"
+    read_via: in-app browser (WebFetch returned HTTP 403)
+
+  - id: optus-outage-health
+    chain_link: telecom failure reaches health services
+    claim: >-
+      The committee reports that the outage affected hospitals and healthcare providers,
+      including phone services at Ramsay Health Care's 70 hospitals and clinics.
+    numbers: ["70"]
+    markers: ["Optus", "hospitals"]
+    source_title: "Optus Network Outage, Chapter 2 - The Optus network outage (final report, 27 September 2024)"
+    url: https://www.aph.gov.au/Parliamentary_Business/Committees/Senate/Environment_and_Communications/OptusNetworkOutage/Report/Chapter_2_-_The_Optus_network_outage
+    publisher: Parliament of Australia, Senate Environment and Communications References Committee
+    source_type: parliamentary committee report
+    retrieved: "2026-11-04"
+    read_via: in-app browser (WebFetch returned HTTP 403)
+
+  - id: optus-triple-zero
+    chain_link: telecom failure blocks a safety-critical channel
+    claim: >-
+      The telecom regulator found that Optus failed to provide access to the emergency call
+      service for 2,145 people during the outage and failed to conduct 369 welfare checks;
+      Optus subsidiaries paid penalties of more than $12 million.
+    numbers: ["2,145", "369", "12"]
+    markers: ["Optus", "2,145"]
+    source_title: "Optus pays $12 million penalty for Triple Zero outage (8 November 2024)"
+    url: https://www.acma.gov.au/articles/2024-11/optus-pays-12-million-penalty-triple-zero-outage
+    publisher: Australian Communications and Media Authority (ACMA)
+    source_type: regulator enforcement release
+    retrieved: "2026-11-04"
+    read_via: in-app browser (WebFetch timed out)
+
+  - id: optus-bean-review
+    chain_link: coordination and communication during an outage
+    claim: >-
+      A government-commissioned post-incident review (Richard Bean, final report 21 March 2024)
+      made 18 recommendations, including rules on how carriers communicate during and after an
+      outage; the government accepted all 18.
+    numbers: ["18", "2024"]
+    markers: ["Optus", "18"]
+    source_title: "Review into the Optus outage of 8 November 2023"
+    url: https://www.infrastructure.gov.au/media-communications/phone/review-optus-outage-8-november-2023
+    publisher: >-
+      Australian Government, Department of Infrastructure, Transport, Regional Development,
+      Communications, Sport and the Arts
+    source_type: government-commissioned post-incident review (department summary page)
+    retrieved: "2026-11-04"
+    read_via: in-app browser (WebFetch timed out)
+
+  - id: crowdstrike-update
+    chain_link: an automated update to a widely deployed system fails at scale
+    claim: >-
+      On 19 July 2024 CrowdStrike released a content configuration update for its Windows sensor
+      that crashed systems; it was reverted 78 minutes later. CrowdStrike says a bug in its
+      content validator let the faulty template instance pass validation.
+    numbers: ["2024", "78"]
+    markers: ["CrowdStrike", "2024"]
+    source_title: "Remediation and Guidance Hub: Channel File 291 Incident (incl. root cause analysis executive summary)"
+    url: https://www.crowdstrike.com/falcon-content-update-remediation-and-guidance-hub/
+    publisher: CrowdStrike
+    source_type: company post-incident review
+    retrieved: "2026-11-04"
+    read_via: WebFetch
+
+  - id: crowdstrike-devices
+    chain_link: an automated update to a widely deployed system fails at scale
+    claim: >-
+      Microsoft estimated that the CrowdStrike update affected 8.5 million Windows devices,
+      under one percent of all Windows machines.
+    numbers: ["8.5"]
+    markers: ["CrowdStrike", "8.5"]
+    source_title: "Helping our customers through the CrowdStrike outage (20 July 2024)"
+    url: https://blogs.microsoft.com/blog/2024/07/20/helping-our-customers-through-the-crowdstrike-outage/
+    publisher: Microsoft (David Weston, Vice President, Enterprise and OS Security)
+    source_type: company statement (affected platform vendor)
+    retrieved: "2026-11-04"
+    read_via: WebFetch
+
+  - id: crowdstrike-hospitals
+    chain_link: an IT failure reaches patient-facing health services, including patient portals
+    claim: >-
+      A peer-reviewed study measured network service disruptions coinciding with the CrowdStrike
+      update at 759 of 2232 US hospitals with available data; 239 of 1098 disrupted services were
+      patient-facing, including patient access platforms (portals).
+    numbers: ["759", "2232", "239", "1098"]
+    markers: ["CrowdStrike", "759"]
+    source_title: >-
+      Tully JL, Rao S, Straw I, et al. Patient Care Technology Disruptions Associated With the
+      CrowdStrike Outage. JAMA Netw Open. 2025;8(7):e2530226
+    url: https://jamanetwork.com/journals/jamanetworkopen/fullarticle/10.1001/jamanetworkopen.2025.30226
+    publisher: JAMA Network Open (American Medical Association); authors at University of California, San Diego
+    source_type: peer-reviewed study
+    retrieved: "2026-11-04"
+    read_via: WebFetch (counts and patient-access wording read verbatim from the article page)
+    note: >-
+      Not part of the claim and not used in the paragraph: the study's stated limitations (it
+      did not measure patient harm) were read only from the truncated part of the page, so are
+      unverified here; CrowdStrike's public dispute of the method is known only from news
+      coverage (Becker's Hospital Review, Fierce Healthcare; source type: news).
+
+  - id: bofa-fraud-filter
+    chain_link: an automated fraud model locks legitimate users out at scale
+    claim: >-
+      US regulators found that from fall 2020 to mid-2021 (2020–21) Bank of America used a fraud filter
+      with a simple set of flags that automatically froze unemployment-benefit prepaid accounts,
+      harming thousands of legitimate cardholders, who then struggled to get them unfrozen. The
+      CFPB fined the bank $100 million and the OCC $125 million (14 July 2022).
+    numbers: ["2020", "2021", "21", "100", "125", "2022"]  # "21" as in "2020–21"
+    markers: ["Bank of America", "fraud filter"]
+    source_title: >-
+      Federal Regulators Fine Bank of America $225 Million Over Botched Disbursement of State
+      Unemployment Benefits at Height of Pandemic (14 July 2022)
+    url: https://www.consumerfinance.gov/archive/newsroom/federal-regulators-fine-bank-of-america-225-million-over-botched-disbursement-of-state-unemployment-benefits-at-height-of-pandemic/
+    publisher: US Consumer Financial Protection Bureau (CFPB)
+    source_type: regulator enforcement release
+    retrieved: "2026-11-04"
+    read_via: WebFetch and in-app browser (date checked)
+
+# What the search did not find (stated plainly, not a gap conclusion).
+not_found:
+  - >-
+    No documented incident found that combines the chain: a telecom AI model degrading one-time
+    passcode SMS, a health operator's fraud model mass-locking patients, and a breakdown between
+    the two sectors. Searched: the sources above, the OECD AI Incidents Monitor and the AI
+    Incident Database (newest listings only; their search pages could not be read).
+  - >-
+    No documented case found of a network AI or traffic-management model deprioritising
+    one-time passcode SMS.
+
+# Considered but not used.
+not_used:
+  - id: rogers-2022
+    reason: >-
+      Rogers outage (Canada, 8 July 2022): the CRTC-published Xona Partners executive summary
+      (https://crtc.gc.ca/eng/publications/reports/xona2024.htm) is behind a bot check, and the
+      publications.gc.ca copy only loops to an archive notice; not read, so not used.

@@ -226,7 +226,8 @@ def section_html(idx: int, sec: Any) -> str:
             continue
         if kind == "table":
             rows: list[list[str]] = content
-            tcls = "map" if idx == 4 else "results"
+            first_map = idx == 4 and not any(k == "table" for k, _ in blocks[:i])
+            tcls = "map" if first_map else "cited" if idx == 4 else "results"
             head = "".join(f"<th>{inline(c)}</th>" for c in rows[0])
             body: list[str] = []
             for r in rows[1:]:
@@ -240,7 +241,7 @@ def section_html(idx: int, sec: Any) -> str:
                         cells.append(f"<td>{inline(c)}</td>")
                 rcls = ' class="rep"' if r[0].startswith("Governed + rank-1") else ""
                 body.append(f"<tr{rcls}>" + "".join(cells) + "</tr>")
-            if idx == 4:
+            if first_map:
                 out.append(f'<figure class="pipe">{pipeline_svg()}</figure>')
             out.append(
                 f'<table class="{tcls}"><thead><tr>{head}</tr></thead>'
@@ -263,7 +264,12 @@ def section_html(idx: int, sec: Any) -> str:
         elif idx == 2 and text.startswith("**"):
             cls = "lead"
         out.append(f'<p class="{cls}">{inline(text)}</p>')
-        if idx == 2 and i == 0:
+        # The timeline follows the scenario paragraph: §2's first paragraph without a bold lead.
+        first_plain = next(
+            (j for j, (k, c) in enumerate(blocks) if k == "para" and not str(c).startswith("**")),
+            None,
+        )
+        if idx == 2 and i == first_plain:
             out.append(f'<figure class="tl">{timeline_svg()}</figure>')
         i += 1
     out.append("</section>")
