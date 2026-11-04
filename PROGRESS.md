@@ -40,9 +40,9 @@ policies/, scenarios/ unchanged; no API call.
   the in-app browser (human-approved fallback) after WebFetch was refused or timed out.
   **Paragraph approved by the human (gates 7/8, 2026-11-04) with three edits; commit eda7822
   "Approved by human: precedents paragraph"**; 122 words (test limit raised 120 -> 125, brief
-  said "max ~120"). Copy kept in `docs/review/report-background-draft.md`. Open
-  QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): reviewers could not fetch the web pages;
-  spot-check the figures against the ACMA, Senate committee and JAMA pages.
+  said "max ~120"). Copy kept in `docs/review/report-background-draft.md`. The
+  reviewers could not fetch the web pages; the human spot-checked every figure against its
+  source page (2026-11-04; see "Waiting on human"): closed.
 - **Report (commit 21e3781 and the review fixes), as the human specified:** §2 starts with the
   approved Precedents paragraph, then "How it works" (5 numbered sentences, no new numbers), then
   the existing text; §4 adds "Policy documents loaded and cited by the agents" after the mapping table
@@ -1418,9 +1418,11 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 ## Waiting on human
 
 **report-feedback (PR #31, merged 2026-11-04, bdf1013):** gate 7 done (wording approved with
-two fixes). Still open QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): no
-reviewer could fetch the precedent sources; spot-check the figures against the ACMA, Senate
-committee, JAMA and CFPB pages (`docs/report/background-sources.yaml` has the URLs).
+two fixes). Nothing open. **Precedent spot-check: done by the human (2026-11-04).** Each figure was checked against its
+source page: Senate committee report ch. 2 (4:05am-4:00pm, an estimated 10.2 million subscribers,
+the routing change after a software upgrade, hospitals), the ACMA penalty release, the JAMA
+Network Open study (759 hospitals) and the CFPB release ("thousands of legitimate cardholders",
+fall 2020 to mid-2021). The reviewers' QUESTION-FOR-HUMAN on the precedent figures is closed.
 
 **PR 3 (vector knowledge base, PR #16): merged 2026-10-30** on the human's instruction after
 three review rounds (round-3 human gates answered: AGENTS.md exception (2) widened, cc8608a; the
@@ -1645,8 +1647,7 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 ## Next step
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
-PR #31 (bdf1013); final PDF 5 pages. Open: the human's spot-check of the precedent figures (see
-"Waiting on human"). See "Start here".
+PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".
 
 Gate 4 done (2026-10-31): #19 merged (4e1a642); #20 merged (a140c22) with the snapshot and
 traces in `docs/evaluation/gate4/`. Do not rerun either live run without asking. **PR 5** on
