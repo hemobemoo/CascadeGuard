@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from cascadeguard.domain.repairs import RepairOperationType
-from cascadeguard.engine.constraints import OVERSTATED
+from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
 from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
 from cascadeguard.storage.reports import CONCLUSION_DRAFT, ScriptedRuns, load_gate4, scripted_runs
 
@@ -46,8 +47,27 @@ LABEL_NUMBERS = {
 }
 
 
+NUMBER = r"(?<![\w.])\d[\d,.]*\d|(?<![\w.])\d"
+# The precedents paragraph (organizer question "Was there such an incident before?"): its numbers
+# describe real, analogous incidents, so they trace to docs/report/background-sources.yaml, not
+# to the scenario data. The draft awaits human approval (gates 7/8) before it enters the report.
+BACKGROUND_MARKER = "**Precedents.**"
+BACKGROUND_SOURCES = REPORT / "background-sources.yaml"
+BACKGROUND_DRAFT = PROJECT_ROOT / "docs" / "review" / "report-background-draft.md"
+BACKGROUND_MAX_WORDS = 120
+MAX_QUOTE_WORDS = 15
+
+
 def text() -> str:
     return SOURCE.read_text(encoding="utf-8")
+
+
+def background_paragraphs(t: str) -> list[str]:
+    return [p for p in t.replace("\r\n", "\n").split("\n\n") if p.startswith(BACKGROUND_MARKER)]
+
+
+def background_facts() -> list[dict[str, Any]]:
+    return yaml.safe_load(BACKGROUND_SOURCES.read_text(encoding="utf-8"))["facts"]
 
 
 @pytest.fixture(scope="module")
@@ -97,15 +117,76 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
 
 def test_every_number_is_traced_to_the_data(runs: ScriptedRuns) -> None:
     allowed = traced(runs)
-    body = re.sub(r"`[^`]+`", "", text())  # ids are checked separately
+    body = text().replace("\r\n", "\n")
+    for paragraph in background_paragraphs(body):  # checked against its sources instead
+        body = body.replace(paragraph, "")
+    body = re.sub(r"`[^`]+`", "", body)  # ids are checked separately
     body = re.sub(r"\S+@\S+|https?://\S+", "", body)  # contact address and links
     body = body.replace("2026-10-31", "")
     untraced = [
         n
-        for n in re.findall(r"(?<![\w.])\d[\d,.]*\d|(?<![\w.])\d", body)
+        for n in re.findall(NUMBER, body)
         if n.rstrip(".,") not in allowed and n.rstrip(".,") not in LABEL_NUMBERS
     ]
     assert not untraced, f"numbers not traced to the data: {sorted(set(untraced))}"
+
+
+def _unsourced(paragraph: str, facts: list[dict[str, Any]]) -> list[str]:
+    """Numbers in the paragraph not listed for any fact whose markers all appear in it."""
+    present = [f for f in facts if all(m in paragraph for m in f["markers"])]
+    sourced = {str(n) for f in present for n in f["numbers"]}
+    return [n for n in re.findall(NUMBER, paragraph) if n.rstrip(".,") not in sourced]
+
+
+def test_background_numbers_come_from_the_background_sources() -> None:
+    facts = background_facts()
+    drafts = background_paragraphs(BACKGROUND_DRAFT.read_text(encoding="utf-8"))
+    assert len(drafts) == 1, "the draft holds exactly one precedents paragraph"
+    assert len(background_paragraphs(text())) <= 1
+    for paragraph in drafts + background_paragraphs(text()):
+        assert re.findall(NUMBER, paragraph), "the check must see the paragraph's numbers"
+        assert not _unsourced(paragraph, facts), _unsourced(paragraph, facts)
+
+
+def test_a_number_without_its_claim_is_refused() -> None:
+    """The rule is per claim: a sourced number fails once its claim's markers are absent, and an
+    unlisted number fails even next to a sourced claim."""
+    facts = background_facts()
+    assert _unsourced(f"{BACKGROUND_MARKER} Optus 2023: 10.2 million.", facts) == []
+    assert _unsourced(f"{BACKGROUND_MARKER} An outage hit 10.2 million.", facts) == ["10.2"]
+    assert _unsourced(f"{BACKGROUND_MARKER} Optus 2023: 11 million.", facts) == ["11"]
+
+
+def test_background_sources_are_complete() -> None:
+    facts = background_facts()
+    ids = [f["id"] for f in facts]
+    assert len(ids) == len(set(ids))
+    for f in facts:
+        for key in ("claim", "source_title", "publisher", "source_type", "read_via"):
+            assert str(f[key]).strip(), (f["id"], key)
+        assert f["url"].startswith("https://"), f["id"]
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", f["retrieved"]), f["id"]
+        assert f["markers"], f["id"]
+        for n in f["numbers"]:  # every listed number is stated in the claim itself
+            assert re.search(rf"(?<![\w.]){re.escape(str(n))}(?![\d])", f["claim"]), (f["id"], n)
+    # Background only: never a clause, never read by the engine.
+    assert not BACKGROUND_SOURCES.is_relative_to(PROJECT_ROOT / "policies")
+    for path in (PROJECT_ROOT / "src").rglob("*.py"):
+        assert "background-sources" not in path.read_text(encoding="utf-8"), path
+
+
+def test_the_background_wording_follows_the_rules() -> None:
+    for paragraph in background_paragraphs(BACKGROUND_DRAFT.read_text(encoding="utf-8")) + (
+        background_paragraphs(text())
+    ):
+        assert len(paragraph.split()) <= BACKGROUND_MAX_WORDS, len(paragraph.split())
+        lower = paragraph.lower()
+        assert "analogous" in lower and "not this scenario" in lower
+        assert "hypothetical" in lower and "synthetic" in lower
+        assert not GAP_CLAIM.search(paragraph), GAP_CLAIM.findall(paragraph)
+        assert not OVERSTATED.search(paragraph), OVERSTATED.findall(paragraph)
+        for quote in re.findall(r"[\"“]([^\"”]+)[\"”]", paragraph):  # not apostrophes
+            assert len(quote.split()) <= MAX_QUOTE_WORDS, quote
 
 
 def test_the_stated_facts_match_the_runs(runs: ScriptedRuns) -> None:
