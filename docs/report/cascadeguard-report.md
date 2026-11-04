@@ -50,9 +50,9 @@ Y.3172 is used as an architecture pattern for an institutional decision pipeline
 
 Every clause is shown with its status label (e.g. "reviewed (interpreted) · binding unknown", "illustrative", "not binding · international precedent"); 21 clauses are loaded (19 reviewed, 2 illustrative), drafts never.
 
-**Policy documents the agents cited.** Citations per run, counted once per decision; binding means binding in its own jurisdiction, not that the document applies to this scenario. The clause-level map is in docs/citation-map.md.
+**Policy documents loaded and cited by the agents.** Citations per run, counted once per decision; binding means binding in the UAE, as recorded on each clause; it does not mean the document applies to this scenario. The clause-level map is in docs/citation-map.md.
 
-| Document | Issuer | Binding (in its own jurisdiction) | How it is used | Scripted | Live governed | Live ungoverned |
+| Document | Issuer | Binding in the UAE | How it is used | Scripted | Live governed | Live ungoverned |
 |---|---|---|---|---|---|---|
 | UAE Federal Law on ICT in Health Fields (English translation) | UAE (federal) | binding | cited by agents | 3 | 19 | 18 |
 | DHA Health Data Protection and Confidentiality Policy | Dubai Health Authority | binding unknown | cited by agents | 4 | 13 | 11 |

@@ -117,7 +117,7 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
     return out
 
 
-CITED_TABLE_START = "**Policy documents the agents cited.**"
+CITED_TABLE_START = "**Policy documents loaded and cited by the agents.**"
 
 
 def cited_block(t: str) -> str:
@@ -151,7 +151,8 @@ def _rejected_per_live_run(cmap: Any) -> dict[str, int]:
     return {run: len(s) for run, s in steps.items()}
 
 
-# §4 "Policy documents the agents cited": report row label -> source file (None = illustrative).
+# §4 "Policy documents loaded and cited by the agents": report row -> source file (None =
+# illustrative).
 CITED_DOCUMENTS: dict[str, str | None] = {
     "UAE Federal Law on ICT in Health Fields (English translation)": (
         "UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf"
@@ -203,7 +204,7 @@ def test_the_cited_documents_table_matches_the_citation_map() -> None:
     }
     header = rows.pop("Document")
     assert header[2:] == [
-        "Binding (in its own jurisdiction)",
+        "Binding in the UAE",
         "How it is used",
         "Scripted",
         "Live governed",
@@ -238,6 +239,10 @@ def test_the_cited_documents_table_matches_the_citation_map() -> None:
     assert len(per_run) == 1, per_run
     assert f"{per_run.pop()} decision rejected (citation out of scope)" in section4
     assert "docs/citation-map.md" in section4
+    assert (
+        "binding means binding in the UAE, as recorded on each clause; it does not mean the "
+        "document applies to this scenario." in section4
+    )
     rejected = {(c.run, c.role, c.minute) for c in cmap.all_citations() if c.verdict != "accepted"}
     assert rejected == {
         (cmap.LIVE_GOVERNED, "telecom_operator", 75),

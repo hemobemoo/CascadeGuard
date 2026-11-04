@@ -43,7 +43,7 @@ policies/, scenarios/ unchanged; no API call.
   spot-check the figures against the ACMA, Senate committee and JAMA pages.
 - **Report (commit 21e3781 and the review fixes), as the human specified:** §2 starts with the
   approved Precedents paragraph, then "How it works" (5 numbered sentences, no new numbers), then
-  the existing text; §4 adds "Policy documents the agents cited" after the mapping table
+  the existing text; §4 adds "Policy documents loaded and cited by the agents" after the mapping table
   (separate scripted / live governed / live ungoverned columns; shared-decision note;
   "1 decision rejected (citation out of scope)"; link to docs/citation-map.md). Charter row says
   "UAE-principle example in the gap analysis" (phase-auditor MINOR: gap_examples.yaml calls it a
@@ -1416,7 +1416,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 ## Waiting on human
 
 **report-feedback (2026-11-04), gate 7:** the human approves the final report wording (the
-"How it works" paragraph and the §4 "Policy documents the agents cited" table, in the .md, .docx
+"How it works" paragraph and the §4 "Policy documents loaded and cited by the agents" table, in the .md, .docx
 and PDF) before the PR is merged. Open QUESTION-FOR-HUMAN (evidence-auditor, phase-auditor): no
 reviewer could fetch the precedent sources; spot-check the figures against the ACMA, Senate
 committee, JAMA and CFPB pages (`docs/report/background-sources.yaml` has the URLs).
