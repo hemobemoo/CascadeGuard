@@ -1,6 +1,6 @@
 # AI for Good Sandbox Hackathon – GM of AI – CascadeGuard
 
-Team leader: Ibrahim Melhem (Al Balqa Applied University, Faculty of AI; mentor: Dr. Wafaa Almaaitah)
+Team leader: Ibrahim Melhem (Al Balqa Applied University, Faculty of Artificial Intelligence; mentor: Dr. Wafaa Almaaitah)
 Team members: Ibrahim Melhem
 Contact details: ibrahimmelhem2005@gmail.com
 Github link: https://github.com/hemobemoo/CascadeGuard
