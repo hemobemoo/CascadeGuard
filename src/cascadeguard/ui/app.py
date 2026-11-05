@@ -4,13 +4,21 @@ The UI only displays engine results: runs, searches and replays come from the sa
 the CLI uses, and `ui/view_model.py` formats them. No logic lives here. The scripted baseline
 and repair search are computed once at startup and held in memory, so the page opens with the
 verdict, diagnosis and repair ladder already rendered. LLM agents are read from the decision
-cache only (no live calls in the UI; the CLI keeps live runs).
+cache only (no live calls for runs in the UI; the CLI keeps live runs). The one exception is
+"Ask the Policy Adviser" (human decision 2026-11-05, specs 005/006 amendments, ADR 0003): with
+OPENROUTER_API_KEY set, its switch "Live LLM call when the answer is not cached" (off by
+default) lets one question call the configured chat model (at most aq.REQUEST_CAP chat requests,
+and one query embedding sent up to 4 times with retries), at most ADVISER_SESSION_CAP live
+questions per session; any failure gives the labelled template. The seven answer sections are
+always the engine's text; the model's own lines appear only in the separate "Model commentary
+(unverified agent statement)" block (option (b), human decision 2026-11-06).
 """
 
 import asyncio
 import html
 import os
 import re
+import secrets
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,8 +28,18 @@ import yaml
 from nicegui import app as nicegui_app
 from nicegui import background_tasks, run, ui
 
+from cascadeguard.agents import adviser_query as aq
 from cascadeguard.agents.llm import LLMAgent, LLMConfigError
-from cascadeguard.cli import LLM, SCRIPTED, AgentChoice, World, load_world, search_repairs
+from cascadeguard.cli import (
+    LLM,
+    SCRIPTED,
+    AgentChoice,
+    World,
+    adviser_asker,
+    adviser_requests,
+    load_world,
+    search_repairs,
+)
 from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
@@ -31,6 +49,7 @@ from cascadeguard.engine.repair_search import (
     SearchResult,
     outcome_definition,
 )
+from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.ui import view_model as vm
@@ -38,6 +57,44 @@ from cascadeguard.ui import view_model as vm
 STATEMENT = AGENT_STATEMENT.split(" (", 1)[0]  # short form; the full label is the tooltip
 DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
 PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
+# Live adviser calls per browser session (human decision 2026-11-05). Counted on the server
+# per browser id (NiceGUI's browser cookie), so a reload or a new tab does not reset it; the
+# count lives for this server process.
+ADVISER_SESSION_CAP = 20
+_ADVISER_CALLS: dict[str, int] = {}
+_ADVISER_LOCK = threading.Lock()
+# Signs the browser-id cookie; a fresh random value per server process (nothing to store).
+STORAGE_SECRET = secrets.token_hex(32)
+
+
+def browser_id() -> str:
+    """NiceGUI's id for this browser (signed cookie), "" outside a page."""
+    storage = cast(dict[str, Any], nicegui_app.storage.browser)  # pyright: ignore[reportUnknownMemberType]
+    return str(storage.get("id", ""))
+
+
+def adviser_calls(browser: str) -> int:
+    with _ADVISER_LOCK:
+        return _ADVISER_CALLS.get(browser, 0)
+
+
+def reserve_adviser_call(browser: str) -> bool:
+    """Take one live slot for this browser, if any is left: check and count in one step under
+    the lock, so tabs asking at the same moment cannot pass the cap together."""
+    with _ADVISER_LOCK:
+        used = _ADVISER_CALLS.get(browser, 0)
+        if used >= ADVISER_SESSION_CAP:
+            return False
+        _ADVISER_CALLS[browser] = used + 1
+        return True
+
+
+def release_adviser_call(browser: str) -> None:
+    """Give back a reserved slot when no request was sent (e.g. a cached answer)."""
+    with _ADVISER_LOCK:
+        _ADVISER_CALLS[browser] = max(0, _ADVISER_CALLS.get(browser, 0) - 1)
+
+
 THEME = Path(__file__).with_name("theme.css")
 HIDDEN_DELAY = 0.3  # seconds before sections not on screen are refreshed after a click
 FILL_DELAY = 0.15  # seconds after the websocket connects before the other sections are sent
@@ -284,6 +341,7 @@ class Session:
     step: int = 0
     guided: bool = True
     error: str = ""  # why the selected agents have no result (shown instead of one)
+    browser: str = ""  # NiceGUI browser id: the adviser call count is kept per browser
     fade: bool = True  # graph: everything outside the highlighted subgraph faded (spec 006b)
     ladder_all: bool = False  # ladder: every rung, not only the top TOP_RUNGS
     sections: dict[str, ui.element] = field(default_factory=dict[str, ui.element])
@@ -346,6 +404,7 @@ def index() -> None:
     ui.add_css(THEME)
     names = scenarios()
     s = Session(scenario=names[0])
+    s.browser = browser_id()
     dark = ui.dark_mode(False)
 
     def current() -> Bundle | str:
@@ -524,6 +583,145 @@ def index() -> None:
             replay_lanes()
         replay_box.set_visibility(False)
         role_panel_view()
+        ask_box = ui.element("div").classes("w-full")
+
+    def adviser_panel() -> None:
+        """Ask the Policy Adviser at a step: its own view at that step of the run shown in the
+        lanes. LLM mode when the .env key is set (live, cached), else the template."""
+        minutes = [e.at_minute for e in world_events()] or [0]
+        presets = aq.load_presets(SCENARIOS_DIR / s.scenario)
+        with ui.column().classes("cg-pane w-full gap-1 mt-2").props("data-testid=ask-panel"):
+            ui.label("Ask the Policy Adviser").classes("font-semibold")
+            ui.label(
+                "Pause at a step and ask the policy_legal_adviser. It answers from its own view "
+                "at that step of the governed scripted baseline (no later facts, nothing outside "
+                "its boundary). Model-written lines are marked as agent statements. Only loaded "
+                "clauses are citable; knowledge-base text is context only; not citable."
+            ).classes("cg-muted")
+            with ui.row().classes("items-end gap-2 w-full"):
+                step = ui.select(
+                    {m: f"T+{m:02d}" for m in minutes}, value=minutes[0], label="Step"
+                ).props("data-testid=ask-step dense")
+                (
+                    ui.select(
+                        {i: text for i, (_, text) in enumerate(presets)},
+                        value=None,
+                        label="Preset question",
+                        on_change=lambda e: pick_preset(e.value),
+                    )
+                    .classes("grow")
+                    .style("min-width: min(100%, 18rem); flex: 1 1 18rem")
+                    .props("data-testid=ask-preset dense clearable")
+                )
+            question = (
+                ui.textarea("Question", placeholder="or type your own question")
+                .classes("w-full")
+                .props("data-testid=ask-question dense autogrow")
+            )
+            # Human decision 2026-11-05: off by default, shown only when OPENROUTER_API_KEY
+            # is set; at most ADVISER_SESSION_CAP live questions per session.
+            keyed = aq.api_key_is_set()
+            with ui.row().classes("items-center gap-2") as live_row:
+                live = ui.switch("Live LLM call when the answer is not cached", value=False).props(
+                    "data-testid=ask-live"
+                )
+                calls = ui.label("").classes("cg-muted").props("data-testid=ask-calls")
+            live_row.set_visibility(keyed)
+
+            def show_calls() -> None:
+                used = adviser_calls(s.browser)
+                calls.set_text(f"live adviser calls this session: {used} / {ADVISER_SESSION_CAP}")
+                if used >= ADVISER_SESSION_CAP:
+                    live.value = False
+                    live.disable()
+
+            show_calls()
+            button = ui.button("Ask the adviser", on_click=lambda: ask_now()).props(
+                "no-caps data-testid=ask-button"
+            )
+            answer_box = ui.column().classes("w-full gap-1").props("data-testid=ask-answer")
+
+        def pick_preset(index: int | None) -> None:
+            if index is not None:
+                at, text = presets[index]
+                question.value = text
+                step.value = at
+
+        def set_step(minute: int) -> None:
+            step.value = minute
+
+        ask_step["set"] = set_step
+
+        async def ask_now() -> None:
+            text = str(question.value or "").strip()
+            d = s.data
+            if not text or d is None:
+                return
+            button.disable()
+            answer_box.clear()
+            with answer_box:
+                ui.label("Asking ...").classes("cg-muted")
+            try:
+                # The governed scripted baseline, as in the CLI, whichever agents the lanes show.
+                scripted = await run.io_bound(bundle, s.scenario, "scripted")
+                result = scripted.baseline if isinstance(scripted, Bundle) else d.baseline
+                view = next(
+                    v for v in result.views if v.role_id == aq.ADVISER and v.minute == step.value
+                )
+                # A slot is reserved before the call; it is given back only when the call
+                # sent nothing. A call that fails part-way keeps its slot (it may have sent).
+                go_live = bool(live.value) and reserve_adviser_call(s.browser)
+                asked = await run.io_bound(
+                    ask_adviser,
+                    s.scenario,
+                    text,
+                    view,
+                    d,
+                    [t for _, t in presets],
+                    not go_live,
+                )
+                answer, sent = cast(tuple[aq.AdviserAnswer, bool], asked)
+                if go_live and not sent:
+                    release_adviser_call(s.browser)
+            except Exception as exc:  # never a raw error: the no-key template, labelled
+                try:
+                    answer = await run.io_bound(
+                        template_after_error, s.scenario, text, step.value, d, presets, exc
+                    )
+                except Exception:  # even the template failed: a fixed message, nothing raw
+                    answer = None
+            show_calls()
+            answer_box.clear()
+            with answer_box:
+                if answer is None:
+                    ui.label("No answer could be produced for this question.").classes(
+                        "cg-act-no"
+                    ).props("data-testid=ask-mode")
+                else:
+                    show_answer(answer)
+            button.enable()
+
+    def world_events() -> tuple[Any, ...]:
+        d = s.data
+        if d is not None:
+            return tuple(d.world.scenario.events)
+        found = bundle(s.scenario, "scripted")
+        return tuple(found.world.scenario.events) if isinstance(found, Bundle) else ()
+
+    ask_step: dict[str, Any] = {}
+
+    def open_adviser() -> None:
+        """Built on first use, so the page stays as light as before (spec 006 click budget)."""
+        ask_box.clear()
+        with ask_box:
+            adviser_panel()
+        if s.cell is not None:
+            ask_step["set"](s.cell[1])
+
+    with ask_box:
+        ui.button("Ask the Policy Adviser ...", on_click=open_adviser).props(
+            "outline no-caps dense data-testid=ask-open"
+        ).classes("mt-2")
 
     def cell(run: str, role: str, c: vm.Cell) -> None:
         css = "cg-cell" + (" cg-cell-recipient" if c.recipient else "")
@@ -1060,6 +1258,8 @@ def index() -> None:
         if s.cell is not None and (s.lanes_run, *s.cell) in cells:
             cells[(s.lanes_run, *s.cell)].classes(remove="cg-cell-selected")
         s.cell = None if s.cell == (role, minute) else (role, minute)
+        if s.cell is not None and "set" in ask_step:  # the adviser panel follows the open step
+            ask_step["set"](minute)
         if s.cell is not None and (s.lanes_run, *s.cell) in cells:
             cells[(s.lanes_run, *s.cell)].classes(add="cg-cell-selected")
         role_panel_view.refresh()
@@ -1125,6 +1325,61 @@ def index() -> None:
     ui.timer(0, fill, once=True)
 
 
+def ask_adviser(
+    scenario: str, question: str, view: Any, d: Bundle, presets: list[str], offline: bool
+) -> tuple[aq.AdviserAnswer, bool]:
+    """One question to the adviser (cli.adviser_asker: LLM mode with a key, live unless
+    offline; else the template), and whether any live request was sent."""
+    asker = adviser_asker(offline, aq.DEFAULT_ANSWER_CACHE)
+    roles = [r.id for r in d.world.roles.roles]
+    answer = aq.ask(scenario, question, view, d.world.clauses, roles, asker, presets)
+    return answer, sum(adviser_requests(asker)) > 0
+
+
+def template_after_error(
+    scenario: str,
+    question: str,
+    minute: int,
+    d: Bundle,
+    presets: tuple[tuple[int, str], ...],
+    exc: BaseException,
+) -> aq.AdviserAnswer:
+    """The no-key template answer after an unexpected error, labelled; the error's own text is
+    never shown (human decision 2026-11-05)."""
+    scripted = bundle(scenario, "scripted")
+    result = scripted.baseline if isinstance(scripted, Bundle) else d.baseline
+    view = next(v for v in result.views if v.role_id == aq.ADVISER and v.minute == minute)
+    detail = aq.TEMPLATE_FAILED.format(reason=aq.failure_reason(exc))
+    asker = aq.Asker(template_detail=detail)
+    roles = [r.id for r in d.world.roles.roles]
+    texts = [t for _, t in presets]
+    return aq.ask(scenario, question, view, d.world.clauses, roles, asker, texts)
+
+
+def show_answer(answer: aq.AdviserAnswer) -> None:
+    css = "cg-act-ok" if answer.mode == aq.MODE_LLM else "cg-muted"
+    ui.label(f"Answer mode: {answer.mode_detail}").classes(f"font-semibold {css}").props(
+        "data-testid=ask-mode"
+    )
+    ui.label(f"T+{answer.minute:02d} · retrieval: {answer.retrieval}").classes("cg-muted")
+    if answer.rejected:
+        ui.label(f"Engine check rejected the LLM answer: {', '.join(answer.rejected)}").classes(
+            "cg-act-no"
+        )
+    for title, body in answer.sections():
+        ui.label(title).classes("font-semibold mt-1")
+        lines(body)
+    if answer.commentary:  # option (b): the model's own lines, apart from the seven sections
+        with ui.column().classes("cg-pane w-full gap-0 mt-1").props("data-testid=ask-commentary"):
+            ui.label(aq.COMMENTARY_HEADING).classes("font-semibold cg-muted")
+            lines(list(answer.commentary))
+    ui.label(f"Context ({CONTEXT_LABEL})").classes("font-semibold mt-1")
+    lines(
+        [f"{c.source_file} p.{c.page} [{c.label}]: {c.text[:240]}" for c in answer.context],
+        empty="none",
+    )
+
+
 def cache_text(world: World) -> str:
     if world.cache is None:
         return ""
@@ -1141,6 +1396,7 @@ def main() -> None:
         reload=False,
         show=False,
         tailwind=False,
+        storage_secret=STORAGE_SECRET,
     )
 
 
