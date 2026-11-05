@@ -365,9 +365,32 @@ def test_views_cache_keys_and_outputs_ignore_the_gap_example_folder(
     result = cli.run_scenario(SCENARIO)
     text_with = cli.format_result(result, cli.excluded_drafts(result))
     monkeypatch.setattr(loader, "GAP_EXAMPLES_DIR", tmp_path / "absent")
+    assert loader.load_gap_example_clauses() == {}  # the patch takes effect
     without = snapshot()
     result = cli.run_scenario(SCENARIO)
     text_without = cli.format_result(result, cli.excluded_drafts(result))
     assert with_folder == without
     assert text_with == text_without
     assert "21 draft clauses not loaded" in text_with
+
+
+def test_a_demoted_gap_example_is_left_out_not_shown(tmp_path: Path) -> None:
+    """Gate 1 for a gap-example-only clause: an edit sets it back to draft (listed under
+    reapproval_needed); it then stays in its folder, is not loaded as a gap example, and the
+    report builder refuses a mapping that names it."""
+    from cascadeguard.knowledge import loader
+    from cascadeguard.storage.reports import load_gap_examples, reviewed_example_clauses
+
+    folder = tmp_path / "gap_examples_only"
+    folder.mkdir()
+    text = (loader.GAP_EXAMPLES_DIR / "nist_sp800_34.yaml").read_text(encoding="utf-8")
+    (folder / "nist_sp800_34.yaml").write_text(
+        text.replace("status: reviewed", "status: draft", 1), encoding="utf-8"
+    )
+    everything = {c.id: c.status for c in loader.gap_example_folder_clauses(folder)}
+    assert set(everything) == NIST_IDS
+    assert ClauseStatus.DRAFT in everything.values()
+    shown = loader.load_gap_example_clauses(folder)
+    assert len(shown) == 1 and set(shown) < NIST_IDS
+    corpus = {c.id: c for c in load_clauses()} | shown
+    assert not reviewed_example_clauses(load_gap_examples(), corpus)

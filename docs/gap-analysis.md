@@ -4,7 +4,7 @@ _Hypothetical scenario with synthetic data only. CascadeGuard is decision suppor
 
 Generated from the governed baseline run with scripted agents (clause set: policies/reviewed: reviewed + illustrative clauses) by `scripts/build_reports.py`; regenerate it, never edit it. Each diagnosed failure is a candidate for expert review, not a finding of law: its qualification below is part of it.
 
-The examples are a mapping reviewed by the human (Ibrahim Melhem, 2026-10-31, gate 7) (`scenarios/uae_health_access/gap_examples.yaml`). An entry not yet approved is marked so. Foreign and international texts are shown as examples of practice elsewhere, never as UAE law; every clause carries its status label.
+The examples are a mapping reviewed by the human (Ibrahim Melhem, 2026-11-06, gate 7) (`scenarios/uae_health_access/gap_examples.yaml`). An entry not yet approved is marked so. Foreign and international texts are shown as examples of practice elsewhere, never as UAE law; every clause carries its status label.
 
 ## `information_deadlock:network_incident_status->health_service_operator`
 

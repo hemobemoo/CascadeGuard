@@ -11,6 +11,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
+from functools import cache
 from pathlib import Path
 from typing import Any, Literal, Self
 
@@ -134,9 +135,15 @@ def trace_files(runs: ScriptedRuns) -> dict[str, str]:
 
 
 def _label(clause: PolicyClause) -> str:
-    if clause.id in load_gap_example_clauses():  # option (c): shown, never loaded
+    if clause.id in _gap_example_ids():  # option (c): shown, never loaded
         return f"`{clause.id}` [{clause.status_label}; {GAP_EXAMPLE_NOTE}]"
     return f"`{clause.id}` [{clause.status_label}]"
+
+
+@cache
+def _gap_example_ids() -> frozenset[str]:
+    """Read once per process: the ids reviewed as gap examples only."""
+    return frozenset(load_gap_example_clauses())
 
 
 def _source(clause: PolicyClause) -> str:
@@ -492,6 +499,16 @@ def build(scenario: str = SCENARIO) -> dict[Path, str]:
     # The simulation's corpus plus the clauses reviewed as gap examples only (option (c)).
     corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
     examples = load_gap_examples(scenario)
+    if not reviewed_example_clauses(examples, corpus):
+        missing = sorted(
+            e.clause
+            for e in examples.entries
+            if e.clause not in corpus or corpus[e.clause].status is not ClauseStatus.REVIEWED
+        )
+        raise ValueError(
+            f"gap_examples.yaml maps clauses that are not reviewed: {missing} (gate 1: a demoted "
+            "clause needs the human's re-approval before it is shown)"
+        )
     out = {TRACES_DIR / name: text for name, text in trace_files(runs).items()}
     out[GAP_ANALYSIS] = gap_analysis_markdown(runs, examples, corpus)
     out[CONCLUSION_DRAFT] = conclusion_markdown(runs, load_gate4())

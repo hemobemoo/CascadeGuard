@@ -5,10 +5,13 @@
 # Each entry names a reviewed clause and says, in one line, what it is an example of. It never says
 # the UAE corpus lacks a provision: every diagnosed failure keeps its own qualification (not a
 # confirmed legal or standards gap). A failure with no entry has no reviewed example mapped.
+# Gate 7, 2026-11-06 (Ibrahim Melhem): the two NIST SP 800-34 entries for
+# orphan_duty:activate_fallback_channel approved, with the human's relevance lines; their
+# clauses are reviewed as gap examples only (policies/gap_examples_only/), never loaded.
 # Hypothetical scenario, synthetic data.
 status: reviewed
 reviewed_by: Ibrahim Melhem
-reviewed_on: 2026-10-31
+reviewed_on: 2026-11-06
 entries:
   - failure: information_deadlock:network_incident_status->health_service_operator
     clause: oecd.ai-principles.accountability-cooperation
