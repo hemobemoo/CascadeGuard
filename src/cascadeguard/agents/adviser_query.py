@@ -442,7 +442,10 @@ def template_answer(
     role_ids: frozenset[str],
     mode_detail: str,
     rejected: AnswerCheck | None = None,
+    model_selected: bool = False,
 ) -> AdviserAnswer:
+    """The seven sections in the engine's words. `model_selected`: the clauses are the ones an
+    accepted LLM answer cited (option (b)), so the text says the selection is the model's."""
     uae = tuple(e for e in retrieved.candidates if e.uae)[:MAX_UAE]
     international = tuple(e for e in retrieved.candidates if not e.uae)[:MAX_INTERNATIONAL]
     cited = (*uae, *international)
@@ -456,8 +459,15 @@ def template_answer(
     else:
         named = "; ".join(f"{e.clause_id} [{e.status_label}]" for e in cited)
         direct = (
-            f"Deterministic summary (no model): the loaded clauses that best match the question "
-            f"are {named}. "
+            (
+                f"Engine text: the clauses the model selected for this question are {named} "
+                "(the selection is the model's; this text and the readings are the engine's). "
+            )
+            if model_selected
+            else (
+                f"Deterministic summary (no model): the loaded clauses that best match the "
+                f"question are {named}. "
+            )
         )
         if not uae:
             direct += f"A UAE clause on this question was {NOT_IDENTIFIED}. "
@@ -468,9 +478,14 @@ def template_answer(
     uncertainty = [
         *_label_uncertainty(cited),
         availability_note(view),
-        "The template matches question words against clause text; a relevant clause that uses "
-        "other words can be missed.",
     ]
+    uncertainty.append(
+        "The clauses were selected by the model from the retrieved ones; it may have left out a "
+        "relevant clause."
+        if model_selected
+        else "The template matches question words against clause text; a relevant clause that "
+        "uses other words can be missed."
+    )
     if retrieved.retrieval == RETRIEVAL_KEYWORD:
         uncertainty.append(KEYWORD_NOTE)
     return AdviserAnswer(
@@ -745,7 +760,9 @@ def llm_answer(
         retrieved.context,
         retrieved.retrieval,
     )
-    shown = template_answer(scenario_id, question, view, picked, role_ids, mode_detail)
+    shown = template_answer(
+        scenario_id, question, view, picked, role_ids, mode_detail, model_selected=True
+    )
     notes = [
         f"{c.clause_id}: {c.relevance}"
         for c in (*payload.uae_evidence, *payload.international_comparison)

@@ -1,10 +1,11 @@
-"""Record the LLM answers to the adviser's preset questions, for offline replay in the demo.
+"""Record the LLM answers to the adviser's preset questions, for offline replay in the CLI.
 
 Each preset (scenarios/<id>/adviser_questions.yaml) is asked at its own step through
 `agents.adviser_query.ask` with the configured chat model (.env), on keyword retrieval (no query
 embedding: the preset embedding failed, human decision 2026-11-06), with a fresh client capped
 at `REQUEST_CAP` requests per question. Answers go to docs/evaluation/adviser/cache/; replay with
-`cascadeguard ask <scenario> --at T+n "<preset>" --cache docs/evaluation/adviser/cache`.
+`cascadeguard ask <scenario> --at T+n "<preset>" --cache docs/evaluation/adviser/cache`
+(the UI reads data/adviser_cache/, not this folder).
 
 Gate 4: this sends requests to OpenRouter. Without `--run` it is a dry run that prints the plan.
 

@@ -216,7 +216,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--live",
         action="store_true",
         help="allow live model calls for this question (needs the three .env variables; at "
-        "most 4 chat requests and 1 query embedding, retries included); without it, ask never "
+        "most 4 chat requests, retries included, and 1 query embedding, up to 4 attempts); "
+        "without it, ask never "
         "calls a model, even with a key (human decision 2026-11-06)",
     )
     ask_cmd.add_argument(

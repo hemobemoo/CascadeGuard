@@ -263,7 +263,7 @@ def test_llm_answer_quotes_come_from_the_clause_not_the_model(tmp_path: Path) ->
     assert e.quote == " ".join(clause.text.split()) and e.page == clause.page
     # Option (b): the model's words are only in the commentary block, never in sections 1/5/6.
     assert e.relevance == ""
-    assert answer.direct_answer.startswith("Deterministic summary (no model)")
+    assert answer.direct_answer.startswith("Engine text: the clauses the model selected")
     assert agent_statement("relevance of dha.pp11.4-18-1: continuity plans") in answer.commentary
     assert answer.status_labels == (("dha.pp11.4-18-1", clause.status_label),)
 
@@ -929,3 +929,63 @@ def test_live_without_a_key_is_a_clear_error(
 ) -> None:
     assert main(["ask", SCENARIO, "--at", "T+60", FALLBACK_Q, "--live"]) == 2
     assert "--live needs OPENROUTER_API_KEY" in capsys.readouterr().out
+
+
+def test_llm_answer_says_the_selection_is_the_models(tmp_path: Path) -> None:
+    """test-breaker (final round): an accepted LLM answer never calls the model's clause choice a
+    deterministic best match."""
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload())))
+    assert answer.mode == aq.MODE_LLM
+    text = answer.text()
+    assert "no model" not in text and "best match" not in text
+    assert "the clauses the model selected" in answer.direct_answer
+    template = ask(FALLBACK_Q, 60, asker(tmp_path / "t"))
+    assert "Deterministic summary (no model)" in template.direct_answer
+
+
+def test_ui_cap_reservation_holds_under_concurrency() -> None:
+    """Tabs asking at the same moment cannot pass the per-browser cap together."""
+    import threading
+
+    from cascadeguard.ui import app
+
+    browser = "test-browser-concurrency"
+    app._ADVISER_CALLS[browser] = app.ADVISER_SESSION_CAP - 1  # pyright: ignore[reportPrivateUsage]
+    granted: list[bool] = []
+    threads = [
+        threading.Thread(target=lambda: granted.append(app.reserve_adviser_call(browser)))
+        for _ in range(8)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert granted.count(True) == 1
+    assert app.adviser_calls(browser) == app.ADVISER_SESSION_CAP
+    app.release_adviser_call(browser)  # a cached answer sent nothing: the slot comes back
+    assert app.adviser_calls(browser) == app.ADVISER_SESSION_CAP - 1
+    del app._ADVISER_CALLS[browser]  # pyright: ignore[reportPrivateUsage]
+
+
+def test_recorded_preset_cache_is_clean_and_consistent() -> None:
+    """docs/evaluation/adviser/cache: key = file name, current prompt version, a valid payload,
+    no key-shaped string, URL or local path, and every cited clause in the keyword-retrieval
+    offer of some preset at its step. (The key match itself needs the real model id; the agent
+    checked a CLI replay hit on 2026-11-06.)"""
+    folder = Path(aq.__file__).resolve().parents[3] / "docs" / "evaluation" / "adviser" / "cache"
+    files = sorted(folder.glob("*.json"))
+    assert len(files) == len(aq.load_presets(SCENARIOS_DIR / SCENARIO)) == 6
+    offers: set[str] = set()
+    for at, text in aq.load_presets(SCENARIOS_DIR / SCENARIO):
+        context = aq.retrieve_context(text, view_at(at), None)
+        offers |= {
+            e.clause_id for e in aq.rank_clauses(text, view_at(at), world().clauses, context)
+        }
+    for path in files:
+        raw = path.read_text(encoding="utf-8")
+        assert not re.search(r"sk-or|Bearer|https?://|[A-Za-z]:\\|/Users/|AppData", raw), path
+        data = json.loads(raw)
+        assert data["key"] == path.stem and data["prompt_version"] == aq.PROMPT_VERSION
+        payload_ = aq.AdviserPayload.model_validate(data["payload"])
+        cited = [c.clause_id for c in (*payload_.uae_evidence, *payload_.international_comparison)]
+        assert set(cited) <= offers, path
