@@ -496,6 +496,7 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
 def build(scenario: str = SCENARIO) -> dict[Path, str]:
     """Every generated file and its content."""
     runs = scripted_runs(scenario)
+    _gap_example_ids.cache_clear()  # labels and corpus read the folder at the same moment
     # The simulation's corpus plus the clauses reviewed as gap examples only (option (c)).
     corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
     examples = load_gap_examples(scenario)
