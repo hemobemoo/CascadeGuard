@@ -49,7 +49,10 @@ simulation/orchestrator  (deterministic code, not an agent)
   (`docs/evaluation/traces/`), `docs/gap-analysis.md` (failures, UAE clauses considered, the
   examples mapped in `scenarios/<id>/gap_examples.yaml`, repairs that remove or mask each
   failure) and an unpublished conclusion draft, from engine runs and committed exports only;
-  `scripts/build_reports.py` writes them and a test keeps the committed files equal.
+  `scripts/build_reports.py` writes them and a test keeps the committed files equal. It also
+  reads `policies/gap_examples_only/` (clauses reviewed as gap examples only, Task 2 option (c),
+  2026-11-06), which nothing else reads: those clauses never reach the engine, views, KB or
+  adviser.
 
 ```
 baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ──> hard filter
