@@ -53,7 +53,7 @@ so the two PROGRESS commits after #31 ride along).**
   `policies/kb/adviser_query_vectors.json` does not exist yet (gate 4, waiting on human).
 - Tests: `tests/unit/test_adviser_query.py` (count in the PR body, from the final run), e2e
   `test_ask_the_adviser_without_a_key` and `test_ask_the_adviser_live_switch_and_error_fallback`.
-  Full suite 742 passed (before the lazy panel); scripted `run`, `repairs`, `--governance off`
+  Full suite: the final count is in the PR body; scripted `run`, `repairs`, `--governance off`
   and the rank-1 `--repair` output byte-identical to main (checked 2026-11-05); goldens unchanged.
 - UI: the panel is built on the first click of "Ask the Policy Adviser ..." (data-testid
   ask-open), so the page is as light as before. The local perf budget "graph highlight" is
@@ -111,6 +111,17 @@ so the two PROGRESS commits after #31 ride along).**
   the labelled template; illustrative text is labelled "paraphrase, not a quotation"; README and
   UI docstring count embedding retries; architecture says the preset vectors are not built yet;
   Done-when recorded above. Round 3 (the last) follows on the final commit.
+- Review round 3 (the last), on dcfe35d: phase-auditor FAIL (MAJOR: the 20-call cap reset on a
+  page reload; MINORs) and test-breaker FAIL (2 BLOCKER: everyday wording that claims binding
+  force, authority or a gap still passes the phrase lists; MAJOR: an abstention could still
+  carry an answer; MINORs). Fixed after round 3 (not re-reviewed: the loop allows three
+  rounds): the cap is counted per browser id on the server (survives reloads and new tabs;
+  e2e test with a cap of 2); an LLM abstention must name no role and is shown with the
+  engine's fixed abstention text; one export file per question; the fallback can never show a
+  raw error; the section-2 heading marks illustrative rules; every round-3 phrasing added to the
+  patterns and to the tests. **Left open as a human gate:** a phrase list cannot catch every
+  wording, so model free text (sections 1, 5, 6) can still assert binding force, authority or a
+  gap in words no pattern lists. Options, in "Waiting on human".
 - Preset embedding (approved by the human 2026-11-05, 1 request): **failed twice**, HTTP 502 on
   all 4 attempts each time (retry approved by the human; 8 requests in all, no vector returned).
   The model is still listed by OpenRouter's public embeddings catalogue (checked 2026-11-05), so
@@ -435,9 +446,9 @@ then locked.
 
 **Human brief of 2026-11-05 (see "Start here"): Task 1, Ask the Policy Adviser, on branch
 `phase-7-adviser-query` (the name is the human's; it is not START_PROMPT's Phase 7, tracing).**
-Built; review round 1: test-breaker FAIL and phase-auditor FAIL, findings fixed; round 2
-running. Then: full checks, PR, stop for the gate-4 and gate-8 items under "Waiting on human".
-Tasks 2-5 follow, one PR each.
+Built; three review rounds done (all FAIL; every finding fixed except the structural
+question that round 3 left open, now a human gate under "Waiting on human"). PR opened with the
+full check result; stop for the human. Tasks 2-5 follow, one PR each.
 
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
@@ -1548,6 +1559,18 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   needs the human's explicit approval in the chat (rule of 2026-11-05).
 - Open: with a key and no `--offline`, `ask` in the CLI calls the model live, as the brief says.
   Keep, or require an explicit `--live`? (Not answered yet.)
+- **Gate 2/8, open after review round 3 (test-breaker BLOCKERs):** the engine check matches
+  phrase lists, so model free text can still claim binding force, authority or a gap in new
+  wording (the agent-statement label and the clause status labels stay next to it, and nothing
+  reaches state). Options: (a) show model free text in sections 1, 5 and 6 only when every
+  cited clause is reviewed and binding, else the engine's template text; (b) make the engine's
+  template text the answer in sections 1, 5 and 6 always, and show the model's text only in a
+  separate "Model commentary (unverified agent statement)" block; (c) accept the residual risk
+  as it is. Agent recommendation: (b).
+- Gate 6 confirmation (phase-auditor round 3): the AGENTS.md line added is: "Exception (human,
+  2026-11-05): the read-only "Ask the Policy Adviser" answer is a separate advisory channel,
+  not an `AgentDecision`; see `docs/decisions/0003-adviser-advisory-channel.md`." Confirm it is
+  the approved wording.
 - **Answered (human, 2026-11-05):**
   - Gate 4 disclosure acknowledged (report in "Start here", Task 1).
   - Gates 4/8: live LLM calls allowed from the UI for the adviser panel only; agents in the UI
@@ -1792,10 +1815,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-05:** finish the Task 1 review loop (round 2), run all checks, open the PR from
-`phase-7-adviser-query` with the reviewer verdicts, and stop for the human's answers under
-"Waiting on human" (Task 1). Then Task 2 (`gap-fallback-example`). The older notes below are
-history.
+**2026-11-05:** Task 1 PR is open from `phase-7-adviser-query` (review rounds 1-3 done; the
+round-3 structural question is a human gate). Wait for the human's answers under "Waiting on
+human" (Task 1), then merge only on the human's instruction. Next: Task 2
+(`gap-fallback-example`). The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".

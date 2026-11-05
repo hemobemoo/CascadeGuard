@@ -16,6 +16,7 @@ import asyncio
 import html
 import os
 import re
+import secrets
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,8 +55,33 @@ from cascadeguard.ui import view_model as vm
 STATEMENT = AGENT_STATEMENT.split(" (", 1)[0]  # short form; the full label is the tooltip
 DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
 PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
-# Live adviser calls per browser session (human decision 2026-11-05).
+# Live adviser calls per browser session (human decision 2026-11-05). Counted on the server
+# per browser id (NiceGUI's browser cookie), so a reload or a new tab does not reset it; the
+# count lives for this server process.
 ADVISER_SESSION_CAP = 20
+_ADVISER_CALLS: dict[str, int] = {}
+_ADVISER_LOCK = threading.Lock()
+# Signs the browser-id cookie; a fresh random value per server process (nothing to store).
+STORAGE_SECRET = secrets.token_hex(32)
+
+
+def browser_id() -> str:
+    """NiceGUI's id for this browser (signed cookie), "" outside a page."""
+    storage = cast(dict[str, Any], nicegui_app.storage.browser)  # pyright: ignore[reportUnknownMemberType]
+    return str(storage.get("id", ""))
+
+
+def adviser_calls(browser: str) -> int:
+    with _ADVISER_LOCK:
+        return _ADVISER_CALLS.get(browser, 0)
+
+
+def count_adviser_call(browser: str) -> int:
+    with _ADVISER_LOCK:
+        _ADVISER_CALLS[browser] = _ADVISER_CALLS.get(browser, 0) + 1
+        return _ADVISER_CALLS[browser]
+
+
 THEME = Path(__file__).with_name("theme.css")
 HIDDEN_DELAY = 0.3  # seconds before sections not on screen are refreshed after a click
 FILL_DELAY = 0.15  # seconds after the websocket connects before the other sections are sent
@@ -302,7 +328,7 @@ class Session:
     step: int = 0
     guided: bool = True
     error: str = ""  # why the selected agents have no result (shown instead of one)
-    adviser_calls: int = 0  # live adviser questions this session (ADVISER_SESSION_CAP)
+    browser: str = ""  # NiceGUI browser id: the adviser call count is kept per browser
     fade: bool = True  # graph: everything outside the highlighted subgraph faded (spec 006b)
     ladder_all: bool = False  # ladder: every rung, not only the top TOP_RUNGS
     sections: dict[str, ui.element] = field(default_factory=dict[str, ui.element])
@@ -365,6 +391,7 @@ def index() -> None:
     ui.add_css(THEME)
     names = scenarios()
     s = Session(scenario=names[0])
+    s.browser = browser_id()
     dark = ui.dark_mode(False)
 
     def current() -> Bundle | str:
@@ -589,10 +616,9 @@ def index() -> None:
             live_row.set_visibility(keyed)
 
             def show_calls() -> None:
-                calls.set_text(
-                    f"live adviser calls this session: {s.adviser_calls} / {ADVISER_SESSION_CAP}"
-                )
-                if s.adviser_calls >= ADVISER_SESSION_CAP:
+                used = adviser_calls(s.browser)
+                calls.set_text(f"live adviser calls this session: {used} / {ADVISER_SESSION_CAP}")
+                if used >= ADVISER_SESSION_CAP:
                     live.value = False
                     live.disable()
 
@@ -629,7 +655,7 @@ def index() -> None:
                 view = next(
                     v for v in result.views if v.role_id == aq.ADVISER and v.minute == step.value
                 )
-                go_live = bool(live.value) and s.adviser_calls < ADVISER_SESSION_CAP
+                go_live = bool(live.value) and adviser_calls(s.browser) < ADVISER_SESSION_CAP
                 asked = await run.io_bound(
                     ask_adviser,
                     s.scenario,
@@ -640,15 +666,24 @@ def index() -> None:
                     not go_live,
                 )
                 answer, sent = cast(tuple[aq.AdviserAnswer, bool], asked)
-                s.adviser_calls += 1 if sent else 0
+                if sent:
+                    count_adviser_call(s.browser)
             except Exception as exc:  # never a raw error: the no-key template, labelled
-                answer = await run.io_bound(
-                    template_after_error, s.scenario, text, step.value, d, presets, exc
-                )
+                try:
+                    answer = await run.io_bound(
+                        template_after_error, s.scenario, text, step.value, d, presets, exc
+                    )
+                except Exception:  # even the template failed: a fixed message, nothing raw
+                    answer = None
             show_calls()
             answer_box.clear()
             with answer_box:
-                show_answer(cast(aq.AdviserAnswer, answer))
+                if answer is None:
+                    ui.label("No answer could be produced for this question.").classes(
+                        "cg-act-no"
+                    ).props("data-testid=ask-mode")
+                else:
+                    show_answer(answer)
             button.enable()
 
     def world_events() -> tuple[Any, ...]:
@@ -1342,6 +1377,7 @@ def main() -> None:
         reload=False,
         show=False,
         tailwind=False,
+        storage_secret=STORAGE_SECRET,
     )
 
 
