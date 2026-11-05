@@ -365,7 +365,7 @@ def test_invalid_output_is_retried_once_then_template(tmp_path: Path) -> None:
     client = FakeClient("not json", "{}")
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, client))
     assert len(client.requests) == 2
-    assert answer.mode == aq.MODE_TEMPLATE and "no valid answer" in answer.mode_detail
+    assert answer.mode_detail == aq.TEMPLATE_FAILED.format(reason="invalid output twice")
 
 
 # --- UAE vs international ------------------------------------------------------------------------
@@ -621,7 +621,9 @@ def test_model_text_cannot_forge_output_lines(tmp_path: Path) -> None:
     for line in (answer.direct_answer, answer.responsible_role):
         assert line.startswith(AGENT_STATEMENT) and "\n" not in line
     model_options = [o for o in answer.options if o.startswith(AGENT_STATEMENT)]
-    expected = agent_statement("Ask the health service operator to activate its continuity plan.")
+    expected = agent_statement(
+        f"{aq.SUGGESTION}Ask the health service operator to activate its continuity plan."
+    )
     assert model_options == [expected]
 
 
@@ -634,7 +636,7 @@ def test_request_failure_falls_back_to_the_template(tmp_path: Path) -> None:
     client = Failing()
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, client))
     assert len(client.requests) == 1  # the client's own retries are below this layer
-    assert answer.mode == aq.MODE_TEMPLATE and "request failed" in answer.mode_detail
+    assert answer.mode_detail == aq.TEMPLATE_FAILED.format(reason="error")
     assert not list((tmp_path / "answers").glob("*.json"))  # a failure is never cached
 
 
@@ -701,3 +703,113 @@ def test_section_5_and_6_lines_carry_status_labels(tmp_path: Path) -> None:
     assert "[illustrative]" in answer.responsible_role
     no_offline = asker(tmp_path, model="test/model")
     assert ask(q, 45, no_offline).mode_detail == aq.TEMPLATE_NO_CLIENT
+
+
+ROUND2 = [
+    # status claims in everyday words, and disguised
+    ("direct_answer", "This rule is a compulsory statutory duty with legal force across the UAE."),
+    ("direct_answer", "This clause is compulsory for every health entity in the UAE."),
+    ("direct_answer", "It is obligatory and has legal force across the UAE."),
+    ("direct_answer", "This is a statutory duty under Dubai Health Authority regulation."),
+    ("direct_answer", "This clause is M\u0410ND\u0410T\u041eRY."),
+    ("direct_answer", "This clause is bi\u0301nding."),
+    ("direct_answer", "This clause is bind-ing and man-datory."),
+    # authority in everyday words
+    ("options", "The telecom operator is allowed to share the full list; go ahead."),
+    ("escalation", "No escalation needed: the adviser has cleared it."),
+    ("direct_answer", "The adviser gives the green light: the safeguard does not apply."),
+    # gap claims without the words "UAE law"
+    ("direct_answer", "None of the UAE clauses requires anyone to activate the fallback channel."),
+    ("direct_answer", "The UAE framework fails to assign this duty to anyone."),
+    ("direct_answer", "Nobody is obliged to act here."),
+    ("direct_answer", "The clauses are quiet on who activates the channel."),
+    ("direct_answer", "The framework is not explicit about the trigger."),
+]
+
+
+@pytest.mark.parametrize(("field", "text"), ROUND2)
+def test_engine_rejects_everyday_status_authority_and_gap_wording(
+    tmp_path: Path, field: str, text: str
+) -> None:
+    """test-breaker round 2: phrasings outside the round-1 strings."""
+    value: Any = [text] if field in ("options", "escalation", "uncertainty") else text
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**{field: value}))))
+    assert answer.mode == aq.MODE_TEMPLATE, text
+    assert {"status_claim", "authority_wording", "gap_wording"} & set(answer.rejected), text
+
+
+def test_key_without_model_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-not-real")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    assert not aq.key_is_set()
+    assert main(["ask", SCENARIO, "--at", "T+60", FALLBACK_Q, "--cache", str(tmp_path)]) == 0
+    assert f"Answer mode: {aq.TEMPLATE_NO_MODEL}" in capsys.readouterr().out
+
+
+def test_the_default_suite_refuses_the_network() -> None:
+    """conftest's autouse guard: a connection outside the loopback interface fails the test."""
+    for address in (("8.8.8.8", 443), ("1.1.1.1", 443)):
+        refused = pytest.raises(AssertionError, match="must not reach the network")
+        with refused, socket.socket() as sock:
+            sock.connect(address)
+        refused = pytest.raises(AssertionError, match="must not reach the network")
+        with refused, socket.socket() as sock:
+            sock.connect_ex(address)
+
+
+def test_live_failures_fall_back_to_the_labelled_template(tmp_path: Path) -> None:
+    """Timeout, 429 or any error: the no-key template, labelled; never the error's text."""
+
+    class Boom(Exception):
+        status_code = 429
+
+    class Timeout(Exception):
+        pass
+
+    for exc, reason in ((Boom("secret body"), "rate limit (HTTP 429)"), (Timeout(), "timeout")):
+
+        class Failing(FakeClient):
+            def __init__(self, error: Exception) -> None:
+                super().__init__()
+                self.error = error
+
+            def create(self, **request: Any) -> Any:
+                raise self.error
+
+        answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path / reason, Failing(exc)))
+        assert answer.mode_detail == aq.TEMPLATE_FAILED.format(reason=reason)
+        assert "secret body" not in answer.text()
+
+    class BrokenEmbedder(FakeEmbedder):
+        def query(self, text: str) -> kb.Vectors:
+            raise ConnectionError("embedding endpoint down: secret")
+
+    config = SimpleNamespace(model="test/model", output_mode="json_schema")
+    a = asker(tmp_path / "e", config=config, client=FakeClient(), embedder=BrokenEmbedder())  # type: ignore[arg-type]
+    answer = ask("A free-text question about fallback?", 60, a)
+    assert answer.mode_detail == aq.TEMPLATE_FAILED.format(reason="query embedding, error")
+    assert answer.retrieval == aq.RETRIEVAL_KEYWORD and "secret" not in answer.text()
+
+
+def test_the_advisory_channel_reaches_no_result() -> None:
+    """ADR 0003: no module that runs the simulation or builds goldens, the citation map, counts
+    or the gap analysis imports the adviser (only the CLI, the UI and the audit store do)."""
+    root = Path(aq.__file__).resolve().parents[1]
+    project = root.parents[1]
+    producers = [
+        *sorted((root / "engine").glob("*.py")),
+        *sorted((root / "simulation").glob("*.py")),
+        root / "agents" / "scripted.py",
+        root / "agents" / "llm.py",
+        root / "agents" / "cache.py",
+        root / "storage" / "reports.py",
+        root / "storage" / "export.py",
+        project / "scripts" / "citation_map.py",
+        project / "scripts" / "build_reports.py",
+    ]
+    assert len(producers) > 10
+    for path in producers:
+        text = path.read_text(encoding="utf-8")
+        assert "adviser_query" not in text, path
