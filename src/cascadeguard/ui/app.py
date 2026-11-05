@@ -31,6 +31,7 @@ from cascadeguard.cli import (
     AgentChoice,
     World,
     adviser_asker,
+    adviser_requests,
     load_world,
     search_repairs,
 )
@@ -51,8 +52,8 @@ from cascadeguard.ui import view_model as vm
 STATEMENT = AGENT_STATEMENT.split(" (", 1)[0]  # short form; the full label is the tooltip
 DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
 PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
-# "0": the adviser panel's live-call switch starts off (it is on by default when a key is set).
-ADVISER_LIVE_VARIABLE = "CASCADEGUARD_UI_ADVISER_LIVE"
+# Live adviser calls per browser session (human decision 2026-11-05).
+ADVISER_SESSION_CAP = 20
 THEME = Path(__file__).with_name("theme.css")
 HIDDEN_DELAY = 0.3  # seconds before sections not on screen are refreshed after a click
 FILL_DELAY = 0.15  # seconds after the websocket connects before the other sections are sent
@@ -299,6 +300,7 @@ class Session:
     step: int = 0
     guided: bool = True
     error: str = ""  # why the selected agents have no result (shown instead of one)
+    adviser_calls: int = 0  # live adviser questions this session (ADVISER_SESSION_CAP)
     fade: bool = True  # graph: everything outside the highlighted subgraph faded (spec 006b)
     ladder_all: bool = False  # ladder: every rung, not only the top TOP_RUNGS
     sections: dict[str, ui.element] = field(default_factory=dict[str, ui.element])
@@ -574,12 +576,25 @@ def index() -> None:
                 .classes("w-full")
                 .props("data-testid=ask-question dense autogrow")
             )
-            keyed = aq.key_is_set()
-            live = ui.switch(
-                "Live LLM call when the answer is not cached",
-                value=keyed and os.environ.get(ADVISER_LIVE_VARIABLE, "1") != "0",
-            ).props("data-testid=ask-live")
-            live.set_visibility(keyed)  # no key: always the deterministic template
+            # Human decision 2026-11-05: off by default, shown only when OPENROUTER_API_KEY
+            # is set; at most ADVISER_SESSION_CAP live questions per session.
+            keyed = aq.api_key_is_set()
+            with ui.row().classes("items-center gap-2") as live_row:
+                live = ui.switch("Live LLM call when the answer is not cached", value=False).props(
+                    "data-testid=ask-live"
+                )
+                calls = ui.label("").classes("cg-muted").props("data-testid=ask-calls")
+            live_row.set_visibility(keyed)
+
+            def show_calls() -> None:
+                calls.set_text(
+                    f"live adviser calls this session: {s.adviser_calls} / {ADVISER_SESSION_CAP}"
+                )
+                if s.adviser_calls >= ADVISER_SESSION_CAP:
+                    live.value = False
+                    live.disable()
+
+            show_calls()
             button = ui.button("Ask the adviser", on_click=lambda: ask_now()).props(
                 "no-caps data-testid=ask-button"
             )
@@ -612,21 +627,23 @@ def index() -> None:
                 view = next(
                     v for v in result.views if v.role_id == aq.ADVISER and v.minute == step.value
                 )
-                answer = await run.io_bound(
+                go_live = bool(live.value) and s.adviser_calls < ADVISER_SESSION_CAP
+                asked = await run.io_bound(
                     ask_adviser,
                     s.scenario,
                     text,
                     view,
                     d,
                     [t for _, t in presets],
-                    not bool(live.value),
+                    not go_live,
                 )
-            except Exception as exc:  # shown, never a traceback in the page
-                answer_box.clear()
-                with answer_box:
-                    ui.label(f"No answer: {type(exc).__name__}: {exc}").classes("cg-act-no")
-                button.enable()
-                return
+                answer, sent = cast(tuple[aq.AdviserAnswer, bool], asked)
+                s.adviser_calls += 1 if sent else 0
+            except Exception as exc:  # never a raw error: the no-key template, labelled
+                answer = await run.io_bound(
+                    template_after_error, s.scenario, text, step.value, d, presets, exc
+                )
+            show_calls()
             answer_box.clear()
             with answer_box:
                 show_answer(cast(aq.AdviserAnswer, answer))
@@ -1258,12 +1275,33 @@ def index() -> None:
 
 def ask_adviser(
     scenario: str, question: str, view: Any, d: Bundle, presets: list[str], offline: bool
-) -> aq.AdviserAnswer:
+) -> tuple[aq.AdviserAnswer, bool]:
     """One question to the adviser (cli.adviser_asker: LLM mode with a key, live unless
-    offline; else the template)."""
+    offline; else the template), and whether any live request was sent."""
     asker = adviser_asker(offline, aq.DEFAULT_ANSWER_CACHE)
     roles = [r.id for r in d.world.roles.roles]
-    return aq.ask(scenario, question, view, d.world.clauses, roles, asker, presets)
+    answer = aq.ask(scenario, question, view, d.world.clauses, roles, asker, presets)
+    return answer, sum(adviser_requests(asker)) > 0
+
+
+def template_after_error(
+    scenario: str,
+    question: str,
+    minute: int,
+    d: Bundle,
+    presets: tuple[tuple[int, str], ...],
+    exc: BaseException,
+) -> aq.AdviserAnswer:
+    """The no-key template answer after an unexpected error, labelled; the error's own text is
+    never shown (human decision 2026-11-05)."""
+    scripted = bundle(scenario, "scripted")
+    result = scripted.baseline if isinstance(scripted, Bundle) else d.baseline
+    view = next(v for v in result.views if v.role_id == aq.ADVISER and v.minute == minute)
+    detail = aq.TEMPLATE_FAILED.format(reason=aq.failure_reason(exc))
+    asker = aq.Asker(template_detail=detail)
+    roles = [r.id for r in d.world.roles.roles]
+    texts = [t for _, t in presets]
+    return aq.ask(scenario, question, view, d.world.clauses, roles, asker, texts)
 
 
 def show_answer(answer: aq.AdviserAnswer) -> None:

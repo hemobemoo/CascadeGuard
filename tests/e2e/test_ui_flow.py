@@ -123,6 +123,47 @@ def _record_cache(directory: Path, model: str = "", baseline_only: bool = False)
         search_repairs(SCENARIO, world=recorded)
 
 
+# Every UI server runs under this guard (human decision 2026-11-05): .env hidden, the OpenRouter
+# variables removed, and any socket connection outside the loopback interface refused.
+SERVER_GUARD = """
+import os, socket
+from pathlib import Path
+import cascadeguard.agents.llm as _llm
+_llm.ENV_FILE = Path("no-such-dir") / ".env"
+[os.environ.pop(k, None) for k in ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")]
+_connect = socket.socket.connect
+def _guarded(self, address):
+    host = str(address[0]) if isinstance(address, tuple) else "127.0.0.1"
+    if not (host in ("localhost", "::1") or host.startswith("127.")):
+        raise OSError("e2e UI server: network access outside loopback is blocked")
+    return _connect(self, address)
+socket.socket.connect = _guarded
+"""
+APP_LAUNCHER = "from cascadeguard.ui import app; app.main()"
+# A dummy key (never sent anywhere): the live switch shows; building a client is refused, so a
+# live question fails at once and must come back as the labelled template.
+KEYED_REFUSING_LAUNCHER = """
+os.environ["OPENROUTER_API_KEY"] = "test-key-not-real"
+os.environ["OPENROUTER_BASE_URL"] = "https://openrouter.ai/api/v1"
+os.environ["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
+import cascadeguard.cli as _cli
+def _refuse(*args, **kwargs):
+    raise RuntimeError("e2e: no live client")
+_cli.make_client = _refuse
+_cli.OpenRouterEmbedder = _refuse
+from cascadeguard.ui import app
+app.main()
+"""
+
+
+def _guarded(command: list[str]) -> list[str]:
+    """The same command, run under SERVER_GUARD."""
+    if command[:2] == ["-m", "cascadeguard.ui.app"]:
+        return ["-c", SERVER_GUARD + APP_LAUNCHER, *command[2:]]
+    assert command[0] == "-c", command
+    return ["-c", SERVER_GUARD + command[1], *command[2:]]
+
+
 def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str]:
     port = _free_port()
     # Without pytest's variables: NiceGUI switches to its own test mode when it sees them.
@@ -133,7 +174,9 @@ def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str
     if model is not None:
         env["CASCADEGUARD_MODEL"] = model
     command = ["-m", "cascadeguard.ui.app"] if model is not None else ["-c", NO_MODEL_LAUNCHER]
-    command = launcher or command
+    command = _guarded(launcher or command)
+    env.pop("OPENROUTER_API_KEY", None)
+    env.pop("OPENROUTER_BASE_URL", None)
     process = subprocess.Popen(
         [sys.executable, *command],
         env=env,
@@ -161,6 +204,11 @@ def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str
 def server() -> Iterator[str]:
     # LLM mode is only exercised from the cache, under a model id that has no cache entries.
     yield from _serve("test/e2e-no-such-model")
+
+
+@pytest.fixture(scope="module")
+def server_keyed_refusing() -> Iterator[str]:
+    yield from _serve(None, ["-c", KEYED_REFUSING_LAUNCHER])
 
 
 @pytest.fixture(scope="module")
@@ -651,6 +699,35 @@ def test_ask_the_adviser_without_a_key(server_without_model: str, browser: Brows
         expect(answer).to_contain_text(title)
     expect(answer).to_contain_text("dha.pp11.4-18-1")
     expect(answer).to_contain_text("context only; not citable")
+    context.close()
+
+
+def test_ask_the_adviser_live_switch_and_error_fallback(
+    server_keyed_refusing: str, browser: Browser
+) -> None:
+    """Human decision 2026-11-05: with a key the live switch shows, off by default, with the
+    session count; an error falls back to the template, labelled, never the raw error."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_keyed_refusing)
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.locator('[data-testid="ask-open"]').click()
+    live = pg.locator('[data-testid="ask-live"]')
+    expect(live).to_be_visible()
+    expect(live).to_have_attribute("aria-checked", "false")
+    expect(pg.locator('[data-testid="ask-calls"]')).to_have_text(
+        "live adviser calls this session: 0 / 20"
+    )
+    pg.get_by_label("Question", exact=True).fill("Who keeps the plan?")
+    live.click()
+    pg.locator('[data-testid="ask-button"]').click()
+    mode = pg.locator('[data-testid="ask-mode"]')
+    expect(mode).to_have_text(
+        "Answer mode: deterministic template, as with no API key (the live call failed: error)"
+    )
+    expect(pg.locator('[data-testid="ask-answer"]')).not_to_contain_text("e2e: no live client")
     context.close()
 
 
