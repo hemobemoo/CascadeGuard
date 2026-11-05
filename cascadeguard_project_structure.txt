@@ -92,7 +92,7 @@ cascadeguard/
 │   │   ├── graph.py                  NetworkX dependency graph (roles, data flows, obligations)
 │   │   ├── diagnosis.py              locate the cross-agency coordination failure
 │   │   ├── governance.py             [PR 4] governed vs ungoverned comparison (--governance off; comparison only)
-│   │   ├── adviser_check.py          [P7] checks an LLM adviser answer (citations, labels, gap wording)
+│   │   ├── adviser_check.py          [Task 1, 2026-11-05] checks an LLM adviser answer (citations, labels, gap wording)
 │   │   └── repair_search.py          [P3] enumerate + rank repairs (lexicographic, see AGENTS.md)
 │   │
 │   ├── agents/
@@ -100,7 +100,7 @@ cascadeguard/
 │   │   ├── scripted.py               [P2] decisions read from scenario data (no LLM)
 │   │   ├── llm.py                    [P5] LLM-backed agent, same protocol, structured output
 │   │   ├── cache.py                  [P5] record/replay cache keyed by hash(role, view, prompt version, model id)
-│   │   └── adviser_query.py          [P7] Ask the Policy Adviser: one question at T+n from the adviser's own view
+│   │   └── adviser_query.py          [Task 1, 2026-11-05] Ask the Policy Adviser: one question at T+n from the adviser's own view
 │   │
 │   ├── storage/
 │   │   ├── audit.py                  [P3] DuckDB: runs, events, findings, repairs, comparisons
@@ -129,14 +129,14 @@ cascadeguard/
 │   │                                 (TRANSCRIBED_SOURCES); quotes flagged so are checked here
 │   ├── kb/                           [PR 3] vector index: chunks.jsonl, vectors.npy, manifest.json (context only);
 │   │                                 acceptance.json + query_vectors.json (acceptance queries, stored vectors);
-│   │                                 [P7] adviser_query_vectors.json (preset adviser questions; after gate 4)
+│   │                                 [Task 1, 2026-11-05] adviser_query_vectors.json (preset adviser questions; after gate 4)
 │   └── reviewed/                     [P1] clause YAML extracted from the PDFs; engine reads only these
 │       └── README.md                 field definitions + status meanings (draft / reviewed / illustrative)
 │
 ├── scripts/
 │   ├── extract_pdf_text.py           [P1] PDFs -> policies/extracted/*.jsonl (pdfplumber)
 │   ├── build_kb.py                   [PR 3] chunks + OpenRouter embeddings -> policies/kb/
-│   ├── embed_adviser_presets.py      [P7] preset adviser questions -> policies/kb/adviser_query_vectors.json (dry run by default)
+│   ├── embed_adviser_presets.py      [Task 1, 2026-11-05] preset adviser questions -> policies/kb/adviser_query_vectors.json (dry run by default)
 │   ├── build_reports.py              [PR 5] writes the generated evaluation documents (--check)
 │   ├── report_docx.py                [report] report Markdown -> .docx on the organizers' template
 │   ├── citation_map.py               [report] committed runs -> docs/citation-map.md (--check; no API call)
@@ -155,7 +155,7 @@ cascadeguard/
 │       │                             unsuccessful replay (P3 goldens live here, not tests/golden/)
 │       ├── evaluation_findings.yaml  [P6] recorded scripted-vs-LLM findings shown in the UI
 │       ├── gap_examples.yaml         [PR 5] failure -> example-clause mapping (reviewed, gate 7)
-│       ├── adviser_questions.yaml    [P7] preset questions for Ask the Policy Adviser
+│       ├── adviser_questions.yaml    [Task 1, 2026-11-05] preset questions for Ask the Policy Adviser
 │       ├── display.yaml              [P6b] UI-only display labels and incident summary
 │       └── README.md                 plain-language narrative of the incident
 │

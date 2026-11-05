@@ -65,6 +65,13 @@ so the two PROGRESS commits after #31 ride along).**
   governed scripted baseline like the CLI; new tests for request failure, the request line,
   the keyword half, stored preset vectors. QUESTION-FOR-HUMAN (UI live switch on by default)
   is already under "Waiting on human". Adviser tests: 51.
+- Review round 1, phase-auditor FAIL (on ee77984), fixed: the abstention sentences had a double
+  negative ("no clause ... was not identified"; now "a clause ... was not identified", with a
+  test); PROGRESS "Current phase"/"Next step" updated and the old "live querying deferred" line
+  marked superseded; section 5 and 6 lines carry status labels (engine readings marked); a keyed
+  run with no client is labelled TEMPLATE_NO_CLIENT, not offline; structure tags say "Task 1,
+  2026-11-05" (not P7); the UI view source was already fixed. Its three QUESTION-FOR-HUMAN items
+  are under "Waiting on human".
 - Preset embedding (approved by the human 2026-11-05, 1 request): **failed twice**, HTTP 502 on
   all 4 attempts each time (retry approved by the human; 8 requests in all, no vector returned).
   The model is still listed by OpenRouter's public embeddings catalogue (checked 2026-11-05), so
@@ -387,6 +394,12 @@ then locked.
 
 ## Current phase
 
+**Human brief of 2026-11-05 (see "Start here"): Task 1, Ask the Policy Adviser, on branch
+`phase-7-adviser-query` (the name is the human's; it is not START_PROMPT's Phase 7, tracing).**
+Built; review round 1: test-breaker FAIL and phase-auditor FAIL, findings fixed; round 2
+running. Then: full checks, PR, stop for the gate-4 and gate-8 items under "Waiting on human".
+Tasks 2-5 follow, one PR each.
+
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
 PRs follow, one at a time; each stops once open with CI green:
@@ -416,7 +429,8 @@ Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM ba
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
 only after asking again; until then the demo stays scripted. The two
 `uae.cyber-strategy-2025.*` drafts stay unloaded for this submission; no new sources after the
-Charter PDF. Live querying of the adviser is deferred until after submission.
+Charter PDF. Live querying of the adviser is deferred until after submission (superseded by the
+human brief of 2026-11-05: Task 1, Ask the Policy Adviser, see "Start here").
 
 **Phase 6d — Official sources: merged to main via PR #11 (merge commit bf753c9, branch
 `phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
@@ -1495,7 +1509,16 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 - Decision: with a key and no `--offline`, `ask` (and the UI panel, switch on by default) calls
   the model live, as the brief says. The agent's own accidental calls show the risk: keep, or
   require an explicit `--live` in the CLI?
-- Gate 4 disclosure: 6 unasked chat + 6 embedding requests (see "Start here", Task 1).
+- Gate 4 disclosure: 6 unasked chat + 6 embedding requests (see "Start here", Task 1); the
+  human needs to acknowledge it (phase-auditor QUESTION-FOR-HUMAN).
+- Gates 4/8 (phase-auditor): the UI panel's live switch and the CLI's live default conflict with
+  the earlier decision in specs/005-llm-agents.md ("no live calls from the UI; the CLI keeps live
+  runs") and specs/006-demo-ui-v2.md ("the UI has no live LLM mode"). The 2026-11-05 brief asks
+  for LLM mode in the demo. Confirm the exception (then the specs get a note), or the UI stays
+  cached/offline only.
+- Gate 8 (phase-auditor): the LLM adviser returns an `AdviserPayload` (the seven sections), not
+  an `AgentDecision`; AGENTS.md says agents return only an AgentDecision. It is read-only (no
+  state change; engine-checked). Accept it as a separate advisory channel?
 - After merge: proposed new wording for the report's §6 Limits sentence about the adviser
   (gate 7); the PDF stays at 5 pages.
 
@@ -1727,6 +1750,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+**2026-11-05:** finish the Task 1 review loop (round 2), run all checks, open the PR from
+`phase-7-adviser-query` with the reviewer verdicts, and stop for the human's answers under
+"Waiting on human" (Task 1). Then Task 2 (`gap-fallback-example`). The older notes below are
+history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".

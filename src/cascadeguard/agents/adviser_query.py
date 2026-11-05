@@ -79,6 +79,7 @@ LLM_LIVE = "LLM (configured chat model, live call; cached)"
 LLM_CACHED = "LLM (configured chat model; cached answer, no call)"
 TEMPLATE_NO_KEY = "deterministic template (no API key)"
 TEMPLATE_OFFLINE = "deterministic template (offline; no cached LLM answer for this question)"
+TEMPLATE_NO_CLIENT = "deterministic template (no chat client; no cached LLM answer)"
 TEMPLATE_REJECTED = "deterministic template (the engine rejected the LLM answer: {reasons})"
 TEMPLATE_FAILED = "deterministic template (the LLM gave no valid answer: {reason})"
 
@@ -398,7 +399,10 @@ def _responsible(items: Sequence[EvidenceItem], role_ids: frozenset[str]) -> str
             named.setdefault(actor, []).append(e.clause_id)
     if not named:
         return NOT_ESTABLISHED
-    roles = "; ".join(f"{role} ({', '.join(ids)})" for role, ids in named.items())
+    labels = {e.clause_id: e.status_label for e in items}
+    roles = "; ".join(
+        f"{role} ({', '.join(f'{i} [{labels[i]}]' for i in ids)})" for role, ids in named.items()
+    )
     return (
         f"{roles}: the actor in the engine's reading of each cited clause (see section 6). "
         "Whether a reading answers this question is for a human expert."
@@ -407,7 +411,8 @@ def _responsible(items: Sequence[EvidenceItem], role_ids: frozenset[str]) -> str
 
 def _options(items: Sequence[EvidenceItem], view: RoleView) -> list[str]:
     lines = [
-        f"{kind.capitalize()} ({e.clause_id}): {e.reading.split(': ', 1)[1]}"
+        f"{kind.capitalize()} ({e.clause_id} [{e.status_label}]; engine reading): "
+        f"{e.reading.split(': ', 1)[1]}"
         for e in items
         for kind in ("permission", "prohibition", "obligation", "safeguard")
         if e.reading.startswith(f"{kind}: ")
@@ -431,7 +436,7 @@ def template_answer(
     abstained = not cited
     if abstained:
         direct = (
-            "The adviser abstains: no loaded clause supporting an answer to this question was "
+            "The adviser abstains: a loaded clause supporting an answer to this question was "
             f"{NOT_IDENTIFIED} at T+{view.minute:02d}. Absence from the reviewed corpus says "
             "nothing about whether UAE law addresses the question."
         )
@@ -442,7 +447,7 @@ def template_answer(
             f"are {named}. "
         )
         if not uae:
-            direct += f"No UAE clause on this question was {NOT_IDENTIFIED}. "
+            direct += f"A UAE clause on this question was {NOT_IDENTIFIED}. "
         readings = [f"{e.clause_id}: {e.reading}" for e in uae if e.reading]
         if readings:
             direct += "The engine's readings: " + "; ".join(readings) + ". "
@@ -838,7 +843,8 @@ def ask(
             cached, scenario_id, question, view, retrieved, offered, clauses, roles, LLM_CACHED, {}
         )
     if asker.offline or asker.client is None:
-        return template_answer(scenario_id, question, view, retrieved, roles, TEMPLATE_OFFLINE)
+        detail = TEMPLATE_OFFLINE if asker.offline else TEMPLATE_NO_CLIENT
+        return template_answer(scenario_id, question, view, retrieved, roles, detail)
     payload: AdviserPayload | None = None
     usage: dict[str, Any] = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
     problem = "invalid output twice"
