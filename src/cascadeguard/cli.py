@@ -768,6 +768,7 @@ def adviser_asker(offline: bool, cache_dir: Path) -> aq.Asker:
         stored = None
     if not aq.key_is_set():
         return aq.Asker(
+            template_detail=aq.no_model_detail(),
             cache=cache,
             model=aq.model_or_none() if offline else None,
             stored=stored,
@@ -796,16 +797,20 @@ def adviser_asker(offline: bool, cache_dir: Path) -> aq.Asker:
     )
 
 
+def adviser_requests(asker: aq.Asker) -> tuple[int, int]:
+    """(chat requests, query embeddings) this asker sent; (0, 0) when nothing is live."""
+    inner = getattr(asker.client, "inner", None)
+    chat = inner.requests if isinstance(inner, CappedClient) else 0
+    count = getattr(asker.embedder, "requests", 0)  # OpenRouterEmbedder counts its requests
+    return chat, count if isinstance(count, int) else 0
+
+
 def adviser_requests_line(asker: aq.Asker) -> str | None:
     """With a key and no --offline: the live requests this question sent (chat requests,
     retries included, under the per-question cap; query embeddings)."""
     if asker.client is None:
         return None
-    inner = getattr(asker.client, "inner", None)
-    chat = inner.requests if isinstance(inner, CappedClient) else 0
-    embedder = asker.embedder
-    count = getattr(embedder, "requests", 0)  # OpenRouterEmbedder counts its requests
-    embeds = count if isinstance(count, int) else 0
+    chat, embeds = adviser_requests(asker)
     return (
         f"Live requests: {chat} chat (cap {aq.REQUEST_CAP}, retries included), "
         f"{embeds} query embedding"

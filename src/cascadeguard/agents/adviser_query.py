@@ -79,9 +79,13 @@ LLM_LIVE = "LLM (configured chat model, live call; cached)"
 LLM_CACHED = "LLM (configured chat model; cached answer, no call)"
 TEMPLATE_NO_KEY = "deterministic template (no API key)"
 TEMPLATE_OFFLINE = "deterministic template (offline; no cached LLM answer for this question)"
+TEMPLATE_NO_MODEL = (
+    "deterministic template (CASCADEGUARD_MODEL is not set; no default model is used)"
+)
+SUGGESTION = "suggestion, not a permission: "
 TEMPLATE_NO_CLIENT = "deterministic template (no chat client; no cached LLM answer)"
 TEMPLATE_REJECTED = "deterministic template (the engine rejected the LLM answer: {reasons})"
-TEMPLATE_FAILED = "deterministic template (the LLM gave no valid answer: {reason})"
+TEMPLATE_FAILED = "deterministic template, as with no API key (the live call failed: {reason})"
 
 RETRIEVAL_LIVE = "hybrid search (question embedded live with the knowledge-base model)"
 RETRIEVAL_STORED = "hybrid search (stored query vector of a preset question)"
@@ -744,7 +748,10 @@ def llm_answer(
         responsible_role=agent_statement(payload.responsible_role),
         # The engine's readings of the cited UAE clauses first; the model's suggestions are
         # labelled agent statements, never permissions.
-        options=(*_options(uae, view), *(agent_statement(o) for o in payload.options)),
+        options=(
+            *_options(uae, view),
+            *(agent_statement(f"{SUGGESTION}{o}") for o in payload.options),
+        ),
         escalation=(
             *ESCALATION,
             *(agent_statement(e) for e in payload.escalation),
@@ -782,6 +789,22 @@ class Asker:
     output_mode: str = "json_schema"
     stored: kb.Embedder | None = None  # preset question vectors
     index: kb.Index | None = None
+    template_detail: str = TEMPLATE_NO_KEY  # the mode shown when no model is configured
+
+
+def failure_reason(exc: BaseException) -> str:
+    """A short, fixed description of a failed live call: never the error's own text."""
+    name = type(exc).__name__
+    status = getattr(exc, "status_code", None)
+    if status == 429 or name == "DailyLimitReached":
+        return "rate limit (HTTP 429)"
+    if "Timeout" in name:
+        return "timeout"
+    if name == "CapReached":
+        return "request cap reached"
+    if isinstance(status, int):
+        return f"HTTP {status}"
+    return "error"
 
 
 def clean_question(text: str) -> str:
@@ -826,12 +849,22 @@ def ask(
         embedder, retrieval = vectors.recording(asker.embedder), RETRIEVAL_LIVE
     else:
         embedder, retrieval = None, RETRIEVAL_KEYWORD
-    context = retrieve_context(question, view, embedder, asker.index)
+    try:
+        context = retrieve_context(question, view, embedder, asker.index)
+    except Exception as exc:  # the live query embedding failed: the no-key answer, labelled
+        if retrieval != RETRIEVAL_LIVE:
+            raise
+        context = retrieve_context(question, view, None, asker.index)
+        retrieved = Retrieved(
+            rank_clauses(question, view, clauses, context), context, RETRIEVAL_KEYWORD
+        )
+        detail = TEMPLATE_FAILED.format(reason=f"query embedding, {failure_reason(exc)}")
+        return template_answer(scenario_id, question, view, retrieved, roles, detail)
     candidates = rank_clauses(question, view, clauses, context)
     retrieved = Retrieved(candidates, context, retrieval)
     model = asker.config.model if asker.config is not None else asker.model
     if model is None:
-        return template_answer(scenario_id, question, view, retrieved, roles, TEMPLATE_NO_KEY)
+        return template_answer(scenario_id, question, view, retrieved, roles, asker.template_detail)
     offered = candidates[:LLM_CANDIDATES]
     request = build_request(
         model, question, view, offered, context, sorted(roles), asker.output_mode
@@ -852,8 +885,8 @@ def ask(
         usage["calls"] += 1
         try:
             response = asker.client.chat.completions.create(**request)
-        except Exception as exc:  # after the client's own retries
-            problem = f"request failed ({type(exc).__name__})"
+        except Exception as exc:  # after the client's own retries: timeout, 429, cap, any error
+            problem = failure_reason(exc)
             break
         u = getattr(response, "usage", None)
         usage["prompt_tokens"] += int(getattr(u, "prompt_tokens", 0) or 0)
@@ -877,9 +910,21 @@ def _env(names: Sequence[str], env_file: Path | None) -> dict[str, str]:
     return values
 
 
+def api_key_is_set(env_file: Path | None = None) -> bool:
+    """OPENROUTER_API_KEY is set (.env or the environment): the UI shows its live switch."""
+    return bool(_env(("OPENROUTER_API_KEY",), env_file))
+
+
 def key_is_set(env_file: Path | None = None) -> bool:
     """Every LLM variable is set (.env or the environment): LLM mode. Else template mode."""
     return len(_env(llm.ENV_VARIABLES, env_file)) == len(llm.ENV_VARIABLES)
+
+
+def no_model_detail(env_file: Path | None = None) -> str:
+    """The template's mode text when LLM mode is off: a key without CASCADEGUARD_MODEL says
+    so (AGENTS.md: never a default model), anything else is "no API key"."""
+    keyed = bool(_env(("OPENROUTER_API_KEY",), env_file))
+    return TEMPLATE_NO_MODEL if keyed and model_or_none(env_file) is None else TEMPLATE_NO_KEY
 
 
 def model_or_none(env_file: Path | None = None) -> str | None:

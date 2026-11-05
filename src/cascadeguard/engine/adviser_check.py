@@ -68,26 +68,34 @@ _CONFUSABLES = str.maketrans(
         )
     }
 )
+_INNER_HYPHEN = re.compile(r"(?<=\w)[-\u00ad\u2010\u2011](?=\w)")
 ADVISER_GAP = re.compile(
     r"\babsen(?:t|ce)\b|\black(?:s|ing|ed)?\b|\bunclear\b|\bunaddressed\b|\bundefined\b"
     r"|\bmissing\b|\bvoid\b|\bomi(?:ts|tted|ssion)\b"
     r"|\bno (?:\w+ ){0,2}(?:requirements?|statutes?|obligations?|duty|duties|mandates?"
     r"|legislation|provisions?|rules?|laws?)\b"
-    r"|\b(?:does|do|did) not (?:oblige|require|mandate|specify|say|state|assign|define)\b"
-    r"|\bnot (?:required|obliged|mandated|specified|assigned|defined) by\b",
+    r"|\b(?:does|do|did|is|are) ?n[o']t (?:\w+ ){0,2}(?:oblige|require|mandate|specify|say"
+    r"|state|assign|define|cover|address|explicit|clear)\w*\b"
+    r"|\bnot (?:required|obliged|mandated|specified|assigned|defined) by\b"
+    r"|\bnone of\b|\bnobody\b|\bno[- ]one\b|\bfail(?:s|ed)? to\b|\bquiet\b"
+    r"|\bnot explicit\w*\b|\bnor does\b|\bneither\b",
     re.IGNORECASE,
 )
 STATUS_CLAIM = re.compile(
     r"\b(?:non-?|not )?binding\b|\bmandatory\b|\blegally\b|\benforceable\b|\bhas the force of\b"
     r"|\b(?:federal|uae|emirati|dubai) (?:law|legislation|statute|regulation|decree)\b"
-    r"|\breviewed\b(?! corpus)|\billustrative\b|\bin force\b",
+    r"|\breviewed\b(?! corpus)|\billustrative\b|\bin force\b|\bin effect\b"
+    r"|\bcompulsor\w*|\bobligator\w*|\bstatutor\w*|\blegal(?:ly)? force\b|\bforce of law\b"
+    r"|\brequired by (?:the )?law\b|\blaw of the land\b|\blegal (?:duty|obligation|requirement)",
     re.IGNORECASE,
 )
 AUTHORITY = re.compile(
     r"\bauthori[sz](?:e|es|ed|ing|ation)\b|\bapprov(?:e|es|ed|ing|al)\b|\bhereby\b"
     r"|\bpermit(?:s|ted|ting)?\b|\bpermission\b|\bwaiv(?:e|es|ed|er|ing)\b|\bdisregard\w*\b"
     r"|\boverrid(?:e|es|den|ing)\b|\bset aside\b|\b(?:may|can) (?:be )?ignored?\b"
-    r"|\bexempt\w*\b|\bsuspend\w*\b",
+    r"|\bexempt\w*\b|\bsuspend\w*\b|\ballow(?:s|ed|ing)?\b|\bgo ahead\b|\bgreen light\b"
+    r"|\bclear(?:s|ed)? (?:it|to|for)\b|\bcleared\b|\bdoes not apply\b|\bsign(?:s|ed)? off\b"
+    r"|\bno (?:\w+ )?escalation\b|\bneed not\b|\bnot need to\b|\bno need to\b",
     re.IGNORECASE,
 )
 
@@ -103,14 +111,19 @@ class AnswerCheck:
 
 
 def normalise(text: str) -> str:
-    """Text as matched: NFKC, format/control characters removed, look-alikes mapped, one line."""
-    folded = unicodedata.normalize("NFKC", text)
+    """Text as matched, on one line: NFKC then case-folded; decomposed (NFKD) with combining
+    marks dropped ("bínding" -> "binding"); format and control characters removed; Latin
+    look-alikes mapped (after folding, so capitals are covered too); hyphens and soft hyphens
+    inside a word removed ("bind-ing" -> "binding")."""
+    folded = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", text).casefold())
     kept = "".join(
         " " if ch in "\n\r\t" else ch
         for ch in folded
-        if ch in "\n\r\t" or not unicodedata.category(ch).startswith("C")
+        if ch in "\n\r\t"
+        or not (unicodedata.category(ch).startswith("C") or unicodedata.category(ch) == "Mn")
     )
-    return " ".join(kept.translate(_CONFUSABLES).split())
+    mapped = _INNER_HYPHEN.sub("", kept.translate(_CONFUSABLES))
+    return " ".join(mapped.split())
 
 
 def has_control(text: str) -> bool:
