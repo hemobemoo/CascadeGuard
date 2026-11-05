@@ -117,7 +117,7 @@ and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is cont
 - SHA-256: `476f04d4c60b0770c1ac8b2720551972074ce78e936a3e7a535048416111d0df`.
 - Extracted with `uv run python scripts/extract_pdf_text.py --only nistspecialpublication800-34r1`:
   149 pages, none without text. PDF page 15 is printed page 1.
-- US federal guidance: international (non-UAE) precedent, not AI-specific, not binding in the UAE.
+- US federal guidance: foreign (non-UAE) precedent, not AI-specific, not binding in the UAE.
   Clauses quoted from it carry the automatic qualifier "foreign precedent" (US jurisdiction).
 - Kept out of the keyword search and the vector index (`NOT_SEARCHED`): adding it to the searched
   corpus changes the index's corpus (the committed index refuses to load until rebuilt) and
