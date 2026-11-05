@@ -122,6 +122,15 @@ so the two PROGRESS commits after #31 ride along).**
   patterns and to the tests. **Left open as a human gate:** a phrase list cannot catch every
   wording, so model free text (sections 1, 5, 6) can still assert binding force, authority or a
   gap in words no pattern lists. Options, in "Waiting on human".
+- **Human answers 2026-11-06, applied:** option (b) (sections always the engine's text; model
+  lines only in "Model commentary (unverified agent statement)"; ADR 0003, README, UI docstring
+  updated); AGENTS.md line confirmed; CLI `ask` calls a model only with `--live`. Gate 4: the
+  preset-embedding retry failed a third time (HTTP 502 x4, 4 requests; stopped as instructed), so
+  the 6 preset answers were recorded on keyword retrieval (6 chat requests, all succeeded) into
+  `docs/evaluation/adviser/cache/` (checked: no key, base URL, model id or local path). **The
+  engine rejected all six** (gap/status/authority wording in the model's commentary, e.g. "does
+  not state", "no clause", "illustrative"), so preset replay shows the template with reasons.
+  Whether to relax the checks for the commentary block is the human's call (not changed).
 - Preset embedding (approved by the human 2026-11-05, 1 request): **failed twice**, HTTP 502 on
   all 4 attempts each time (retry approved by the human; 8 requests in all, no vector returned).
   The model is still listed by OpenRouter's public embeddings catalogue (checked 2026-11-05), so
