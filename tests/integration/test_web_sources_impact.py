@@ -275,3 +275,86 @@ def test_extracted_context_fingerprint_changes_with_the_new_extracted_text(tmp_p
     for name in OFFICIAL_6D:
         (before / name.replace(".pdf", ".jsonl")).unlink()
     assert extracted_digest(before) != extracted_digest(EXTRACTED_DIR)
+
+
+# --- Task 2 (human brief 2026-11-05): NIST SP 800-34 Rev. 1 drafts --------------------------
+
+NIST_SOURCE = "nistspecialpublication800-34r1.pdf"
+NIST_IDS = {
+    "nist.sp800-34.alternate-manual-means",
+    "nist.sp800-34.activation-by-designated-authority",
+}
+
+
+def is_nist(source_file: str | None) -> bool:
+    return source_file == NIST_SOURCE
+
+
+def test_the_nist_clauses_are_the_two_drafts() -> None:
+    clauses = [c for c in load_clauses() if is_nist(c.source_file)]
+    assert {c.id for c in clauses} == NIST_IDS
+    assert {c.status for c in clauses} == {ClauseStatus.DRAFT}  # until gate 1
+    assert all(c.binding is False and c.normalized is None for c in clauses)
+    assert not NIST_IDS & set(load_engine_clauses())
+
+
+def test_once_reviewed_the_nist_clauses_enter_only_the_analysis_roles_views(
+    tmp_path: Path,
+) -> None:
+    reviewed = copy_reviewed(tmp_path / "rev", drop_web=False, review_web=True, select=is_nist)
+    clauses = load_engine_clauses(reviewed)
+    assert set(clauses) >= NIST_IDS
+    corpus = frozenset(c.id for c in load_clauses(reviewed))
+    _, roles = cli.load_scenario(SCENARIO, set(corpus), cli.SCENARIOS_DIR)
+    reached = {
+        r.id
+        for r in roles.roles
+        if NIST_IDS & {c.id for c in clauses_for_role(clauses, corpus, r.id, r.allowed_actions)}
+    }
+    assert reached == {ANALYST}
+
+
+def test_loading_the_nist_clauses_leaves_diagnosis_goals_and_goldens_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Task 2 Done-when: with both NIST drafts set to reviewed (temp copy), the baseline summary
+    (diagnosis, goals, findings), the repair search and both goldens are byte-identical; only
+    the policy_legal_adviser's views (and LLM cache keys) change."""
+    before = snapshot()
+    rev = copy_reviewed(tmp_path / "rev", drop_web=False, review_web=True, select=is_nist)
+    monkeypatch.setattr(cli, "REVIEWED_DIR", rev)
+    after = snapshot()
+    assert {cid for cid, _ in after["loaded"]} - {cid for cid, _ in before["loaded"]} == NIST_IDS
+    assert before["baseline"] == after["baseline"]
+    assert before["search"] == after["search"]
+    golden = yaml.safe_load(GOLDEN_REPAIRS.read_text(encoding="utf-8"))
+    assert cli.search_repairs(SCENARIO).summary() == golden["search"]
+    pairs = list(zip(before["views"], after["views"], strict=True))
+    for replay, other in zip(before["replay_views"], after["replay_views"], strict=True):
+        pairs += list(zip(replay, other, strict=True))
+    assert {role_of(a) for a, b in pairs if a != b} == {ANALYST}
+
+
+def test_the_nist_drafts_change_only_the_draft_count_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The approved output change (human 2026-11-06): with the two NIST drafts present the CLI
+    and Markdown say two more drafts are not loaded, and nothing else differs."""
+
+    def outputs() -> tuple[int, str, str]:
+        result = cli.run_scenario(SCENARIO)
+        drafts = cli.excluded_drafts(result)
+        return (
+            drafts,
+            cli.format_result(result, drafts),
+            cli.baseline_markdown(SCENARIO, result, drafts),
+        )
+
+    with_count, with_text, with_md = outputs()
+    rev = copy_reviewed(tmp_path / "rev", drop_web=True, select=is_nist)
+    monkeypatch.setattr(cli, "REVIEWED_DIR", rev)
+    count, text, md = outputs()
+    assert with_count == count + 2
+    line, fewer = (f"{n} draft clauses not loaded" for n in (with_count, count))
+    assert with_text != text and with_text.replace(line, fewer) == text
+    assert with_md.replace(line, fewer) == md

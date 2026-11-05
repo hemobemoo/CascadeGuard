@@ -1577,6 +1577,14 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 **Task 2, NIST SP 800-34 (2026-11-06):**
 - Gate 1: the human checks the two draft quotes against PDF pages 15 and 50 (printed 1 and 36):
   `nist.sp800-34.alternate-manual-means`, `nist.sp800-34.activation-by-designated-authority`.
+  **What approving them changes** (test-breaker, Task 2): diagnosis, goals, repair ranking and
+  goldens stay identical (now tested); but the adviser's views change, so (1) the cache keys of
+  all six recorded preset answers in `docs/evaluation/adviser/cache/` change and replay falls back
+  to the template until re-recorded (gate 4), and the extra clauses shift the IDF ranking (at one
+  T+45 preset `uae.fl2-2019.art6` would also be offered); (2) `extracted_digest` changes even
+  though NIST is not searched (`_quoted_pages` covers every reviewed clause's page), so every
+  `--extracted-context` LLM cache entry goes stale; (3) LLM agents' cached decisions for the
+  adviser's steps change key. The KB index still loads.
 - Gate 7 (after gate 1): the agent proposes a gap_examples.yaml entry for
   orphan_duty:activate_fallback_channel. Evidence-auditor QUESTION-FOR-HUMAN: is US
   information-system contingency guidance (not AI-specific; "should"; manual means "typically

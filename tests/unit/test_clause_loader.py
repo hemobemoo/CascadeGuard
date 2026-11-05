@@ -118,13 +118,24 @@ def test_repository_elisions_skip_only_harmless_text() -> None:
 
 @pytest.mark.parametrize(
     "gap",
-    ["unless the patient consents", "within 72 hours", "subject to Article 5", "x" * 201, ""],
+    [
+        "unless the patient consents",
+        "within 72 hours",
+        "subject to Article 5",
+        "x" * 201,
+        "",
+        # the bullet-glyph exception is exact: bullet text after the glyph is not skippable
+        "(cid:131) Recovering information systems operations at an alternate location (typically "
+        "acceptable for only long-term disruptions)",
+    ],
 )
 def test_gap_check_rejects_meaningful_skipped_text(gap: str) -> None:
     assert gap_problems([gap])
 
 
-@pytest.mark.parametrize("gap", ["1", "REQ-ML-MNG-003", "c In the case that such explanations"])
+@pytest.mark.parametrize(
+    "gap", ["1", "REQ-ML-MNG-003", "c In the case that such explanations", "(cid:131)"]
+)
 def test_gap_check_allows_stray_markers_and_column_text(gap: str) -> None:
     assert gap_problems([gap]) == []
 
