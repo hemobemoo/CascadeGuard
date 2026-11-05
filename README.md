@@ -198,12 +198,27 @@ uv run cascadeguard ask uae_health_access --presets                       # the 
 uv run cascadeguard ask uae_health_access --at T+30 "Who must activate the fallback channel?" --offline
 ```
 
-With no API key a deterministic template writes the answer (no network; free-text questions use
-the keyword half of the search). With the three variables of `.env.example` set, the configured
-chat model writes it from the same evidence, the engine checks every citation, and the answer is
-cached in `data/adviser_cache/`; `--offline` replays it without a call. Without `--offline` and
-with a key, `ask` makes live calls (per question: at most 4 chat requests, and 1 query
-embedding, sent up to 4 times with retries).
+The seven sections are always the engine's own text, built from the loaded clauses: with no API
+key (no network; free-text questions use the keyword half of the search), and in LLM mode too.
+In LLM mode (`--live`, with the three variables of `.env.example` set) the configured chat model
+picks the clauses from the same evidence and writes a separate block, "Model commentary
+(unverified agent statement)", after the seven sections; the engine checks every citation and
+phrase before anything is shown. Answers are cached in `data/adviser_cache/` and replayed
+without `--live`. **`ask` calls a model only with `--live`** (per question: at most 4 chat
+requests, and 1 query embedding, sent up to 4 times with retries); without it, even with a key,
+it uses the cache or the template.
+
+Preset answers: the configured model's answers to the six presets were recorded on 2026-11-06
+(6 chat requests) in `docs/evaluation/adviser/cache/`; replay with
+`--cache docs/evaluation/adviser/cache` (the cache key includes the model id, so replay needs the
+same `CASCADEGUARD_MODEL` in `.env`; no call is made). They were recorded on **keyword
+retrieval**: embedding the preset questions failed (OpenRouter HTTP 502, 2026-11-05/06), so
+`policies/kb/adviser_query_vectors.json` does not exist and the context chunks come from the
+keyword half of the search. **The engine rejected all six recorded answers** (gap, status or
+authority wording in the model's text, e.g. "does not state", "no clause", "illustrative"), so
+replaying a preset shows the deterministic template with the rejection reasons, not the model's
+commentary. If the presets are embedded later, their context changes and the recorded answers no
+longer match.
 Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
 DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by
 default and shows only when `OPENROUTER_API_KEY` is set, with at most 20 live questions per
