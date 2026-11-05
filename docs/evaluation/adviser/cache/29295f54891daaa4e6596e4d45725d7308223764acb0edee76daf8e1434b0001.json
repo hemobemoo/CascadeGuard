@@ -1,0 +1,36 @@
+{
+  "key": "29295f54891daaa4e6596e4d45725d7308223764acb0edee76daf8e1434b0001",
+  "prompt_version": "adviser-v1",
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The reviewed corpus does not identify a single responsible human decision-maker for reviewing and reversing automated account lockouts; the UAE AI Charter assigns human oversight to correct AI errors, and the OECD principle assigns risk management to AI actors according to their roles, context, and ability to act.",
+    "uae_evidence": [
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "relevance": "Human oversight is emphasized to correct errors or biases that may arise from AI, with an engine reading assigning health_service_operator review of automated lockouts when an AI output may be erroneous."
+      }
+    ],
+    "international_comparison": [
+      {
+        "clause_id": "oecd.ai-principles.accountability-cooperation",
+        "relevance": "AI actors should apply systematic risk management based on their roles, context, and ability to act, including co-operation between actors."
+      }
+    ],
+    "responsible_role": "policy_legal_adviser · the UAE AI Charter’s human-oversight safeguard points to health_service_operator review of automated lockouts",
+    "options": [
+      "health_service_operator reviews automated lockouts under the UAE AI Charter human-oversight safeguard",
+      "telecom_operator reviews automated lockouts if it is the relevant AI actor under the OECD principle"
+    ],
+    "escalation": [
+      "policy_legal_adviser"
+    ],
+    "uncertainty": [
+      "The corpus does not state which role holds final authority to reverse lockouts, and no clause explicitly names a reversal decision-maker."
+    ]
+  },
+  "usage": {
+    "calls": 1,
+    "prompt_tokens": 2056,
+    "completion_tokens": 326
+  }
+}
