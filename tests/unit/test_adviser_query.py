@@ -5,6 +5,7 @@ exercised with a fake chat client and a fake embedder.
 """
 
 import json
+import re
 import socket
 from dataclasses import replace
 from functools import cache
@@ -275,6 +276,8 @@ def test_abstains_when_no_loaded_clause_supports_an_answer(tmp_path: Path) -> No
         assert aq.NOT_IDENTIFIED in answer.direct_answer
         assert answer.responsible_role == NOT_ESTABLISHED
         assert "no provision" not in answer.text().casefold()
+        # phase-auditor round 1: never a double negative that reverses the meaning
+        assert not re.search(r"no[^.]*not identified", answer.text(), re.IGNORECASE)
 
 
 def test_template_text_never_uses_gap_wording(tmp_path: Path) -> None:
@@ -685,3 +688,16 @@ def test_presets_use_their_stored_vectors(tmp_path: Path) -> None:
     (tmp_path / aq.PRESET_VECTORS).write_text(json.dumps(other), encoding="utf-8")
     with pytest.raises(kb.KnowledgeBaseError, match="another index or model"):
         kb.StoredQueries(index.digest, tmp_path, aq.PRESET_VECTORS)
+
+
+def test_section_5_and_6_lines_carry_status_labels(tmp_path: Path) -> None:
+    q = "Must the telecom operator report the network incident to the telecom regulator?"
+    answer = ask(q, 45, asker(tmp_path))
+    engine_lines = [o for o in answer.options if "engine reading" in o]
+    assert engine_lines
+    for e in answer.uae_evidence:
+        if e.reading:
+            assert any(f"{e.clause_id} [{e.status_label}]" in o for o in engine_lines)
+    assert "[illustrative]" in answer.responsible_role
+    no_offline = asker(tmp_path, model="test/model")
+    assert ask(q, 45, no_offline).mode_detail == aq.TEMPLATE_NO_CLIENT
