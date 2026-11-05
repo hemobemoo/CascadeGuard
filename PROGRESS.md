@@ -55,6 +55,26 @@ so the two PROGRESS commits after #31 ride along).**
   embeddings (`nvidia/nemotron-3.5-embed-1b:free`). Only the questions, the adviser's view (no
   facts at those steps) and public clause/KB text were sent. Results stayed in the ignored
   `data/adviser_cache/` and a temp dir; nothing committed. Since then only `--offline` or tests.
+  **Acknowledged by the human (2026-11-05).** Report, as asked:
+  - What each was for. Batch 1 (`ask` without `--offline`): T+60 "Who must activate the fallback
+    channel?", T+30 "What is the speed limit for camels on Sheikh Zayed Road?" (abstention probe),
+    T+15 "What do international frameworks say about human oversight of AI systems that
+    automatically lock users out?". Batch 2 (variables blanked, `.env` still read): T+60 the
+    fallback question, T+30 the camel question, T+30 "Can the telecom operator share network
+    degradation status with the health operator, and what may be shared?". Each question: 1 query
+    embedding (the free-text question) and 1 chat request (no retries were needed).
+  - Cost: both models are OpenRouter `:free` variants (embedding `nvidia/nemotron-3.5-embed-1b:free`;
+    the configured chat model's id ends in `:free`, checked locally without printing it), priced
+    at 0. The requests' own cost field was not recorded, and the OpenRouter activity page was not
+    checked (that needs the human's account).
+  - Committed output: none. The answers and query vectors were in `data/adviser_cache/`
+    (git-ignored) and a temp dir; both deleted 2026-11-05; `git ls-files` lists no adviser cache.
+    Nothing from them holds a key (the cache entries hold the payload and token counts only).
+  - The later preset-embedding attempts (approved): 8 requests, all HTTP 502, no output.
+- **Rule (human, 2026-11-05): no API call of any kind without the human's explicit approval in
+  the chat, tests and smoke checks included.** Enforced in tests: `tests/conftest.py`
+  (`network_guard`, autouse) fails any test that opens a connection outside the loopback
+  interface; the e2e UI servers run under the same guard with `.env` hidden.
 - Review round 1: test-breaker FAIL (2 BLOCKER, 3 MAJOR, 2 MINOR), all fixed: the engine
   check now normalises free text (NFKC, format/control characters removed, Latin look-alikes
   mapped), widens gap wording (ADVISER_GAP), rejects status claims (`status_claim`: binding,
@@ -1505,20 +1525,22 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 - Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
   retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
-  answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`).
-- Decision: with a key and no `--offline`, `ask` (and the UI panel, switch on by default) calls
-  the model live, as the brief says. The agent's own accidental calls show the risk: keep, or
-  require an explicit `--live` in the CLI?
-- Gate 4 disclosure: 6 unasked chat + 6 embedding requests (see "Start here", Task 1); the
-  human needs to acknowledge it (phase-auditor QUESTION-FOR-HUMAN).
-- Gates 4/8 (phase-auditor): the UI panel's live switch and the CLI's live default conflict with
-  the earlier decision in specs/005-llm-agents.md ("no live calls from the UI; the CLI keeps live
-  runs") and specs/006-demo-ui-v2.md ("the UI has no live LLM mode"). The 2026-11-05 brief asks
-  for LLM mode in the demo. Confirm the exception (then the specs get a note), or the UI stays
-  cached/offline only.
-- Gate 8 (phase-auditor): the LLM adviser returns an `AdviserPayload` (the seven sections), not
-  an `AgentDecision`; AGENTS.md says agents return only an AgentDecision. It is read-only (no
-  state change; engine-checked). Accept it as a separate advisory channel?
+  answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:
+  needs the human's explicit approval in the chat (rule of 2026-11-05).
+- Open: with a key and no `--offline`, `ask` in the CLI calls the model live, as the brief says.
+  Keep, or require an explicit `--live`? (Not answered yet.)
+- **Answered (human, 2026-11-05):**
+  - Gate 4 disclosure acknowledged (report in "Start here", Task 1).
+  - Gates 4/8: live LLM calls allowed from the UI for the adviser panel only; agents in the UI
+    stay cache-only. Conditions, implemented: switch off by default, shown only when
+    `OPENROUTER_API_KEY` is set; 20 live adviser calls per session, shown in the panel; timeout,
+    429 or any error -> the no-key template, labelled, never a raw error; every live answer
+    cached, presets replay offline; only the manifest's embedding model. Dated amendment notes
+    appended to specs/005 and specs/006 (original text unchanged).
+  - Gate 8: the adviser's answer object accepted as a separate advisory channel (read-only; never
+    seen by agents or the engine's decisions; no effect on goldens, citation map, counts or gap
+    analysis; citations validated against loaded clause ids before display):
+    `docs/decisions/0003-adviser-advisory-channel.md`; one AGENTS.md line (gate 6, approved).
 - After merge: proposed new wording for the report's §6 Limits sentence about the adviser
   (gate 7); the PDF stays at 5 pages.
 
