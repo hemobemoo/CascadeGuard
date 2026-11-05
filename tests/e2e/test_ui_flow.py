@@ -123,6 +123,55 @@ def _record_cache(directory: Path, model: str = "", baseline_only: bool = False)
         search_repairs(SCENARIO, world=recorded)
 
 
+# Every UI server runs under this guard (human decision 2026-11-05): .env hidden, the OpenRouter
+# variables removed, and any socket connection outside the loopback interface refused.
+SERVER_GUARD = """
+import os, socket
+from pathlib import Path
+import cascadeguard.agents.llm as _llm
+_llm.ENV_FILE = Path("no-such-dir") / ".env"
+[os.environ.pop(k, None) for k in ("OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")]
+_connect = socket.socket.connect
+def _guarded(self, address):
+    host = str(address[0]) if isinstance(address, tuple) else "127.0.0.1"
+    if not (host in ("localhost", "::1") or host.startswith("127.")):
+        raise OSError("e2e UI server: network access outside loopback is blocked")
+    return _connect(self, address)
+socket.socket.connect = _guarded
+"""
+APP_LAUNCHER = "from cascadeguard.ui import app; app.main()"
+# A dummy key (never sent anywhere): the live switch shows. The client and embedder are fakes
+# whose calls fail at once (the guard blocks the network anyway); each live question counts as
+# one sent request, and the session cap is 2, so the test can reach it.
+KEYED_REFUSING_LAUNCHER = """
+os.environ["OPENROUTER_API_KEY"] = "test-key-not-real"
+os.environ["OPENROUTER_BASE_URL"] = "https://openrouter.ai/api/v1"
+os.environ["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
+import cascadeguard.cli as _cli
+class _Fails:
+    requests = 1
+    def __init__(self, *args, **kwargs):
+        pass
+    def query(self, text):
+        raise RuntimeError("e2e: no live embedding")
+    def documents(self, texts):
+        raise RuntimeError("e2e: no live embedding")
+_cli.make_client = lambda *args, **kwargs: None
+_cli.OpenRouterEmbedder = _Fails
+from cascadeguard.ui import app
+app.ADVISER_SESSION_CAP = 2
+app.main()
+"""
+
+
+def _guarded(command: list[str]) -> list[str]:
+    """The same command, run under SERVER_GUARD."""
+    if command[:2] == ["-m", "cascadeguard.ui.app"]:
+        return ["-c", SERVER_GUARD + APP_LAUNCHER, *command[2:]]
+    assert command[0] == "-c", command
+    return ["-c", SERVER_GUARD + command[1], *command[2:]]
+
+
 def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str]:
     port = _free_port()
     # Without pytest's variables: NiceGUI switches to its own test mode when it sees them.
@@ -133,7 +182,9 @@ def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str
     if model is not None:
         env["CASCADEGUARD_MODEL"] = model
     command = ["-m", "cascadeguard.ui.app"] if model is not None else ["-c", NO_MODEL_LAUNCHER]
-    command = launcher or command
+    command = _guarded(launcher or command)
+    env.pop("OPENROUTER_API_KEY", None)
+    env.pop("OPENROUTER_BASE_URL", None)
     process = subprocess.Popen(
         [sys.executable, *command],
         env=env,
@@ -161,6 +212,11 @@ def _serve(model: str | None, launcher: list[str] | None = None) -> Iterator[str
 def server() -> Iterator[str]:
     # LLM mode is only exercised from the cache, under a model id that has no cache entries.
     yield from _serve("test/e2e-no-such-model")
+
+
+@pytest.fixture(scope="module")
+def server_keyed_refusing() -> Iterator[str]:
+    yield from _serve(None, ["-c", KEYED_REFUSING_LAUNCHER])
 
 
 @pytest.fixture(scope="module")
@@ -620,6 +676,81 @@ def test_llm_mode_without_a_model_shows_no_result(
     pg.get_by_text("Scripted", exact=True).click()
     expect(pg.locator('[data-testid="verdict-badge"]')).to_have_text(SMALLEST_SAFE)
     expect(pg.locator('[data-testid="verdict-error"]')).to_have_count(0)
+    context.close()
+
+
+def test_ask_the_adviser_without_a_key(server_without_model: str, browser: Browser) -> None:
+    """The adviser panel on the timeline: a preset at its step, answered by the deterministic
+    template (no key, so no call is possible), with the mode shown and all seven sections."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_without_model)
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.locator('[data-testid="ask-open"]').click()  # the panel is built on first use
+    panel = pg.locator('[data-testid="ask-panel"]')
+    expect(panel).to_contain_text("Ask the Policy Adviser")
+    expect(pg.locator('[data-testid="ask-live"]')).to_be_hidden()  # no key: no live switch
+    # Opening a cell moves the panel to that step.
+    pg.locator('[data-testid="cell-baseline-policy_legal_adviser-45"]').click()
+    expect(pg.locator('[data-testid="ask-step"]')).to_contain_text("T+45")
+    pg.get_by_label("Preset question").click()
+    pg.get_by_role("option", name="Who must activate the fallback channel?").click()
+    expect(pg.locator('[data-testid="ask-step"]')).to_contain_text("T+60")
+    pg.locator('[data-testid="ask-button"]').click()
+    answer = pg.locator('[data-testid="ask-answer"]')
+    expect(pg.locator('[data-testid="ask-mode"]')).to_have_text(
+        "Answer mode: deterministic template (no API key)"
+    )
+    for title in ("1. Direct answer", "2. UAE evidence", "3. Status label", "7. Uncertainty"):
+        expect(answer).to_contain_text(title)
+    expect(answer).to_contain_text("dha.pp11.4-18-1")
+    expect(answer).to_contain_text("context only; not citable")
+    context.close()
+
+
+def test_ask_the_adviser_live_switch_and_error_fallback(
+    server_keyed_refusing: str, browser: Browser
+) -> None:
+    """Human decision 2026-11-05: with a key the live switch shows, off by default, with the
+    session count; an error falls back to the template, labelled, never the raw error."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_keyed_refusing)
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.locator('[data-testid="ask-open"]').click()
+    live = pg.locator('[data-testid="ask-live"]')
+    expect(live).to_be_visible()
+    expect(live).to_have_attribute("aria-checked", "false")
+    calls = pg.locator('[data-testid="ask-calls"]')
+    expect(calls).to_have_text("live adviser calls this session: 0 / 2")
+
+    def ask_live(question: str) -> None:
+        pg.get_by_label("Question", exact=True).fill(question)
+        if live.get_attribute("aria-checked") == "false":
+            live.click()
+        pg.locator('[data-testid="ask-button"]').click()
+
+    ask_live("Who keeps the plan?")
+    expect(pg.locator('[data-testid="ask-mode"]')).to_have_text(
+        "Answer mode: deterministic template, as with no API key "
+        "(the live call failed: query embedding, error)"
+    )
+    expect(pg.locator('[data-testid="ask-answer"]')).not_to_contain_text("e2e: no live")
+    expect(calls).to_have_text("live adviser calls this session: 1 / 2")
+    # A reload keeps the count: it is kept per browser, not per page load.
+    pg.reload()
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.locator('[data-testid="ask-open"]').click()
+    expect(calls).to_have_text("live adviser calls this session: 1 / 2")
+    ask_live("Who reverses the locks?")
+    expect(calls).to_have_text("live adviser calls this session: 2 / 2")
+    expect(live).to_have_attribute("aria-checked", "false")
+    expect(live).to_have_attribute("aria-disabled", "true")
     context.close()
 
 

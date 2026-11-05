@@ -1,0 +1,24 @@
+# Preset questions for "Ask the Policy Adviser" (human brief, 2026-11-05). Their query vectors
+# are embedded once with the knowledge-base model (policies/kb/manifest.json) and stored in
+# policies/kb/adviser_query_vectors.json, so a preset retrieves the same context with no API
+# key. Free-text questions are embedded live when a key is set, else keyword search only.
+# `at` is the step the demo asks it at; any step may be chosen.
+questions:
+  - at: 30
+    text: >-
+      Can the telecom operator share network degradation status with the health operator, and
+      what may be shared?
+  - at: 60
+    text: Who must activate the fallback channel?
+  - at: 45
+    text: Who is responsible for reviewing and reversing the automated account lockouts?
+  - at: 45
+    text: >-
+      Must the health service operator notify the health-data oversight role of a suspected
+      incident, and within what period?
+  - at: 45
+    text: Must the telecom operator report the network incident to the telecom regulator?
+  - at: 15
+    text: >-
+      What do international frameworks say about human oversight of AI systems that
+      automatically lock users out?
