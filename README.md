@@ -182,6 +182,30 @@ uv run cascadeguard run uae_health_access --repair <repair-id>   # replay with o
 uv run python -m cascadeguard.ui.app                             # demo UI at http://localhost:8765
 ```
 
+### Ask the Policy Adviser
+
+Pause at any step and ask the Policy and Legal Adviser a question. It answers from its own view
+at that step (no fact released later, nothing outside its information boundary) in seven
+sections: direct answer, UAE evidence (clause id, source, page, verbatim quote), status labels,
+an international comparison kept separate, the responsible role or "not established in the
+reviewed corpus", permissible options and the required human escalation, and uncertainty. It
+abstains when no loaded clause supports an answer. Only loaded clauses (reviewed or
+illustrative) are citable; knowledge-base text is context only; not citable. The adviser has no
+enforcement authority.
+
+```bash
+uv run cascadeguard ask uae_health_access --presets                       # the 6 preset questions
+uv run cascadeguard ask uae_health_access --at T+30 "Who must activate the fallback channel?" --offline
+```
+
+With no API key a deterministic template writes the answer (no network; free-text questions use
+the keyword half of the search). With the three variables of `.env.example` set, the configured
+chat model writes it from the same evidence, the engine checks every citation, and the answer is
+cached in `data/adviser_cache/`; `--offline` replays it without a call. Without `--offline` and
+with a key, `ask` makes live calls (at most 4 chat requests and 1 query embedding per question).
+Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
+DuckDB. In the UI the panel is under the timeline (step b).
+
 ## Knowledge base and Sources
 
 | What | Where |
