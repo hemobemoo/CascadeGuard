@@ -804,7 +804,8 @@ def adviser_requests_line(asker: aq.Asker) -> str | None:
     inner = getattr(asker.client, "inner", None)
     chat = inner.requests if isinstance(inner, CappedClient) else 0
     embedder = asker.embedder
-    embeds = embedder.requests if isinstance(embedder, OpenRouterEmbedder) else 0
+    count = getattr(embedder, "requests", 0)  # OpenRouterEmbedder counts its requests
+    embeds = count if isinstance(count, int) else 0
     return (
         f"Live requests: {chat} chat (cap {aq.REQUEST_CAP}, retries included), "
         f"{embeds} query embedding"

@@ -28,6 +28,7 @@ import json
 import math
 import os
 import re
+import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -48,7 +49,13 @@ from cascadeguard.agents.llm import (
 )
 from cascadeguard.domain.base import DomainModel
 from cascadeguard.domain.policies import ClauseStatus, PolicyClause, is_uae_jurisdiction
-from cascadeguard.engine.adviser_check import NOT_ESTABLISHED, AnswerCheck, check_answer
+from cascadeguard.engine.adviser_check import (
+    NOT_ESTABLISHED,
+    NOT_IDENTIFIED,
+    AnswerCheck,
+    check_answer,
+)
+from cascadeguard.engine.constraints import agent_statement
 from cascadeguard.knowledge import kb
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
@@ -59,7 +66,6 @@ PROMPT_VERSION = "adviser-v1"
 DEFAULT_ANSWER_CACHE = PROJECT_ROOT / "data" / "adviser_cache"
 PRESETS_FILE = "adviser_questions.yaml"
 PRESET_VECTORS = "adviser_query_vectors.json"  # in policies/kb/, tied to the index digest
-NOT_IDENTIFIED = "not identified in the reviewed corpus"
 MAX_UAE = 3
 MAX_INTERNATIONAL = 2
 LLM_CANDIDATES = 8  # citable clauses offered to the model
@@ -295,7 +301,7 @@ class AdviserAnswer:
             lines = [f"{e.clause_id} [{e.status_label}]: {e.title}", f"  source: {e.source}"]
             lines.append(f'  quote: "{e.quote}"')
             if e.relevance:
-                lines.append(f"  relevance (model's note, unverified): {e.relevance}")
+                lines.append(f"  relevance: {e.relevance}")
             return lines
 
         uae = [line for e in self.uae_evidence for line in item(e)] or [
@@ -517,8 +523,13 @@ Rules:
 - Do not quote: the simulation shows each clause's verbatim text, source, page and status.
 - Distinguish binding UAE law from non-binding guidance and foreign or international precedent,
   using each clause's status label.
-- If no listed clause supports an answer, set abstain to true, cite nothing, and say the answer
-  is {NOT_IDENTIFIED}. Never say that UAE law lacks a provision or that a gap exists.
+- If no listed clause supports an answer, set abstain to true, cite nothing, list no options,
+  and say the answer is {NOT_IDENTIFIED}.
+- Never say that anything is absent, lacking, missing, unclear or not required, or that a gap
+  exists: say only what the listed clauses state.
+- Never state a clause's status or whether it binds (no "binding", "mandatory", "federal law"):
+  the simulation shows each clause's status label next to it.
+- Never authorise, approve, permit, waive or override anything: you advise only.
 - responsible_role: a role id from "known_roles" followed by a short reason drawn from a cited
   clause, or exactly "{NOT_ESTABLISHED}".
 - Use only facts in "facts_in_your_view". A fact not listed is not available to you at this step;
@@ -683,13 +694,13 @@ def llm_answer(
         abstain=payload.abstain,
         uae_ids=[c.clause_id for c in payload.uae_evidence],
         international_ids=[c.clause_id for c in payload.international_comparison],
+        direct_answer=payload.direct_answer,
         free_text=[
-            payload.direct_answer,
-            *payload.options,
             *payload.escalation,
             *payload.uncertainty,
             *(c.relevance for c in (*payload.uae_evidence, *payload.international_comparison)),
         ],
+        options=payload.options,
         responsible_role=payload.responsible_role,
         citable=citable,
         role_ids=role_ids,
@@ -700,11 +711,15 @@ def llm_answer(
 
     def filled(cited: Sequence[CitedClause]) -> tuple[EvidenceItem, ...]:
         unique = dict.fromkeys(c.clause_id for c in cited)
-        notes = {c.clause_id: c.relevance for c in cited}
+        notes = {c.clause_id: agent_statement(c.relevance) for c in cited}
         return tuple(_with_note(by_id[cid], notes[cid]) for cid in unique)
 
     uae, international = filled(payload.uae_evidence), filled(payload.international_comparison)
-    uncertainty = [*payload.uncertainty, *_label_uncertainty((*uae, *international))]
+    # Every line the model wrote is shown under the engine's agent-statement label, on one line.
+    uncertainty = [
+        *(agent_statement(u) for u in payload.uncertainty),
+        *_label_uncertainty((*uae, *international)),
+    ]
     uncertainty.append(availability_note(view))
     if retrieved.retrieval == RETRIEVAL_KEYWORD:
         uncertainty.append(KEYWORD_NOTE)
@@ -717,13 +732,19 @@ def llm_answer(
         mode_detail=mode_detail,
         retrieval=retrieved.retrieval,
         abstained=payload.abstain,
-        direct_answer=payload.direct_answer,
+        direct_answer=agent_statement(payload.direct_answer),
         uae_evidence=uae,
         status_labels=tuple((e.clause_id, e.status_label) for e in (*uae, *international)),
         international=international,
-        responsible_role=payload.responsible_role,
-        options=payload.options,
-        escalation=(*ESCALATION, *payload.escalation, *_obligation_lines(view)),
+        responsible_role=agent_statement(payload.responsible_role),
+        # The engine's readings of the cited UAE clauses first; the model's suggestions are
+        # labelled agent statements, never permissions.
+        options=(*_options(uae, view), *(agent_statement(o) for o in payload.options)),
+        escalation=(
+            *ESCALATION,
+            *(agent_statement(e) for e in payload.escalation),
+            *_obligation_lines(view),
+        ),
         uncertainty=tuple(uncertainty),
         facts_in_view=tuple(f.id for f in view.facts),
         retrieved=tuple(e.clause_id for e in retrieved.candidates),
@@ -758,6 +779,13 @@ class Asker:
     index: kb.Index | None = None
 
 
+def clean_question(text: str) -> str:
+    """The question on one line, control and format characters (escape sequences, zero-width
+    marks) replaced by spaces, so it cannot forge an output line."""
+    visible = "".join(" " if unicodedata.category(ch).startswith("C") else ch for ch in text)
+    return " ".join(visible.split())
+
+
 def load_presets(scenario_dir: Path) -> tuple[tuple[int, str], ...]:
     path = scenario_dir / PRESETS_FILE
     if not path.is_file():
@@ -779,7 +807,7 @@ def ask(
     """Answer one question at the step of `view` (the adviser's own view)."""
     if view.role_id != ADVISER:
         raise ValueError(f"the question goes to {ADVISER}, not {view.role_id}")
-    question = " ".join(question.split())
+    question = clean_question(question)
     if not question:
         raise ValueError("the question is empty")
     roles = frozenset(role_ids)
