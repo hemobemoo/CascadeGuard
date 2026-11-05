@@ -86,7 +86,9 @@ QUALIFIER = re.compile(
     r"notwithstanding|may|shall|must|article|paragraph)\b|\d",
     re.IGNORECASE,
 )
-HARMLESS_GAP = re.compile(r"^(\d{1,2}|REQ-ML-[A-Z]+-\d{3})$")  # footnote marker, margin req id
+# Footnote marker, margin requirement id, or a bullet glyph pdfplumber extracts as "(cid:131)"
+# (Task 2, NIST SP 800-34: the elision skips only the glyph, never bullet text).
+HARMLESS_GAP = re.compile(r"^(\d{1,2}|REQ-ML-[A-Z]+-\d{3}|\(cid:131\))$")
 MAX_GAP_CHARS = 200
 
 

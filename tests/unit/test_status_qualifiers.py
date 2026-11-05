@@ -154,7 +154,13 @@ UAE_IN_CORPUS = {
     "UAE (illustrative)",
     "UAE (national strategy)",
 }
-FOREIGN_IN_CORPUS = {"EU", "United States (voluntary framework)"}
+# "United States (federal guidance)": NIST SP 800-34 Rev. 1 (Task 2, human 2026-11-06: keep
+# the automatic "foreign precedent").
+FOREIGN_IN_CORPUS = {
+    "EU",
+    "United States (voluntary framework)",
+    "United States (federal guidance)",
+}
 INTERNATIONAL_IN_CORPUS = {
     "International (ITU-T Recommendation)",
     "International (OECD Adherents; non-binding recommendation; UAE adherence not checked)",

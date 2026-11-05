@@ -89,7 +89,7 @@ An absent provision in the reviewed corpus is never reported as a confirmed lega
 
 ## Policy and evidence rules
 
-- The policy knowledge base is the 23 original PDF documents in `policies/sources/` plus the
+- The policy knowledge base is the 24 original PDF documents in `policies/sources/` plus the
   web transcriptions of official pages in `policies/sources/web/`, listed in its `MANIFEST.md`.
   These originals are never modified, renamed, or deleted.
 - The two published books among them are context only: never a clause source, never quoted

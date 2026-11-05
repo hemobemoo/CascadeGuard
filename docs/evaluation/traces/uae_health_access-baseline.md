@@ -7,7 +7,7 @@ Scenario: uae_health_access (synthetic, hypothetical)
 Clause set: policies/reviewed: reviewed + illustrative clauses
 Agents: scripted agents (scripted_decisions.yaml)
   21 clauses loaded
-  21 draft clauses not loaded (awaiting human review)
+  23 draft clauses not loaded (awaiting human review)
   Decisions citing drafts are rejected; diagnosis covers loaded clauses only
   - dha.pp11.4-18-1 [reviewed (interpreted) · binding unknown]
   - dha.pp11.4-18-2 [reviewed (interpreted) · binding unknown]
