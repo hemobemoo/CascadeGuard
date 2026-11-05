@@ -140,18 +140,26 @@ def _guarded(self, address):
 socket.socket.connect = _guarded
 """
 APP_LAUNCHER = "from cascadeguard.ui import app; app.main()"
-# A dummy key (never sent anywhere): the live switch shows; building a client is refused, so a
-# live question fails at once and must come back as the labelled template.
+# A dummy key (never sent anywhere): the live switch shows. The client and embedder are fakes
+# whose calls fail at once (the guard blocks the network anyway); each live question counts as
+# one sent request, and the session cap is 2, so the test can reach it.
 KEYED_REFUSING_LAUNCHER = """
 os.environ["OPENROUTER_API_KEY"] = "test-key-not-real"
 os.environ["OPENROUTER_BASE_URL"] = "https://openrouter.ai/api/v1"
 os.environ["CASCADEGUARD_MODEL"] = "test/e2e-no-such-model"
 import cascadeguard.cli as _cli
-def _refuse(*args, **kwargs):
-    raise RuntimeError("e2e: no live client")
-_cli.make_client = _refuse
-_cli.OpenRouterEmbedder = _refuse
+class _Fails:
+    requests = 1
+    def __init__(self, *args, **kwargs):
+        pass
+    def query(self, text):
+        raise RuntimeError("e2e: no live embedding")
+    def documents(self, texts):
+        raise RuntimeError("e2e: no live embedding")
+_cli.make_client = lambda *args, **kwargs: None
+_cli.OpenRouterEmbedder = _Fails
 from cascadeguard.ui import app
+app.ADVISER_SESSION_CAP = 2
 app.main()
 """
 
@@ -717,17 +725,32 @@ def test_ask_the_adviser_live_switch_and_error_fallback(
     live = pg.locator('[data-testid="ask-live"]')
     expect(live).to_be_visible()
     expect(live).to_have_attribute("aria-checked", "false")
-    expect(pg.locator('[data-testid="ask-calls"]')).to_have_text(
-        "live adviser calls this session: 0 / 20"
+    calls = pg.locator('[data-testid="ask-calls"]')
+    expect(calls).to_have_text("live adviser calls this session: 0 / 2")
+
+    def ask_live(question: str) -> None:
+        pg.get_by_label("Question", exact=True).fill(question)
+        if live.get_attribute("aria-checked") == "false":
+            live.click()
+        pg.locator('[data-testid="ask-button"]').click()
+
+    ask_live("Who keeps the plan?")
+    expect(pg.locator('[data-testid="ask-mode"]')).to_have_text(
+        "Answer mode: deterministic template, as with no API key "
+        "(the live call failed: query embedding, error)"
     )
-    pg.get_by_label("Question", exact=True).fill("Who keeps the plan?")
-    live.click()
-    pg.locator('[data-testid="ask-button"]').click()
-    mode = pg.locator('[data-testid="ask-mode"]')
-    expect(mode).to_have_text(
-        "Answer mode: deterministic template, as with no API key (the live call failed: error)"
-    )
-    expect(pg.locator('[data-testid="ask-answer"]')).not_to_contain_text("e2e: no live client")
+    expect(pg.locator('[data-testid="ask-answer"]')).not_to_contain_text("e2e: no live")
+    expect(calls).to_have_text("live adviser calls this session: 1 / 2")
+    # A reload keeps the count: it is kept per browser, not per page load.
+    pg.reload()
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.locator('[data-testid="ask-open"]').click()
+    expect(calls).to_have_text("live adviser calls this session: 1 / 2")
+    ask_live("Who reverses the locks?")
+    expect(calls).to_have_text("live adviser calls this session: 2 / 2")
+    expect(live).to_have_attribute("aria-checked", "false")
+    expect(live).to_have_attribute("aria-disabled", "true")
     context.close()
 
 

@@ -9,6 +9,7 @@ cascadeguard ask <scenario> --at T+30 "<question>" [--offline] [--cache DIR] [--
 """
 
 import argparse
+import hashlib
 import io
 import sys
 from collections.abc import Sequence
@@ -797,6 +798,11 @@ def adviser_asker(offline: bool, cache_dir: Path) -> aq.Asker:
     )
 
 
+def answer_id(question: str) -> str:
+    """Eight hex characters of the question's SHA-256, for export file names."""
+    return hashlib.sha256(question.encode("utf-8")).hexdigest()[:8]
+
+
 def adviser_requests(asker: aq.Asker) -> tuple[int, int]:
     """(chat requests, query embeddings) this asker sent; (0, 0) when nothing is live."""
     inner = getattr(asker.client, "inner", None)
@@ -862,7 +868,8 @@ def _ask(args: argparse.Namespace) -> int:
     if args.export is not None:
         _export(
             args.export,
-            f"{args.scenario}-ask-T{minute:02d}",
+            # One file per question: two questions at one step never overwrite each other.
+            f"{args.scenario}-ask-T{minute:02d}-{answer_id(answer.question)}",
             answer.trace(),
             _text_markdown(
                 f"Ask the Policy Adviser: {args.scenario} T+{minute:02d}", answer.text()

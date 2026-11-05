@@ -78,7 +78,9 @@ ADVISER_GAP = re.compile(
     r"|state|assign|define|cover|address|explicit|clear)\w*\b"
     r"|\bnot (?:required|obliged|mandated|specified|assigned|defined) by\b"
     r"|\bnone of\b|\bnobody\b|\bno[- ]one\b|\bfail(?:s|ed)? to\b|\bquiet\b"
-    r"|\bnot explicit\w*\b|\bnor does\b|\bneither\b",
+    r"|\bnot explicit\w*\b|\bnor does\b|\bneither\b"
+    r"|\bno (?:\w+ ){0,2}(?:clauses?|instruments?|texts?|deadlines?|time limits?|owners?)\b"
+    r"|\bonly foreign\b",
     re.IGNORECASE,
 )
 STATUS_CLAIM = re.compile(
@@ -86,7 +88,10 @@ STATUS_CLAIM = re.compile(
     r"|\b(?:federal|uae|emirati|dubai) (?:law|legislation|statute|regulation|decree)\b"
     r"|\breviewed\b(?! corpus)|\billustrative\b|\bin force\b|\bin effect\b"
     r"|\bcompulsor\w*|\bobligator\w*|\bstatutor\w*|\blegal(?:ly)? force\b|\bforce of law\b"
-    r"|\brequired by (?:the )?law\b|\blaw of the land\b|\blegal (?:duty|obligation|requirement)",
+    r"|\brequired by (?:the )?law\b|\blaw of the land\b|\blegal (?:duty|obligation|requirement)"
+    r"|\bis (?:the )?law\b|\b(?:legal )?weight of law\b|\blegal weight\b|\bbound by\b"
+    r"|\b(?:emirate|state|country)'?s? law\b|\bunder the law\b|\blaw of the uae\b"
+    r"|\blawful(?:ly)?\b|\bunlawful\b|\blegal(?:ly)? required\b",
     re.IGNORECASE,
 )
 AUTHORITY = re.compile(
@@ -95,7 +100,9 @@ AUTHORITY = re.compile(
     r"|\boverrid(?:e|es|den|ing)\b|\bset aside\b|\b(?:may|can) (?:be )?ignored?\b"
     r"|\bexempt\w*\b|\bsuspend\w*\b|\ballow(?:s|ed|ing)?\b|\bgo ahead\b|\bgreen light\b"
     r"|\bclear(?:s|ed)? (?:it|to|for)\b|\bcleared\b|\bdoes not apply\b|\bsign(?:s|ed)? off\b"
-    r"|\bno (?:\w+ )?escalation\b|\bneed not\b|\bnot need to\b|\bno need to\b",
+    r"|\bno (?:\w+ )?escalation\b|\bneed not\b|\bnot need to\b|\bno need to\b"
+    r"|\bentitled\b|\bfree to\b|\bmay proceed\b|\bproceed to\b|\bbypass\w*\b|\bskip\w*\b"
+    r"|\bcircumvent\w*\b|\bsidestep\w*\b",
     re.IGNORECASE,
 )
 
@@ -179,7 +186,14 @@ def check_answer(
         reasons.append("control_characters")
     if not responsible_role_ok(responsible_role, role_ids):
         reasons.append("responsible_role")
-    abstained_ok = NOT_IDENTIFIED in normalise(direct_answer) and not opts and not cited
+    # An abstention cites nothing, lists no options and names no role; its text is replaced by
+    # the engine's fixed abstention sentence when shown (by the adviser module).
+    abstained_ok = (
+        NOT_IDENTIFIED in normalise(direct_answer)
+        and not opts
+        and not cited
+        and normalise(responsible_role) == NOT_ESTABLISHED
+    )
     if (abstain and not abstained_ok) or (not abstain and not cited):
         reasons.append("abstention")
     return AnswerCheck(tuple(reasons), unknown)

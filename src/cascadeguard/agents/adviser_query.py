@@ -76,6 +76,7 @@ REQUEST_CAP = 2 * ATTEMPTS  # requests per question, retries included
 MODE_LLM = "llm"
 MODE_TEMPLATE = "template"
 LLM_LIVE = "LLM (configured chat model, live call; cached)"
+LLM_ABSTAINED = "LLM (the model abstained; the engine's fixed abstention text is shown)"
 LLM_CACHED = "LLM (configured chat model; cached answer, no call)"
 TEMPLATE_NO_KEY = "deterministic template (no API key)"
 TEMPLATE_OFFLINE = "deterministic template (offline; no cached LLM answer for this question)"
@@ -96,7 +97,7 @@ RETRIEVAL_KEYWORD = (
 )
 KEYWORD_NOTE = "Context was found by keyword search only: no query vector for this question."
 
-UAE_HEADING = "UAE evidence"
+UAE_HEADING = "UAE evidence (illustrative scenario rules marked as such)"
 INTERNATIONAL_HEADING = "International comparison (not UAE law; listed separately)"
 INTERNATIONAL_NOTE = (
     "International and foreign texts are shown for comparison only. Each one's status label "
@@ -718,6 +719,12 @@ def llm_answer(
     if not check.ok:
         detail = TEMPLATE_REJECTED.format(reasons=", ".join(check.reasons))
         return template_answer(scenario_id, question, view, retrieved, role_ids, detail, check)
+    if payload.abstain:  # the model's words are dropped: the engine's abstention is shown
+        empty = Retrieved((), retrieved.context, retrieved.retrieval)
+        shown = template_answer(scenario_id, question, view, empty, role_ids, LLM_ABSTAINED)
+        return replace(
+            shown, mode=MODE_LLM, retrieved=tuple(e.clause_id for e in offered), usage=usage
+        )
 
     def filled(cited: Sequence[CitedClause]) -> tuple[EvidenceItem, ...]:
         unique = dict.fromkeys(c.clause_id for c in cited)

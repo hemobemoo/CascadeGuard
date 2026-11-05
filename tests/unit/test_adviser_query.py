@@ -359,6 +359,10 @@ def test_llm_abstention_is_accepted(tmp_path: Path) -> None:
     answer = ask(ABSTAIN_Q, 30, llm_asker(tmp_path, FakeClient(content)))
     assert answer.mode == aq.MODE_LLM, answer.rejected
     assert answer.abstained and answer.cited_ids == ()
+    # round 3: the model's words are dropped; the engine's fixed abstention text is shown
+    assert answer.mode_detail == aq.LLM_ABSTAINED
+    assert answer.direct_answer.startswith("The adviser abstains:")
+    assert answer.responsible_role == NOT_ESTABLISHED
 
 
 def test_invalid_output_is_retried_once_then_template(tmp_path: Path) -> None:
@@ -532,8 +536,10 @@ def test_no_key_fallback_runs_with_no_network(
         assert status == 0, out
         assert f"Answer mode: {aq.TEMPLATE_NO_KEY}" in out
         assert "7. Uncertainty" in out
-    (exported,) = (tmp_path / "out").glob("*.json")
-    assert json.loads(exported.read_text(encoding="utf-8"))["mode"] == aq.MODE_TEMPLATE
+    exported = sorted((tmp_path / "out").glob("*.json"))
+    assert len(exported) == 2  # one file per question
+    for path in exported:
+        assert json.loads(path.read_text(encoding="utf-8"))["mode"] == aq.MODE_TEMPLATE
 
 
 def test_free_text_without_key_says_keyword_only(tmp_path: Path) -> None:
@@ -820,3 +826,51 @@ def test_illustrative_text_is_not_called_a_quote(tmp_path: Path) -> None:
     text = ask(q, 45, asker(tmp_path)).text()
     assert '  text (paraphrase, not a quotation): "Illustrative rule' in text
     assert '  quote: "Illustrative rule' not in text
+
+
+ROUND3 = [
+    ("direct_answer", "This rule carries the weight of law in the UAE."),
+    ("direct_answer", "Operators are bound by this clause under the law of the UAE."),
+    ("direct_answer", "The clause is law in the UAE."),
+    ("direct_answer", "It carries legal weight in the UAE."),
+    ("direct_answer", "The emirate's law requires it."),
+    ("direct_answer", "The health operator may proceed to reverse the lockouts now."),
+    ("direct_answer", "The operator is entitled to share the full subscriber records."),
+    ("direct_answer", "You can lawfully share everything."),
+    ("options", "The telecom operator is free to skip the regulator safeguard if busy."),
+    ("escalation", "The prohibition can be bypassed in this emergency."),
+    ("direct_answer", "There is no UAE clause on this; the corpus offers only foreign texts."),
+    ("direct_answer", "No UAE instrument assigns this duty to anyone."),
+    ("direct_answer", "No UAE instrument sets a deadline."),
+]
+
+
+@pytest.mark.parametrize(("field", "text"), ROUND3)
+def test_engine_rejects_round3_wording(tmp_path: Path, field: str, text: str) -> None:
+    """test-breaker and phase-auditor round 3. A phrase list cannot be complete: the structural
+    question (how model free text is shown) is with the human."""
+    value: Any = [text] if field in ("options", "escalation") else text
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**{field: value}))))
+    assert answer.mode == aq.MODE_TEMPLATE, text
+    assert {"status_claim", "authority_wording", "gap_wording"} & set(answer.rejected), text
+
+
+def test_an_abstention_that_still_answers_is_rejected(tmp_path: Path) -> None:
+    content = payload(
+        abstain=True,
+        uae_evidence=[],
+        options=[],
+        direct_answer=f"{aq.NOT_IDENTIFIED}. However, the telecom operator must report in 2 hours.",
+        responsible_role="telecom_operator must report within 2 hours",
+        escalation=["The telecom operator must report within 2 hours."],
+    )
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(content)))
+    assert "abstention" in answer.rejected and answer.mode == aq.MODE_TEMPLATE
+    assert "2 hours" not in answer.text()
+
+
+def test_two_questions_at_one_step_export_two_files(tmp_path: Path) -> None:
+    for q in (SHARE_Q, FALLBACK_Q):
+        args = ["ask", SCENARIO, "--at", "T+30", q, "--cache", str(tmp_path / "c")]
+        assert main([*args, "--export", str(tmp_path / "out")]) == 0
+    assert len(list((tmp_path / "out").glob("*.json"))) == 2
