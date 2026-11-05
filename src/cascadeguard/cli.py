@@ -4,7 +4,7 @@ cascadeguard run <scenario> [--clauses DIR] [--repair ID] [--export DIR] [--audi
 cascadeguard repairs <scenario> [--clauses DIR] [--export DIR]
 Both take --agents scripted|llm (default scripted), --offline and --cache DIR (LLM only).
 cascadeguard kb query "<text>" [-k N] | cascadeguard kb export <path>
-cascadeguard ask <scenario> --at T+30 "<question>" [--offline] [--cache DIR] [--export DIR]
+cascadeguard ask <scenario> --at T+30 "<question>" [--live | --offline] [--cache DIR] [--export DIR]
     [--audit [DB]] | cascadeguard ask <scenario> --presets
 """
 
@@ -209,7 +209,15 @@ def build_parser() -> argparse.ArgumentParser:
     ask_cmd.add_argument(
         "--offline",
         action="store_true",
-        help="no API call: a cached LLM answer if there is one, else the deterministic template",
+        help="no API call: a cached LLM answer if there is one, else the deterministic template "
+        "(the default without --live)",
+    )
+    ask_cmd.add_argument(
+        "--live",
+        action="store_true",
+        help="allow live model calls for this question (needs the three .env variables; at "
+        "most 4 chat requests and 1 query embedding, retries included); without it, ask never "
+        "calls a model, even with a key (human decision 2026-11-06)",
     )
     ask_cmd.add_argument(
         "--cache",
@@ -849,7 +857,15 @@ def _ask(args: argparse.Namespace) -> int:
         return 2
     try:
         minute = parse_step(args.at, [e.at_minute for e in world.scenario.events])
-        asker = adviser_asker(args.offline, args.cache)
+        if args.live and args.offline:
+            raise ValueError("--live and --offline exclude each other")
+        if args.live and not aq.key_is_set():
+            raise ValueError(
+                "--live needs OPENROUTER_API_KEY, OPENROUTER_BASE_URL and CASCADEGUARD_MODEL in "
+                ".env (see .env.example); no default model is used"
+            )
+        # Human decision 2026-11-06: a model is called only with --live.
+        asker = adviser_asker(not args.live, args.cache)
         answer = aq.ask(
             args.scenario,
             args.question,

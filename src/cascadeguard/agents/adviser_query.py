@@ -97,6 +97,7 @@ RETRIEVAL_KEYWORD = (
 )
 KEYWORD_NOTE = "Context was found by keyword search only: no query vector for this question."
 
+COMMENTARY_HEADING = "Model commentary (unverified agent statement)"
 UAE_HEADING = "UAE evidence (illustrative scenario rules marked as such)"
 INTERNATIONAL_HEADING = "International comparison (not UAE law; listed separately)"
 INTERNATIONAL_NOTE = (
@@ -295,6 +296,9 @@ class AdviserAnswer:
     rejected: tuple[str, ...] = ()  # engine reasons, when an LLM answer was rejected
     unknown_citations: tuple[str, ...] = ()
     usage: dict[str, Any] = field(default_factory=dict[str, Any])
+    # LLM mode only: every line the model wrote, each under the agent-statement label. Never
+    # part of the seven sections (option (b), human decision 2026-11-06).
+    commentary: tuple[str, ...] = ()
 
     @property
     def cited_ids(self) -> tuple[str, ...]:
@@ -355,6 +359,9 @@ class AdviserAnswer:
         for title, body in self.sections():
             lines.append(title)
             lines.extend(f"  {b}" for b in body)
+        if self.commentary:
+            lines.append(COMMENTARY_HEADING)
+            lines.extend(f"  {c}" for c in self.commentary)
         lines.append(f"Context ({CONTEXT_LABEL}):")
         if not self.context:
             lines.append("  none")
@@ -726,55 +733,41 @@ def llm_answer(
             shown, mode=MODE_LLM, retrieved=tuple(e.clause_id for e in offered), usage=usage
         )
 
-    def filled(cited: Sequence[CitedClause]) -> tuple[EvidenceItem, ...]:
-        unique = dict.fromkeys(c.clause_id for c in cited)
-        notes = {c.clause_id: agent_statement(c.relevance) for c in cited}
-        return tuple(_with_note(by_id[cid], notes[cid]) for cid in unique)
+    # Option (b), human decision 2026-11-06: sections 1, 5 and 6 are always the engine's
+    # template text, built from the clauses the model chose; every line the model wrote goes to
+    # the separate "Model commentary" block, under the agent-statement label (the engine check
+    # above has already run its phrase checks on each of them).
+    def chosen(cited: Sequence[CitedClause]) -> tuple[EvidenceItem, ...]:
+        return tuple(by_id[cid] for cid in dict.fromkeys(c.clause_id for c in cited))
 
-    uae, international = filled(payload.uae_evidence), filled(payload.international_comparison)
-    # Every line the model wrote is shown under the engine's agent-statement label, on one line.
-    uncertainty = [
-        *(agent_statement(u) for u in payload.uncertainty),
-        *_label_uncertainty((*uae, *international)),
+    picked = Retrieved(
+        (*chosen(payload.uae_evidence), *chosen(payload.international_comparison)),
+        retrieved.context,
+        retrieved.retrieval,
+    )
+    shown = template_answer(scenario_id, question, view, picked, role_ids, mode_detail)
+    notes = [
+        f"{c.clause_id}: {c.relevance}"
+        for c in (*payload.uae_evidence, *payload.international_comparison)
     ]
-    uncertainty.append(availability_note(view))
-    if retrieved.retrieval == RETRIEVAL_KEYWORD:
-        uncertainty.append(KEYWORD_NOTE)
-    return AdviserAnswer(
-        scenario=scenario_id,
-        question=question,
-        minute=view.minute,
-        view_digest=view_digest(view),
+    commentary = tuple(
+        agent_statement(line)
+        for line in (
+            payload.direct_answer,
+            f"responsible role: {payload.responsible_role}",
+            *(f"{SUGGESTION}{o}" for o in payload.options),
+            *(f"escalation: {e}" for e in payload.escalation),
+            *(f"uncertainty: {u}" for u in payload.uncertainty),
+            *(f"relevance of {n}" for n in notes),
+        )
+    )
+    return replace(
+        shown,
         mode=MODE_LLM,
-        mode_detail=mode_detail,
-        retrieval=retrieved.retrieval,
-        abstained=payload.abstain,
-        direct_answer=agent_statement(payload.direct_answer),
-        uae_evidence=uae,
-        status_labels=tuple((e.clause_id, e.status_label) for e in (*uae, *international)),
-        international=international,
-        responsible_role=agent_statement(payload.responsible_role),
-        # The engine's readings of the cited UAE clauses first; the model's suggestions are
-        # labelled agent statements, never permissions.
-        options=(
-            *_options(uae, view),
-            *(agent_statement(f"{SUGGESTION}{o}") for o in payload.options),
-        ),
-        escalation=(
-            *ESCALATION,
-            *(agent_statement(e) for e in payload.escalation),
-            *_obligation_lines(view),
-        ),
-        uncertainty=tuple(uncertainty),
-        facts_in_view=tuple(f.id for f in view.facts),
         retrieved=tuple(e.clause_id for e in retrieved.candidates),
-        context=retrieved.context,
+        commentary=commentary,
         usage=usage,
     )
-
-
-def _with_note(e: EvidenceItem, note: str) -> EvidenceItem:
-    return replace(e, relevance=note)
 
 
 # --- Entry point -------------------------------------------------------------------------------

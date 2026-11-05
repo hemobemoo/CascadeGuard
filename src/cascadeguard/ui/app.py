@@ -9,7 +9,9 @@ cache only (no live calls for runs in the UI; the CLI keeps live runs). The one 
 OPENROUTER_API_KEY set, its switch "Live LLM call when the answer is not cached" (off by
 default) lets one question call the configured chat model (at most aq.REQUEST_CAP chat requests,
 and one query embedding sent up to 4 times with retries), at most ADVISER_SESSION_CAP live
-questions per session; any failure gives the labelled template.
+questions per session; any failure gives the labelled template. The seven answer sections are
+always the engine's text; the model's own lines appear only in the separate "Model commentary
+(unverified agent statement)" block (option (b), human decision 2026-11-06).
 """
 
 import asyncio
@@ -1354,6 +1356,10 @@ def show_answer(answer: aq.AdviserAnswer) -> None:
     for title, body in answer.sections():
         ui.label(title).classes("font-semibold mt-1")
         lines(body)
+    if answer.commentary:  # option (b): the model's own lines, apart from the seven sections
+        with ui.column().classes("cg-pane w-full gap-0 mt-1").props("data-testid=ask-commentary"):
+            ui.label(aq.COMMENTARY_HEADING).classes("font-semibold cg-muted")
+            lines(list(answer.commentary))
     ui.label(f"Context ({CONTEXT_LABEL})").classes("font-semibold mt-1")
     lines(
         [f"{c.source_file} p.{c.page} [{c.label}]: {c.text[:240]}" for c in answer.context],

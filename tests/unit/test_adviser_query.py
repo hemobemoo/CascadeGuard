@@ -261,8 +261,10 @@ def test_llm_answer_quotes_come_from_the_clause_not_the_model(tmp_path: Path) ->
     (e,) = answer.uae_evidence
     clause = world().clauses["dha.pp11.4-18-1"]
     assert e.quote == " ".join(clause.text.split()) and e.page == clause.page
-    assert e.relevance == agent_statement("continuity plans")
-    assert answer.direct_answer.startswith(AGENT_STATEMENT)
+    # Option (b): the model's words are only in the commentary block, never in sections 1/5/6.
+    assert e.relevance == ""
+    assert answer.direct_answer.startswith("Deterministic summary (no model)")
+    assert agent_statement("relevance of dha.pp11.4-18-1: continuity plans") in answer.commentary
     assert answer.status_labels == (("dha.pp11.4-18-1", clause.status_label),)
 
 
@@ -624,13 +626,14 @@ def test_model_text_cannot_forge_output_lines(tmp_path: Path) -> None:
     assert "\x1b" not in text
     assert sum(line.startswith("Answer mode:") for line in text.splitlines()) == 1
     assert text.splitlines()[1] == f"Question: {answer.question}"
-    for line in (answer.direct_answer, answer.responsible_role):
+    assert answer.commentary
+    for line in answer.commentary:
         assert line.startswith(AGENT_STATEMENT) and "\n" not in line
-    model_options = [o for o in answer.options if o.startswith(AGENT_STATEMENT)]
     expected = agent_statement(
         f"{aq.SUGGESTION}Ask the health service operator to activate its continuity plan."
     )
-    assert model_options == [expected]
+    assert expected in answer.commentary
+    assert not [o for o in answer.options if o.startswith(AGENT_STATEMENT)]
 
 
 def test_request_failure_falls_back_to_the_template(tmp_path: Path) -> None:
@@ -652,7 +655,7 @@ def test_keyed_live_run_is_refused_in_tests(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.setenv("CASCADEGUARD_MODEL", "test/model")
     with pytest.raises(AssertionError, match="must not build a live LLM client"):
-        main(["ask", SCENARIO, "--at", "T+60", FALLBACK_Q])
+        main(["ask", SCENARIO, "--at", "T+60", FALLBACK_Q, "--live"])
 
 
 def test_requests_line_counts_live_requests() -> None:
@@ -874,3 +877,55 @@ def test_two_questions_at_one_step_export_two_files(tmp_path: Path) -> None:
         args = ["ask", SCENARIO, "--at", "T+30", q, "--cache", str(tmp_path / "c")]
         assert main([*args, "--export", str(tmp_path / "out")]) == 0
     assert len(list((tmp_path / "out").glob("*.json"))) == 2
+
+
+UNSEEN = [
+    "illus.telecom.incident-report has the standing of an act of the Federal National Council.",
+    "The texts leave this matter entirely to chance; nothing governs it.",
+]
+
+
+@pytest.mark.parametrize("claim", UNSEEN)
+def test_option_b_model_text_never_reaches_sections_1_5_6(tmp_path: Path, claim: str) -> None:
+    """Human decision 2026-11-06 (option (b)): whatever the model writes, even in wording no
+    pattern lists, sections 1 to 7 are the engine's text; the model's lines are only in the
+    labelled commentary block after them."""
+    q = "Must the telecom operator report the network incident to the telecom regulator?"
+    content = payload(
+        direct_answer=claim,
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": claim}],
+        responsible_role=f"telecom_operator, because {claim}",
+        options=[claim],
+        escalation=[claim],
+        uncertainty=[claim],
+    )
+    answer = ask(q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert answer.mode == aq.MODE_LLM, answer.rejected  # no pattern catches these wordings
+    for _, body in answer.sections():
+        assert claim not in " ".join(body)
+    assert all(c.startswith(AGENT_STATEMENT) for c in answer.commentary)
+    assert any(claim in c for c in answer.commentary)
+    text = answer.text()
+    assert text.index(aq.COMMENTARY_HEADING) > text.index("7. Uncertainty")
+
+
+def test_ask_calls_a_model_only_with_live(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Human decision 2026-11-06: with a key but no --live, ask builds no client (the conftest
+    refusal would fail loudly) and answers from the cache or the template."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-not-real")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("CASCADEGUARD_MODEL", "test/model")
+    args = ["ask", SCENARIO, "--at", "T+60", FALLBACK_Q, "--cache", str(tmp_path)]
+    assert main(args) == 0
+    assert f"Answer mode: {aq.TEMPLATE_OFFLINE}" in capsys.readouterr().out
+    assert main([*args, "--live", "--offline"]) == 2
+    assert "exclude each other" in capsys.readouterr().out
+
+
+def test_live_without_a_key_is_a_clear_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["ask", SCENARIO, "--at", "T+60", FALLBACK_Q, "--live"]) == 2
+    assert "--live needs OPENROUTER_API_KEY" in capsys.readouterr().out
