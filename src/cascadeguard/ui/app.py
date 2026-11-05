@@ -78,10 +78,21 @@ def adviser_calls(browser: str) -> int:
         return _ADVISER_CALLS.get(browser, 0)
 
 
-def count_adviser_call(browser: str) -> int:
+def reserve_adviser_call(browser: str) -> bool:
+    """Take one live slot for this browser, if any is left: check and count in one step under
+    the lock, so tabs asking at the same moment cannot pass the cap together."""
     with _ADVISER_LOCK:
-        _ADVISER_CALLS[browser] = _ADVISER_CALLS.get(browser, 0) + 1
-        return _ADVISER_CALLS[browser]
+        used = _ADVISER_CALLS.get(browser, 0)
+        if used >= ADVISER_SESSION_CAP:
+            return False
+        _ADVISER_CALLS[browser] = used + 1
+        return True
+
+
+def release_adviser_call(browser: str) -> None:
+    """Give back a reserved slot when no request was sent (e.g. a cached answer)."""
+    with _ADVISER_LOCK:
+        _ADVISER_CALLS[browser] = max(0, _ADVISER_CALLS.get(browser, 0) - 1)
 
 
 THEME = Path(__file__).with_name("theme.css")
@@ -657,7 +668,9 @@ def index() -> None:
                 view = next(
                     v for v in result.views if v.role_id == aq.ADVISER and v.minute == step.value
                 )
-                go_live = bool(live.value) and adviser_calls(s.browser) < ADVISER_SESSION_CAP
+                # A slot is reserved before the call; it is given back only when the call
+                # sent nothing. A call that fails part-way keeps its slot (it may have sent).
+                go_live = bool(live.value) and reserve_adviser_call(s.browser)
                 asked = await run.io_bound(
                     ask_adviser,
                     s.scenario,
@@ -668,8 +681,8 @@ def index() -> None:
                     not go_live,
                 )
                 answer, sent = cast(tuple[aq.AdviserAnswer, bool], asked)
-                if sent:
-                    count_adviser_call(s.browser)
+                if go_live and not sent:
+                    release_adviser_call(s.browser)
             except Exception as exc:  # never a raw error: the no-key template, labelled
                 try:
                     answer = await run.io_bound(

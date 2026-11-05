@@ -1566,8 +1566,7 @@ clauses are precedents and context for gap analysis and can be reviewed later.
   retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
   answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:
   needs the human's explicit approval in the chat (rule of 2026-11-05).
-- Open: with a key and no `--offline`, `ask` in the CLI calls the model live, as the brief says.
-  Keep, or require an explicit `--live`? (Not answered yet.)
+- Answered 2026-11-06: `ask` in the CLI calls a model only with `--live` (7d25d0b).
 - **Gate 2/8, open after review round 3 (test-breaker BLOCKERs):** the engine check matches
   phrase lists, so model free text can still claim binding force, authority or a gap in new
   wording (the agent-statement label and the clause status labels stay next to it, and nothing
