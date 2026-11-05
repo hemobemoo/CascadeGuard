@@ -370,7 +370,8 @@ def test_nist_sp800_34_is_never_searched() -> None:
     jsonl = EXTRACTED_DIR / NIST_SP800_34.replace(".pdf", ".jsonl")
     pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
     for query in ("alternate site contingency plan", "activation criteria designated authority"):
-        assert any(w in p["text"].casefold() for p in pages for w in query.split()), query
+        # every query word is on one NIST page, so the query does target this source
+        assert any(all(w in p["text"].casefold() for w in query.split()) for p in pages), query
         found = search_extracted(query, limit=1000)
         assert found and all(s.source_file != NIST_SP800_34 for s in found), query
     assert all(p.source_file != NIST_SP800_34 for p in searchable_pages())

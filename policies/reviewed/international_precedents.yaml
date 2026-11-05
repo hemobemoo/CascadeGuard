@@ -362,6 +362,6 @@ clauses:
       quoted) separates the roles: recovery teams "may be notified once the system outage or
       disruption has been identified and the ISCP Coordinator has determined that activation
       criteria have been met". Candidate global example for "who activates a fallback": one
-      designated authority, named in the plan with a successor, acting on criteria stated in
+      designated authority, named in the plan with a successor identified if necessary, acting on criteria stated in
       advance (a recommendation: "should"). Its automatic qualifier "foreign precedent" (US
       jurisdiction) is kept (human decision 2026-11-06).
