@@ -314,9 +314,10 @@ clauses:
     title: "NIST SP 800-34 Rev. 1: restore disrupted services, including by alternate (manual) processing means"
     text: >-
       Contingency planning generally includes one or more of the following approaches to
-      restore disrupted services: [...] Performing some or all of the affected business
-      processes using alternate processing (manual) means (typically acceptable for only
-      short-term disruptions);
+      restore disrupted services: [...] Restoring information systems using alternate
+      equipment; [...] Performing some or all of the affected business processes using
+      alternate processing (manual) means (typically acceptable for only short-term
+      disruptions);
     source_file: nistspecialpublication800-34r1.pdf
     page: 15
     article: Chapter 1, Introduction
@@ -326,12 +327,12 @@ clauses:
     status: draft
     binding: false
     notes: >-
-      International precedent (US federal contingency-planning guidance, outside the UAE); not
-      AI-specific; not binding in the UAE. The [...] skips the bullet glyph and the first bullet
-      ("Restoring information systems using alternate equipment;"). Candidate global example of
+      Foreign precedent (US federal contingency-planning guidance, outside the UAE); not
+      AI-specific; not binding in the UAE. Each [...] skips only a bullet glyph (extracted as
+      "(cid:131)"); the quote stops after the second of four bullets. Candidate global example of
       an alternate (fallback) channel for a disrupted service; it does not say who activates it.
-      Note for review: its automatic qualifier is "foreign precedent" (US jurisdiction), while
-      the brief asks for "international precedent".
+      Its automatic qualifier "foreign precedent" (US jurisdiction) is kept (human decision
+      2026-11-06).
 
   - id: nist.sp800-34.activation-by-designated-authority
     title: "NIST SP 800-34 Rev. 1: the designated authority activates the plan when activation criteria are met"
@@ -349,9 +350,9 @@ clauses:
     status: draft
     binding: false
     notes: >-
-      International precedent (US federal contingency-planning guidance, outside the UAE); not
+      Foreign precedent (US federal contingency-planning guidance, outside the UAE); not
       AI-specific; not binding in the UAE. The [...] skips the footnote marker "31" after
       "plan."; footnote 31 (same page) says the designated authority is typically a senior
       manager or CIO. Candidate global example for "who activates a fallback": a designated
-      authority, on criteria stated in advance. Note for review: its automatic qualifier is
-      "foreign precedent" (US jurisdiction), while the brief asks for "international precedent".
+      authority, on criteria stated in advance. Its automatic qualifier "foreign precedent" (US
+      jurisdiction) is kept (human decision 2026-11-06).
