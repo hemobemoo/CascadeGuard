@@ -4,7 +4,10 @@ The UI only displays engine results: runs, searches and replays come from the sa
 the CLI uses, and `ui/view_model.py` formats them. No logic lives here. The scripted baseline
 and repair search are computed once at startup and held in memory, so the page opens with the
 verdict, diagnosis and repair ladder already rendered. LLM agents are read from the decision
-cache only (no live calls in the UI; the CLI keeps live runs).
+cache only (no live calls for runs in the UI; the CLI keeps live runs). The one exception is
+"Ask the Policy Adviser": with a key in .env it may call the configured chat model for one
+question (switch "Live LLM call when the answer is not cached"; at most aq.REQUEST_CAP
+requests per question), as the human's brief of 2026-11-05 asks for the demo.
 """
 
 import asyncio
@@ -20,8 +23,17 @@ import yaml
 from nicegui import app as nicegui_app
 from nicegui import background_tasks, run, ui
 
+from cascadeguard.agents import adviser_query as aq
 from cascadeguard.agents.llm import LLMAgent, LLMConfigError
-from cascadeguard.cli import LLM, SCRIPTED, AgentChoice, World, load_world, search_repairs
+from cascadeguard.cli import (
+    LLM,
+    SCRIPTED,
+    AgentChoice,
+    World,
+    adviser_asker,
+    load_world,
+    search_repairs,
+)
 from cascadeguard.engine.constraints import AGENT_STATEMENT
 from cascadeguard.engine.governance import GovernanceComparison
 from cascadeguard.engine.repair_search import (
@@ -31,6 +43,7 @@ from cascadeguard.engine.repair_search import (
     SearchResult,
     outcome_definition,
 )
+from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.ui import view_model as vm
@@ -38,6 +51,8 @@ from cascadeguard.ui import view_model as vm
 STATEMENT = AGENT_STATEMENT.split(" (", 1)[0]  # short form; the full label is the tooltip
 DEFAULT_PORT = 8765  # 8080 is often taken by other local servers
 PORT_VARIABLE = "CASCADEGUARD_UI_PORT"
+# "0": the adviser panel's live-call switch starts off (it is on by default when a key is set).
+ADVISER_LIVE_VARIABLE = "CASCADEGUARD_UI_ADVISER_LIVE"
 THEME = Path(__file__).with_name("theme.css")
 HIDDEN_DELAY = 0.3  # seconds before sections not on screen are refreshed after a click
 FILL_DELAY = 0.15  # seconds after the websocket connects before the other sections are sent
@@ -524,6 +539,117 @@ def index() -> None:
             replay_lanes()
         replay_box.set_visibility(False)
         role_panel_view()
+        ask_box = ui.element("div").classes("w-full")
+
+    def adviser_panel() -> None:
+        """Ask the Policy Adviser at a step: its own view at that step of the run shown in the
+        lanes. LLM mode when the .env key is set (live, cached), else the template."""
+        minutes = [e.at_minute for e in world_events()] or [0]
+        presets = aq.load_presets(SCENARIOS_DIR / s.scenario)
+        with ui.column().classes("cg-pane w-full gap-1 mt-2").props("data-testid=ask-panel"):
+            ui.label("Ask the Policy Adviser").classes("font-semibold")
+            ui.label(
+                "Pause at a step and ask the policy_legal_adviser. It answers from its own view "
+                "at that step (no later facts, nothing outside its boundary). Only loaded "
+                "clauses are citable; knowledge-base text is context only; not citable."
+            ).classes("cg-muted")
+            with ui.row().classes("items-end gap-2 w-full"):
+                step = ui.select(
+                    {m: f"T+{m:02d}" for m in minutes}, value=minutes[0], label="Step"
+                ).props("data-testid=ask-step dense")
+                (
+                    ui.select(
+                        {i: text for i, (_, text) in enumerate(presets)},
+                        value=None,
+                        label="Preset question",
+                        on_change=lambda e: pick_preset(e.value),
+                    )
+                    .classes("grow")
+                    .style("min-width: min(100%, 18rem); flex: 1 1 18rem")
+                    .props("data-testid=ask-preset dense clearable")
+                )
+            question = (
+                ui.textarea("Question", placeholder="or type your own question")
+                .classes("w-full")
+                .props("data-testid=ask-question dense autogrow")
+            )
+            keyed = aq.key_is_set()
+            live = ui.switch(
+                "Live LLM call when the answer is not cached",
+                value=keyed and os.environ.get(ADVISER_LIVE_VARIABLE, "1") != "0",
+            ).props("data-testid=ask-live")
+            live.set_visibility(keyed)  # no key: always the deterministic template
+            button = ui.button("Ask the adviser", on_click=lambda: ask_now()).props(
+                "no-caps data-testid=ask-button"
+            )
+            answer_box = ui.column().classes("w-full gap-1").props("data-testid=ask-answer")
+
+        def pick_preset(index: int | None) -> None:
+            if index is not None:
+                at, text = presets[index]
+                question.value = text
+                step.value = at
+
+        def set_step(minute: int) -> None:
+            step.value = minute
+
+        ask_step["set"] = set_step
+
+        async def ask_now() -> None:
+            text = str(question.value or "").strip()
+            d = s.data
+            if not text or d is None:
+                return
+            button.disable()
+            answer_box.clear()
+            with answer_box:
+                ui.label("Asking ...").classes("cg-muted")
+            try:
+                result = d.baseline
+                view = next(
+                    v for v in result.views if v.role_id == aq.ADVISER and v.minute == step.value
+                )
+                answer = await run.io_bound(
+                    ask_adviser,
+                    s.scenario,
+                    text,
+                    view,
+                    d,
+                    [t for _, t in presets],
+                    not bool(live.value),
+                )
+            except Exception as exc:  # shown, never a traceback in the page
+                answer_box.clear()
+                with answer_box:
+                    ui.label(f"No answer: {type(exc).__name__}: {exc}").classes("cg-act-no")
+                button.enable()
+                return
+            answer_box.clear()
+            with answer_box:
+                show_answer(cast(aq.AdviserAnswer, answer))
+            button.enable()
+
+    def world_events() -> tuple[Any, ...]:
+        d = s.data
+        if d is not None:
+            return tuple(d.world.scenario.events)
+        found = bundle(s.scenario, "scripted")
+        return tuple(found.world.scenario.events) if isinstance(found, Bundle) else ()
+
+    ask_step: dict[str, Any] = {}
+
+    def open_adviser() -> None:
+        """Built on first use, so the page stays as light as before (spec 006 click budget)."""
+        ask_box.clear()
+        with ask_box:
+            adviser_panel()
+        if s.cell is not None:
+            ask_step["set"](s.cell[1])
+
+    with ask_box:
+        ui.button("Ask the Policy Adviser ...", on_click=open_adviser).props(
+            "outline no-caps dense data-testid=ask-open"
+        ).classes("mt-2")
 
     def cell(run: str, role: str, c: vm.Cell) -> None:
         css = "cg-cell" + (" cg-cell-recipient" if c.recipient else "")
@@ -1060,6 +1186,8 @@ def index() -> None:
         if s.cell is not None and (s.lanes_run, *s.cell) in cells:
             cells[(s.lanes_run, *s.cell)].classes(remove="cg-cell-selected")
         s.cell = None if s.cell == (role, minute) else (role, minute)
+        if s.cell is not None and "set" in ask_step:  # the adviser panel follows the open step
+            ask_step["set"](minute)
         if s.cell is not None and (s.lanes_run, *s.cell) in cells:
             cells[(s.lanes_run, *s.cell)].classes(add="cg-cell-selected")
         role_panel_view.refresh()
@@ -1123,6 +1251,36 @@ def index() -> None:
         render_all()
 
     ui.timer(0, fill, once=True)
+
+
+def ask_adviser(
+    scenario: str, question: str, view: Any, d: Bundle, presets: list[str], offline: bool
+) -> aq.AdviserAnswer:
+    """One question to the adviser (cli.adviser_asker: LLM mode with a key, live unless
+    offline; else the template)."""
+    asker = adviser_asker(offline, aq.DEFAULT_ANSWER_CACHE)
+    roles = [r.id for r in d.world.roles.roles]
+    return aq.ask(scenario, question, view, d.world.clauses, roles, asker, presets)
+
+
+def show_answer(answer: aq.AdviserAnswer) -> None:
+    css = "cg-act-ok" if answer.mode == aq.MODE_LLM else "cg-muted"
+    ui.label(f"Answer mode: {answer.mode_detail}").classes(f"font-semibold {css}").props(
+        "data-testid=ask-mode"
+    )
+    ui.label(f"T+{answer.minute:02d} · retrieval: {answer.retrieval}").classes("cg-muted")
+    if answer.rejected:
+        ui.label(f"Engine check rejected the LLM answer: {', '.join(answer.rejected)}").classes(
+            "cg-act-no"
+        )
+    for title, body in answer.sections():
+        ui.label(title).classes("font-semibold mt-1")
+        lines(body)
+    ui.label(f"Context ({CONTEXT_LABEL})").classes("font-semibold mt-1")
+    lines(
+        [f"{c.source_file} p.{c.page} [{c.label}]: {c.text[:240]}" for c in answer.context],
+        empty="none",
+    )
 
 
 def cache_text(world: World) -> str:

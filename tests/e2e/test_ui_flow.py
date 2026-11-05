@@ -623,6 +623,37 @@ def test_llm_mode_without_a_model_shows_no_result(
     context.close()
 
 
+def test_ask_the_adviser_without_a_key(server_without_model: str, browser: Browser) -> None:
+    """The adviser panel on the timeline: a preset at its step, answered by the deterministic
+    template (no key, so no call is possible), with the mode shown and all seven sections."""
+    context = browser.new_context(viewport={"width": 1400, "height": 1000})
+    pg = context.new_page()
+    pg.set_default_timeout(TIMEOUT_MS)
+    pg.goto(server_without_model)
+    pg.locator(".cg-lanes").first.wait_for(state="attached")
+    pg.get_by_text("Expert", exact=True).click()
+    pg.locator('[data-testid="ask-open"]').click()  # the panel is built on first use
+    panel = pg.locator('[data-testid="ask-panel"]')
+    expect(panel).to_contain_text("Ask the Policy Adviser")
+    expect(pg.locator('[data-testid="ask-live"]')).to_be_hidden()  # no key: no live switch
+    # Opening a cell moves the panel to that step.
+    pg.locator('[data-testid="cell-baseline-policy_legal_adviser-45"]').click()
+    expect(pg.locator('[data-testid="ask-step"]')).to_contain_text("T+45")
+    pg.get_by_label("Preset question").click()
+    pg.get_by_role("option", name="Who must activate the fallback channel?").click()
+    expect(pg.locator('[data-testid="ask-step"]')).to_contain_text("T+60")
+    pg.locator('[data-testid="ask-button"]').click()
+    answer = pg.locator('[data-testid="ask-answer"]')
+    expect(pg.locator('[data-testid="ask-mode"]')).to_have_text(
+        "Answer mode: deterministic template (no API key)"
+    )
+    for title in ("1. Direct answer", "2. UAE evidence", "3. Status label", "7. Uncertainty"):
+        expect(answer).to_contain_text(title)
+    expect(answer).to_contain_text("dha.pp11.4-18-1")
+    expect(answer).to_contain_text("context only; not citable")
+    context.close()
+
+
 def test_guided_flow_with_cached_llm_agents(server_recorded: str, browser: Browser) -> None:
     """Spec 006b "Done when": the guided flow with cached LLM agents (a cache recorded from the
     scripted decisions, read offline) shows names, sentences, the top-3 ladder, the faded
