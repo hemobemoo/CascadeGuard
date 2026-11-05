@@ -5,4 +5,7 @@ They are never loaded into the simulation (engine, role views, knowledge base, a
 the report builder reads them, for `scenarios/<id>/gap_examples.yaml` and
 `docs/gap-analysis.md`, where each is shown with its status label plus "reviewed as a gap
 example; not loaded into the simulation". Same fields and review rules as
-`policies/reviewed/` (verbatim quote, page, gate 1, digests in `policies/approvals.yaml`).
+`policies/reviewed/` (verbatim quote, page, gate 1, digests in `policies/approvals.yaml`). An
+edit to one of them sets it back to `status: draft` and lists it under `reapproval_needed`, in
+this folder; while it is a draft the report builder does not show it and refuses a
+gap_examples.yaml entry that maps it.

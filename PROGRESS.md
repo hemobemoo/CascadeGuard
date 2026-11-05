@@ -10,7 +10,8 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
 1. Ask the Policy Adviser (`phase-7-adviser-query`): **merged, PR #33, 98b4173 (2026-11-06).**
 2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): built; PR
-   #34 open (reviewers PASS, 812 passed); waiting on gate 1 (the human checks the two quotes), then a gap_examples proposal (gate 7).
+   #34 open; option (c) applied (gate 1 scoped to gap examples only, gate 7 entries added, gate 6
+   confirmed); after its review loop, full suite and CI: merge.
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -482,9 +483,15 @@ citation_map --check passes; technical report and its tests unchanged; traces an
 byte-identical to main (the run line is back to "21 draft clauses not loaded", since the clauses
 left the corpus; the earlier approved 21 -> 23 change is no longer needed). Keep "foreign
 precedent"; AGENTS.md 23 -> 24 original PDFs (gate 6, confirmed). No other AGENTS.md change was
-needed (the engine still reads clause YAML in policies/reviewed/ only). Next: PR,
-then the human checks the two quotes (gate 1), then a gap_examples.yaml proposal for
-orphan_duty:activate_fallback_channel (gate 7). After the PR is open: stop (Task 3 in a new session).
+needed (the engine still reads clause YAML in policies/reviewed/ only). The human gave the
+explicit gate-1 list in the chat (2026-11-06: "Gate 1 (scoped): reviewed by human as gap examples
+only: nist.sp800-34.alternate-manual-means, nist.sp800-34.activation-by-designated-authority").
+Option-(c) review round 1: evidence-auditor PASS, test-breaker PASS, phase-auditor FAIL (a test
+whose monkeypatch had no effect; this hand-off); fixed: the folder is read at call time and the
+test asserts the patch takes effect; a demoted (draft) gap-example clause stays in its folder, is
+not shown, and the builder refuses a mapping to it (tested); ids read once. Next: re-run the
+phase-auditor, full suite, CI, merge #34; then branch `adviser-commentary-check` (the human's
+follow-up of 2026-11-06).
 
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
@@ -1857,11 +1864,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2's PR #34 is open from `gap-fallback-example`;
-stop for the human (gate 1 on `nist.sp800-34.alternate-manual-means` and
-`nist.sp800-34.activation-by-designated-authority`; then a gap_examples.yaml proposal for
-orphan_duty:activate_fallback_channel, gate 7). The human will probably start Task 3
-(`uae-cyber-sources`) in a new session. The older notes below are history.
+**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2 (PR #34): option (c) done (gates 1, 6 and
+7 answered); merge after the phase-auditor re-run, full suite and CI. Then the adviser
+commentary follow-up on branch `adviser-commentary-check` (per-sentence filter, evidence-scoped
+absence wording, re-record the 6 presets once: approved), PR, stop. Task 3 probably in a new
+session. The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".
