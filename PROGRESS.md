@@ -22,7 +22,9 @@ not yet used by the simulation"; no code change).
 adapter wired into the simulation; facilitator start/pause/release controls; audit and trace view
 in the UI; provenance record for every live run (model, prompt version, KB and manifest hashes,
 step, errors); minimum-vs-excessive information-sharing branch at T+30; agent rubric evaluation
-suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated demo video.
+suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated demo video;
+load the NIST clauses into the simulation, then re-record the gate-4 adviser steps and the preset
+answers once embeddings work; update the citation map, traces and report §4 (gate 7).
 
 **Task 1 — Ask the Policy Adviser (branch `phase-7-adviser-query`, from `progress-after-pr31`,
 so the two PROGRESS commits after #31 ride along).**
@@ -469,10 +471,18 @@ nvlpubs.nist.gov (SHA-256 476f04d4...d0df), extracted (149 pages), inventory #24
 international_precedents.yaml (`nist.sp800-34.alternate-manual-means` p.15,
 `nist.sp800-34.activation-by-designated-authority` p.50; quotes verified on page); the file is in
 `NOT_SEARCHED` (no KB rebuild, human 2026-11-06), so the KB index and extracted_digest stay
-identical to main. Impact (temp dir, drafts set reviewed): baseline summary, diagnosis, goals,
-failure clauses and repair ranking identical; only the adviser's 6 views change. Human answers
-2026-11-06: the run line "21 -> 23 draft clauses not loaded" approved; keep "foreign
-precedent" (notes corrected); AGENTS.md 23 -> 24 original PDFs (gate 6, approved). Next: PR,
+identical to main. **Option (c), human decision 2026-11-06:** gate 1 scoped: the two clauses are
+reviewed **as gap examples only** and live in `policies/gap_examples_only/` (approvals pinned),
+never loaded: loader, RuleBook, clauses_for_role, role views, KB and the adviser's citable set
+ignore them; only `storage/reports.py` (scripts/build_reports.py) reads them, labelled "reviewed as
+a gap example; not loaded into the simulation". Gate 7: both gap_examples.yaml entries for
+orphan_duty:activate_fallback_channel added (approved); docs/gap-analysis.md regenerated.
+Confirmed: gate-4 llm_cache replays 36/36 offline; six preset keys unchanged (pinned test);
+citation_map --check passes; technical report and its tests unchanged; traces and goldens
+byte-identical to main (the run line is back to "21 draft clauses not loaded", since the clauses
+left the corpus; the earlier approved 21 -> 23 change is no longer needed). Keep "foreign
+precedent"; AGENTS.md 23 -> 24 original PDFs (gate 6, confirmed). No other AGENTS.md change was
+needed (the engine still reads clause YAML in policies/reviewed/ only). Next: PR,
 then the human checks the two quotes (gate 1), then a gap_examples.yaml proposal for
 orphan_duty:activate_fallback_channel (gate 7). After the PR is open: stop (Task 3 in a new session).
 
@@ -1574,26 +1584,12 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Task 2, NIST SP 800-34 (2026-11-06):**
-- Gate 1: the human checks the two draft quotes against PDF pages 15 and 50 (printed 1 and 36):
-  `nist.sp800-34.alternate-manual-means`, `nist.sp800-34.activation-by-designated-authority`.
-  **What approving them changes** (test-breaker, Task 2): diagnosis, goals, repair ranking and
-  goldens stay identical (now tested); but the adviser's views change, so (1) the cache keys of
-  all six recorded preset answers in `docs/evaluation/adviser/cache/` change and replay falls back
-  to the template until re-recorded (gate 4), and the extra clauses shift the IDF ranking (at one
-  T+45 preset `uae.fl2-2019.art6` would also be offered); (2) `extracted_digest` changes even
-  though NIST is not searched (`_quoted_pages` covers every reviewed clause's page), so every
-  `--extracted-context` LLM cache entry goes stale; (3) LLM agents' cached decisions for the
-  adviser's steps change key. The KB index still loads.
-- Gate 7 (after gate 1): the agent proposes a gap_examples.yaml entry for
-  orphan_duty:activate_fallback_channel. Evidence-auditor QUESTION-FOR-HUMAN: is US
-  information-system contingency guidance (not AI-specific; "should"; manual means "typically
-  acceptable for only short-term disruptions") a fair example for this failure? The entry would
-  keep that condition and the "candidate finding" wording.
-- Gate 6 (phase-auditor): confirm the AGENTS.md wording "24 original PDF documents" (approved
-  2026-11-06; the only AGENTS.md change on this branch).
-- Note for the human (phase-auditor MINOR): `tests/unit/test_clause_loader.py` HARMLESS_GAP now
-  also accepts exactly "(cid:131)" (the pdfplumber bullet glyph), so `[...]` may skip it.
+**Task 2, NIST SP 800-34 (2026-11-06): all answered.** Gate 1 scoped to "gap examples only"
+(option (c)); gate 7 entries approved and added; gate 6 confirmed. Recorded for reference: had the
+clauses been loaded, the gate-4 cache would replay 30/36 (the adviser's 6 steps), the preset keys
+and extracted_digest would change, and the citation map, traces and report §4 would go stale
+(checked 2026-11-06; now a finals-backlog item). Note: `HARMLESS_GAP` in
+tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
 
 **Task 1, Ask the Policy Adviser (2026-11-05; merged 2026-11-06, items below answered):**
 - Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,

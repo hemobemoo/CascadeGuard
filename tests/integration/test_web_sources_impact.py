@@ -30,6 +30,7 @@ from cascadeguard.knowledge.loader import (
     REVIEWED_DIR,
     load_clauses,
     load_engine_clauses,
+    load_gap_example_clauses,
 )
 from cascadeguard.knowledge.retrieval import clauses_for_role, extracted_digest
 from cascadeguard.simulation.orchestrator import RunResult
@@ -277,89 +278,96 @@ def test_extracted_context_fingerprint_changes_with_the_new_extracted_text(tmp_p
     assert extracted_digest(before) != extracted_digest(EXTRACTED_DIR)
 
 
-# --- Task 2 (human brief 2026-11-05): NIST SP 800-34 Rev. 1 drafts --------------------------
+# --- Task 2, option (c) (human decision 2026-11-06): NIST SP 800-34 Rev. 1 clauses are reviewed
+# as gap examples only, in policies/gap_examples_only/, and never loaded into the simulation.
 
 NIST_SOURCE = "nistspecialpublication800-34r1.pdf"
 NIST_IDS = {
     "nist.sp800-34.alternate-manual-means",
     "nist.sp800-34.activation-by-designated-authority",
 }
+# Adviser preset cache keys computed on main before Task 2 (fake model id, hashing only): the
+# recorded answers in docs/evaluation/adviser/cache/ must keep matching.
+PINNED_PRESET_KEYS = [  # (step, key), in adviser_questions.yaml order
+    (30, "9bba7664258e996d7663ef6e74239d94eb312cfab747cdec17da640119aeebf3"),
+    (60, "5331d628bc9cb5fa9f8d97cc1d23b07cdf4295cabf67484ab320fc5f62d55ad9"),
+    (45, "eb290d019390346826680fc8bf4fd26de85f96e2b6fa2b4c69ac2b0edfbb9ec8"),
+    (45, "f2db0f6608fe2e7aeef826a16aafce0a1c4719c01acf76a767ae81631077a897"),
+    (45, "67d85ccfda7fcc7c6585afa9fbd5ea6175da2b872689e18dedfe24e83f8f10af"),
+    (15, "736227188aee28d9960c7ebe0641265c5f756da3502898eb86cd83ee8664a547"),
+]
 
 
-def is_nist(source_file: str | None) -> bool:
-    return source_file == NIST_SOURCE
-
-
-def test_the_nist_clauses_are_the_two_drafts() -> None:
-    clauses = [c for c in load_clauses() if is_nist(c.source_file)]
-    assert {c.id for c in clauses} == NIST_IDS
-    assert {c.status for c in clauses} == {ClauseStatus.DRAFT}  # until gate 1
-    assert all(c.binding is False and c.normalized is None for c in clauses)
-    assert not NIST_IDS & set(load_engine_clauses())
-    # Task 2 brief: foreign precedent (the automatic label), not AI-specific, not binding in UAE
-    for c in clauses:
+def test_the_nist_clauses_are_reviewed_gap_examples_only() -> None:
+    gap = load_gap_example_clauses()
+    assert set(gap) == NIST_IDS
+    for c in gap.values():
+        assert c.status is ClauseStatus.REVIEWED and c.source_file == NIST_SOURCE
+        assert c.binding is False and c.normalized is None
         assert c.status_label.endswith("not binding · foreign precedent"), c.id
         notes = " ".join((c.notes or "").split())
         assert "not AI-specific" in notes and "not binding in the UAE" in notes, c.id
+    corpus = {c.id for c in load_clauses()}
+    assert not NIST_IDS & corpus and not NIST_IDS & set(load_engine_clauses())
 
 
-def test_once_reviewed_the_nist_clauses_enter_only_the_analysis_roles_views(
-    tmp_path: Path,
-) -> None:
-    reviewed = copy_reviewed(tmp_path / "rev", drop_web=False, review_web=True, select=is_nist)
-    clauses = load_engine_clauses(reviewed)
-    assert set(clauses) >= NIST_IDS
-    corpus = frozenset(c.id for c in load_clauses(reviewed))
-    _, roles = cli.load_scenario(SCENARIO, set(corpus), cli.SCENARIOS_DIR)
-    reached = {
-        r.id
-        for r in roles.roles
-        if NIST_IDS & {c.id for c in clauses_for_role(clauses, corpus, r.id, r.allowed_actions)}
-    }
-    assert reached == {ANALYST}
+def test_no_role_view_rulebook_adviser_set_or_kb_ever_contains_them() -> None:
+    from cascadeguard.agents import adviser_query as aq
+    from cascadeguard.engine.constraints import RuleBook
+    from cascadeguard.knowledge.kb import committed_index
+
+    clauses = load_engine_clauses()
+    book = RuleBook(dict(clauses))
+    assert not NIST_IDS & set(book.clauses)  # the engine's rules never hold them
+    baseline = cli.run_scenario(SCENARIO)
+    found = cli.search_repairs(SCENARIO)
+    views = [*baseline.views, *(v for c in found.ranked for v in c.replay.views)]
+    for v in views:
+        seen = {c.id for c in v.role_clauses} | {c.id for c in v.clauses}
+        assert not NIST_IDS & seen, v.role_id
+    world = cli.load_world(SCENARIO)
+    for at, text in aq.load_presets(cli.SCENARIOS_DIR / SCENARIO):
+        view = cli.adviser_view(world, at)
+        ctx = aq.retrieve_context(text, view, None)
+        offered = {e.clause_id for e in aq.rank_clauses(text, view, world.clauses, ctx)}
+        assert not NIST_IDS & offered
+    for chunk in committed_index().chunks:
+        assert chunk.source_file != NIST_SOURCE
+        assert not NIST_IDS & {r.id for r in chunk.clauses}
 
 
-def test_loading_the_nist_clauses_leaves_diagnosis_goals_and_goldens_unchanged(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Task 2 Done-when: with both NIST drafts set to reviewed (temp copy), the baseline summary
-    (diagnosis, goals, findings), the repair search and both goldens are byte-identical; only
-    the policy_legal_adviser's views (and LLM cache keys) change."""
-    before = snapshot()
-    rev = copy_reviewed(tmp_path / "rev", drop_web=False, review_web=True, select=is_nist)
-    monkeypatch.setattr(cli, "REVIEWED_DIR", rev)
-    after = snapshot()
-    assert {cid for cid, _ in after["loaded"]} - {cid for cid, _ in before["loaded"]} == NIST_IDS
-    assert before["baseline"] == after["baseline"]
-    assert before["search"] == after["search"]
-    golden = yaml.safe_load(GOLDEN_REPAIRS.read_text(encoding="utf-8"))
-    assert cli.search_repairs(SCENARIO).summary() == golden["search"]
-    pairs = list(zip(before["views"], after["views"], strict=True))
-    for replay, other in zip(before["replay_views"], after["replay_views"], strict=True):
-        pairs += list(zip(replay, other, strict=True))
-    assert {role_of(a) for a, b in pairs if a != b} == {ANALYST}
+def test_the_six_adviser_preset_cache_keys_are_unchanged() -> None:
+    from cascadeguard.agents import adviser_query as aq
 
-
-def test_the_nist_drafts_change_only_the_draft_count_line(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The approved output change (human 2026-11-06): with the two NIST drafts present the CLI
-    and Markdown say two more drafts are not loaded, and nothing else differs."""
-
-    def outputs() -> tuple[int, str, str]:
-        result = cli.run_scenario(SCENARIO)
-        drafts = cli.excluded_drafts(result)
-        return (
-            drafts,
-            cli.format_result(result, drafts),
-            cli.baseline_markdown(SCENARIO, result, drafts),
+    world = cli.load_world(SCENARIO)
+    roles = sorted(r.id for r in world.roles.roles)
+    keys: list[tuple[int, str]] = []
+    for at, text in aq.load_presets(cli.SCENARIOS_DIR / SCENARIO):
+        view = cli.adviser_view(world, at)
+        ctx = aq.retrieve_context(text, view, None)
+        offered = aq.rank_clauses(text, view, world.clauses, ctx)[: aq.LLM_CANDIDATES]
+        request = aq.build_request(
+            "test/pinned-model", text, view, offered, ctx, roles, "json_schema"
         )
+        keys.append((at, aq.answer_key(request, view)))
+    assert keys == PINNED_PRESET_KEYS
 
-    with_count, with_text, with_md = outputs()
-    rev = copy_reviewed(tmp_path / "rev", drop_web=True, select=is_nist)
-    monkeypatch.setattr(cli, "REVIEWED_DIR", rev)
-    count, text, md = outputs()
-    assert with_count == count + 2
-    line, fewer = (f"{n} draft clauses not loaded" for n in (with_count, count))
-    assert with_text != text and with_text.replace(line, fewer) == text
-    assert with_md.replace(line, fewer) == md
+
+def test_views_cache_keys_and_outputs_ignore_the_gap_example_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every role view and LLM cache key (so the gate-4 cache replays 36 of 36), the baseline,
+    the search and the CLI text are identical with and without policies/gap_examples_only/; the
+    draft count stays 21."""
+    from cascadeguard.knowledge import loader
+
+    with_folder = snapshot()
+    result = cli.run_scenario(SCENARIO)
+    text_with = cli.format_result(result, cli.excluded_drafts(result))
+    monkeypatch.setattr(loader, "GAP_EXAMPLES_DIR", tmp_path / "absent")
+    without = snapshot()
+    result = cli.run_scenario(SCENARIO)
+    text_without = cli.format_result(result, cli.excluded_drafts(result))
+    assert with_folder == without
+    assert text_with == text_without
+    assert "21 draft clauses not loaded" in text_with

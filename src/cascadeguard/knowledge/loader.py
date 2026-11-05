@@ -29,6 +29,10 @@ EXTRACTED_DIR = PROJECT_ROOT / "policies" / "extracted"
 # Page-image transcriptions for sources whose text layer is unreliable (see TRANSCRIBED_FLAG).
 TRANSCRIPTIONS_DIR = PROJECT_ROOT / "policies" / "transcriptions"
 APPROVALS_FILE = PROJECT_ROOT / "policies" / "approvals.yaml"
+# Clauses reviewed as gap-analysis examples only (human decision 2026-11-06, option (c)): never
+# loaded into the simulation; only the report builder reads them (load_gap_example_clauses).
+GAP_EXAMPLES_DIR = PROJECT_ROOT / "policies" / "gap_examples_only"
+GAP_EXAMPLE_NOTE = "reviewed as a gap example; not loaded into the simulation"
 
 ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
 # The two published books are context only and never a clause source (AGENTS.md).
@@ -90,6 +94,26 @@ def load_engine_clauses(
 ) -> dict[str, PolicyClause]:
     """Clauses the engine may use: `reviewed` and `illustrative` only, keyed by id."""
     return {c.id: c for c in load_clauses(directory, sources_dir) if c.status in ENGINE_STATUSES}
+
+
+def load_gap_example_clauses(
+    directory: Path = GAP_EXAMPLES_DIR,
+    sources_dir: Path = SOURCES_DIR,
+    corpus_dir: Path = REVIEWED_DIR,
+) -> dict[str, PolicyClause]:
+    """Clauses reviewed as gap examples only, keyed by id. For the report builder alone: the
+    engine path (load_clauses, load_engine_clauses) never reads this folder. Each must be
+    `reviewed` and must not share an id with the simulation's corpus."""
+    if not directory.is_dir():
+        return {}
+    clauses = load_clauses(directory, sources_dir)
+    corpus = {c.id for c in load_clauses(corpus_dir, sources_dir)}
+    for clause in clauses:
+        if clause.status is not ClauseStatus.REVIEWED:
+            raise ClauseLoadError(f"{clause.id}: a gap-example-only clause must be reviewed")
+        if clause.id in corpus:
+            raise ClauseLoadError(f"{clause.id}: also in the simulation's corpus")
+    return {c.id: c for c in clauses}
 
 
 def clause_digest(clause: PolicyClause) -> str:

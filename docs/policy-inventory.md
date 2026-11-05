@@ -32,7 +32,7 @@ does not state one (PDF file metadata is not used, since several copies were re-
 | 21 | `UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf` | Recommendation on the Ethics of AI, SHS/BIO/PI/2021/1 (official original) | UNESCO General Conference | 2021-11-23 | 44 | 8, 12, 16, 24 (section divider images, page number only) | Two columns: read column by column where the gutter is clear (20 pages, records `"columns": 2`); pages 2, 4, 26, 27, 30, 33, 35–37, 39, 41–43 have a full-width heading and still interleave |
 | 22 | `UAE_National_Cybersecurity_Strategy.pdf` | National Cyber Security Strategy (TRA era) | Telecommunications Regulatory Authority (TRA) | **unknown** (not printed) | 16 | — | **No — see below** |
 | 23 | `The UAE Charter for the Development and Use of Artificial Intelligence.pdf` | The UAE Charter for the Development & Use of Artificial Intelligence (official PDF) | UAE Minister of State for Artificial Intelligence, Digital Economy & Remote Work Applications Office (as printed on p.1) | 2024-07 (as printed on p.1) | 5 | — | **No — image pages with an unreliable embedded text layer; see below** |
-| 24 | `nistspecialpublication800-34r1.pdf` | NIST SP 800-34 Rev. 1, Contingency Planning Guide for Federal Information Systems | US National Institute of Standards and Technology (NIST) | 2010-05 (as printed on p.2) | 149 | — | Yes. Not searched (`NOT_SEARCHED`) until the human approves a knowledge-base rebuild; draft clauses only |
+| 24 | `nistspecialpublication800-34r1.pdf` | NIST SP 800-34 Rev. 1, Contingency Planning Guide for Federal Information Systems | US National Institute of Standards and Technology (NIST) | 2010-05 (as printed on p.2) | 149 | — | Yes. Not searched (`NOT_SEARCHED`) until the human approves a knowledge-base rebuild; its two clauses are reviewed as gap examples only (`policies/gap_examples_only/`), never loaded |
 
 **SHA-256 of the committed originals** (Phase 6d; the two books are not committed and not
 listed). Originals are never modified, renamed or deleted; `tests/unit/test_web_sources.py` checks these.
@@ -119,6 +119,10 @@ and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is cont
   149 pages, none without text. PDF page 15 is printed page 1.
 - US federal guidance: foreign (non-UAE) precedent, not AI-specific, not binding in the UAE.
   Clauses quoted from it carry the automatic qualifier "foreign precedent" (US jurisdiction).
+- Its two clauses (`nist.sp800-34.alternate-manual-means` p.15, `nist.sp800-34.activation-by-designated-authority`
+  p.50) were reviewed by the human on 2026-11-06 as gap examples only (option (c)): they are in
+  `policies/gap_examples_only/`, never loaded into the simulation; only the report builder reads
+  them, for `gap_examples.yaml` and `docs/gap-analysis.md`.
 - Kept out of the keyword search and the vector index (`NOT_SEARCHED`): adding it to the searched
   corpus changes the index's corpus (the committed index refuses to load until rebuilt) and
   `extracted_digest`. A rebuild is the human's decision (gate 4).

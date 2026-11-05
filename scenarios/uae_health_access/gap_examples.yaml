@@ -34,3 +34,11 @@ entries:
     clause: uae.ai-charter.human-oversight
     relevance: A UAE principle (not binding) on human oversight to correct errors of AI. It sets no trigger for review (no threshold or time; its interpreted condition, that an AI output may be erroneous, is not a trigger). It illustrates the principle without a trigger.
     approved: true
+  - failure: orphan_duty:activate_fallback_channel
+    clause: nist.sp800-34.activation-by-designated-authority
+    relevance: "US federal contingency guidance (not AI-specific; a recommendation): a designated authority activates the plan when activation criteria stated in advance are met. It illustrates an assigned owner and a pre-set trigger for activating a fallback."
+    approved: true
+  - failure: orphan_duty:activate_fallback_channel
+    clause: nist.sp800-34.alternate-manual-means
+    relevance: "US federal contingency guidance (not AI-specific; a recommendation): alternate (manual) processing as a way to restore a disrupted service, typically for short-term disruptions. It illustrates the fallback mechanism, not who activates it."
+    approved: true
