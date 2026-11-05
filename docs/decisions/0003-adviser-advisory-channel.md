@@ -23,9 +23,17 @@ The adviser's answer is accepted as a separate advisory channel, on these condit
 3. **Citations validated before display**, the same as agent citations: every cited id must be
    one of the loaded clauses (reviewed or illustrative) retrieved for the question
    (`engine/adviser_check.py`, `unknown_citation`). Quotes, sources, pages and status labels
-   come from the loaded clause, never from the model; every model-written line is shown under
-   the agent-statement label; an answer the check rejects is replaced by the deterministic
-   template, with the reasons.
+   come from the loaded clause, never from the model; an answer the check rejects is replaced
+   by the deterministic template, with the reasons.
+5. **Model text kept apart (option (b), human decision 2026-11-06).** The seven sections are
+   always the engine's template text, built from the clauses the model chose; sections 1, 5 and
+   6 never hold model text. Every line the model wrote is shown only in a separate block,
+   "Model commentary (unverified agent statement)", after the seven sections, each line under
+   the agent-statement label. The engine's phrase checks (gap, status, authority wording,
+   control characters) still run on every commentary line. Reason: review round 3 showed that
+   phrase lists cannot catch every wording, so the sections must not depend on them.
+6. **CLI calls a model only with `--live`** (human decision 2026-11-06); the UI switch is
+   unchanged (off by default, shown only with `OPENROUTER_API_KEY`, 20 live calls per browser).
 4. **AGENTS.md** records the exception in one line (gate 6, approved with this decision).
 
 ## Alternatives not taken
