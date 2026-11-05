@@ -65,8 +65,11 @@ so the two PROGRESS commits after #31 ride along).**
   governed scripted baseline like the CLI; new tests for request failure, the request line,
   the keyword half, stored preset vectors. QUESTION-FOR-HUMAN (UI live switch on by default)
   is already under "Waiting on human". Adviser tests: 51.
-- Preset embedding (approved by the human 2026-11-05, 1 request): **failed**, HTTP 502 on all 4
-  attempts (1 + 3 automatic retries). Nothing written; retry waits for the human.
+- Preset embedding (approved by the human 2026-11-05, 1 request): **failed twice**, HTTP 502 on
+  all 4 attempts each time (retry approved by the human; 8 requests in all, no vector returned).
+  The model is still listed by OpenRouter's public embeddings catalogue (checked 2026-11-05), so
+  this looks like a provider outage. Nothing written; a further retry waits for the human. No
+  other embedding model is used (AGENTS.md / brief).
 - Verify: `uv run pytest tests/unit/test_adviser_query.py`;
   `uv run cascadeguard ask uae_health_access --at T+60 "Who must activate the fallback channel?" --offline`.
 
@@ -1482,8 +1485,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 ## Waiting on human
 
 **Task 1, Ask the Policy Adviser (2026-11-05):**
-- Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed (HTTP 502 x4,
-  4 requests sent). Retry (up to 4 more requests) when the human says so. Until then presets use
+- Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,
+  8 requests sent, no result). Retry (up to 4 more requests) when the human says so. Until then presets use
   the keyword half without a key, and a live embedding with one.
 - Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
