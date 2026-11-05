@@ -6,6 +6,15 @@
       "runtimeExecutable": "uv",
       "runtimeArgs": ["run", "python", "-m", "cascadeguard.ui.app"],
       "port": 8765, "autoPort": false
+    },
+    {
+      "name": "cascadeguard-ui-nokey",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run", "python", "-c",
+        "import os; from pathlib import Path; import cascadeguard.agents.llm as llm; llm.ENV_FILE = Path('no-such-dir') / '.env'; [os.environ.pop(k, None) for k in llm.ENV_VARIABLES]; os.environ['CASCADEGUARD_UI_PORT'] = '8766'; from cascadeguard.ui import app; app.main()"
+      ],
+      "port": 8766, "autoPort": false
     }
   ]
 }

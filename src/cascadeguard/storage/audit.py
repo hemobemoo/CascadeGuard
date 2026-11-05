@@ -1,7 +1,8 @@
 """Audit trail in a local DuckDB file (default data/audit.duckdb, gitignored).
 
 Records every run (baseline or replay) with its event log, findings and diagnosed failures,
-each repair comparison, and each repair search (ranked and discarded candidates).
+each repair comparison, each repair search (ranked and discarded candidates), and each question
+put to the Policy Adviser (question, step, view digest, answer mode, retrieved items, answer).
 Append-only: rows are never updated or deleted.
 """
 
@@ -11,6 +12,7 @@ from typing import Any
 
 import duckdb
 
+from cascadeguard.agents.adviser_query import AdviserAnswer
 from cascadeguard.engine.repair_search import (
     INCONCLUSIVE_LISTED,
     ReplayComparison,
@@ -54,6 +56,15 @@ CREATE TABLE IF NOT EXISTS repairs (
     rank INTEGER,                        -- NULL when discarded by the hard filter
     edits INTEGER, requires_authorization BOOLEAN, critical_blockers_removed INTEGER,
     outcome VARCHAR, discarded_reason VARCHAR, clause_ids VARCHAR[]
+);
+CREATE TABLE IF NOT EXISTS adviser_queries (
+    query_id INTEGER PRIMARY KEY,
+    recorded_at TIMESTAMPTZ DEFAULT current_timestamp,
+    scenario VARCHAR NOT NULL, minute INTEGER NOT NULL, question VARCHAR NOT NULL,
+    view_digest VARCHAR NOT NULL, mode VARCHAR NOT NULL, mode_detail VARCHAR NOT NULL,
+    retrieval VARCHAR NOT NULL,
+    retrieved JSON NOT NULL,             -- citable clause ids and context chunks
+    answer JSON NOT NULL                 -- the full trace (AdviserAnswer.trace())
 );
 """
 
@@ -188,3 +199,30 @@ class AuditStore:
         if rows:
             self.con.executemany("INSERT INTO repairs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
         return base
+
+    def record_question(self, answer: AdviserAnswer) -> int:
+        """Record one question to the Policy Adviser with its full trace."""
+        row = self.con.execute(
+            "SELECT coalesce(max(query_id), 0) + 1 FROM adviser_queries"
+        ).fetchone()
+        assert row is not None
+        query_id = int(row[0])
+        trace = answer.trace()
+        retrieved = {"clauses": trace["retrieved"], "context": trace["context"]}
+        self.con.execute(
+            "INSERT INTO adviser_queries (query_id, scenario, minute, question, view_digest, mode, "
+            "mode_detail, retrieval, retrieved, answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                query_id,
+                answer.scenario,
+                answer.minute,
+                answer.question,
+                answer.view_digest,
+                answer.mode,
+                answer.mode_detail,
+                answer.retrieval,
+                _json(retrieved),
+                _json(trace),
+            ],
+        )
+        return query_id

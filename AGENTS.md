@@ -33,6 +33,8 @@ citations, uncertainty. They must never:
 - authorize an action, or override a prohibition or safeguard;
 - declare a legal gap without cited evidence and an explicit qualification.
 
+Exception (human, 2026-11-05): the read-only "Ask the Policy Adviser" answer is a separate advisory channel, not an `AgentDecision`; see `docs/decisions/0003-adviser-advisory-channel.md`.
+
 Enforcement in code, not just convention:
 
 - Agents receive a read-only, boundary-filtered view object.

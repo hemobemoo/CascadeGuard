@@ -182,6 +182,50 @@ uv run cascadeguard run uae_health_access --repair <repair-id>   # replay with o
 uv run python -m cascadeguard.ui.app                             # demo UI at http://localhost:8765
 ```
 
+### Ask the Policy Adviser
+
+Pause at any step and ask the Policy and Legal Adviser a question. It answers from its own view
+at that step (no fact released later, nothing outside its information boundary) in seven
+sections: direct answer, UAE evidence (clause id, source, page, verbatim quote), status labels,
+an international comparison kept separate, the responsible role or "not established in the
+reviewed corpus", permissible options and the required human escalation, and uncertainty. It
+abstains when no loaded clause supports an answer. Only loaded clauses (reviewed or
+illustrative) are citable; knowledge-base text is context only; not citable. The adviser has no
+enforcement authority.
+
+```bash
+uv run cascadeguard ask uae_health_access --presets                       # the 6 preset questions
+uv run cascadeguard ask uae_health_access --at T+30 "Who must activate the fallback channel?" --offline
+```
+
+The seven sections are always the engine's own text, built from the loaded clauses: with no API
+key (no network; free-text questions use the keyword half of the search), and in LLM mode too.
+In LLM mode (`--live`, with the three variables of `.env.example` set) the configured chat model
+picks the clauses from the same evidence and writes a separate block, "Model commentary
+(unverified agent statement)", after the seven sections; the engine checks every citation and
+phrase before anything is shown. Answers are cached in `data/adviser_cache/` and replayed
+without `--live`. **`ask` calls a model only with `--live`** (per question: at most 4 chat
+requests, and 1 query embedding, sent up to 4 times with retries); without it, even with a key,
+it uses the cache or the template.
+
+Preset answers: the configured model's answers to the six presets were recorded on 2026-11-06
+(6 chat requests) in `docs/evaluation/adviser/cache/`; replay with
+`--cache docs/evaluation/adviser/cache` (the cache key includes the model id, so replay needs the
+same `CASCADEGUARD_MODEL` in `.env`; no call is made). They were recorded on **keyword
+retrieval**: embedding the preset questions failed (OpenRouter HTTP 502, 2026-11-05/06), so
+`policies/kb/adviser_query_vectors.json` does not exist and the context chunks come from the
+keyword half of the search. **The engine rejected all six recorded answers** (gap, status or
+authority wording in the model's text, e.g. "does not state", "no clause", "illustrative"), so
+replaying a preset shows the deterministic template with the rejection reasons, not the model's
+commentary. If the presets are embedded later, their context changes and the recorded answers no
+longer match.
+Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
+DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by
+default and shows only when `OPENROUTER_API_KEY` is set, with at most 20 live questions per
+session; any failed live call falls back to the template, labelled. Agents in the UI stay
+cache-only. The adviser's answer is a separate, read-only advisory channel
+(`docs/decisions/0003-adviser-advisory-channel.md`).
+
 ## Knowledge base and Sources
 
 | What | Where |

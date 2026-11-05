@@ -4,9 +4,12 @@ cascadeguard run <scenario> [--clauses DIR] [--repair ID] [--export DIR] [--audi
 cascadeguard repairs <scenario> [--clauses DIR] [--export DIR]
 Both take --agents scripted|llm (default scripted), --offline and --cache DIR (LLM only).
 cascadeguard kb query "<text>" [-k N] | cascadeguard kb export <path>
+cascadeguard ask <scenario> --at T+30 "<question>" [--live | --offline] [--cache DIR] [--export DIR]
+    [--audit [DB]] | cascadeguard ask <scenario> --presets
 """
 
 import argparse
+import hashlib
 import io
 import sys
 from collections.abc import Sequence
@@ -14,7 +17,9 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+import cascadeguard.agents.llm as llm_module
 from cascadeguard import __version__
+from cascadeguard.agents import adviser_query as aq
 from cascadeguard.agents.base import Agent
 from cascadeguard.agents.cache import DEFAULT_CACHE_DIR, DecisionCache
 from cascadeguard.agents.llm import (
@@ -26,6 +31,7 @@ from cascadeguard.agents.llm import (
     LLMConfigError,
     RetryPolicy,
     llm_agents,
+    make_client,
 )
 from cascadeguard.agents.scripted import load_scripted_agents
 from cascadeguard.domain.policies import PolicyClause
@@ -51,12 +57,15 @@ from cascadeguard.knowledge.kb import (
     Hit,
     KnowledgeBaseError,
     OpenRouterEmbedder,
+    StoredQueries,
+    committed_index,
     export_kb_main,
     index_digest,
     search_kb,
 )
 from cascadeguard.knowledge.loader import REVIEWED_DIR, load_clauses, load_engine_clauses
 from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
+from cascadeguard.simulation.boundaries import RoleView
 from cascadeguard.simulation.loader import (
     PROJECT_ROOT,
     SCENARIOS_DIR,
@@ -187,6 +196,46 @@ def build_parser() -> argparse.ArgumentParser:
         "export", help="write chunks, vectors and metadata as JSONL for a ChromaDB kb_main load"
     )
     export_cmd.add_argument("path", type=Path)
+    ask_cmd = subcommands.add_parser(
+        "ask",
+        help="pause at a step and ask the Policy Adviser a question (its own view at that step)",
+    )
+    ask_cmd.add_argument("scenario")
+    ask_cmd.add_argument("question", nargs="?", default=None)
+    ask_cmd.add_argument("--at", default=None, help="the step, e.g. T+30 (an inject minute)")
+    ask_cmd.add_argument(
+        "--presets", action="store_true", help="list the scenario's preset questions and exit"
+    )
+    ask_cmd.add_argument(
+        "--offline",
+        action="store_true",
+        help="no API call: a cached LLM answer if there is one, else the deterministic template "
+        "(the default without --live)",
+    )
+    ask_cmd.add_argument(
+        "--live",
+        action="store_true",
+        help="allow live model calls for this question (needs the three .env variables; at "
+        "most 4 chat requests, retries included, and 1 query embedding, up to 4 attempts); "
+        "without it, ask never "
+        "calls a model, even with a key (human decision 2026-11-06)",
+    )
+    ask_cmd.add_argument(
+        "--cache",
+        type=Path,
+        default=aq.DEFAULT_ANSWER_CACHE,
+        help=f"adviser answer cache (default {_display(aq.DEFAULT_ANSWER_CACHE)})",
+    )
+    ask_cmd.add_argument("--export", type=Path, default=None, help="write JSON and Markdown here")
+    ask_cmd.add_argument(
+        "--audit",
+        type=Path,
+        nargs="?",
+        const=DEFAULT_DB,
+        default=None,
+        help=f"record the question and answer in a DuckDB audit file (default "
+        f"{_display(DEFAULT_DB)})",
+    )
     return parser
 
 
@@ -627,6 +676,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "kb":
         return _kb(args, parser)
+    if args.command == "ask":
+        return _ask(args)
     if args.command not in ("run", "repairs"):
         parser.print_help()
         return 0
@@ -699,6 +750,155 @@ def _kb(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
         print(f"cascadeguard: {exc}")
         return 2
     parser.print_help()
+    return 0
+
+
+def parse_step(text: str, minutes: Sequence[int]) -> int:
+    """ "T+30", "t+30" or "30" -> 30, if it is an inject minute of the scenario."""
+    raw = text.strip().upper().removeprefix("T+").removeprefix("T")
+    if not raw.isdigit() or int(raw) not in minutes:
+        steps = ", ".join(f"T+{m:02d}" for m in minutes)
+        raise ValueError(f"--at must be one of the scenario's steps: {steps}")
+    return int(raw)
+
+
+def adviser_view(world: World, minute: int) -> RoleView:
+    """The Policy Adviser's own view at this step of the governed scripted baseline."""
+    return next(v for v in world.baseline().views if v.role_id == aq.ADVISER and v.minute == minute)
+
+
+def adviser_asker(offline: bool, cache_dir: Path) -> aq.Asker:
+    """LLM mode when every LLM variable is set (live unless offline), else the template. Preset
+    questions use their stored query vectors; free text is embedded live only with a key."""
+    cache = aq.AnswerCache(cache_dir)
+    index = committed_index()
+    try:
+        stored: aq.kb.Embedder | None = StoredQueries(index.digest, filename=aq.PRESET_VECTORS)
+    except KnowledgeBaseError:  # no stored preset vectors yet: presets use the keyword half
+        stored = None
+    if not aq.key_is_set():
+        return aq.Asker(
+            template_detail=aq.no_model_detail(),
+            cache=cache,
+            model=aq.model_or_none() if offline else None,
+            stored=stored,
+            index=index,
+            offline=True,
+            output_mode=_output_mode(),
+        )
+    config = LLMConfig.from_env()
+    if offline:
+        return aq.Asker(
+            config=config,
+            offline=True,
+            cache=cache,
+            stored=stored,
+            index=index,
+            output_mode=config.output_mode,
+        )
+    return aq.Asker(
+        config=config,
+        client=make_client(config, cap=aq.REQUEST_CAP),
+        embedder=OpenRouterEmbedder(env_file=llm_module.ENV_FILE),
+        cache=cache,
+        stored=stored,
+        index=index,
+        output_mode=config.output_mode,
+    )
+
+
+def answer_id(question: str) -> str:
+    """Eight hex characters of the question's SHA-256, for export file names."""
+    return hashlib.sha256(question.encode("utf-8")).hexdigest()[:8]
+
+
+def adviser_requests(asker: aq.Asker) -> tuple[int, int]:
+    """(chat requests, query embeddings) this asker sent; (0, 0) when nothing is live."""
+    inner = getattr(asker.client, "inner", None)
+    chat = inner.requests if isinstance(inner, CappedClient) else 0
+    count = getattr(asker.embedder, "requests", 0)  # OpenRouterEmbedder counts its requests
+    return chat, count if isinstance(count, int) else 0
+
+
+def adviser_requests_line(asker: aq.Asker) -> str | None:
+    """With a key and no --offline: the live requests this question sent (chat requests,
+    retries included, under the per-question cap; query embeddings)."""
+    if asker.client is None:
+        return None
+    chat, embeds = adviser_requests(asker)
+    return (
+        f"Live requests: {chat} chat (cap {aq.REQUEST_CAP}, retries included), "
+        f"{embeds} query embedding"
+    )
+
+
+def _output_mode() -> str:
+    try:
+        return LLMConfig.output_mode_from_env()
+    except LLMConfigError:
+        return "json_schema"
+
+
+def _ask(args: argparse.Namespace) -> int:
+    stdout: object = sys.stdout
+    if isinstance(stdout, io.TextIOWrapper):
+        stdout.reconfigure(errors="replace")
+    try:
+        world = load_world(args.scenario)
+    except (KeyError, FileNotFoundError, ValueError) as exc:
+        print(f"cascadeguard: {exc}")
+        return 2
+    presets = aq.load_presets(SCENARIOS_DIR / args.scenario)
+    if args.presets:
+        for n, (at, text) in enumerate(presets, 1):
+            print(f"{n}. [T+{at:02d}] {text}")
+        return 0
+    if args.question is None or args.at is None:
+        print('cascadeguard: give --at T+N and a question, e.g. --at T+30 "Who must ...?"')
+        return 2
+    try:
+        minute = parse_step(args.at, [e.at_minute for e in world.scenario.events])
+        if args.live and args.offline:
+            raise ValueError("--live and --offline exclude each other")
+        if args.live and not aq.key_is_set():
+            raise ValueError(
+                "--live needs OPENROUTER_API_KEY, OPENROUTER_BASE_URL and CASCADEGUARD_MODEL in "
+                ".env (see .env.example); no default model is used"
+            )
+        # Human decision 2026-11-06: a model is called only with --live.
+        asker = adviser_asker(not args.live, args.cache)
+        answer = aq.ask(
+            args.scenario,
+            args.question,
+            adviser_view(world, minute),
+            world.clauses,
+            [r.id for r in world.roles.roles],
+            asker,
+            [text for _, text in presets],
+        )
+    except (ValueError, LLMConfigError, KnowledgeBaseError) as exc:
+        print(f"cascadeguard: {exc}")
+        return 2
+    print(answer.text())
+    if (line := adviser_requests_line(asker)) is not None:
+        print(line)
+    if args.export is not None:
+        _export(
+            args.export,
+            # One file per question: two questions at one step never overwrite each other.
+            f"{args.scenario}-ask-T{minute:02d}-{answer_id(answer.question)}",
+            answer.trace(),
+            _text_markdown(
+                f"Ask the Policy Adviser: {args.scenario} T+{minute:02d}", answer.text()
+            ),
+        )
+    if args.audit is not None:
+        store = AuditStore(args.audit)
+        try:
+            query_id = store.record_question(answer)
+        finally:
+            store.close()
+        print(f"audit: adviser question {query_id} in {_display(args.audit)}")
     return 0
 
 
