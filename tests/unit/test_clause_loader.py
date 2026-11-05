@@ -18,6 +18,7 @@ from cascadeguard.knowledge.loader import (
     ClauseLoadError,
     load_clauses,
     load_engine_clauses,
+    load_gap_example_clauses,
     quote_found_on_page,
     skipped_texts,
 )
@@ -73,7 +74,7 @@ def test_repository_clauses_load_with_unique_ids() -> None:
 def test_repository_clause_quotes_are_verbatim_on_their_cited_page() -> None:
     missing = [
         c.id
-        for c in load_clauses()
+        for c in [*load_clauses(), *load_gap_example_clauses().values()]
         if c.status is not ClauseStatus.ILLUSTRATIVE and not quote_found_on_page(c)
     ]
     assert missing == []
@@ -106,7 +107,7 @@ def gap_problems(skipped: list[str]) -> list[str]:
 
 def test_repository_elisions_skip_only_harmless_text() -> None:
     problems: dict[str, list[str]] = {}
-    for clause in load_clauses():
+    for clause in [*load_clauses(), *load_gap_example_clauses().values()]:
         if ELISION not in clause.text:
             continue
         skipped = skipped_texts(clause)

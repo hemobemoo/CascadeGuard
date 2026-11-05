@@ -28,7 +28,12 @@ from cascadeguard.engine.repair_search import (
     ReplayComparison,
     SearchResult,
 )
-from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
+from cascadeguard.knowledge.loader import (
+    GAP_EXAMPLE_NOTE,
+    PROJECT_ROOT,
+    load_clauses,
+    load_gap_example_clauses,
+)
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.storage.export import (
@@ -129,6 +134,8 @@ def trace_files(runs: ScriptedRuns) -> dict[str, str]:
 
 
 def _label(clause: PolicyClause) -> str:
+    if clause.id in load_gap_example_clauses():  # option (c): shown, never loaded
+        return f"`{clause.id}` [{clause.status_label}; {GAP_EXAMPLE_NOTE}]"
     return f"`{clause.id}` [{clause.status_label}]"
 
 
@@ -482,7 +489,8 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
 def build(scenario: str = SCENARIO) -> dict[Path, str]:
     """Every generated file and its content."""
     runs = scripted_runs(scenario)
-    corpus = {c.id: c for c in load_clauses()}
+    # The simulation's corpus plus the clauses reviewed as gap examples only (option (c)).
+    corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
     examples = load_gap_examples(scenario)
     out = {TRACES_DIR / name: text for name, text in trace_files(runs).items()}
     out[GAP_ANALYSIS] = gap_analysis_markdown(runs, examples, corpus)

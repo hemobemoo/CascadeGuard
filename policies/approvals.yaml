@@ -33,6 +33,10 @@ approved:
   unesco.ai-ethics.human-oversight: 203850fd654c6f850445201b8c84e0335caf48882b868ceb1c35463e9333c7a4
   unesco.ai-ethics.responsibility-accountability: 3195745fed5d15a48fefa5fbd6591cace0170368b5f51486c92dfe13e95531f2
   unesco.ai-ethics.review-and-correct: 10629ca9a2b97e92f340a55be8130bcb843c90457c705d0f8c8b806ce07f629f
+  # Gate 1 (scoped) on 2026-11-06 (reviewer Ibrahim Melhem): reviewed as gap examples only,
+  # never loaded (policies/gap_examples_only/); quotes checked against the PDF pp. 15 and 50.
+  nist.sp800-34.activation-by-designated-authority: 791d8817c0863f48b0e595320306af66cf7633cdffa3370cfc33e48e274ea400
+  nist.sp800-34.alternate-manual-means: 78867467325ab47feebabac0427dd383b3163043f998dc4cf27cc96fa566d730
 reapproval_needed: []
 # Page-image transcriptions the human checked against the image (AGENTS.md, transcription
 # route): "<source_file>#<page>" -> SHA-256 of the record's text at approval. A record with
