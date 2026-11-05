@@ -10,7 +10,7 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
 1. Ask the Policy Adviser (`phase-7-adviser-query`): **merged, PR #33, 98b4173 (2026-11-06).**
 2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): built; PR
-   open; waiting on gate 1 (the human checks the two quotes), then a gap_examples proposal (gate 7).
+   #34 open (reviewers PASS, 812 passed); waiting on gate 1 (the human checks the two quotes), then a gap_examples proposal (gate 7).
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -1861,7 +1861,7 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2's PR is open from `gap-fallback-example`;
+**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2's PR #34 is open from `gap-fallback-example`;
 stop for the human (gate 1 on `nist.sp800-34.alternate-manual-means` and
 `nist.sp800-34.activation-by-designated-authority`; then a gap_examples.yaml proposal for
 orphan_duty:activate_fallback_channel, gate 7). The human will probably start Task 3
