@@ -296,6 +296,11 @@ def test_the_nist_clauses_are_the_two_drafts() -> None:
     assert {c.status for c in clauses} == {ClauseStatus.DRAFT}  # until gate 1
     assert all(c.binding is False and c.normalized is None for c in clauses)
     assert not NIST_IDS & set(load_engine_clauses())
+    # Task 2 brief: foreign precedent (the automatic label), not AI-specific, not binding in UAE
+    for c in clauses:
+        assert c.status_label.endswith("not binding · foreign precedent"), c.id
+        notes = " ".join((c.notes or "").split())
+        assert "not AI-specific" in notes and "not binding in the UAE" in notes, c.id
 
 
 def test_once_reviewed_the_nist_clauses_enter_only_the_analysis_roles_views(
