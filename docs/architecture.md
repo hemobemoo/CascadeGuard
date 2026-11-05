@@ -128,7 +128,7 @@ Specs: `specs/001-domain-and-scenario.md`, `specs/002-engine-and-diagnosis.md`,
   `cascadeguard ask`; UI panel under the timeline). Read-only: it never changes a run.
 - Citable evidence: the adviser's `role_clauses` (loaded, reviewed or illustrative), ranked by a
   deterministic IDF-weighted word match. Context: CONTEXT_K knowledge-base chunks from the hybrid
-  search (stored vectors for preset questions, `policies/kb/adviser_query_vectors.json`; a live
+  search (stored vectors for preset questions, `policies/kb/adviser_query_vectors.json`, not yet built: gate 4; a live
   query embedding for free text with a key; else `kb.search_kb_keyword`), labelled context only.
 - Modes: LLM (configured chat model; answer cached in `data/adviser_cache/`, replayed offline) or
   a deterministic template (no key, offline miss, or a rejected LLM answer).

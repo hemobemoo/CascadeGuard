@@ -5,9 +5,11 @@ the CLI uses, and `ui/view_model.py` formats them. No logic lives here. The scri
 and repair search are computed once at startup and held in memory, so the page opens with the
 verdict, diagnosis and repair ladder already rendered. LLM agents are read from the decision
 cache only (no live calls for runs in the UI; the CLI keeps live runs). The one exception is
-"Ask the Policy Adviser": with a key in .env it may call the configured chat model for one
-question (switch "Live LLM call when the answer is not cached"; at most aq.REQUEST_CAP
-requests per question), as the human's brief of 2026-11-05 asks for the demo.
+"Ask the Policy Adviser" (human decision 2026-11-05, specs 005/006 amendments, ADR 0003): with
+OPENROUTER_API_KEY set, its switch "Live LLM call when the answer is not cached" (off by
+default) lets one question call the configured chat model (at most aq.REQUEST_CAP chat requests,
+and one query embedding sent up to 4 times with retries), at most ADVISER_SESSION_CAP live
+questions per session; any failure gives the labelled template.
 """
 
 import asyncio
