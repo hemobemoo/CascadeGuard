@@ -320,6 +320,20 @@ then locked.
 
 ## Current phase
 
+**Task 2 (branch `gap-fallback-example`, WIP, 2026-11-05; usage limit hit mid-task).** Done:
+NIST SP 800-34 Rev. 1 downloaded from nvlpubs.nist.gov (SHA-256 476f04d4...d0df), extracted
+(149 pages), recorded as inventory #24; two drafts in international_precedents.yaml
+(`nist.sp800-34.alternate-manual-means` p.15, `nist.sp800-34.activation-by-designated-authority`
+p.50; quotes verified on page); the file is in `NOT_SEARCHED` so the KB index and
+extracted_digest stay identical to main. Impact (temp dir, drafts set reviewed): baseline summary,
+diagnosis, goals, failure clauses and repair ranking identical; only the adviser's 6 views change.
+Adding the drafts changes one `run` output line: "21 draft clauses not loaded" -> "23" (needs the
+human's OK). Left: 4 failing tests to resolve (test_reports generated files: the 21->23 line;
+test_clause_loader elision allow-list; test_status_qualifiers source type for the new file;
+test_retrieval NOT_SEARCHED list), then review loop, PR, gate-1 ids, gap_examples proposal (gate 7).
+Questions: label "foreign precedent" (automatic for US) vs the brief's "international precedent";
+AGENTS.md still says 23 original PDFs (gate 6).
+
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
 PRs follow, one at a time; each stops once open with CI green:
