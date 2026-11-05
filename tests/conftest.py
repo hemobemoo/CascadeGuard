@@ -1,4 +1,5 @@
-"""No test may reach a live LLM: the real .env is never read and no SDK client is built."""
+"""No test may reach a live LLM: the real .env is never read, and no SDK client or CLI embedder
+is built."""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import Any
 import pytest
 
 import cascadeguard.agents.llm as llm
+import cascadeguard.cli as cli
 
 
 @pytest.fixture(autouse=True)
@@ -27,4 +29,7 @@ def no_live_llm(
         raise AssertionError("tests must not build a live LLM client")
 
     monkeypatch.setattr(llm, "make_client", refuse)
+    # The CLI binds these names at import: refuse them there too (test-breaker, Task 1).
+    monkeypatch.setattr(cli, "make_client", refuse)
+    monkeypatch.setattr(cli, "OpenRouterEmbedder", refuse)
     yield

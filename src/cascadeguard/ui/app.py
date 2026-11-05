@@ -550,7 +550,8 @@ def index() -> None:
             ui.label("Ask the Policy Adviser").classes("font-semibold")
             ui.label(
                 "Pause at a step and ask the policy_legal_adviser. It answers from its own view "
-                "at that step (no later facts, nothing outside its boundary). Only loaded "
+                "at that step of the governed scripted baseline (no later facts, nothing outside "
+                "its boundary). Model-written lines are marked as agent statements. Only loaded "
                 "clauses are citable; knowledge-base text is context only; not citable."
             ).classes("cg-muted")
             with ui.row().classes("items-end gap-2 w-full"):
@@ -605,7 +606,9 @@ def index() -> None:
             with answer_box:
                 ui.label("Asking ...").classes("cg-muted")
             try:
-                result = d.baseline
+                # The governed scripted baseline, as in the CLI, whichever agents the lanes show.
+                scripted = await run.io_bound(bundle, s.scenario, "scripted")
+                result = scripted.baseline if isinstance(scripted, Bundle) else d.baseline
                 view = next(
                     v for v in result.views if v.role_id == aq.ADVISER and v.minute == step.value
                 )

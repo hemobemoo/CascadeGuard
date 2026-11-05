@@ -55,6 +55,18 @@ so the two PROGRESS commits after #31 ride along).**
   embeddings (`nvidia/nemotron-3.5-embed-1b:free`). Only the questions, the adviser's view (no
   facts at those steps) and public clause/KB text were sent. Results stayed in the ignored
   `data/adviser_cache/` and a temp dir; nothing committed. Since then only `--offline` or tests.
+- Review round 1: test-breaker FAIL (2 BLOCKER, 3 MAJOR, 2 MINOR), all fixed: the engine
+  check now normalises free text (NFKC, format/control characters removed, Latin look-alikes
+  mapped), widens gap wording (ADVISER_GAP), rejects status claims (`status_claim`: binding,
+  mandatory, "federal law", ...), authority wording (`authority_wording`), control characters,
+  and an abstention that still answers; every model line is shown under the agent-statement
+  label, one line; options list the engine's readings first; the question is scrubbed;
+  conftest also refuses `cli.make_client` and `cli.OpenRouterEmbedder`; the UI uses the
+  governed scripted baseline like the CLI; new tests for request failure, the request line,
+  the keyword half, stored preset vectors. QUESTION-FOR-HUMAN (UI live switch on by default)
+  is already under "Waiting on human". Adviser tests: 51.
+- Preset embedding (approved by the human 2026-11-05, 1 request): **failed**, HTTP 502 on all 4
+  attempts (1 + 3 automatic retries). Nothing written; retry waits for the human.
 - Verify: `uv run pytest tests/unit/test_adviser_query.py`;
   `uv run cascadeguard ask uae_health_access --at T+60 "Who must activate the fallback channel?" --offline`.
 
@@ -1470,8 +1482,8 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 ## Waiting on human
 
 **Task 1, Ask the Policy Adviser (2026-11-05):**
-- Gate 4: embed the 6 preset questions once (`scripts/embed_adviser_presets.py --run`):
-  **1 embedding request**, free model `nvidia/nemotron-3.5-embed-1b:free`. Until then presets use
+- Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed (HTTP 502 x4,
+  4 requests sent). Retry (up to 4 more requests) when the human says so. Until then presets use
   the keyword half without a key, and a live embedding with one.
 - Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client

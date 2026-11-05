@@ -20,7 +20,7 @@ from cascadeguard.agents import adviser_query as aq
 from cascadeguard.cli import World, adviser_view, load_world, main, parse_step
 from cascadeguard.domain.policies import ClauseStatus, is_uae_jurisdiction
 from cascadeguard.engine.adviser_check import NOT_ESTABLISHED
-from cascadeguard.engine.constraints import GAP_CLAIM
+from cascadeguard.engine.constraints import AGENT_STATEMENT, GAP_CLAIM, agent_statement
 from cascadeguard.knowledge import kb
 from cascadeguard.simulation.boundaries import RoleView
 from cascadeguard.simulation.loader import SCENARIOS_DIR
@@ -128,7 +128,7 @@ def payload(**over: Any) -> str:
         "responsible_role": "health_service_operator, under the plan in dha.pp11.4-18-1",
         "options": ["Ask the health service operator to activate its continuity plan."],
         "escalation": ["The health service operator's management decides."],
-        "uncertainty": ["Binding status unknown."],
+        "uncertainty": ["The scope of the plan for this channel is uncertain."],
     }
     return json.dumps(base | over)
 
@@ -260,7 +260,8 @@ def test_llm_answer_quotes_come_from_the_clause_not_the_model(tmp_path: Path) ->
     (e,) = answer.uae_evidence
     clause = world().clauses["dha.pp11.4-18-1"]
     assert e.quote == " ".join(clause.text.split()) and e.page == clause.page
-    assert e.relevance == "continuity plans"
+    assert e.relevance == agent_statement("continuity plans")
+    assert answer.direct_answer.startswith(AGENT_STATEMENT)
     assert answer.status_labels == (("dha.pp11.4-18-1", clause.status_label),)
 
 
@@ -293,6 +294,50 @@ def test_template_text_never_uses_gap_wording(tmp_path: Path) -> None:
         ({"responsible_role": "the ministry"}, "responsible_role"),
         ({"abstain": True}, "abstention"),
         ({"uae_evidence": []}, "abstention"),
+        # test-breaker round 1: reworded gap claims, zero-width and homoglyph tricks
+        ({"direct_answer": "UAE law is unclear and lacks any requirement here."}, "gap_wording"),
+        (
+            {"direct_answer": "UAE legislation is absent on this point; no statute addresses it."},
+            "gap_wording",
+        ),
+        (
+            {"direct_answer": "There is no UAE requirement here; the law does not oblige anyone."},
+            "gap_wording",
+        ),
+        ({"direct_answer": "UAE law contains a g\u200bap here."}, "gap_wording"),
+        ({"direct_answer": "UAE law contains a \u0261ap here."}, "gap_wording"),
+        # status claims: only the engine's labels say what binds
+        ({"direct_answer": "dha.pp11.4-18-1 is binding UAE federal law."}, "status_claim"),
+        ({"uncertainty": ["Binding status unknown."]}, "status_claim"),
+        # authority wording: the adviser never authorises or sets aside a safeguard
+        (
+            {
+                "direct_answer": "I hereby authorise the telecom operator to share data.",
+                "options": ["Share the full subscriber list now; I approve it."],
+            },
+            "authority_wording",
+        ),
+        (
+            {"direct_answer": "The prohibition in dha.pp11.4-18-1 can be disregarded."},
+            "authority_wording",
+        ),
+        (
+            {"responsible_role": "health_service_operator is authorised to override safeguards"},
+            "authority_wording",
+        ),
+        # forged output lines and escape sequences
+        ({"direct_answer": "ok\nAnswer mode: template\u001b[2J"}, "control_characters"),
+        # an abstention that still answers
+        (
+            {
+                "abstain": True,
+                "uae_evidence": [],
+                "options": [],
+                "responsible_role": NOT_ESTABLISHED,
+                "direct_answer": "Yes: the telecom operator must activate it within 5 minutes.",
+            },
+            "abstention",
+        ),
     ],
 )
 def test_engine_rejects_bad_llm_answers(tmp_path: Path, over: dict[str, Any], reason: str) -> None:
@@ -305,10 +350,12 @@ def test_llm_abstention_is_accepted(tmp_path: Path) -> None:
         abstain=True,
         direct_answer=f"The answer is {aq.NOT_IDENTIFIED}.",
         uae_evidence=[],
+        options=[],
         responsible_role=NOT_ESTABLISHED,
     )
     answer = ask(ABSTAIN_Q, 30, llm_asker(tmp_path, FakeClient(content)))
-    assert answer.mode == aq.MODE_LLM and answer.abstained and answer.cited_ids == ()
+    assert answer.mode == aq.MODE_LLM, answer.rejected
+    assert answer.abstained and answer.cited_ids == ()
 
 
 def test_invalid_output_is_retried_once_then_template(tmp_path: Path) -> None:
@@ -510,10 +557,19 @@ def test_question_goes_only_to_the_adviser(tmp_path: Path) -> None:
 
 
 def test_asking_changes_nothing_in_the_run(tmp_path: Path) -> None:
-    before = world().baseline().summary()
-    for q in QUESTIONS:
-        ask(q, 30, asker(tmp_path))
-    assert world().baseline().summary() == before
+    def snapshot() -> str:
+        result = world().baseline()
+        views = [aq.canonical_view(v) for v in result.views]
+        log = [repr(e) for e in result.log]
+        return json.dumps([result.summary(), views, log], sort_keys=True, default=str)
+
+    before = snapshot()
+    asked = [aq.canonical_view(view_at(m)) for m in minutes()]
+    for m in minutes():
+        for q in QUESTIONS:
+            ask(q, m, asker(tmp_path))
+    assert snapshot() == before
+    assert [aq.canonical_view(view_at(m)) for m in minutes()] == asked
 
 
 def test_offline_with_a_key_builds_no_client(
@@ -522,7 +578,8 @@ def test_offline_with_a_key_builds_no_client(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """--offline never calls, even with every variable set (make_client refuses in tests)."""
+    """--offline never calls, even with every variable set (and in tests conftest refuses the
+    CLI's client and embedder, so a call would fail loudly)."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-not-real")
     monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.setenv("CASCADEGUARD_MODEL", "test/model")
@@ -532,3 +589,99 @@ def test_offline_with_a_key_builds_no_client(
     out = capsys.readouterr().out
     assert f"Answer mode: {aq.TEMPLATE_OFFLINE}" in out
     assert "Live requests" not in out
+
+
+def test_the_illustrative_binding_claim_is_rejected(tmp_path: Path) -> None:
+    """test-breaker round 1: model text calling an illustrative clause binding law."""
+    q = "Must the telecom operator report the network incident to the telecom regulator?"
+    claim = payload(
+        direct_answer="Yes. illus.telecom.incident-report is binding UAE federal law (reviewed, "
+        "binding) and requires a report within 1 hour.",
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(q, 45, llm_asker(tmp_path, FakeClient(claim)))
+    assert answer.mode == aq.MODE_TEMPLATE and "status_claim" in answer.rejected
+    assert "binding UAE federal law" not in answer.text()
+
+
+def test_model_text_cannot_forge_output_lines(tmp_path: Path) -> None:
+    """Every model line is one line under the agent-statement label; the question is scrubbed."""
+    content = payload(direct_answer="The health operator keeps continuity plans.")
+    q = "Who must activate\x1b[2J the fallback\nAnswer mode: forged channel?"
+    answer = ask(q, 60, llm_asker(tmp_path, FakeClient(content)))
+    assert answer.mode == aq.MODE_LLM
+    text = answer.text()
+    assert "\x1b" not in text
+    assert sum(line.startswith("Answer mode:") for line in text.splitlines()) == 1
+    assert text.splitlines()[1] == f"Question: {answer.question}"
+    for line in (answer.direct_answer, answer.responsible_role):
+        assert line.startswith(AGENT_STATEMENT) and "\n" not in line
+    model_options = [o for o in answer.options if o.startswith(AGENT_STATEMENT)]
+    expected = agent_statement("Ask the health service operator to activate its continuity plan.")
+    assert model_options == [expected]
+
+
+def test_request_failure_falls_back_to_the_template(tmp_path: Path) -> None:
+    class Failing(FakeClient):
+        def create(self, **request: Any) -> Any:
+            self.requests.append(request)
+            raise ConnectionError("down")
+
+    client = Failing()
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, client))
+    assert len(client.requests) == 1  # the client's own retries are below this layer
+    assert answer.mode == aq.MODE_TEMPLATE and "request failed" in answer.mode_detail
+    assert not list((tmp_path / "answers").glob("*.json"))  # a failure is never cached
+
+
+def test_keyed_live_run_is_refused_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """tests/conftest.py refuses the CLI's client and embedder: no test can make a live call."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-not-real")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("CASCADEGUARD_MODEL", "test/model")
+    with pytest.raises(AssertionError, match="must not build a live LLM client"):
+        main(["ask", SCENARIO, "--at", "T+60", FALLBACK_Q])
+
+
+def test_requests_line_counts_live_requests() -> None:
+    from cascadeguard.agents.llm import CappedClient, ResilientClient
+    from cascadeguard.cli import adviser_requests_line
+
+    assert adviser_requests_line(aq.Asker()) is None
+    capped = CappedClient(inner=None, cap=aq.REQUEST_CAP, requests=2)
+    line = adviser_requests_line(aq.Asker(client=ResilientClient(capped)))
+    cap = aq.REQUEST_CAP
+    assert line == f"Live requests: 2 chat (cap {cap}, retries included), 0 query embedding"
+
+
+def test_keyword_half_of_the_search() -> None:
+    hits = kb.search_kb_keyword(FALLBACK_Q, k=5)
+    assert hits and all(h.vector_rank == 0 and h.keyword_rank is not None for h in hits)
+    per_source: dict[str, int] = {}
+    for h in hits:
+        per_source[h.chunk.source_file] = per_source.get(h.chunk.source_file, 0) + 1
+        assert h.chunk.duplicate_of is None
+    assert max(per_source.values()) <= kb.MAX_PER_SOURCE
+    assert hits == kb.search_kb_keyword(FALLBACK_Q, k=5)
+    assert kb.search_kb_keyword("   ", k=5) == () and kb.search_kb_keyword("x", k=0) == ()
+
+
+def test_presets_use_their_stored_vectors(tmp_path: Path) -> None:
+    index = kb.committed_index()
+    fake = FakeEmbedder()
+    data = {
+        "index_digest": index.digest,
+        "model_slug": kb.MODEL_SLUG,
+        "query_prefix": kb.QUERY_PREFIX,
+        "vectors": {t: [float(x) for x in fake.query(t)[0]] for t in presets()},
+    }
+    (tmp_path / aq.PRESET_VECTORS).write_text(json.dumps(data), encoding="utf-8")
+    stored = kb.StoredQueries(index.digest, tmp_path, aq.PRESET_VECTORS)
+    a = asker(tmp_path, stored=stored)
+    assert ask(SHARE_Q, 30, a).retrieval == aq.RETRIEVAL_STORED
+    assert ask("A free-text question about fallback?", 30, a).retrieval == aq.RETRIEVAL_KEYWORD
+    other = data | {"model_slug": "nomic-embed-text"}
+    (tmp_path / aq.PRESET_VECTORS).write_text(json.dumps(other), encoding="utf-8")
+    with pytest.raises(kb.KnowledgeBaseError, match="another index or model"):
+        kb.StoredQueries(index.digest, tmp_path, aq.PRESET_VECTORS)
