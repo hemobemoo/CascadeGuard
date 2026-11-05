@@ -328,14 +328,15 @@ clauses:
     binding: false
     notes: >-
       Foreign precedent (US federal contingency-planning guidance, outside the UAE); not
-      AI-specific; not binding in the UAE. Each [...] skips only a bullet glyph (extracted as
+      AI-specific; not binding in the UAE. Viewer page 15 is printed page 1. Each [...] skips
+      only a bullet glyph (extracted as
       "(cid:131)"); the quote stops after the second of four bullets. Candidate global example of
       an alternate (fallback) channel for a disrupted service; it does not say who activates it.
       Its automatic qualifier "foreign precedent" (US jurisdiction) is kept (human decision
       2026-11-06).
 
   - id: nist.sp800-34.activation-by-designated-authority
-    title: "NIST SP 800-34 Rev. 1: the designated authority activates the plan when activation criteria are met"
+    title: "NIST SP 800-34 Rev. 1: the designated authority should activate the plan when activation criteria are met"
     text: >-
       The ISCP should be activated if one or more of the activation criteria for that system
       are met. If an activation criterion is met, the designated authority should activate the
@@ -351,8 +352,16 @@ clauses:
     binding: false
     notes: >-
       Foreign precedent (US federal contingency-planning guidance, outside the UAE); not
-      AI-specific; not binding in the UAE. The [...] skips the footnote marker "31" after
-      "plan."; footnote 31 (same page) says the designated authority is typically a senior
-      manager or CIO. Candidate global example for "who activates a fallback": a designated
-      authority, on criteria stated in advance. Its automatic qualifier "foreign precedent" (US
+      AI-specific; not binding in the UAE. Viewer page 50 is printed page 36. The [...] skips
+      the footnote marker "31" after "plan."; footnote 31 (same page), word for word: "The
+      designated authority (typically a senior manager or CIO) has the authority to activate the
+      contingency plan. That authority may vary based on the organization or system, but the
+      individual with this authority should be designated clearly in the plan. Only one
+      individual should have this authority, and a successor should be clearly identified to
+      assume that responsibility if necessary." The next paragraph of 4.2.1 (same page, not
+      quoted) separates the roles: recovery teams "may be notified once the system outage or
+      disruption has been identified and the ISCP Coordinator has determined that activation
+      criteria have been met". Candidate global example for "who activates a fallback": one
+      designated authority, named in the plan with a successor, acting on criteria stated in
+      advance (a recommendation: "should"). Its automatic qualifier "foreign precedent" (US
       jurisdiction) is kept (human decision 2026-11-06).

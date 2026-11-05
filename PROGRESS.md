@@ -8,8 +8,9 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 
 **Human brief of 2026-11-05 (deadline 10 Nov 2026): six tasks, one branch and one PR each, in
 order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
-1. Ask the Policy Adviser (`phase-7-adviser-query`, top priority): in progress, see below.
-2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): not started.
+1. Ask the Policy Adviser (`phase-7-adviser-query`): **merged, PR #33, 98b4173 (2026-11-06).**
+2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): built; PR
+   open; waiting on gate 1 (the human checks the two quotes), then a gap_examples proposal (gate 7).
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -457,7 +458,13 @@ then locked.
 the human's answers of 2026-11-06 (option (b), `--live`, recorded presets), a final
 test-breaker round (PASS, MINORs fixed), the full suite (805 passed) and CI green.
 
-**Task 2 (branch `gap-fallback-example`, 2026-11-05/06).** NIST SP 800-34 Rev. 1 downloaded from
+**Task 2 (branch `gap-fallback-example`, 2026-11-05/06).** **Done when** (brief and answers of
+2026-11-06): NIST SP 800-34 Rev. 1 in policies/sources/ with URL, date and SHA-256 in the
+inventory, extracted; 1-2 draft clauses, verbatim and page-checked, labelled foreign precedent,
+not AI-specific, not binding in the UAE; loading them (temp dir) leaves diagnosis, goals and
+goldens unchanged; the only output change is the approved 21 -> 23 line (regenerated); NIST kept
+out of search (no KB rebuild); AGENTS.md says 24; the 4 tests fixed without weakening; all checks
+pass; reviewers with no open BLOCKER/MAJOR; PR open with the clause ids for gate 1. NIST SP 800-34 Rev. 1 downloaded from
 nvlpubs.nist.gov (SHA-256 476f04d4...d0df), extracted (149 pages), inventory #24; two drafts in
 international_precedents.yaml (`nist.sp800-34.alternate-manual-means` p.15,
 `nist.sp800-34.activation-by-designated-authority` p.50; quotes verified on page); the file is in
@@ -1567,17 +1574,30 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Task 1, Ask the Policy Adviser (2026-11-05):**
+**Task 2, NIST SP 800-34 (2026-11-06):**
+- Gate 1: the human checks the two draft quotes against PDF pages 15 and 50 (printed 1 and 36):
+  `nist.sp800-34.alternate-manual-means`, `nist.sp800-34.activation-by-designated-authority`.
+- Gate 7 (after gate 1): the agent proposes a gap_examples.yaml entry for
+  orphan_duty:activate_fallback_channel. Evidence-auditor QUESTION-FOR-HUMAN: is US
+  information-system contingency guidance (not AI-specific; "should"; manual means "typically
+  acceptable for only short-term disruptions") a fair example for this failure? The entry would
+  keep that condition and the "candidate finding" wording.
+- Gate 6 (phase-auditor): confirm the AGENTS.md wording "24 original PDF documents" (approved
+  2026-11-06; the only AGENTS.md change on this branch).
+- Note for the human (phase-auditor MINOR): `tests/unit/test_clause_loader.py` HARMLESS_GAP now
+  also accepts exactly "(cid:131)" (the pdfplumber bullet glyph), so `[...]` may skip it.
+
+**Task 1, Ask the Policy Adviser (2026-11-05; merged 2026-11-06, items below answered):**
 - Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,
   8 requests sent, no result). Retry (up to 4 more requests) when the human says so. Until then presets use
   the keyword half without a key, and a live embedding with one.
-- Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
+- Done 2026-11-06 (recorded; all six rejected by the engine): Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
   retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
   answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:
   needs the human's explicit approval in the chat (rule of 2026-11-05).
 - Answered 2026-11-06: `ask` in the CLI calls a model only with `--live` (7d25d0b).
-- **Gate 2/8, open after review round 3 (test-breaker BLOCKERs):** the engine check matches
+- **Answered 2026-11-06 (option (b), implemented):** Gate 2/8 after review round 3 (test-breaker BLOCKERs): the engine check matches
   phrase lists, so model free text can still claim binding force, authority or a gap in new
   wording (the agent-statement label and the clause status labels stay next to it, and nothing
   reaches state). Options: (a) show model free text in sections 1, 5 and 6 only when every
@@ -1833,10 +1853,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-05:** Task 1 PR is open from `phase-7-adviser-query` (review rounds 1-3 done; the
-round-3 structural question is a human gate). Wait for the human's answers under "Waiting on
-human" (Task 1), then merge only on the human's instruction. Next: Task 2
-(`gap-fallback-example`). The older notes below are history.
+**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2's PR is open from `gap-fallback-example`;
+stop for the human (gate 1 on `nist.sp800-34.alternate-manual-means` and
+`nist.sp800-34.activation-by-designated-authority`; then a gap_examples.yaml proposal for
+orphan_duty:activate_fallback_channel, gate 7). The human will probably start Task 3
+(`uae-cyber-sources`) in a new session. The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".
