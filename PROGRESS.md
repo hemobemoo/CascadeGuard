@@ -6,6 +6,139 @@ Session hand-off. Read this before doing anything (see `AGENTS.md`).
 
 Read this section first, then "Current phase" and "Waiting on human". Rules are in `AGENTS.md`.
 
+**Human brief of 2026-11-05 (deadline 10 Nov 2026): six tasks, one branch and one PR each, in
+order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
+1. Ask the Policy Adviser (`phase-7-adviser-query`, top priority): in progress, see below.
+2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): not started.
+3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
+4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
+5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
+6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.
+Optional before 10 Nov, only if 1-5 merged by 8 Nov: `specs/cross_domain_incident_envelope.schema.json`
+(one illustrative telecom-to-health example; README: "proposed open specification, not adopted;
+not yet used by the simulation"; no code change).
+**Finals backlog (not before 10 Nov; only if shortlisted on 18 Nov):** incident-handoff schema
+adapter wired into the simulation; facilitator start/pause/release controls; audit and trace view
+in the UI; provenance record for every live run (model, prompt version, KB and manifest hashes,
+step, errors); minimum-vs-excessive information-sharing branch at T+30; agent rubric evaluation
+suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated demo video.
+
+**Task 1 — Ask the Policy Adviser (branch `phase-7-adviser-query`, from `progress-after-pr31`,
+so the two PROGRESS commits after #31 ride along).**
+- **Done when** (from the human's brief of 2026-11-05 and the answers of the same day): the CLI
+  `ask --at T+n` and the UI panel answer from the adviser's own view at T+n with no later or
+  out-of-boundary fact; seven sections; explicit abstention ("not identified in the reviewed
+  corpus"); only loaded, retrieved clause ids cited, validated by the engine; UAE and
+  international kept apart; LLM mode cached and replayed with `--offline`; the no-key template
+  runs with no network; audit and export hold the full trace; the tests the brief lists pass;
+  the UI live switch meets the human's conditions; ADR 0003, the AGENTS.md line and the spec
+  amendments are in; scripted path and both goldens byte-identical to main; all checks pass
+  (ruff, format, pyright, pytest including e2e) and the result is pasted in the PR body; the
+  reviewers have no open BLOCKER or MAJOR. Not required to open the PR: the stored preset
+  vectors and recorded preset answers (gate 4, separate approval).
+- `cascadeguard ask uae_health_access --at T+30 "<question>"` (`--presets`, `--offline`,
+  `--cache`, `--export`, `--audit`); UI panel "Ask the Policy Adviser" under the timeline (step b;
+  opening a cell moves it to that step; a preset sets its step).
+- `agents/adviser_query.py`: the adviser's own `RoleView` at T+n of the governed scripted
+  baseline (`cli.adviser_view`); citable = its `role_clauses` minus drafts, ranked by an
+  IDF-weighted word match (threshold log N); context = 3 KB chunks (stored preset vectors /
+  live query embedding with a key / `kb.search_kb_keyword` without); 7 sections; abstains with
+  "not identified in the reviewed corpus". LLM mode (all three `.env` variables) with the
+  configured chat model, cache `data/adviser_cache/` (answers and live query vectors, so
+  `--offline` replays free text too); template otherwise. `engine/adviser_check.py` rejects
+  unknown citations, UAE/international mixing, gap wording (GAP_CLAIM), a bad responsible role,
+  inconsistent abstention; a rejected answer falls back to the template with the reasons shown.
+- Audit table `adviser_queries` (`AuditStore.record_question`); `--export` writes the trace.
+- `scripts/embed_adviser_presets.py` (dry run by default): 6 questions, 1 embedding request.
+  `policies/kb/adviser_query_vectors.json` does not exist yet (gate 4, waiting on human).
+- Tests: `tests/unit/test_adviser_query.py` (count in the PR body, from the final run), e2e
+  `test_ask_the_adviser_without_a_key` and `test_ask_the_adviser_live_switch_and_error_fallback`.
+  Full suite: the final count is in the PR body; scripted `run`, `repairs`, `--governance off`
+  and the rank-1 `--repair` output byte-identical to main (checked 2026-11-05); goldens unchanged.
+- UI: the panel is built on the first click of "Ask the Policy Adviser ..." (data-testid
+  ask-open), so the page is as light as before. The local perf budget "graph highlight" is
+  borderline on main too (199, 205/192, 189 ms against 200 ms here; CI factor 3); with the lazy
+  panel 187 and 183 ms. `.claude/launch.json` has `cascadeguard-ui-nokey` (port 8766, `.env`
+  hidden) for checking the panel without any live call.
+- **Disclosure (gate 4 breach, 2026-11-05):** while trying the CLI by hand the agent ran
+  `cascadeguard ask` three times without `--offline` with the real `.env`, then three more times
+  after blanking the variables on the command line (which does not hide `.env`). Sent: 6 chat
+  requests (the configured `CASCADEGUARD_MODEL`; 10,928 prompt / 1,257 completion tokens) and 6 query
+  embeddings (`nvidia/nemotron-3.5-embed-1b:free`). Only the questions, the adviser's view (no
+  facts at those steps) and public clause/KB text were sent. Results stayed in the ignored
+  `data/adviser_cache/` and a temp dir; nothing committed. Since then only `--offline` or tests.
+  **Acknowledged by the human (2026-11-05).** Report, as asked:
+  - What each was for. Batch 1 (`ask` without `--offline`): T+60 "Who must activate the fallback
+    channel?", T+30 "What is the speed limit for camels on Sheikh Zayed Road?" (abstention probe),
+    T+15 "What do international frameworks say about human oversight of AI systems that
+    automatically lock users out?". Batch 2 (variables blanked, `.env` still read): T+60 the
+    fallback question, T+30 the camel question, T+30 "Can the telecom operator share network
+    degradation status with the health operator, and what may be shared?". Each question: 1 query
+    embedding (the free-text question) and 1 chat request (no retries were needed).
+  - Cost: both models are OpenRouter `:free` variants (embedding `nvidia/nemotron-3.5-embed-1b:free`;
+    the configured chat model's id ends in `:free`, checked locally without printing it), priced
+    at 0. The requests' own cost field was not recorded, and the OpenRouter activity page was not
+    checked (that needs the human's account).
+  - Committed output: none. The answers and query vectors were in `data/adviser_cache/`
+    (git-ignored) and a temp dir; both deleted 2026-11-05; `git ls-files` lists no adviser cache.
+    Nothing from them holds a key (the cache entries hold the payload and token counts only).
+  - The later preset-embedding attempts (approved): 8 requests, all HTTP 502, no output.
+- **Rule (human, 2026-11-05): no API call of any kind without the human's explicit approval in
+  the chat, tests and smoke checks included.** Enforced in tests: `tests/conftest.py`
+  (`network_guard`, autouse) fails any test that opens a connection outside the loopback
+  interface; the e2e UI servers run under the same guard with `.env` hidden.
+- Review round 1: test-breaker FAIL (2 BLOCKER, 3 MAJOR, 2 MINOR), all fixed: the engine
+  check now normalises free text (NFKC, format/control characters removed, Latin look-alikes
+  mapped), widens gap wording (ADVISER_GAP), rejects status claims (`status_claim`: binding,
+  mandatory, "federal law", ...), authority wording (`authority_wording`), control characters,
+  and an abstention that still answers; every model line is shown under the agent-statement
+  label, one line; options list the engine's readings first; the question is scrubbed;
+  conftest also refuses `cli.make_client` and `cli.OpenRouterEmbedder`; the UI uses the
+  governed scripted baseline like the CLI; new tests for request failure, the request line,
+  the keyword half, stored preset vectors. QUESTION-FOR-HUMAN (UI live switch on by default)
+  went to the human (answered 2026-11-05).
+- Review round 1, phase-auditor FAIL (on ee77984), fixed: the abstention sentences had a double
+  negative ("no clause ... was not identified"; now "a clause ... was not identified", with a
+  test); PROGRESS "Current phase"/"Next step" updated and the old "live querying deferred" line
+  marked superseded; section 5 and 6 lines carry status labels (engine readings marked); a keyed
+  run with no client is labelled TEMPLATE_NO_CLIENT, not offline; structure tags say "Task 1,
+  2026-11-05" (not P7); the UI view source was already fixed. Its three QUESTION-FOR-HUMAN items
+  are under "Waiting on human".
+- Review round 2: test-breaker FAIL (on 09a206b) and phase-auditor FAIL (on badd9f7), fixed
+  in 561d55b-a3e8bde and the next commit: everyday status/authority/gap wording, upper-case
+  look-alikes, accents and inner hyphens; model options shown as suggestions; a key without
+  CASCADEGUARD_MODEL is named (TEMPLATE_NO_MODEL); any live failure, embedding included, gives
+  the labelled template; illustrative text is labelled "paraphrase, not a quotation"; README and
+  UI docstring count embedding retries; architecture says the preset vectors are not built yet;
+  Done-when recorded above. Round 3 (the last) follows on the final commit.
+- Review round 3 (the last), on dcfe35d: phase-auditor FAIL (MAJOR: the 20-call cap reset on a
+  page reload; MINORs) and test-breaker FAIL (2 BLOCKER: everyday wording that claims binding
+  force, authority or a gap still passes the phrase lists; MAJOR: an abstention could still
+  carry an answer; MINORs). Fixed after round 3 (not re-reviewed: the loop allows three
+  rounds): the cap is counted per browser id on the server (survives reloads and new tabs;
+  e2e test with a cap of 2); an LLM abstention must name no role and is shown with the
+  engine's fixed abstention text; one export file per question; the fallback can never show a
+  raw error; the section-2 heading marks illustrative rules; every round-3 phrasing added to the
+  patterns and to the tests. **Left open as a human gate:** a phrase list cannot catch every
+  wording, so model free text (sections 1, 5, 6) can still assert binding force, authority or a
+  gap in words no pattern lists. Options, in "Waiting on human".
+- **Human answers 2026-11-06, applied:** option (b) (sections always the engine's text; model
+  lines only in "Model commentary (unverified agent statement)"; ADR 0003, README, UI docstring
+  updated); AGENTS.md line confirmed; CLI `ask` calls a model only with `--live`. Gate 4: the
+  preset-embedding retry failed a third time (HTTP 502 x4, 4 requests; stopped as instructed), so
+  the 6 preset answers were recorded on keyword retrieval (6 chat requests, all succeeded) into
+  `docs/evaluation/adviser/cache/` (checked: no key, base URL, model id or local path). **The
+  engine rejected all six** (gap/status/authority wording in the model's commentary, e.g. "does
+  not state", "no clause", "illustrative"), so preset replay shows the template with reasons.
+  Whether to relax the checks for the commentary block is the human's call (not changed).
+- Preset embedding (approved by the human 2026-11-05, 1 request): **failed twice**, HTTP 502 on
+  all 4 attempts each time (retry approved by the human; 8 requests in all, no vector returned).
+  The model is still listed by OpenRouter's public embeddings catalogue (checked 2026-11-05), so
+  this looks like a provider outage. Nothing written; a further retry waits for the human. No
+  other embedding model is used (AGENTS.md / brief).
+- Verify: `uv run pytest tests/unit/test_adviser_query.py`;
+  `uv run cascadeguard ask uae_health_access --at T+60 "Who must activate the fallback channel?" --offline`.
+
 **State of main.** Submission PRs 1 to 5 are merged (#14 labels/licence/README; #15 Charter;
 #16 vector knowledge base; #17 `--governance off`; #21 gap analysis, traces, reviewed example
 mapping and the gate-7-approved conclusion draft, merge ad93ff6, 2026-10-31). **Gate 4 done:** #19 (live LLM with
@@ -320,6 +453,12 @@ then locked.
 
 ## Current phase
 
+**Human brief of 2026-11-05 (see "Start here"): Task 1, Ask the Policy Adviser, on branch
+`phase-7-adviser-query` (the name is the human's; it is not START_PROMPT's Phase 7, tracing).**
+Built; three review rounds done (all FAIL; every finding fixed except the structural
+question that round 3 left open, now a human gate under "Waiting on human"). PR opened with the
+full check result; stop for the human. Tasks 2-5 follow, one PR each.
+
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
 PRs follow, one at a time; each stops once open with CI green:
@@ -349,7 +488,8 @@ Other decisions (2026-10-29): gate 4 approves one recording run (governed LLM ba
 ungoverned variant if cheap) only after all view-changing work is merged (target 4–5 Nov), and
 only after asking again; until then the demo stays scripted. The two
 `uae.cyber-strategy-2025.*` drafts stay unloaded for this submission; no new sources after the
-Charter PDF. Live querying of the adviser is deferred until after submission.
+Charter PDF. Live querying of the adviser is deferred until after submission (superseded by the
+human brief of 2026-11-05: Task 1, Ask the Policy Adviser, see "Start here").
 
 **Phase 6d — Official sources: merged to main via PR #11 (merge commit bf753c9, branch
 `phase-6d-official-sources` kept), tagged `phase-6d`** (2026-10-28, on the human's instruction,
@@ -1417,6 +1557,43 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Task 1, Ask the Policy Adviser (2026-11-05):**
+- Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,
+  8 requests sent, no result). Retry (up to 4 more requests) when the human says so. Until then presets use
+  the keyword half without a key, and a live embedding with one.
+- Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
+  `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
+  retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
+  answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:
+  needs the human's explicit approval in the chat (rule of 2026-11-05).
+- Answered 2026-11-06: `ask` in the CLI calls a model only with `--live` (7d25d0b).
+- **Gate 2/8, open after review round 3 (test-breaker BLOCKERs):** the engine check matches
+  phrase lists, so model free text can still claim binding force, authority or a gap in new
+  wording (the agent-statement label and the clause status labels stay next to it, and nothing
+  reaches state). Options: (a) show model free text in sections 1, 5 and 6 only when every
+  cited clause is reviewed and binding, else the engine's template text; (b) make the engine's
+  template text the answer in sections 1, 5 and 6 always, and show the model's text only in a
+  separate "Model commentary (unverified agent statement)" block; (c) accept the residual risk
+  as it is. Agent recommendation: (b).
+- Gate 6 confirmation (phase-auditor round 3): the AGENTS.md line added is: "Exception (human,
+  2026-11-05): the read-only "Ask the Policy Adviser" answer is a separate advisory channel,
+  not an `AgentDecision`; see `docs/decisions/0003-adviser-advisory-channel.md`." Confirm it is
+  the approved wording.
+- **Answered (human, 2026-11-05):**
+  - Gate 4 disclosure acknowledged (report in "Start here", Task 1).
+  - Gates 4/8: live LLM calls allowed from the UI for the adviser panel only; agents in the UI
+    stay cache-only. Conditions, implemented: switch off by default, shown only when
+    `OPENROUTER_API_KEY` is set; 20 live adviser calls per session, shown in the panel; timeout,
+    429 or any error -> the no-key template, labelled, never a raw error; every live answer
+    cached, presets replay offline; only the manifest's embedding model. Dated amendment notes
+    appended to specs/005 and specs/006 (original text unchanged).
+  - Gate 8: the adviser's answer object accepted as a separate advisory channel (read-only; never
+    seen by agents or the engine's decisions; no effect on goldens, citation map, counts or gap
+    analysis; citations validated against loaded clause ids before display):
+    `docs/decisions/0003-adviser-advisory-channel.md`; one AGENTS.md line (gate 6, approved).
+- After merge: proposed new wording for the report's §6 Limits sentence about the adviser
+  (gate 7); the PDF stays at 5 pages.
+
 **report-feedback (PR #31, merged 2026-11-04, bdf1013):** gate 7 done (wording approved with
 two fixes). Nothing open. **Precedent spot-check: done by the human (2026-11-04).** Each figure was checked against its
 source page: Senate committee report ch. 2 (4:05am-4:00pm, an estimated 10.2 million subscribers,
@@ -1645,6 +1822,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+**2026-11-05:** Task 1 PR is open from `phase-7-adviser-query` (review rounds 1-3 done; the
+round-3 structural question is a human gate). Wait for the human's answers under "Waiting on
+human" (Task 1), then merge only on the human's instruction. Next: Task 2
+(`gap-fallback-example`). The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".

@@ -658,6 +658,33 @@ def search_kb(
     fused = {i: 1 / (RRF_K + r) for i, r in vector_rank.items()}
     for i, r in keyword_rank.items():
         fused[i] += 1 / (RRF_K + r)
+    return _top(chunks, fused, vector_rank, keyword_rank, k)
+
+
+def search_kb_keyword(query: str, k: int = 5, index: Index | None = None) -> tuple[Hit, ...]:
+    """The keyword half of `search_kb` alone, for a query with no embedding (no API key): the
+    same chunks, keyword score, shared ranks, per-document cap and duplicate rule, with no
+    vector ranking (`Hit.vector_rank` 0). No network."""
+    if not query.strip() or k <= 0:
+        return ()
+    index = index or committed_index()
+    chunks = index.chunks
+    words = query_words(query)
+    ranked = [i for i, c in enumerate(chunks) if c.duplicate_of is None]
+    hits = [keyword_score(c.text, words) for c in chunks]
+    keyword_rank = shared_ranks({i: float(hits[i]) for i in ranked if hits[i]})
+    fused = {i: 1 / (RRF_K + r) for i, r in keyword_rank.items()}
+    return _top(chunks, fused, {}, keyword_rank, k)
+
+
+def _top(
+    chunks: Sequence[Chunk],
+    fused: dict[int, float],
+    vector_rank: dict[int, int],
+    keyword_rank: dict[int, int],
+    k: int,
+) -> tuple[Hit, ...]:
+    """The k best fused scores, at most MAX_PER_SOURCE per document; ids order ties."""
     taken: list[Hit] = []
     per_source: dict[str, int] = {}
     for i in sorted(fused, key=lambda i: (-fused[i], chunks[i].id)):
@@ -665,7 +692,7 @@ def search_kb(
         if per_source.get(source, 0) >= MAX_PER_SOURCE:
             continue
         per_source[source] = per_source.get(source, 0) + 1
-        taken.append(Hit(fused[i], chunks[i], vector_rank[i], keyword_rank.get(i)))
+        taken.append(Hit(fused[i], chunks[i], vector_rank.get(i, 0), keyword_rank.get(i)))
         if len(taken) == k:
             break
     return tuple(taken)
@@ -681,6 +708,14 @@ def write_query_vectors(embedder: OpenRouterEmbedder, digest: str, kb_dir: Path 
     """Embed the acceptance queries (one request) into query_vectors.json, tied to the index
     digest, so the acceptance tests run against the committed index with no API."""
     texts = [str(q["query"]) for q in acceptance_queries(kb_dir)]
+    return write_vectors(embedder, texts, digest, kb_dir / "query_vectors.json")
+
+
+def write_vectors(
+    embedder: OpenRouterEmbedder, texts: Sequence[str], digest: str, path: Path
+) -> int:
+    """Embed these queries (one request per BATCH texts) into a stored-vectors file tied to the
+    index digest and the model, read back by `StoredQueries` with no API."""
     vectors = embedder.queries(texts)
     data = {
         "index_digest": digest,
@@ -689,25 +724,26 @@ def write_query_vectors(embedder: OpenRouterEmbedder, digest: str, kb_dir: Path 
         "vectors": {t: [float(x) for x in v] for t, v in zip(texts, vectors, strict=True)},
     }
     text = json.dumps(data, ensure_ascii=False) + "\n"
-    (kb_dir / "query_vectors.json").write_text(text, encoding="utf-8", newline="\n")
+    path.write_text(text, encoding="utf-8", newline="\n")
     return len(texts)
 
 
 class StoredQueries:
-    """An Embedder for queries embedded at build time (query_vectors.json): no API. Refuses a
-    file built for another index or model, and any query it does not hold."""
+    """An Embedder for queries embedded at build time (query_vectors.json, or another file
+    written by `write_vectors`): no API. Refuses a file built for another index or model, and
+    any query it does not hold."""
 
-    def __init__(self, digest: str, kb_dir: Path = KB_DIR) -> None:
+    def __init__(
+        self, digest: str, kb_dir: Path = KB_DIR, filename: str = "query_vectors.json"
+    ) -> None:
         try:
-            data = json.loads((kb_dir / "query_vectors.json").read_text("utf-8"))
+            data = json.loads((kb_dir / filename).read_text("utf-8"))
             built_for = (data["index_digest"], data["model_slug"])
             stored = {str(k): np.array(v, dtype=np.float32) for k, v in data["vectors"].items()}
         except (OSError, ValueError, KeyError, TypeError, AttributeError, RecursionError) as exc:
-            raise KnowledgeBaseError(
-                f"malformed query_vectors.json ({type(exc).__name__})"
-            ) from None
+            raise KnowledgeBaseError(f"malformed {filename} ({type(exc).__name__})") from None
         if built_for != (digest, MODEL_SLUG):
-            raise KnowledgeBaseError("query_vectors.json was built for another index or model")
+            raise KnowledgeBaseError(f"{filename} was built for another index or model")
         for vector in stored.values():
             usable(vector[None, :])
         self.vectors = stored

@@ -114,3 +114,13 @@ passed the engine, 6.06 s, 2,643 / 619 tokens, cost 0. One capped LLM baseline f
   actions in every output; a search lists such replays after the ranked ones
   (`SearchResult.inconclusive`), unranked and without counts.
 - An `invalid_output` from a one-attempt run (smoke test) is kept in memory only.
+
+## Amendment (human decision, 2026-11-05): live calls for the adviser panel only
+
+The original text above is unchanged. One exception is recorded here: the UI's "Ask the Policy
+Adviser" panel may make live LLM calls. Agents in the UI stay cache-only, as above. Conditions:
+the live switch is off by default and appears only when `OPENROUTER_API_KEY` is set; at most 20
+live adviser calls per browser session, shown in the panel; on a timeout, 429 or any other
+error the panel shows the no-key template answer, labelled, never a raw error; every live answer
+goes to the answer cache, and the preset questions replay offline; query embeddings use only the
+model in `policies/kb/manifest.json`. See `docs/decisions/0003-adviser-advisory-channel.md`.

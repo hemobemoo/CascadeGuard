@@ -120,3 +120,20 @@ view ──> cache_key ──hit──> cached AgentDecision
 
 Specs: `specs/001-domain-and-scenario.md`, `specs/002-engine-and-diagnosis.md`,
 `specs/003-repair-and-replay.md`, `specs/004-demo-ui.md`, `specs/005-llm-agents.md`.
+
+## Ask the Policy Adviser
+
+- `agents/adviser_query.py` answers one question at a step T+n from the
+  `policy_legal_adviser`'s own `RoleView` at that step in the governed scripted baseline (CLI
+  `cascadeguard ask`; UI panel under the timeline). Read-only: it never changes a run.
+- Citable evidence: the adviser's `role_clauses` (loaded, reviewed or illustrative), ranked by a
+  deterministic IDF-weighted word match. Context: CONTEXT_K knowledge-base chunks from the hybrid
+  search (stored vectors for preset questions, `policies/kb/adviser_query_vectors.json`, not yet built: gate 4; a live
+  query embedding for free text with a key; else `kb.search_kb_keyword`), labelled context only.
+- Modes: LLM (configured chat model; answer cached in `data/adviser_cache/`, replayed offline) or
+  a deterministic template (no key, offline miss, or a rejected LLM answer).
+  `engine/adviser_check.py` checks an LLM answer: citations only from the retrieved clauses, UAE
+  and international kept apart, no gap wording, a role id or "not established in the reviewed
+  corpus". Quotes, pages and labels always come from the loaded clause.
+- Audit: `AuditStore.record_question` (table `adviser_queries`); `--export` writes the trace.
+
