@@ -813,3 +813,10 @@ def test_the_advisory_channel_reaches_no_result() -> None:
     for path in producers:
         text = path.read_text(encoding="utf-8")
         assert "adviser_query" not in text, path
+
+
+def test_illustrative_text_is_not_called_a_quote(tmp_path: Path) -> None:
+    q = "Must the telecom operator report the network incident to the telecom regulator?"
+    text = ask(q, 45, asker(tmp_path)).text()
+    assert '  text (paraphrase, not a quotation): "Illustrative rule' in text
+    assert '  quote: "Illustrative rule' not in text

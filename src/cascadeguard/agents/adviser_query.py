@@ -304,7 +304,8 @@ class AdviserAnswer:
 
         def item(e: EvidenceItem) -> list[str]:
             lines = [f"{e.clause_id} [{e.status_label}]: {e.title}", f"  source: {e.source}"]
-            lines.append(f'  quote: "{e.quote}"')
+            kind = "text (paraphrase, not a quotation)" if e.illustrative else "quote"
+            lines.append(f'  {kind}: "{e.quote}"')
             if e.relevance:
                 lines.append(f"  relevance: {e.relevance}")
             return lines

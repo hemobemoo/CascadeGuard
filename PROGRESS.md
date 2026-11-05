@@ -25,6 +25,17 @@ suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated d
 
 **Task 1 — Ask the Policy Adviser (branch `phase-7-adviser-query`, from `progress-after-pr31`,
 so the two PROGRESS commits after #31 ride along).**
+- **Done when** (from the human's brief of 2026-11-05 and the answers of the same day): the CLI
+  `ask --at T+n` and the UI panel answer from the adviser's own view at T+n with no later or
+  out-of-boundary fact; seven sections; explicit abstention ("not identified in the reviewed
+  corpus"); only loaded, retrieved clause ids cited, validated by the engine; UAE and
+  international kept apart; LLM mode cached and replayed with `--offline`; the no-key template
+  runs with no network; audit and export hold the full trace; the tests the brief lists pass;
+  the UI live switch meets the human's conditions; ADR 0003, the AGENTS.md line and the spec
+  amendments are in; scripted path and both goldens byte-identical to main; all checks pass
+  (ruff, format, pyright, pytest including e2e) and the result is pasted in the PR body; the
+  reviewers have no open BLOCKER or MAJOR. Not required to open the PR: the stored preset
+  vectors and recorded preset answers (gate 4, separate approval).
 - `cascadeguard ask uae_health_access --at T+30 "<question>"` (`--presets`, `--offline`,
   `--cache`, `--export`, `--audit`); UI panel "Ask the Policy Adviser" under the timeline (step b;
   opening a cell moves it to that step; a preset sets its step).
@@ -40,7 +51,8 @@ so the two PROGRESS commits after #31 ride along).**
 - Audit table `adviser_queries` (`AuditStore.record_question`); `--export` writes the trace.
 - `scripts/embed_adviser_presets.py` (dry run by default): 6 questions, 1 embedding request.
   `policies/kb/adviser_query_vectors.json` does not exist yet (gate 4, waiting on human).
-- Tests: `tests/unit/test_adviser_query.py` (32), e2e `test_ask_the_adviser_without_a_key`.
+- Tests: `tests/unit/test_adviser_query.py` (count in the PR body, from the final run), e2e
+  `test_ask_the_adviser_without_a_key` and `test_ask_the_adviser_live_switch_and_error_fallback`.
   Full suite 742 passed (before the lazy panel); scripted `run`, `repairs`, `--governance off`
   and the rank-1 `--repair` output byte-identical to main (checked 2026-11-05); goldens unchanged.
 - UI: the panel is built on the first click of "Ask the Policy Adviser ..." (data-testid
@@ -84,7 +96,7 @@ so the two PROGRESS commits after #31 ride along).**
   conftest also refuses `cli.make_client` and `cli.OpenRouterEmbedder`; the UI uses the
   governed scripted baseline like the CLI; new tests for request failure, the request line,
   the keyword half, stored preset vectors. QUESTION-FOR-HUMAN (UI live switch on by default)
-  is already under "Waiting on human". Adviser tests: 51.
+  went to the human (answered 2026-11-05).
 - Review round 1, phase-auditor FAIL (on ee77984), fixed: the abstention sentences had a double
   negative ("no clause ... was not identified"; now "a clause ... was not identified", with a
   test); PROGRESS "Current phase"/"Next step" updated and the old "live querying deferred" line
@@ -92,6 +104,13 @@ so the two PROGRESS commits after #31 ride along).**
   run with no client is labelled TEMPLATE_NO_CLIENT, not offline; structure tags say "Task 1,
   2026-11-05" (not P7); the UI view source was already fixed. Its three QUESTION-FOR-HUMAN items
   are under "Waiting on human".
+- Review round 2: test-breaker FAIL (on 09a206b) and phase-auditor FAIL (on badd9f7), fixed
+  in 561d55b-a3e8bde and the next commit: everyday status/authority/gap wording, upper-case
+  look-alikes, accents and inner hyphens; model options shown as suggestions; a key without
+  CASCADEGUARD_MODEL is named (TEMPLATE_NO_MODEL); any live failure, embedding included, gives
+  the labelled template; illustrative text is labelled "paraphrase, not a quotation"; README and
+  UI docstring count embedding retries; architecture says the preset vectors are not built yet;
+  Done-when recorded above. Round 3 (the last) follows on the final commit.
 - Preset embedding (approved by the human 2026-11-05, 1 request): **failed twice**, HTTP 502 on
   all 4 attempts each time (retry approved by the human; 8 requests in all, no vector returned).
   The model is still listed by OpenRouter's public embeddings catalogue (checked 2026-11-05), so

@@ -202,7 +202,8 @@ With no API key a deterministic template writes the answer (no network; free-tex
 the keyword half of the search). With the three variables of `.env.example` set, the configured
 chat model writes it from the same evidence, the engine checks every citation, and the answer is
 cached in `data/adviser_cache/`; `--offline` replays it without a call. Without `--offline` and
-with a key, `ask` makes live calls (at most 4 chat requests and 1 query embedding per question).
+with a key, `ask` makes live calls (per question: at most 4 chat requests, and 1 query
+embedding, sent up to 4 times with retries).
 Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
 DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by
 default and shows only when `OPENROUTER_API_KEY` is set, with at most 20 live questions per
