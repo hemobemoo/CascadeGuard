@@ -204,7 +204,11 @@ chat model writes it from the same evidence, the engine checks every citation, a
 cached in `data/adviser_cache/`; `--offline` replays it without a call. Without `--offline` and
 with a key, `ask` makes live calls (at most 4 chat requests and 1 query embedding per question).
 Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
-DuckDB. In the UI the panel is under the timeline (step b).
+DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by
+default and shows only when `OPENROUTER_API_KEY` is set, with at most 20 live questions per
+session; any failed live call falls back to the template, labelled. Agents in the UI stay
+cache-only. The adviser's answer is a separate, read-only advisory channel
+(`docs/decisions/0003-adviser-advisory-channel.md`).
 
 ## Knowledge base and Sources
 
