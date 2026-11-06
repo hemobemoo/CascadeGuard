@@ -68,3 +68,11 @@ def test_the_counts_do_not_depend_on_local_only_files(tmp_path: Path) -> None:
                 (copy / sub / p.name).write_bytes(b"%PDF-")
     assert cc.counts(copy) == cc.counts()
     assert cc.counts().committed == 22 and cc.counts().originals == 24  # AGENTS.md: 24 originals
+
+
+def test_the_inventory_opening_agrees() -> None:
+    c = corpus_counts().counts()
+    assert (
+        f"The {c.originals} original PDFs in `policies/sources/` ({c.committed} committed; the "
+        f"{c.books} published books kept local;"
+    ) in read("docs/policy-inventory.md")

@@ -37,8 +37,10 @@
 >   summary; and `uae.mohap-smart-health.p7-liability` still quotes a printed transcription
 >   (`web/01`) of the official portal page (the human checked the sentence against the page
 >   itself; whether the portal offers a PDF is not checked).
-> - **Open, stated as limits in the report (§6):** the policy adviser cannot be queried live
->   (gap 7); no fine-tuning and no Sandbox credits (gap 9).
+> - **Open, stated as limits in the report (§6):** no fine-tuning and no Sandbox credits (gap 9).
+>   Gap 7 (the adviser cannot be queried) was closed by PR #33 on 2026-11-06: "Ask the Policy
+>   Adviser" at any step, in the CLI (`cascadeguard ask`) and the UI. The report's Limits sentence
+>   that still says it cannot be queried live awaits the human's wording (gate 7).
 
 Audit of 2026-10-29. **Deadline: 10 November 2026.** Scope: the repository with the gate-1 PR #12
 and the qualifier-label change (branch `clause-qualifier-labels`) on top of `main` (`phase-6d`). No code was changed for this audit and no LLM call was made.
