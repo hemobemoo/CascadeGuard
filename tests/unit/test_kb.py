@@ -385,6 +385,15 @@ def test_the_export_loads_into_a_kb_main_collection_like_the_reference(tmp_path:
     assert meta["source_file"] == "f.pdf" and meta["page"] == "1"
 
 
+def test_every_exported_record_names_the_embedding_model_and_prefixes() -> None:
+    """Task 4: anyone querying the export must embed with the same model and query prefix."""
+    for record in export_records(fake_index()):
+        meta = record["metadata"]
+        assert meta["embedding_model"] == "nvidia/nemotron-3.5-embed-1b:free"
+        assert meta["embedding_dimensions"] == "1024"
+        assert (meta["document_prefix"], meta["query_prefix"]) == ("passage: ", "query: ")
+
+
 def test_the_committed_index_matches_the_corpus_and_its_manifest() -> None:
     index = load_index()
     m = index.manifest

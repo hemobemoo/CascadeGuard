@@ -110,6 +110,9 @@ ui/app.py ──> cli.load_world / search_repairs ──> RunResult, SearchResul
   most two per document; tied scores share a rank; exact duplicates collapse into a primary
   (reviewed transcription, then a quoted original, then id) in both paths. Acceptance queries and their stored vectors: `policies/kb/acceptance.json`,
   `query_vectors.json`.
+  Retrieval evaluation (Task 4): `tests/evaluation/kb_queries.yaml` and its stored vectors,
+  scored by `scripts/kb_retrieval_eval.py` into `docs/evaluation/kb-retrieval.md` (no API).
+  `kb export` records name the embedding model, dimensions and prefixes.
   The index digest covers chunks, model slug, dimensions, prefixes and chunk settings, not the
   vectors. Loading the index re-chunks the corpus and refuses a stale one. Neither path touches
   the scripted demo.
@@ -137,7 +140,8 @@ Specs: `specs/001-domain-and-scenario.md`, `specs/002-engine-and-diagnosis.md`,
   `cascadeguard ask`; UI panel under the timeline). Read-only: it never changes a run.
 - Citable evidence: the adviser's `role_clauses` (loaded, reviewed or illustrative), ranked by a
   deterministic IDF-weighted word match. Context: CONTEXT_K knowledge-base chunks from the hybrid
-  search (stored vectors for preset questions, `policies/kb/adviser_query_vectors.json`, not yet built: gate 4; a live
+  search (stored vectors for preset questions, `policies/kb/adviser_query_vectors.json`, not built; the presets were embedded 2026-11-06 into
+  `adviser_query_vectors.pending.json`, which nothing reads; a live
   query embedding for free text with a key; else `kb.search_kb_keyword`), labelled context only.
 - Modes: LLM (configured chat model; answer cached in `data/adviser_cache/`, replayed offline) or
   a deterministic template (no key, offline miss, or a rejected LLM answer).
