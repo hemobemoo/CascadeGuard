@@ -48,7 +48,7 @@ Y.3172 is used as an architecture pattern for an institutional decision pipeline
 | MLFO | Orchestrator and repair search over the closed grammar | AI & Policies | — (no ML-intent input; critical goals stand in for it) |
 | Sandbox | Replay of the identical incident with a candidate repair | AI & Policies; Impacts of Humans in AI Integration | — (repair edits are hypothetical rules, not source clauses) |
 
-Every clause is shown with its status label (e.g. "reviewed (interpreted) · binding unknown", "illustrative", "not binding · international precedent"); 21 clauses are loaded (19 reviewed, 2 illustrative), drafts never.
+Every clause is shown with its status label (e.g. "reviewed (interpreted) · binding unknown", "illustrative", "not binding · international precedent"); 21 clauses are loaded (19 reviewed, 2 illustrative) of 42 in policies/reviewed/, drafts never; the corpus is 24 original PDFs (2 published books, context only, never a clause source), 3 local-only CSC PDFs (gap examples only) and 7 web transcriptions.
 
 **Policy documents loaded and cited by the agents.** Citations per run, counted once per decision; binding means binding in the UAE, as recorded on each clause; it does not mean the document applies to this scenario. The clause-level map is in docs/citation-map.md.
 
@@ -95,4 +95,4 @@ Each item is a candidate gap for expert review, not a confirmed legal or standar
 
 The two masked items are the candidate gaps the rank-1 repair leaves open: in the scripted replay the incident resolves without settling who may activate a fallback channel or what triggers a review of an automated lockout. Both need expert review.
 
-**Limits.** The policy and legal adviser answers only at scenario steps; it cannot be queried live. No fine-tuning and no Sandbox credits were used. Y.3172 is used as an architecture pattern. The two telecom rules (`illus.telecom.*`) are illustrative and synthetic. Reproduce with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access` (see the README).
+**Limits.** The policy and legal adviser can be asked at any scenario step (CLI `cascadeguard ask`, or the UI panel) and answers only from what its role could see at that step; its seven sections are always the engine's text. An optional model commentary (CLI `--live`, or the UI's live switch) is labelled unverified and filtered by phrase lists that cannot catch every wording; the recorded preset answers used keyword retrieval only. No fine-tuning and no Sandbox credits were used. Y.3172 is used as an architecture pattern. The two telecom rules (`illus.telecom.*`) are illustrative and synthetic. Reproduce with no API key: `uv sync`, then `uv run cascadeguard run uae_health_access` (see the README).

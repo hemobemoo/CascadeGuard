@@ -55,7 +55,10 @@ simulation/orchestrator  (deterministic code, not an agent)
   adviser. Sources not redistributed (Task 3: three UAE Cyber Security Council PDFs; reproduction
   needs the issuer's consent) are local only: `NOT_REDISTRIBUTED` in `knowledge/loader.py` pins
   each by SHA-256, `policies/not_redistributed_pages.json` pins each page's extracted text, and a
-  clause may cite one while the file is absent (a clone, CI).
+  clause may cite one while the file is absent (a clone, CI). Two further generators (Task 5)
+  write `docs/corpus-counts.md` (`scripts/corpus_counts.py`, the one source and clause count)
+  and `docs/institutional-mandate-crosswalk.md` (`scripts/mandate_crosswalk.py`, from the roles
+  and the engine's own authority verdicts); `docs/standards/` holds the standards mappings.
 
 ```
 baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ──> hard filter
