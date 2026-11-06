@@ -34,3 +34,11 @@ cli.py:765-767 and app.py:671 pass the adviser's in). Three MINORs: two fixed, o
 | `cli -.-> kb` "index for ask" dotted, though every `ask` loads the index | FIX, applied | cli.py:774 in `adviser_asker`; split into solid `cli -->|index for ask| kb` and dotted `cli -.->|kb query, kb export| kb` |
 | adviser uses adviser_check wording constants on every path | not drawn (optional per the auditor) | `NOT_IDENTIFIED`, `NOT_ESTABLISHED` in `template_answer` (adviser_query.py:463, 505, 522, 553). A second adviser/acheck edge was tried, but mermaid placed its label against the dotted edge's label in every direction; constants only, like the undrawn `CONTEXT_LABEL` and `PROJECT_ROOT` imports |
 | this file: wrong line for `committed_index()`, round 2 missing | FIX, applied | corrected to cli.py:774; this section |
+
+## Round 3 (evidence-auditor PASS, 2026-11-07)
+
+Every new or changed edge CONFIRMED; README block identical; 0 foreignObject; 42 edges in both
+the .mmd and the SVG. Two MINORs, both "no fix needed", deferred to after the freeze:
+`adviser -.-> llm` could say "(model call only)", since `ask` reads llm.py config constants on
+every path (adviser_query.py:89, 1058, 1071); the `--audit` label could add "and adviser
+questions" (audit.py:203, cli.py:901).

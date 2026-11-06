@@ -2124,4 +2124,5 @@ branch (human instruction, 2026-11-07). Then stop: no Task 6, no schema.
 Reviewers: phase-auditor PASS, evidence-auditor PASS; their MINORs fixed in the diagram (triage:
 `docs/review/final-docs-pass-clause-triage.md`). Deferred MINOR: the `knowledge/kb.py` module
 docstring still says the knowledge base is for the LLM context path only, but the adviser uses it
-too; fix after the freeze (kb.py had to stay unchanged here).
+too; fix after the freeze (kb.py had to stay unchanged here). Evidence-auditor rounds 2 and 3: PASS; deferred
+diagram MINORs (optional labels) are listed in the triage file.
