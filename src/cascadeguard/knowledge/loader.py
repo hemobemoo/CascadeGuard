@@ -7,6 +7,7 @@ checked against the extracted PDF text before the human reviews them.
 
 import hashlib
 import json
+from functools import cache
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, cast
@@ -181,6 +182,7 @@ def load_transcription_approvals(path: Path = APPROVALS_FILE) -> dict[str, str]:
     return dict(cast(dict[str, str], _approvals_data(path)["approved_transcriptions"] or {}))
 
 
+@cache
 def page_digests(path: Path = NOT_REDISTRIBUTED_PAGES) -> dict[str, dict[int, str]]:
     """The committed per-page text digests of the not-redistributed sources."""
     raw = cast(dict[str, dict[str, str]], json.loads(path.read_text(encoding="utf-8")))
@@ -350,6 +352,8 @@ def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
             raise ClauseLoadError(f"{path.name}: clause #{index + 1}: {exc}") from exc
         if clause.source_file is not None:
             _check_source(path.name, clause.id, clause.source_file, sources_dir)
+            if clause.source_file in NOT_REDISTRIBUTED:
+                _check_not_redistributed(path.name, clause, sources_dir)
         clauses.append(clause)
     return clauses
 
@@ -367,7 +371,7 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
         raise ClauseLoadError(f"{where}: source_file must be a plain path inside policies/sources")
     resolved = (sources_dir / relative).resolve()
     if source_file in NOT_REDISTRIBUTED and not resolved.exists():
-        return  # not in a clone or CI: pinned by its SHA-256 instead (NOT_REDISTRIBUTED)
+        return  # not in a clone or CI: its pages are pinned instead (_check_not_redistributed)
     if not resolved.is_relative_to(sources_dir.resolve()) or not resolved.exists():
         raise ClauseLoadError(f"{where}: unknown source_file")
     # Each part must be a real entry name (any case), so a Windows short name ("UAEFED~1.PDF")
@@ -377,6 +381,23 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
         if "~" in part or part.casefold() not in {e.name.casefold() for e in directory.iterdir()}:
             raise ClauseLoadError(f"{where}: source_file must name the file as listed")
         directory = directory / part
+
+
+def _check_not_redistributed(file_name: str, clause: PolicyClause, sources_dir: Path) -> None:
+    """A clause citing a not-redistributed source (test-breaker, Task 3): its page must have a
+    committed text digest (so a clone or CI still pins the page), and the PDF, where present,
+    must be the pinned file (its SHA-256)."""
+    where = f"{file_name}: {clause.id}"
+    source = cast(str, clause.source_file)
+    if clause.page not in page_digests().get(source, {}):
+        raise ClauseLoadError(f"{where}: page {clause.page} has no committed text digest")
+    pdf = sources_dir / source
+    if pdf.exists() and _file_sha256(pdf) != NOT_REDISTRIBUTED[source]:
+        raise ClauseLoadError(f"{where}: {source} is not the pinned file (SHA-256)")
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _squash(text: str) -> str:
