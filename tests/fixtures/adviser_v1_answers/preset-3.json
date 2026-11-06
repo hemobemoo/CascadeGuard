@@ -1,6 +1,11 @@
 {
-  "key": "29295f54891daaa4e6596e4d45725d7308223764acb0edee76daf8e1434b0001",
+  "minute": 45,
+  "question": "Who is responsible for reviewing and reversing the automated account lockouts?",
+  "recorded_key": "29295f54891daaa4e6596e4d45725d7308223764acb0edee76daf8e1434b0001",
   "prompt_version": "adviser-v1",
+  "rejected": [
+    "gap_wording"
+  ],
   "payload": {
     "abstain": false,
     "direct_answer": "The reviewed corpus does not identify a single responsible human decision-maker for reviewing and reversing automated account lockouts; the UAE AI Charter assigns human oversight to correct AI errors, and the OECD principle assigns risk management to AI actors according to their roles, context, and ability to act.",
@@ -27,10 +32,5 @@
     "uncertainty": [
       "The corpus does not state which role holds final authority to reverse lockouts, and no clause explicitly names a reversal decision-maker."
     ]
-  },
-  "usage": {
-    "calls": 1,
-    "prompt_tokens": 2056,
-    "completion_tokens": 326
   }
 }

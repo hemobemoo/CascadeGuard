@@ -286,15 +286,17 @@ NIST_IDS = {
     "nist.sp800-34.alternate-manual-means",
     "nist.sp800-34.activation-by-designated-authority",
 }
-# Adviser preset cache keys computed on main before Task 2 (fake model id, hashing only): the
-# recorded answers in docs/evaluation/adviser/cache/ must keep matching.
+# Adviser preset cache keys (fake model id, hashing only): the recorded answers in
+# docs/evaluation/adviser/cache/ must keep matching, and the gap-example-only clauses never
+# change them. Pinned on main before Task 2 for prompt adviser-v1; re-pinned for adviser-v2 on
+# 2026-11-06 (human decision: evidence-scoped wording in the prompt), the only change to them.
 PINNED_PRESET_KEYS = [  # (step, key), in adviser_questions.yaml order
-    (30, "9bba7664258e996d7663ef6e74239d94eb312cfab747cdec17da640119aeebf3"),
-    (60, "5331d628bc9cb5fa9f8d97cc1d23b07cdf4295cabf67484ab320fc5f62d55ad9"),
-    (45, "eb290d019390346826680fc8bf4fd26de85f96e2b6fa2b4c69ac2b0edfbb9ec8"),
-    (45, "f2db0f6608fe2e7aeef826a16aafce0a1c4719c01acf76a767ae81631077a897"),
-    (45, "67d85ccfda7fcc7c6585afa9fbd5ea6175da2b872689e18dedfe24e83f8f10af"),
-    (15, "736227188aee28d9960c7ebe0641265c5f756da3502898eb86cd83ee8664a547"),
+    (30, "c04643115202f58a2d8c08be68c3dee9ea070a7f19391e010fce1e3e892d7724"),
+    (60, "1f8da33bd5ff26bbd688ccfee6e6b3f0c626200eb3a531999fae70de0f8bc07a"),
+    (45, "d4ad12e79ce28ed62f36078be48575514209e715906cb439126d56373ca8f83d"),
+    (45, "1a996d46ee37d6b5ca2eb8d09a34ba74d7de6cad950f77ec653490d6bc3ac469"),
+    (45, "1dcb28f70f57e776fceb0bc4b4ede2610713acd490f1862d9b090d6bb2dfc73a"),
+    (15, "e2bbfe3dc768e0bc5ebc175a6c0098fc54d7f47d5a4bd334be8f5b43d40580d1"),
 ]
 
 

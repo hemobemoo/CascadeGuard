@@ -1,6 +1,13 @@
 {
-  "key": "24eaba2a3a96462c6676f754193d0b06280360d6819de5d8957221731e9b0705",
+  "minute": 15,
+  "question": "What do international frameworks say about human oversight of AI systems that automatically lock users out?",
+  "recorded_key": "24eaba2a3a96462c6676f754193d0b06280360d6819de5d8957221731e9b0705",
   "prompt_version": "adviser-v1",
+  "rejected": [
+    "gap_wording",
+    "status_claim",
+    "authority_wording"
+  ],
   "payload": {
     "abstain": false,
     "direct_answer": "The reviewed international clauses state that responsibility for AI systems must remain attributable to physical persons or existing legal entities, that humans decide whether to cede control in limited contexts, that AI can never replace ultimate human responsibility and accountability, and that appropriate oversight, impact assessment, audit and due diligence mechanisms should be developed to ensure accountability throughout the AI system life cycle, with auditability and traceability of AI system workings. The OECD clause adds that AI actors should apply a systematic risk management approach to each phase of the AI system lifecycle on an ongoing basis, including through co-operation between AI actors, suppliers, users and other stakeholders. The UAE Charter clause states that human judgment and human oversight over AI are irreplaceable and serve to correct errors or biases, with an engine reading indicating safeguard review of automated lockouts by the health service operator where an AI output may be erroneous. The UAE smart health AI policy clause addresses establishing clear medical liability frameworks for smart health services and AI applications across the healthcare sector, but its status is binding unknown and it is a web transcription.",
@@ -44,10 +51,5 @@
       "The binding status of the UAE smart health AI policy clause is unknown and it is a web transcription, so its legal weight is uncertain.",
       "No facts are provided in facts_in_your_view about the specific lockout system, sector, or actors involved, limiting the ability to map clauses to a concrete scenario."
     ]
-  },
-  "usage": {
-    "calls": 1,
-    "prompt_tokens": 2332,
-    "completion_tokens": 898
   }
 }

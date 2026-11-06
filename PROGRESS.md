@@ -9,9 +9,12 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 **Human brief of 2026-11-05 (deadline 10 Nov 2026): six tasks, one branch and one PR each, in
 order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
 1. Ask the Policy Adviser (`phase-7-adviser-query`): **merged, PR #33, 98b4173 (2026-11-06).**
-2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): built; PR
-   #34 open; option (c) applied (gate 1 scoped to gap examples only, gate 7 entries added, gate 6
-   confirmed); after its review loop, full suite and CI: merge.
+2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): **merged,
+   PR #34, df014a1 (2026-11-06)**; option (c) (gap examples only, never loaded); report section 6
+   fallback bullet updated (gate 7); PDF 5 pages.
+   Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
+   adviser-v2, presets re-recorded (gate 4, approved): built and reviewed; PR to open, then stop
+   for the human.
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -456,6 +459,42 @@ then locked.
 - 2026-11-04: removed docs/report/cascadeguard-report-template.pdf; the .docx is the template version. The PDF test now covers the designed PDF only.
 
 ## Current phase
+
+**Adviser commentary check (branch `adviser-commentary-check`, from main df014a1, 2026-11-06).**
+Human decision of 2026-11-06: filter the model commentary per sentence; allow evidence-scoped
+absence ("not identified in the provided evidence", "the retrieved clauses do not address") and
+status words in the clause's own label; keep blocking binding/permit/authorise/legal-gap claims;
+prompt asks for "not identified in the provided evidence"; tests on the six real rejected
+answers; then re-record the 6 presets once (gate 4). **Done:** engine/adviser_check.py split
+(structure rejects the whole answer; wording withheld per sentence, count and reasons shown, the
+text never); prompt adviser-v2; ADR 0003 amended; README; six v1 answers kept as fixtures
+(tests/fixtures/adviser_v1_answers/); PINNED_PRESET_KEYS re-pinned (prompt change only).
+Gate 4 run 2026-11-06: 6 chat requests, all succeeded, keyword retrieval; all six answers
+accepted, commentary shown for all six, 15 sentences withheld (8, 2, 2, 1, 0, 2); secrets check
+clean (no key, base URL, model id or local path); table in docs/evaluation/adviser/README.md.
+Test-breaker round 1 (FAIL, 2 MAJOR) fixed: an evidence-scoped sentence may not mention the law
+or reach beyond the evidence (BEYOND_EVIDENCE); a sentence naming several clauses may use only
+the label parts they share; ids matched whole; a phrase split across a sentence end is checked
+on the joined pair; "legal effect", "mention", "contemplate", "deal with", "not legislated",
+"nothing ... prevents" added. Test-breaker round 2 (FAIL: MAJOR, BLOCKER, QUESTION-FOR-HUMAN):
+every run of the sentences still shown is re-checked as it will read; sentence split no longer
+breaks at abbreviations ("Decree-Law No. 45"); the probe wordings are added to the lists and the
+tests; "reviewed evidence" is an evidence scope. Test-breaker round 3 (the last; FAIL: BLOCKER,
+3 MAJOR, MINOR, QUESTION) fixed without a further review round (round limit): a sentence naming a
+clause the sections do not show is withheld (`clause_not_shown`; preset 6 described a third
+international clause with no label), relevance lines carry the status label, runs are re-checked
+across fields in display order (window of 8 sentences, bounded time), letters outside the Latin
+blocks are withheld (`unusual_letters`). Its paraphrase MAJOR is the open gate-2 question.
+Re-counted: 19 sentences withheld (8, 2, 3, 2, 1, 3), pinned by
+`test_the_readme_table_matches_the_recorded_answers`. Phase-auditor round 1: PASS (MINORs fixed
+or recorded). Open for the human: all-flagged commentary (see "Waiting on human").
+Verify: `uv run pytest tests/unit/test_adviser_query.py`; offline replay
+`uv run cascadeguard ask uae_health_access --at T+60 "Who must activate the fallback channel?"
+--cache docs/evaluation/adviser/cache` (needs the same CASCADEGUARD_MODEL in .env; no call).
+Local note: `tests/e2e/test_ui_flow.py::test_expert_mode_shows_every_section` failed in 3 of 4
+full runs in the main checkout on 2026-11-06 ("Compare" on rung 2 not visible after scrolling),
+but passed alone, in the e2e file alone, in a clean worktree full run (814 passed) and in CI. It
+looks tied to this checkout's environment (.env, chroma extra), not to a code change; not fixed.
 
 **Task 1, Ask the Policy Adviser: merged via PR #33 (merge commit 98b4173, 2026-11-06)** after
 the human's answers of 2026-11-06 (option (b), `--live`, recorded presets), a final
@@ -1605,11 +1644,42 @@ With option (c) only the report's fallback bullet (section 6, policy gaps) went 
 decision (checked 2026-11-06; loading the clauses is a finals-backlog item). Note: `HARMLESS_GAP` in
 tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
 
+**Adviser commentary check (PR #35, 2026-11-06): answered by the human the same day** (accept
+the residual paraphrase risk, stop extending the lists, add the illus.* rule and fixed line, keep
+the all-withheld behaviour, one last scoped test-breaker round). Known limits, not fixes: the
+paraphrases below; new paraphrase findings go here too. The cross-sentence run check can also
+withhold harmless neighbours (e.g. "is not binding. It sets ..." reads as "is not ... sets").
+Test-breaker round 4 (final, scoped to ad94ab6 and 5844c09; FAIL: 1 MAJOR, 3 MINOR), all fixed,
+not re-reviewed (the human allowed one last round): the illus.* rule matches NFKC/normalised text,
+spaced dots and a hyphen before ("illus" is also a non-ending abbreviation); the run check keeps
+each sentence's own label and evidence-scope allowances; the trace (export, audit) holds
+illustrative_note and withheld_note. Deferred: a UI test of `ask-illustrative-note` and
+`ask-withheld` (no e2e of an LLM-mode answer). History of the two questions:
+- Gate 2 (test-breaker round 2, BLOCKER + QUESTION-FOR-HUMAN): model sentences are filtered by
+  phrase lists, and every round finds new paraphrases that pass (e.g. an illustrative clause
+  "carries full legal authority in the UAE", now added). A list cannot guarantee "binding,
+  permit, authorise and legal-gap claims stay blocked". Options from the reviewer: (1) accept the
+  residual risk under the agent-statement label and say "most wordings are withheld"; (2) show
+  less commentary, e.g. only relevance notes, or only sentences that name a cited clause id;
+  (3) keep option (b) but show no commentary for illustrative clauses. Round 3 found two more
+  that pass ("is a statute every licensee in the UAE has to follow" about an illustrative clause;
+  "As adviser I sanction sharing ...; consent rules give way here"); not added, per the reviewer.
+- Review limit: test-breaker ran three rounds (FAIL each time); the round-3 fixes (clause not
+  shown, labels on relevance lines, cross-field runs, Latin-only letters, bounded time) are not
+  re-reviewed. The human may ask for a further round.
+- Gate 2 (test-breaker QUESTION-FOR-HUMAN): when every sentence of the model commentary is
+  flagged, the answer is now still shown in LLM mode (engine sections from the model-chosen
+  clauses) with no commentary lines and "All N sentences of the model commentary withheld by the
+  engine check (...)". Keep this, or fall back to the template with the reasons?
+- Deferred MINOR (phase-auditor): no e2e test or recorded Playwright run of the UI's withheld
+  note (`ask-withheld`); the text and trace are covered by unit tests.
+
 **Task 1, Ask the Policy Adviser (2026-11-05; merged 2026-11-06, items below answered):**
 - Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,
   8 requests sent, no result). Retry (up to 4 more requests) when the human says so. Until then presets use
   the keyword half without a key, and a live embedding with one.
-- Done 2026-11-06 (recorded; all six rejected by the engine): Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
+- Done 2026-11-06 (v1 recording: all six rejected whole; replaced the same day by the adviser-v2
+  recording on `adviser-commentary-check`, all six accepted with sentences withheld): Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
   retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
   answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:
@@ -1871,11 +1941,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2 (PR #34): option (c) done (gates 1, 6 and
-7 answered); merge after the phase-auditor re-run, full suite and CI. Then the adviser
-commentary follow-up on branch `adviser-commentary-check` (per-sentence filter, evidence-scoped
-absence wording, re-record the 6 presets once: approved), PR, stop. Task 3 probably in a new
-session. The older notes below are history.
+**2026-11-06:** Task 1 merged (PR #33, 98b4173); Task 2 merged (PR #34, df014a1). The adviser
+commentary follow-up (`adviser-commentary-check`) is built and re-recorded; after its review loop,
+full suite and CI, open the PR and stop for the human. Next: Task 3 (`uae-cyber-sources`, triage
+only), probably in a new session. The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".

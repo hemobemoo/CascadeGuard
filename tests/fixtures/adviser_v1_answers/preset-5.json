@@ -1,6 +1,11 @@
 {
-  "key": "d261e11f073d5a394fb2af7a8ef17c67e416a20f59b74841b7c8056d549b7c5e",
+  "minute": 45,
+  "question": "Must the telecom operator report the network incident to the telecom regulator?",
+  "recorded_key": "d261e11f073d5a394fb2af7a8ef17c67e416a20f59b74841b7c8056d549b7c5e",
   "prompt_version": "adviser-v1",
+  "rejected": [
+    "status_claim"
+  ],
   "payload": {
     "abstain": false,
     "direct_answer": "The reviewed corpus states that a licensed telecom operator reports to the telecom regulator any network incident that significantly degrades a public telecommunications service, within 60 minutes of becoming aware of it, and that the telecom regulator may request from a licensed operator information about a network incident affecting a public telecommunications service.",
@@ -25,10 +30,5 @@
     "uncertainty": [
       "The illustrative clauses are not quotations of enacted law, so their binding status in this simulation is not established; the health-data breach clause concerns a different sector and its binding status is marked unknown."
     ]
-  },
-  "usage": {
-    "calls": 1,
-    "prompt_tokens": 1967,
-    "completion_tokens": 287
   }
 }

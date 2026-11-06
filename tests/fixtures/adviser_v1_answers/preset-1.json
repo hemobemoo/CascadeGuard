@@ -1,6 +1,13 @@
 {
-  "key": "797936f5e5e30976a4ab255c8660944b7f35dfb0944c5f62f71cbc73e8b9110b",
+  "minute": 30,
+  "question": "Can the telecom operator share network degradation status with the health operator, and what may be shared?",
+  "recorded_key": "797936f5e5e30976a4ab255c8660944b7f35dfb0944c5f62f71cbc73e8b9110b",
   "prompt_version": "adviser-v1",
+  "rejected": [
+    "gap_wording",
+    "status_claim",
+    "authority_wording"
+  ],
   "payload": {
     "abstain": false,
     "direct_answer": "The reviewed clauses do not state that the telecom operator may share network degradation status with the health operator. They state that the telecom operator must report significant network degradation to the telecom regulator, and that the telecom regulator may request incident information from the operator. Separately, the health data clauses restrict circulation of patient information and health data to permitted cases and health purposes, with patient written approval generally required except in listed exceptions. Because no clause authorises sharing network degradation status with the health operator, and no clause defines what may be shared in that direction, the answer is not identified in the reviewed corpus.",
@@ -35,10 +42,5 @@
     "uncertainty": [
       "No listed clause authorises the telecom operator to share network degradation status with the health operator or specifies what may be shared in that direction."
     ]
-  },
-  "usage": {
-    "calls": 1,
-    "prompt_tokens": 2392,
-    "completion_tokens": 438
   }
 }
