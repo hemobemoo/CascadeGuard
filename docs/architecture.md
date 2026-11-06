@@ -52,7 +52,10 @@ simulation/orchestrator  (deterministic code, not an agent)
   `scripts/build_reports.py` writes them and a test keeps the committed files equal. It also
   reads `policies/gap_examples_only/` (clauses reviewed as gap examples only, Task 2 option (c),
   2026-11-06), which nothing else reads: those clauses never reach the engine, views, KB or
-  adviser.
+  adviser. Sources not redistributed (Task 3: three UAE Cyber Security Council PDFs; reproduction
+  needs the issuer's consent) are local only: `NOT_REDISTRIBUTED` in `knowledge/loader.py` pins
+  each by SHA-256, `policies/not_redistributed_pages.json` pins each page's extracted text, and a
+  clause may cite one while the file is absent (a clone, CI).
 
 ```
 baseline = run(...) ──> diagnose ──> repair_search.candidate_edits ──> hard filter

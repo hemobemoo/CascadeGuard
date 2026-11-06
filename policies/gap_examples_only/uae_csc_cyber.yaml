@@ -1,0 +1,215 @@
+# Gap examples only (Task 3, human 2026-11-06): clauses from the three UAE Cyber Security Council
+# PDFs. Never loaded into the simulation (same route as NIST SP 800-34: only the report builder
+# reads this folder). The PDFs are not redistributed (reproduction needs the CSC's consent): they
+# and their extracted text are local only; see NOT_REDISTRIBUTED in knowledge/loader.py and
+# policies/not_redistributed_pages.json. Each note gives the PDF (viewer) page and the printed
+# page. Gate 1 (scoped) on 2026-11-06 (Ibrahim Melhem): five reviewed as gap examples only,
+# quotes checked against the three PDFs; uae.csc-cirp.ncrg-level3-declaration and
+# uae.csc-cirp.ncrg-sector-impact-information stay drafts (they map to no failure).
+clauses:
+  - id: uae.csc-ai-policy.2-4-2-redundancy-failover
+    title: "UAE AI cyber security policy 2.4.2: the entity shall ensure resilience of AI/ML systems with redundancy and failover"
+    text: >-
+      The entity shall ensure the operational resilience of AI/ML systems by incorporating
+      redundancy and failover mechanisms to maintain availability during disruptions.
+    source_file: National Cyber Security Policy for Artificial Intelligence v1.1.pdf
+    page: 15
+    article: "2.4 Operational Security, policy statement 2.4.2"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2025-11"
+    status: reviewed
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 15 is printed page 14. Version as
+      printed: November 2025, Version 1.1 (cover); file name says v1.1. Policy statement
+      ("shall", as printed). Council-approved 'shall' statement; compliance is monitored through
+      the UAE IA Standard (PDF p.44); no reviewed text establishes its legal force, and the
+      scenario's operators are not designated CII entities. Scope (as the human set it): applies
+      to federal entities and CII entities, for cybersecurity of AI/ML systems or cybersecurity
+      information. Binding unknown for this scenario: the scenario's operators are not
+      designated CII entities, and the incident is an AI model fault, not a cyber attack.
+      Printed scope (p.8 of the PDF): applies to Ministries & Federal Authorities and
+      Non-Government CII Entities; Emirate Government Entities through an Emirate CIIP Program,
+      or directly where there is none. Legal status: Council-approved national policy (as stated
+      on its disclaimer page, PDF p.2, printed p.1); legal force for this scenario not
+      established. Not redistributed: reproduction needs the UAE Cyber Security Council's prior
+      written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
+
+  - id: uae.csc-ai-policy.3-4-3-redundant-systems-ready
+    title: "UAE AI cyber security policy 3.4.3: redundant systems or alternative processes should be ready for immediate deployment"
+    text: >-
+      In cases where AI/ML systems are critical to operations, redundant systems or alternative
+      processes should be available and ready for immediate deployment.
+    source_file: National Cyber Security Policy for Artificial Intelligence v1.1.pdf
+    page: 36
+    article: "3.4.3 Continuity Planning for AI/ML Systems (implementation guidance)"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2025-11"
+    status: reviewed
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 36 is printed page 35. Version as
+      printed: November 2025, Version 1.1 (cover); file name says v1.1. Implementation guidance
+      ("should", as printed); the page header says "Implementation Guidance Version 1.0" inside
+      the Version 1.1 document. Scope (as the human set it): applies to federal entities and CII
+      entities, for cybersecurity of AI/ML systems or cybersecurity information. Binding unknown
+      for this scenario: the scenario's operators are not designated CII entities, and the
+      incident is an AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): applies
+      to Ministries & Federal Authorities and Non-Government CII Entities; Emirate Government
+      Entities through an Emirate CIIP Program, or directly where there is none. Legal status:
+      Council-approved national policy (as stated on its disclaimer page, PDF p.2, printed p.1);
+      legal force for this scenario not established. Not redistributed: reproduction needs the
+      UAE Cyber Security Council's prior written consent; the PDF and its extracted text are
+      local only (NOT_REDISTRIBUTED).
+
+  - id: uae.csc-ai-policy.3-6-2-automated-response-human-intervention
+    title: "UAE AI cyber security policy 3.6.2: automated response on predefined conditions; a fail-safe for timely human intervention (should)"
+    text: >-
+      The entity should consider automated response mechanisms for AI/ML security incidents to
+      mitigate the impact of attacks and prevent further escalation such as isolating affected
+      systems, adjusting security controls, or blocking network traffic, based on predefined
+      conditions and incident severity levels. [...] In cases where automated response
+      mechanisms may not be suitable, or fully effective, the entity should implement a
+      fail-safe mechanism that allows for timely and informed human intervention.
+    source_file: National Cyber Security Policy for Artificial Intelligence v1.1.pdf
+    page: 41
+    article: "3.6.2 Incident Reporting and Management for AI/ML (implementation guidance)"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2025-11"
+    status: reviewed
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 41 is printed page 40. Version as
+      printed: November 2025, Version 1.1 (cover); file name says v1.1. Implementation guidance
+      ("should", as printed). The [...] skips only the bullet glyph "•" between two consecutive
+      bullets. About AI/ML security incidents (attacks), not model faults. Scope (as the human
+      set it): applies to federal entities and CII entities, for cybersecurity of AI/ML systems
+      or cybersecurity information. Binding unknown for this scenario: the scenario's operators
+      are not designated CII entities, and the incident is an AI model fault, not a cyber
+      attack. Printed scope (p.8 of the PDF): applies to Ministries & Federal Authorities and
+      Non-Government CII Entities; Emirate Government Entities through an Emirate CIIP Program,
+      or directly where there is none. Legal status: Council-approved national policy (as stated
+      on its disclaimer page, PDF p.2, printed p.1); legal force for this scenario not
+      established. Not redistributed: reproduction needs the UAE Cyber Security Council's prior
+      written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
+
+  - id: uae.csc-isf.cii-sectors-cross-sector-sharing
+    title: "UAE cyber information sharing framework, CII sectors item 4: share sector regulator or sector incident response information with other sectors"
+    text: >-
+      Share information obtained by a sector regulator (e.g., strategic risks) and/or sector
+      incident response center (e.g., incident-specific data) with other sectors to facilitate
+      cross-sector cybersecurity information sharing.
+    source_file: Cyber Security Information Sharing Framework V2.0.pdf
+    page: 32
+    article: "3.1 National Level Entities, Critical Information Infrastructure Sectors, item 4"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2023-05"
+    status: reviewed
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 32 is printed page 31. Version as
+      printed: May 2023, Version 1.0 (cover); the file name says "V2.0". A listed role of CII
+      sectors (no modal verb printed; the item is a role statement, not "shall" or "should").
+      Scope (as the human set it): applies to federal entities and CII entities, for
+      cybersecurity of AI/ML systems or cybersecurity information. Binding unknown for this
+      scenario: the scenario's operators are not designated CII entities, and the incident is an
+      AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): roles for national
+      level entities, emirate level entities and CII sectors; a guideline for other entities
+      (non-CII entities, startups, academia, service providers). Legal status: Cabinet-approved
+      national framework (as stated on its disclaimer page, PDF p.2, printed p.1); legal force
+      for this scenario not established. Not redistributed: reproduction needs the UAE Cyber
+      Security Council's prior written consent; the PDF and its extracted text are local only
+      (NOT_REDISTRIBUTED).
+
+  - id: uae.csc-isf.traffic-light-protocol
+    title: "UAE cyber information sharing framework 2.2.3: the Traffic Light Protocol signals with whom information may be shared"
+    text: >-
+      Traffic Light Protocol (TLP) is a set of designations used to ensure that sensitive
+      information is shared with the appropriate audience. The TLP uses a color-coded system to
+      identify those with whom information may be shared, thus signaling originator’s intent and
+      easing fears about the extent of disclosure. The TLP also speeds information exchange
+      since recipients intrinsically know with whom they can share that information without
+      having to refer to the originator for permission to share it.
+    source_file: Cyber Security Information Sharing Framework V2.0.pdf
+    page: 24
+    article: "2.2.3 Methods of Information Exchange, Traffic Light Protocol"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2023-05"
+    status: reviewed
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 24 is printed page 23. Version as
+      printed: May 2023, Version 1.0 (cover); the file name says "V2.0". Descriptive (no modal
+      verb). The printed page number is extracted as "2233" (doubled glyphs); the page is
+      printed 23. Scope (as the human set it): applies to federal entities and CII entities, for
+      cybersecurity of AI/ML systems or cybersecurity information. Binding unknown for this
+      scenario: the scenario's operators are not designated CII entities, and the incident is an
+      AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): roles for national
+      level entities, emirate level entities and CII sectors; a guideline for other entities
+      (non-CII entities, startups, academia, service providers). Legal status: Cabinet-approved
+      national framework (as stated on its disclaimer page, PDF p.2, printed p.1); legal force
+      for this scenario not established. Not redistributed: reproduction needs the UAE Cyber
+      Security Council's prior written consent; the PDF and its extracted text are local only
+      (NOT_REDISTRIBUTED).
+
+  - id: uae.csc-cirp.ncrg-level3-declaration
+    title: "UAE cyber incident response plan 2.2: the NCRG Chair is to declare a Level 3 incident when alert-schema thresholds are met"
+    text: >-
+      If relevant thresholds or incident indicators are met defined by the Cyber Incident Alert
+      Schema, based on the recommendation of the NSOC, the NCRG Chair is to declare a
+      Significant Cyber Incident – (Level 3).
+    source_file: Cyber Incident Response Plan V2.0.pdf
+    page: 18
+    article: "2.2 National Cyber Response Group (NCRG), Role during Significant Cyber Incidents (Level 3)"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2023-05"
+    status: draft
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 18 is printed page 17. Version as
+      printed: May 2023, Version 1.0 (cover); the file name says "V2.0". "is to" (as printed).
+      Context for escalation: national cyber incidents only. Scope (as the human set it):
+      applies to federal entities and CII entities, for cybersecurity of AI/ML systems or
+      cybersecurity information. Binding unknown for this scenario: the scenario's operators are
+      not designated CII entities, and the incident is an AI model fault, not a cyber attack.
+      Printed scope (p.8 of the PDF): the CIRF and CIRP apply to all government and private
+      sector entities identified under the UAE Critical Information Infrastructure Protection
+      (CIIP) Policy. Legal status: Cabinet-approved national plan (as stated on its disclaimer
+      page, PDF p.2, printed p.1); legal force for this scenario not established. Not
+      redistributed: reproduction needs the UAE Cyber Security Council's prior written consent;
+      the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
+
+  - id: uae.csc-cirp.ncrg-sector-impact-information
+    title: "UAE cyber incident response plan 2.2: sector representatives on the NCRG are expected to provide information on an incident's impact on their sector"
+    text: >-
+      In addition, critical infrastructure sector representatives are expected to represent
+      their entire sector on the NCRG and consequently be able to provide information on the
+      potential or actual impact of a Significant Cyber Incident on their sector.
+    source_file: Cyber Incident Response Plan V2.0.pdf
+    page: 16
+    article: "2.2 National Cyber Response Group (NCRG), Membership"
+    issuer: UAE Cyber Security Council
+    jurisdiction: UAE (federal; federal entities and CII entities)
+    document_date: "2023-05"
+    status: draft
+    binding: unknown
+    notes: >-
+      UAE text (UAE Cyber Security Council). Viewer page 16 is printed page 15. Version as
+      printed: May 2023, Version 1.0 (cover); the file name says "V2.0". "are expected to" (as
+      printed). Applies within the NCRG, which convenes for a declared Significant Cyber
+      Incident (Level 3). Scope (as the human set it): applies to federal entities and CII
+      entities, for cybersecurity of AI/ML systems or cybersecurity information. Binding unknown
+      for this scenario: the scenario's operators are not designated CII entities, and the
+      incident is an AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): the
+      CIRF and CIRP apply to all government and private sector entities identified under the UAE
+      Critical Information Infrastructure Protection (CIIP) Policy. Legal status:
+      Cabinet-approved national plan (as stated on its disclaimer page, PDF p.2, printed p.1);
+      legal force for this scenario not established. Not redistributed: reproduction needs the
+      UAE Cyber Security Council's prior written consent; the PDF and its extracted text are
+      local only (NOT_REDISTRIBUTED).

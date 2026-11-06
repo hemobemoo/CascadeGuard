@@ -121,11 +121,13 @@ cascadeguard/
 │       └── tracing.py                [P7] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
 │
 ├── policies/
-│   ├── sources/                      [P0] the original PDFs (24 since Task 2, 2026-11-06) — never modified; engine never reads them
+│   ├── sources/                      [P0] the original PDFs (24 committed since Task 2, plus 3 local-only CSC PDFs since Task 3,
+│   │                                 not redistributed) — never modified; engine never reads them
 │   │   └── web/                      [P6c] web transcriptions of official pages (unverified), MANIFEST.md
 │   ├── approvals.yaml                [P3] digests of human-approved reviewed clauses (gate 1)
 │   ├── gap_examples_only/            [Task 2, 2026-11-06] clauses reviewed as gap examples only (NIST SP 800-34);
-│   │                                 never loaded; read only by the report builder
+│   │                                 never loaded; read only by the report builder; [Task 3] uae_csc_cyber.yaml (5 reviewed, 2 drafts)
+│   ├── not_redistributed_pages.json  [Task 3] per-page text digests of the local-only CSC PDFs
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   ├── transcriptions/               [Charter PR] page-image transcriptions for sources with an unreliable text layer
 │   │                                 (TRANSCRIBED_SOURCES); quotes flagged so are checked here

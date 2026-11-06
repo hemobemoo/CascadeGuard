@@ -9,6 +9,7 @@ from cascadeguard.cli import load_world, search_repairs
 from cascadeguard.engine.constraints import RuleBook
 from cascadeguard.knowledge.loader import (
     EXTRACTED_DIR,
+    NOT_REDISTRIBUTED,
     TRANSCRIPTIONS_DIR,
     transcription_digest,
 )
@@ -144,7 +145,15 @@ TRA_QUERIES = (
 def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
     """Human decision 2026-10-28: the TRA-era strategy is kept as provenance only. Its extracted
     text does match these queries, yet no snippet from it is ever returned."""
-    assert {TRA_STRATEGY, NEWS_ITEM, CHARTER, *EXCLUDED_2026_10_30, NIST_SP800_34} == NOT_SEARCHED
+    # Task 3 (2026-11-06): the three not-redistributed CSC PDFs are never searched either.
+    assert {
+        TRA_STRATEGY,
+        NEWS_ITEM,
+        CHARTER,
+        *EXCLUDED_2026_10_30,
+        NIST_SP800_34,
+        *NOT_REDISTRIBUTED,
+    } == NOT_SEARCHED
     jsonl = EXTRACTED_DIR / TRA_STRATEGY.replace(".pdf", ".jsonl")
     pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
     for query in TRA_QUERIES:

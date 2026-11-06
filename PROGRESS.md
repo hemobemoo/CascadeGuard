@@ -13,9 +13,30 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    PR #34, df014a1 (2026-11-06)**; option (c) (gap examples only, never loaded); report section 6
    fallback bullet updated (gate 7); PDF 5 pages.
    Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
-   adviser-v2, presets re-recorded (gate 4, approved): built and reviewed; PR to open, then stop
-   for the human.
-3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
+   adviser-v2, presets re-recorded (gate 4, approved): **merged, PR #35, 2a80a26 (2026-11-06).**
+3. UAE cyber sources (`uae-cyber-sources`, from main 2a80a26): started 2026-11-06; human change of
+   2026-11-06: approved clauses go the gap_examples_only route like NIST (never loaded, no KB
+   rebuild; gate-4 cache, preset keys, citation map, traces and goldens unchanged); prefer
+   official PDFs; propose gap_examples entries mainly for information_deadlock. **Blocked on the
+   human: downloading the three official PDFs** (see "Waiting on human"). Unblocked 2026-11-06:
+   the human downloaded them; seven drafts in `policies/gap_examples_only/uae_csc_cyber.yaml`;
+   PR #36: gates 1, 6 and 7 answered 2026-11-06, report §6 approved, note location corrected and
+   the five re-approved; merge after the clean-checkout suite and CI.
+   **Done when** (human brief 2026-11-05 and instructions 2026-11-06): the three official CSC PDFs
+   are local only (gitignored with their extracted text) and pinned (inventory: official link,
+   retrieval date 2026-11-06, SHA-256, version as printed; per-page digests); README Sources rows
+   say "not redistributed (reproduction requires CSC consent); download from the official link";
+   drafts in policies/gap_examples_only/ only, with the human's labels (UAE text, issuer, scope,
+   binding unknown for this scenario), PDF and printed pages, modal verbs as printed, relevance
+   lines saying what each covers and does not; quote checks verifiable (digest route, explained in
+   the PR); gate-4 cache 36/36, preset keys, citation map and report tests, traces and goldens
+   unchanged, no KB rebuild; triage with gate-1 ids and proposed gate-7 entries; review loop, full
+   suite, CI green; PR opened; stop.
+   Decided by the human (2026-11-06), not open: committing the short verbatim quotes inside the
+   clauses is allowed ("Commit only the official csc.gov.ae URL, the retrieval date ..., the SHA-256
+   and the printed version/date in the inventory, plus the short verbatim quotes inside the
+   clauses"); binding is "unknown for this scenario" with the scope note (instruction 4). The
+   evidence-auditor suggested a legal-status reason instead; raised in the PR as optional.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
 6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.
@@ -1634,6 +1655,19 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Task 3, UAE cyber sources (2026-11-06): all answered; §6 approved; merge after suite and CI.**
+(History below.) Also for the human
+(phase-auditor round 3): the legal-status notes say "(as printed on its cover)", but the approval
+statement is printed on p.2 (the disclaimer), not the cover; correcting it edits five reviewed
+clauses (back to draft, gate-1 re-approval). Not changed. Gate 1: five reviewed as gap
+examples only (8a6a617); two NCRG clauses stay drafts. Gate 7: six entries; the sector-impact entry
+dropped. Gate 6: AGENTS.md wording applied. Legal-status sentence in every note and relevance line.
+Earlier text: The human downloaded the three
+CSC PDFs (not redistributed: gitignored, pinned by SHA-256 and per-page digests). Gate 1: the
+seven draft quotes (ids, PDF and printed pages in `docs/review/uae-cyber-sources-triage.md`).
+Gate 7: the proposed gap_examples entries in that file (none added; drafts cannot be mapped).
+Gate 6: proposed AGENTS.md wording for the three local-only PDFs (not edited).
+
 **Task 2, NIST SP 800-34 (2026-11-06): all gates answered.** Gate 7 report wording approved and
 applied (fallback bullet, intro dates, corrected relevance line; PDF still 5 pages). Deferred to Task 5 (docs-reconcile): a README "Sources" row for
 nistspecialpublication800-34r1.pdf. Earlier items: all answered. Gate 1 scoped to "gap examples only"
@@ -1940,6 +1974,12 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+**2026-11-06 (Task 3):** PR #35 merged (2a80a26). Task 3 is PR #36: gates 1, 6 and 7 applied;
+§6 approved and the notes corrected (re-approved); clean-checkout suite, CI green, merge, report
+the merge commit and page count. Then Task 5, then Task 4.
+Then Task 5 (docs reconciliation), then Task 4 (one approved test embedding first; on HTTP 502
+stop). Freeze: nothing merges after 9 Nov 18:00 Amman time except fixes to broken checks.
 
 **2026-11-06:** Task 1 merged (PR #33, 98b4173); Task 2 merged (PR #34, df014a1). The adviser
 commentary follow-up (`adviser-commentary-check`) is built and re-recorded; after its review loop,
