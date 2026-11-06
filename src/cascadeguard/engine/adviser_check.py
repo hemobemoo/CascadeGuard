@@ -86,12 +86,12 @@ ADVISER_GAP = re.compile(
     r"|\bno (?:\w+ ){0,2}(?:requirements?|statutes?|obligations?|duty|duties|mandates?"
     r"|legislation|provisions?|rules?|laws?)\b"
     r"|\b(?:does|do|did|is|are) ?n[o']t (?:\w+ ){0,2}(?:oblige|require|mandate|specify|say"
-    r"|state|assign|define|cover|address|explicit|clear)\w*\b"
+    r"|state|assign|define|cover|address|explicit|clear|mention|contemplate|deal with)\w*\b"
     r"|\bnot (?:required|obliged|mandated|specified|assigned|defined) by\b"
     r"|\bnone of\b|\bnobody\b|\bno[- ]one\b|\bfail(?:s|ed)? to\b|\bquiet\b"
     r"|\bnot explicit\w*\b|\bnor does\b|\bneither\b"
     r"|\bno (?:\w+ ){0,2}(?:clauses?|instruments?|texts?|deadlines?|time limits?|owners?)\b"
-    r"|\bonly foreign\b",
+    r"|\bonly foreign\b|\bnot (?:\w+ )?legislated\b|\bhas(?:n't| not) legislated\b",
     re.IGNORECASE,
 )
 STATUS_CLAIM = re.compile(
@@ -102,7 +102,7 @@ STATUS_CLAIM = re.compile(
     r"|\brequired by (?:the )?law\b|\blaw of the land\b|\blegal (?:duty|obligation|requirement)"
     r"|\bis (?:the )?law\b|\b(?:legal )?weight of law\b|\blegal weight\b|\bbound by\b"
     r"|\b(?:emirate|state|country)'?s? law\b|\bunder the law\b|\blaw of the uae\b"
-    r"|\blawful(?:ly)?\b|\bunlawful\b|\blegal(?:ly)? required\b",
+    r"|\blawful(?:ly)?\b|\bunlawful\b|\blegal(?:ly)? required\b|\blegal effect\b",
     re.IGNORECASE,
 )
 AUTHORITY = re.compile(
@@ -113,7 +113,8 @@ AUTHORITY = re.compile(
     r"|\bclear(?:s|ed)? (?:it|to|for)\b|\bcleared\b|\bdoes not apply\b|\bsign(?:s|ed)? off\b"
     r"|\bno (?:\w+ )?escalation\b|\bneed not\b|\bnot need to\b|\bno need to\b"
     r"|\bentitled\b|\bfree to\b|\bmay proceed\b|\bproceed to\b|\bbypass\w*\b|\bskip\w*\b"
-    r"|\bcircumvent\w*\b|\bsidestep\w*\b",
+    r"|\bcircumvent\w*\b|\bsidestep\w*\b"
+    r"|\bnothing (?:\w+ ){0,5}(?:prevents?|prohibits?|stops?|bars?|forbids?|restricts?)\b",
     re.IGNORECASE,
 )
 
@@ -124,6 +125,15 @@ EVIDENCE = r"(?:provided|retrieved|listed|cited) (?:evidence|clauses?)"
 EVIDENCE_SCOPED = re.compile(
     rf"\bnot (?:identified|stated|named|specified|addressed) (?:in|by) the {EVIDENCE}\b"
     rf"|\b(?:the )?{EVIDENCE} (?:does|do) not (?:address|state|specify|name|identify)\b"
+)
+# A sentence that uses the evidence-scoped allowance must stay about the evidence: once it is
+# used, any word about the law or beyond the evidence flags the sentence (test-breaker: "not
+# addressed by the provided evidence or anywhere in the national legislation").
+BEYOND_EVIDENCE = re.compile(
+    r"\b(?:laws?|legislation|legislative|legal|statutes?|statutory|decrees?|regulations?"
+    r"|regulatory|acts?|codes?|pdpl|country|countries|national|federal|emirates?|emirati|uae"
+    r"|dubai|abu dhabi|anywhere|elsewhere|everywhere|nowhere|nor|neither|either|any other"
+    r"|every|all other|same holds|likewise|also|beyond|corpus|framework|jurisdiction)\b"
 )
 NOT_SCOPED_LABEL = "binding"  # a label part never allowed alone: it would assert binding force
 # A sentence ends at ".", "!" or "?" followed by a space (ids such as dha.pp11.4-18-1 have none).
@@ -171,18 +181,23 @@ def label_parts(clause: PolicyClause) -> frozenset[str]:
 def allowed_label_parts(
     sentence: str, own: str | None, cited: Mapping[str, PolicyClause]
 ) -> frozenset[str]:
-    """Label parts the sentence may repeat: those of its own clause (a relevance note); else of
-    the cited clauses it names by id; else the parts every cited clause's label has."""
+    """Label parts the sentence may repeat: those of its own clause (a relevance note); else the
+    parts shared by every cited clause it names by id (exact ids, not substrings); else the parts
+    every cited clause's label has. Shared parts only, so a sentence naming two clauses cannot
+    give one of them the other's label."""
     if own is not None:
         return label_parts(cited[own])
-    named = [label_parts(c) for cid, c in cited.items() if cid in sentence]
-    if named:
-        return frozenset(part for parts in named for part in parts)
-    every = [label_parts(c) for c in cited.values()]
+    named = [label_parts(c) for cid, c in cited.items() if names(sentence, cid)]
+    every = named or [label_parts(c) for c in cited.values()]
     common: set[str] = set(every[0]) if every else set()
     for parts in every[1:]:
         common &= parts
     return frozenset(common)
+
+
+def names(sentence: str, clause_id: str) -> bool:
+    """Whether the sentence names this clause id as a whole token."""
+    return re.search(rf"(?<![\w.-]){re.escape(clause_id)}(?![\w-]|\.\w)", sentence) is not None
 
 
 def _without(text: str, parts: Iterable[str]) -> str:
@@ -191,18 +206,29 @@ def _without(text: str, parts: Iterable[str]) -> str:
     return text
 
 
-def sentence_reasons(sentence: str, allowed_labels: Iterable[str] = ()) -> tuple[str, ...]:
-    """Why one sentence of model free text must be withheld (empty: it may be shown)."""
+def sentence_reasons(
+    sentence: str, allowed_labels: Iterable[str] = (), *, scope_words: bool = True
+) -> tuple[str, ...]:
+    """Why one sentence of model free text must be withheld (empty: it may be shown).
+    `scope_words` False: skip the BEYOND_EVIDENCE rule (used on two joined sentences, which
+    looks only for a phrase split across them)."""
     text = normalise(sentence)
     reasons: list[str] = []
     scoped = EVIDENCE_SCOPED.sub(" ", text)
-    if GAP_CLAIM.search(scoped) or ADVISER_GAP.search(scoped):
+    beyond = scope_words and scoped != text and BEYOND_EVIDENCE.search(scoped)
+    if beyond or GAP_CLAIM.search(scoped) or ADVISER_GAP.search(scoped):
         reasons.append("gap_wording")
     if STATUS_CLAIM.search(_without(text, allowed_labels)):
         reasons.append("status_claim")
     if AUTHORITY.search(text):
         reasons.append("authority_wording")
     return tuple(reasons)
+
+
+def joined(first: str, second: str) -> str:
+    """Two neighbouring sentences as one, the end punctuation of the first removed, so a phrase
+    split across them ("can be! Ignored") is checked whole."""
+    return f"{first.rstrip('.!?')} {second}"
 
 
 def has_control(text: str) -> bool:

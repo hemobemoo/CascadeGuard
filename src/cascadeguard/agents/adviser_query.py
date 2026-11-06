@@ -55,6 +55,7 @@ from cascadeguard.engine.adviser_check import (
     AnswerCheck,
     allowed_label_parts,
     check_answer,
+    joined,
     sentence_reasons,
     sentences,
 )
@@ -813,13 +814,18 @@ def llm_answer(
     commentary: list[str] = []
     withheld: list[str] = []
     for prefix, text, own in lines:
-        kept: list[str] = []
-        for sentence in sentences(text):
-            reasons = sentence_reasons(sentence, allowed_label_parts(sentence, own, cited))
-            if reasons:
-                withheld.append(", ".join(reasons))
-            else:
-                kept.append(sentence)
+        parts = sentences(text)
+        flags = [sentence_reasons(x, allowed_label_parts(x, own, cited)) for x in parts]
+        # A phrase split across a sentence end: both neighbours are withheld (test-breaker).
+        for i in range(len(parts) - 1):
+            if flags[i] or flags[i + 1]:
+                continue
+            pair = joined(parts[i], parts[i + 1])
+            allowed = allowed_label_parts(pair, own, cited)
+            if reasons := sentence_reasons(pair, allowed, scope_words=False):
+                flags[i] = flags[i + 1] = reasons
+        withheld.extend(", ".join(r) for r in flags if r)
+        kept = [x for x, r in zip(parts, flags, strict=True) if not r]
         if kept:
             commentary.append(agent_statement(prefix + " ".join(kept)))
     return replace(
