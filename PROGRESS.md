@@ -55,7 +55,8 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    the generated report (13 = 23 - 10 misses; 0.203/0.500/0.453 rounded) and traced by
    `test_every_number_is_traced_to_the_data`; PDF still 5 pages. **Ranking decided (human,
    2026-11-06): deferred to finals**; no change to `kb.search_kb`, the cap, the RRF weights or the
-   queries (see the finals backlog). PR #38 open; merge when the human's conditions hold.
+   queries (see the finals backlog). **Merged: PR #38, merge commit fb4ee97 (2026-11-07);** clean
+   checkout 927 passed, 3 skipped; CI green on c7bbaaf; PDF 5 pages; phase-auditor round 3 PASS.
    **Done when** (the human's brief of 2026-11-05, Task 4, word for word): "Write ~25 queries in
    tests/evaluation/kb_queries.yaml with the expected source and page, written before looking.
    Cover: AI governance, health data sharing, telecom duties, incident response, information
@@ -560,9 +561,11 @@ then locked.
 
 ## Current phase
 
+**Latest: final docs pass (branch `final-docs-pass`, PR #39);** see the "Final docs pass" section at the end of this file.
+
 **Task 4, retrieval evaluation (branch `kb-retrieval-eval`, from main 965947e, 2026-11-06).**
-See the Task 4 entry in "Start here". PR #38; gate 7 answered; merge when the human's conditions
-hold, then stop (no Task 6, no incident-envelope schema until the human decides).
+Merged (PR #38, fb4ee97). Stopped: no Task 6 and no incident-envelope schema until the human
+decides.
 
 **Before (Adviser commentary check):**
 **Adviser commentary check (branch `adviser-commentary-check`, from main df014a1, 2026-11-06).**
@@ -2062,8 +2065,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 merged as PR #38 once the
-human's conditions hold. Then stop: Task 6 (optional live run, gate 4) and the optional
+**2026-11-07 (final docs pass):** PR #39 opened; merge on green CI (human-approved 2026-11-07), then stop. See "Final docs pass" at the end of this file.
+
+**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 merged (PR #38, fb4ee97,
+2026-11-07). Stopped: Task 6 (optional live run, gate 4) and the optional
 incident-envelope schema wait for the human's decision. The four carried-over clause items
 (dha.pp11.4-18-5, mocai.ethics.fallback-plan, uae.cyber-strategy-2025.governance-aim,
 uae.cyber-strategy-2025.partnership-aim) also wait for the human.
@@ -2104,3 +2109,20 @@ Earlier (done):
    - approve the paid Phase 5 smoke test (gate 4: anything that costs money).
 2. Then start Phase 5 on `phase-5-llm`; its first test-breaker round covers a0b6342 and the
    Phase 4 commits after it.
+
+## Final docs pass (branch `final-docs-pass`, from `progress-after-pr38`, 2026-11-07)
+
+PR #39 opened; merge on green CI (human-approved 2026-11-07). Adds the Policy Adviser
+(`agents/adviser_query.py`) and the adviser answer check (`engine/adviser_check.py`) to
+`docs/architecture.mmd`, the README block (identical) and `docs/architecture.svg` (mermaid-cli
+11.4.2, `htmlLabels: false`, 0 foreignObject); renames "Vector index" to "Knowledge-base
+search". Guided step b narration gains: "Use 'Ask the Policy Adviser' below the lanes to
+question the adviser at any step." Scripted run, repairs, replay and `--governance off` output
+byte-identical to main; goldens, caches, citation map, traces, report (PDF 5 pages) and
+`kb.search_kb` unchanged; no live call. After the merge, delete the `progress-after-pr38`
+branch (human instruction, 2026-11-07). Then stop: no Task 6, no schema.
+Reviewers: phase-auditor PASS, evidence-auditor PASS; their MINORs fixed in the diagram (triage:
+`docs/review/final-docs-pass-clause-triage.md`). Deferred MINOR: the `knowledge/kb.py` module
+docstring still says the knowledge base is for the LLM context path only, but the adviser uses it
+too; fix after the freeze (kb.py had to stay unchanged here). Evidence-auditor rounds 2 and 3: PASS; deferred
+diagram MINORs (optional labels) are listed in the triage file.
