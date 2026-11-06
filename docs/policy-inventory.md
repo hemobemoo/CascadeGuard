@@ -1,4 +1,4 @@
-# Policy source inventory (Phase 1a; #20–22 added in Phase 6d; #23 for the submission; #24 Task 2, 2026-11-05)
+# Policy source inventory (Phase 1a; #20–22 added in Phase 6d; #23 for the submission; #24 Task 2, 2026-11-05; #25–27 Task 3, local only)
 
 The 24 PDFs in `policies/sources/` (plus one derived OCR copy, listed after the table, and the
 seven web transcriptions in `policies/sources/web/`, listed at the end), from
@@ -126,6 +126,33 @@ and no clause in `policies/reviewed/` quotes it (checked 2026-10-23). It is cont
 - Kept out of the keyword search and the vector index (`NOT_SEARCHED`): adding it to the searched
   corpus changes the index's corpus (the committed index refuses to load until rebuilt) and
   `extracted_digest`. A rebuild is the human's decision (gate 4).
+
+## #25–27 UAE Cyber Security Council (Task 3, human 2026-11-06): local only, not redistributed
+
+Each PDF says: "Neither the whole nor part of this document shall be reproduced without the prior
+written consent of the UAE Cyber Security Council." The human downloaded them in a browser from
+the official csc.gov.ae links (retrieved 2026-11-06). They and their extracted text are
+**gitignored**; this table, `NOT_REDISTRIBUTED` in `src/cascadeguard/knowledge/loader.py` and the
+per-page text digests in `policies/not_redistributed_pages.json` pin them. Download them from the
+official links below to check a quote. Not searched (`NOT_SEARCHED`); no knowledge-base rebuild.
+Their clauses are drafts in `policies/gap_examples_only/uae_csc_cyber.yaml` (never loaded).
+
+| File | SHA-256 | Official link | Version as printed (cover) | Pages | No-text pages |
+|---|---|---|---|---|---|
+| `National Cyber Security Policy for Artificial Intelligence v1.1.pdf` | `eb9bf50934743b304860dadae5365ab204c6f32bc0baa90129cd512b1b576077` | https://csc.gov.ae/documents/38662/1042755/National+Cyber+Security+Policy+for+Artificial+Intelligence_v1.1.pdf/aeca22fd-f413-f1ac-a01f-14446e62f982?t=1771617654295 | November 2025, Version 1.1 | 55 | 47 (image) |
+| `Cyber Security Information Sharing Framework V2.0.pdf` | `0dcdffad720af6b5c81b822a1a8cd7aeab49277fb0ec30878a7343e141597d88` | https://csc.gov.ae/documents/38662/1042755/Cyber+Security+Information+Sharing+Framework+V2.0.pdf/f6194090-0797-51ec-5372-05b68f4d099f?t=1771617652952 | May 2023, Version 1.0 (the file name says "V2.0") | 44 | 38 (image) |
+| `Cyber Incident Response Plan V2.0.pdf` | `212a2155f82de69eff5d33cb6601bbb0df76fb36d05d3223dacf5d191a4ecbe8` | https://csc.gov.ae/documents/38662/1042755/Cyber+Incident+Response+Plan_V2.0.pdf/5893693c-7a1a-05cf-60a0-d10a1ee154ef?t=1771617652578 | May 2023, Version 1.0 (the file name says "V2.0") | 50 | 43 (image) |
+
+- Issuer: UAE Cyber Security Council (the two 2023 documents: "approved by the UAE Cabinet",
+  p.2; the AI policy: "approved by the UAE Cyber Security Council", p.2).
+- Scope as printed (p.8 of each): the AI policy applies to Ministries and Federal Authorities and
+  non-government CII entities (Emirate entities via an Emirate CIIP programme); the CIRF and CIRP
+  apply to entities identified under the UAE CIIP Policy; the information sharing framework sets
+  roles for national, emirate and CII-sector entities and is a guideline for other entities.
+- Printed page = PDF (viewer) page − 1 for the pages quoted (the cover is unnumbered).
+- Linked from the u.ae pages "Cyber Security Information Sharing Framework", "Cyber Incident
+  Response Plan" and "The National Cyber Security Policy for Artificial Intelligence" (updated
+  02 Jul 2026).
 
 ## Derived OCR source
 

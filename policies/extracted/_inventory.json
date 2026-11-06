@@ -119,6 +119,38 @@
     }
   },
   {
+    "source_file": "Cyber Incident Response Plan V2.0.pdf",
+    "output": "Cyber Incident Response Plan V2.0.jsonl",
+    "page_count": 50,
+    "pages_without_text": [
+      43
+    ],
+    "image_pages_without_text": [
+      43
+    ],
+    "metadata": {
+      "Title": "Talkbook portrait  template",
+      "Author": "Williams, David",
+      "CreationDate": "D:20230718144314+04'00'"
+    }
+  },
+  {
+    "source_file": "Cyber Security Information Sharing Framework V2.0.pdf",
+    "output": "Cyber Security Information Sharing Framework V2.0.jsonl",
+    "page_count": 44,
+    "pages_without_text": [
+      38
+    ],
+    "image_pages_without_text": [
+      38
+    ],
+    "metadata": {
+      "Title": "Talkbook portrait  template",
+      "Author": "Williams, David",
+      "CreationDate": "D:20230718144442+04'00'"
+    }
+  },
+  {
     "source_file": "Dubai Law No. (26) of 2015.pdf",
     "output": "Dubai Law No. (26) of 2015.jsonl",
     "page_count": 9,
@@ -189,6 +221,21 @@
     ],
     "metadata": {
       "CreationDate": "D:20221221121227+04'00'"
+    }
+  },
+  {
+    "source_file": "National Cyber Security Policy for Artificial Intelligence v1.1.pdf",
+    "output": "National Cyber Security Policy for Artificial Intelligence v1.1.jsonl",
+    "page_count": 55,
+    "pages_without_text": [
+      47
+    ],
+    "image_pages_without_text": [
+      47
+    ],
+    "metadata": {
+      "Title": "",
+      "CreationDate": "D:20251217152300+04'00'"
     }
   },
   {
