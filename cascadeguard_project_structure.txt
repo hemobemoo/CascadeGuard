@@ -166,6 +166,7 @@ cascadeguard/
 │
 └── tests/
     ├── fixtures/                     [P2+] synthetic clauses (status illustrative) for building while review is pending
+    │   └── adviser_v1_answers/       recorded adviser-v1 model answers (2026-11-06), test input only
     ├── unit/                         [P0+] (P0: one empty test so the checks run)
     ├── integration/                  [P2+] full loop with ScriptedAgent
     ├── golden/                       [not used] the P3 goldens live under scenarios/

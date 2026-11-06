@@ -1,0 +1,30 @@
+{
+  "key": "a7605b4b85cec56db766c2792031ca78837e55023db997d9004cae17120e83c1",
+  "prompt_version": "adviser-v2",
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The reviewed corpus contains an illustrative UAE rule stating that a licensed telecom operator reports to the telecom regulator any network incident that significantly degrades a public telecommunications service within 60 minutes of becoming aware of it. Whether this incident is significant enough to trigger that rule is not identified in the provided evidence.",
+    "uae_evidence": [
+      {
+        "clause_id": "illus.telecom.incident-report",
+        "relevance": "Sets out the illustrative obligation for a licensed telecom operator to report a significant network incident to the telecom regulator within 60 minutes."
+      }
+    ],
+    "international_comparison": [],
+    "responsible_role": "telecom_operator",
+    "options": [
+      "Assess whether the network incident significantly degrades a public telecommunications service; if so, the telecom operator reports to the telecom regulator within 60 minutes of becoming aware of it."
+    ],
+    "escalation": [
+      "telecom_regulator"
+    ],
+    "uncertainty": [
+      "The clause is illustrative, not a quotation, so its legal effect is uncertain; the facts do not establish whether this incident significantly degrades a public telecommunications service."
+    ]
+  },
+  "usage": {
+    "calls": 1,
+    "prompt_tokens": 1996,
+    "completion_tokens": 246
+  }
+}

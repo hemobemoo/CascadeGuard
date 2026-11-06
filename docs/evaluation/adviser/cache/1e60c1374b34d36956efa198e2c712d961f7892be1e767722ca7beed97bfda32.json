@@ -1,0 +1,33 @@
+{
+  "key": "1e60c1374b34d36956efa198e2c712d961f7892be1e767722ca7beed97bfda32",
+  "prompt_version": "adviser-v2",
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The reviewed evidence does not identify a specific role responsible for reviewing and reversing automated account lockouts.",
+    "uae_evidence": [
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "relevance": "The Charter emphasizes human oversight over AI to correct errors or biases, but it does not identify who reviews or reverses automated account lockouts."
+      }
+    ],
+    "international_comparison": [
+      {
+        "clause_id": "oecd.ai-principles.accountability-cooperation",
+        "relevance": "AI actors should apply systematic risk management across the AI system lifecycle and cooperate with other actors, but it does not assign responsibility for reviewing or reversing automated account lockouts."
+      }
+    ],
+    "responsible_role": "not established in the reviewed corpus",
+    "options": [],
+    "escalation": [
+      "policy_legal_adviser"
+    ],
+    "uncertainty": [
+      "No listed clause assigns responsibility for reviewing or reversing automated account lockouts to any known role."
+    ]
+  },
+  "usage": {
+    "calls": 1,
+    "prompt_tokens": 2085,
+    "completion_tokens": 216
+  }
+}
