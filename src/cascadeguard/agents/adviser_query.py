@@ -56,6 +56,7 @@ from cascadeguard.engine.adviser_check import (
     allowed_label_parts,
     check_answer,
     joined,
+    names,
     sentence_reasons,
     sentences,
 )
@@ -799,6 +800,7 @@ def llm_answer(
         scenario_id, question, view, picked, role_ids, mode_detail, model_selected=True
     )
     cited = {cid: citable[cid] for cid in picked_ids(payload)}
+    labels = dict(shown.status_labels)  # the clauses the engine's sections show, with labels
     # (prefix, model text, the clause a relevance note is about)
     lines: list[tuple[str, str, str | None]] = [
         ("", payload.direct_answer, None),
@@ -807,36 +809,39 @@ def llm_answer(
         *(("escalation: ", e, None) for e in payload.escalation),
         *(("uncertainty: ", u, None) for u in payload.uncertainty),
         *(
-            (f"relevance of {c.clause_id}: ", c.relevance, c.clause_id)
+            (
+                f"relevance of {c.clause_id} [{labels.get(c.clause_id, '')}]: ",
+                c.relevance,
+                c.clause_id,
+            )
             for c in (*payload.uae_evidence, *payload.international_comparison)
         ),
     ]
-    commentary: list[str] = []
-    withheld: list[str] = []
-    for prefix, text, own in lines:
-        parts = sentences(text)
-        flags = [sentence_reasons(x, allowed_label_parts(x, own, cited)) for x in parts]
-        # A phrase split across sentence ends (test-breaker rounds 1 and 2): every run of the
-        # sentences still shown, joined as it will read (with filler or withheld sentences
-        # between them gone), is checked again until nothing more is flagged.
-        changed = True
-        while changed:
-            changed = False
-            shown_at = [i for i, r in enumerate(flags) if not r]
-            for start in range(len(shown_at)):
-                for end in range(start + 1, len(shown_at)):
-                    run = shown_at[start : end + 1]
-                    text_run = joined(*(parts[i] for i in run))
-                    allowed = allowed_label_parts(text_run, own, cited)
-                    if reasons := sentence_reasons(text_run, allowed, scope_words=False):
-                        for i in run:
-                            flags[i] = reasons
-                        changed = True
-                        break
-                if changed:
+    # Every sentence, in display order: (line index, sentence, the clause it is about).
+    items = [(n, x, own) for n, (_, text, own) in enumerate(lines) for x in sentences(text)]
+    flags = [commentary_reasons(x, own, cited, labels, clauses) for _, x, own in items]
+    # A phrase split across sentence ends, list entries or fields (test-breaker rounds 1-3):
+    # every run of up to RUN_WINDOW sentences still shown, joined in display order as it will
+    # read (withheld sentences between them gone), is checked again until nothing more is
+    # flagged. The window bounds the work; the phrase patterns span at most a few words.
+    changed = True
+    while changed:
+        changed = False
+        shown_at = [i for i, r in enumerate(flags) if not r]
+        for start in range(len(shown_at)):
+            for end in range(start + 1, min(start + RUN_WINDOW, len(shown_at))):
+                run = shown_at[start : end + 1]
+                text_run = joined(*(items[i][1] for i in run))
+                allowed = allowed_label_parts(text_run, None, cited)
+                if reasons := sentence_reasons(text_run, allowed, scope_words=False):
+                    for i in run:
+                        flags[i] = reasons
+                    changed = True
                     break
-        withheld.extend(", ".join(r) for r in flags if r)
-        kept = [x for x, r in zip(parts, flags, strict=True) if not r]
+    withheld = [", ".join(r) for r in flags if r]
+    commentary: list[str] = []
+    for n, (prefix, _, _) in enumerate(lines):
+        kept = [x for (m, x, _), r in zip(items, flags, strict=True) if m == n and not r]
         if kept:
             commentary.append(agent_statement(prefix + " ".join(kept)))
     return replace(
@@ -847,6 +852,29 @@ def llm_answer(
         withheld=tuple(withheld),
         usage=usage,
     )
+
+
+RUN_WINDOW = 8  # sentences per re-checked run (test-breaker round 3: bounded work)
+CLAUSE_NOT_SHOWN = "clause_not_shown"
+
+
+def commentary_reasons(
+    sentence: str,
+    own: str | None,
+    cited: Mapping[str, PolicyClause],
+    labels: Mapping[str, str],
+    clauses: Mapping[str, PolicyClause],
+) -> tuple[str, ...]:
+    """The engine's reasons to withhold one commentary sentence: its wording, and naming a clause
+    the engine's sections do not show with its status label (test-breaker round 3: a third
+    international clause was described with no label anywhere)."""
+    reasons = list(sentence_reasons(sentence, allowed_label_parts(sentence, own, cited)))
+    unlabelled = (own is not None and own not in labels) or any(
+        names(sentence, cid) for cid in clauses if cid not in labels
+    )
+    if unlabelled:
+        reasons.append(CLAUSE_NOT_SHOWN)
+    return tuple(reasons)
 
 
 def picked_ids(payload: AdviserPayload) -> tuple[str, ...]:

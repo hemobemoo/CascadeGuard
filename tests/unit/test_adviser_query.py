@@ -273,7 +273,8 @@ def test_llm_answer_quotes_come_from_the_clause_not_the_model(tmp_path: Path) ->
     # Option (b): the model's words are only in the commentary block, never in sections 1/5/6.
     assert e.relevance == ""
     assert answer.direct_answer.startswith("Engine text: the clauses the model selected")
-    assert agent_statement("relevance of dha.pp11.4-18-1: continuity plans") in answer.commentary
+    note = f"relevance of dha.pp11.4-18-1 [{clause.status_label}]: continuity plans"
+    assert agent_statement(note) in answer.commentary  # each relevance line carries the label
     assert answer.status_labels == (("dha.pp11.4-18-1", clause.status_label),)
 
 
@@ -1092,9 +1093,9 @@ def test_a_label_word_is_allowed_only_for_its_own_clause(tmp_path: Path) -> None
     )
     answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(own)))
     assert answer.withheld == (), answer.withheld
-    assert agent_statement(f"relevance of illus.telecom.incident-report: {note}") in (
-        answer.commentary
-    )
+    assert agent_statement(
+        f"relevance of illus.telecom.incident-report [illustrative]: {note}"
+    ) in (answer.commentary)
     # The same word about a reviewed clause is a status claim.
     other = payload(uae_evidence=[{"clause_id": "dha.pp11.4-18-1", "relevance": note}])
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path / "b", FakeClient(other)))
@@ -1162,7 +1163,7 @@ V1_EXPECTED: dict[str, tuple[tuple[str, ...], int, int]] = {
     "preset-3.json": ((), 6, 2),
     "preset-4.json": ((), 5, 2),
     "preset-5.json": ((), 6, 1),
-    "preset-6.json": ((), 12, 5),
+    "preset-6.json": ((), 11, 6),  # the third international clause is not shown
 }
 # A sentence of each that must never be shown (a claim about the law or a status claim).
 V1_NEVER_SHOWN = {
@@ -1291,7 +1292,7 @@ V2_TABLE = {
     "1e60c1374b34d36956efa198e2c712d961f7892be1e767722ca7beed97bfda32": (3, 3, 3),
     "4bef5bb38c779870f28c148e3090fcd411509a60b59792bdecd5a9ff70653f45": (4, 6, 2),
     "a7605b4b85cec56db766c2792031ca78837e55023db997d9004cae17120e83c1": (5, 5, 1),
-    "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1": (6, 11, 2),
+    "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1": (6, 10, 3),
 }
 
 
@@ -1398,3 +1399,75 @@ def test_reviewed_evidence_is_an_evidence_scope() -> None:
     assert "gap_wording" not in sentence_reasons(
         "The reviewed evidence does not identify an owner.", {"reviewed"}
     )
+
+
+# --- Test-breaker round 3 ------------------------------------------------------------------------
+
+
+def test_every_clause_named_in_the_commentary_has_its_status_label_shown(tmp_path: Path) -> None:
+    """Preset 6 cites three international clauses; the sections show two. The commentary must not
+    describe the third: no status label is shown for it."""
+    stem = "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1"
+    content = json.dumps(
+        json.loads((V2_CACHE / f"{stem}.json").read_text(encoding="utf-8"))["payload"]
+    )
+    at, question = aq.load_presets(SCENARIOS_DIR / SCENARIO)[5]
+    answer = ask(question, at, llm_asker(tmp_path, FakeClient(content)))
+    labelled = dict(answer.status_labels)
+    assert "oecd.ai-principles.accountability-cooperation" not in labelled
+    for line in answer.commentary:
+        for cid in world().clauses:
+            if names(line, cid):
+                assert cid in labelled, (cid, line)
+    assert aq.CLAUSE_NOT_SHOWN in withheld_reasons(answer)
+
+
+@pytest.mark.parametrize(
+    "over",
+    [
+        {
+            "escalation": [
+                "The continuity safeguard can be",
+                "ignored by the operator in this incident.",
+            ]
+        },
+        {"options": ["The PDPL does"], "escalation": [], "uncertainty": ["not require it."]},
+        {
+            "direct_answer": "The adviser may",
+            "responsible_role": "health_service_operator overrides",
+        },
+    ],
+)
+def test_a_phrase_split_across_fields_is_withheld(tmp_path: Path, over: dict[str, Any]) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**over))))
+    assert answer.withheld
+    shown = " ".join(answer.commentary).casefold()
+    assert "ignored" not in shown and "not require" not in shown and "overrides" not in shown
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "illus.telecom.incident-report is b" + chr(0x026A) + "nding.",  # small capital I
+        "illus.telecom.incident-report is mandat" + chr(0x1D0F) + "ry.",  # small capital O
+        "The adviser may overri" + chr(0x0501) + "e the safeguard for this incident.",  # komi de
+    ],
+)
+def test_letters_outside_the_latin_blocks_are_withheld(tmp_path: Path, text: str) -> None:
+    content = payload(
+        direct_answer=text,
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert_withheld(answer, [text], {"unusual_letters"})
+
+
+def test_a_long_commentary_is_checked_in_bounded_time(tmp_path: Path) -> None:
+    import time
+
+    long = " ".join(["The plan covers the channel."] * 200)
+    started = time.perf_counter()
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(uncertainty=[long]))))
+    assert time.perf_counter() - started < 10, "the run re-check must stay bounded"
+    assert answer.mode == aq.MODE_LLM and answer.withheld == ()
