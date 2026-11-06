@@ -1644,7 +1644,12 @@ With option (c) only the report's fallback bullet (section 6, policy gaps) went 
 decision (checked 2026-11-06; loading the clauses is a finals-backlog item). Note: `HARMLESS_GAP` in
 tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
 
-**Adviser commentary check (branch `adviser-commentary-check`, 2026-11-06): two questions.**
+**Adviser commentary check (PR #35, 2026-11-06): answered by the human the same day** (accept
+the residual paraphrase risk, stop extending the lists, add the illus.* rule and fixed line, keep
+the all-withheld behaviour, one last scoped test-breaker round). Known limits, not fixes: the
+paraphrases below; new paraphrase findings go here too. The cross-sentence run check can also
+withhold harmless neighbours (e.g. "is not binding. It sets ..." reads as "is not ... sets").
+History of the two questions:
 - Gate 2 (test-breaker round 2, BLOCKER + QUESTION-FOR-HUMAN): model sentences are filtered by
   phrase lists, and every round finds new paraphrases that pass (e.g. an illustrative clause
   "carries full legal authority in the UAE", now added). A list cannot guarantee "binding,

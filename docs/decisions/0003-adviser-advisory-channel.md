@@ -44,8 +44,12 @@ The adviser's answer is accepted as a separate advisory channel, on these condit
    run of the sentences still shown. Binding, permit, authorise and legal-gap claims are
    withheld when they match the engine's phrase lists; a phrase list cannot catch every
    paraphrase (test-breaker round 2: e.g. "carries full legal authority" was shown before it was
-   added). Whether to accept that residual risk under the agent-statement label, or to restrict
-   the shown commentary further, is open for the human (PROGRESS.md "Waiting on human").
+   added). **Decided by the human, 2026-11-06:** accept the residual risk; stop extending the
+   phrase lists; one structural rule: a commentary sentence naming an illustrative clause
+   (`illus.*`, including its relevance note) is withheld, and when the answer cites one the block
+   shows "Illustrative clauses are synthetic rules written for this scenario, not UAE law."
+   When every sentence is flagged, the answer keeps no commentary lines and says "All N
+   sentences ... withheld" (no template fallback). **Known limit:** Model commentary is filtered by phrase lists and labelled unverified; it can still contain wording the filter does not catch. The answer itself (sections 1–7) is always the engine's text.
    Also withheld: a sentence naming a clause the sections do not show (so no status label would
    be shown for it; at most 3 UAE and 2 international clauses are shown), and a sentence with
    letters outside the Latin blocks (look-alikes). Each relevance line carries its clause's

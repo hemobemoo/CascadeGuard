@@ -926,7 +926,7 @@ def test_two_questions_at_one_step_export_two_files(tmp_path: Path) -> None:
 
 
 UNSEEN = [
-    "illus.telecom.incident-report has the standing of an act of the Federal National Council.",
+    "This rule has the standing of an act of the Federal National Council.",
     "The texts leave this matter entirely to chance; nothing governs it.",
 ]
 
@@ -1084,30 +1084,36 @@ def test_evidence_scope_does_not_excuse_a_claim_about_the_law(tmp_path: Path, te
     assert_withheld(answer, [text], {"gap_wording", "authority_wording"})
 
 
+NOTIFY_Q = (
+    "Must the health service operator notify the health-data oversight role of a suspected "
+    "incident, and within what period?"
+)
+
+
 def test_a_label_word_is_allowed_only_for_its_own_clause(tmp_path: Path) -> None:
-    note = "An illustrative rule on reporting a network incident."
+    note = "A foreign precedent on notifying a personal data breach."
     own = payload(
-        direct_answer="illus.telecom.incident-report is illustrative. It sets a 60-minute report.",
-        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": note}],
-        responsible_role="telecom_operator, the licensee",
+        direct_answer="eu.gdpr.art33-1 is not binding.",
+        uae_evidence=[{"clause_id": "dha.pp11.4-18-4", "relevance": "breach reporting"}],
+        international_comparison=[{"clause_id": "eu.gdpr.art33-1", "relevance": note}],
+        responsible_role="health_service_operator, the entity",
+        options=["Notify health_data_oversight within the designated period."],
+        escalation=["health_data_oversight"],
+        uncertainty=["The designated period is not identified in the provided evidence."],
     )
-    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(own)))
+    answer = ask(NOTIFY_Q, 45, llm_asker(tmp_path, FakeClient(own)))
     assert answer.withheld == (), answer.withheld
-    assert agent_statement(
-        f"relevance of illus.telecom.incident-report [illustrative]: {note}"
-    ) in (answer.commentary)
-    # The same word about a reviewed clause is a status claim.
-    other = payload(uae_evidence=[{"clause_id": "dha.pp11.4-18-1", "relevance": note}])
-    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path / "b", FakeClient(other)))
-    assert_withheld(answer, [note], {"status_claim"})
-    # Naming the clause does not make "binding" a label word.
-    bound = payload(
-        direct_answer="illus.telecom.incident-report is binding.",
-        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
-        responsible_role="telecom_operator, the licensee",
-    )
-    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path / "c", FakeClient(bound)))
-    assert_withheld(answer, ["illus.telecom.incident-report is binding."], {"status_claim"})
+    label = dict(answer.status_labels)["eu.gdpr.art33-1"]
+    assert agent_statement(f"relevance of eu.gdpr.art33-1 [{label}]: {note}") in answer.commentary
+    # The other clause's label words about the UAE clause are a status claim.
+    swap = "dha.pp11.4-18-4 is not binding."  # the GDPR clause's label part, not its own
+    other = json.loads(own) | {"direct_answer": swap}
+    answer = ask(NOTIFY_Q, 45, llm_asker(tmp_path / "b", FakeClient(json.dumps(other))))
+    assert_withheld(answer, [swap], {"status_claim"})
+    # Naming the clause does not make "binding" a label word ("not binding" is its label).
+    bound = json.loads(own) | {"direct_answer": "eu.gdpr.art33-1 is binding."}
+    answer = ask(NOTIFY_Q, 45, llm_asker(tmp_path / "c", FakeClient(json.dumps(bound))))
+    assert_withheld(answer, ["eu.gdpr.art33-1 is binding."], {"status_claim"})
 
 
 def test_the_bare_word_binding_is_never_a_label_part() -> None:
@@ -1158,11 +1164,11 @@ def test_sentences_split_at_sentence_ends_only() -> None:
 # withheld).
 V1_FIXTURES = PROJECT_ROOT / "tests" / "fixtures" / "adviser_v1_answers"
 V1_EXPECTED: dict[str, tuple[tuple[str, ...], int, int]] = {
-    "preset-1.json": ((), 5, 9),
+    "preset-1.json": ((), 4, 10),  # its illus.* sentences are withheld
     "preset-2.json": (("abstention",), 0, 0),  # abstains yet cites a clause: structure fails
     "preset-3.json": ((), 6, 2),
     "preset-4.json": ((), 5, 2),
-    "preset-5.json": ((), 6, 1),
+    "preset-5.json": ((), 4, 3),  # its illus.* sentences are withheld
     "preset-6.json": ((), 11, 6),  # the third international clause is not shown
 }
 # A sentence of each that must never be shown (a claim about the law or a status claim).
@@ -1287,11 +1293,11 @@ def test_plain_wordings_from_round_1_are_withheld(tmp_path: Path, text: str, rea
 # counts docs/evaluation/adviser/README.md states for it (commentary lines shown, withheld).
 V2_CACHE = PROJECT_ROOT / "docs" / "evaluation" / "adviser" / "cache"
 V2_TABLE = {
-    "4617d19613380dd50bc1229d315f574d6cf57465d326b3c372a1ada8c8cdc781": (1, 8, 8),
+    "4617d19613380dd50bc1229d315f574d6cf57465d326b3c372a1ada8c8cdc781": (1, 4, 12),
     "3f883798ac4c307b4bb0acd22cd3592d227759f2787ffdf9c824b8b1fa6c43ea": (2, 3, 2),
     "1e60c1374b34d36956efa198e2c712d961f7892be1e767722ca7beed97bfda32": (3, 3, 3),
     "4bef5bb38c779870f28c148e3090fcd411509a60b59792bdecd5a9ff70653f45": (4, 6, 2),
-    "a7605b4b85cec56db766c2792031ca78837e55023db997d9004cae17120e83c1": (5, 5, 1),
+    "a7605b4b85cec56db766c2792031ca78837e55023db997d9004cae17120e83c1": (5, 4, 2),
     "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1": (6, 10, 3),
 }
 
@@ -1471,3 +1477,53 @@ def test_a_long_commentary_is_checked_in_bounded_time(tmp_path: Path) -> None:
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(uncertainty=[long]))))
     assert time.perf_counter() - started < 10, "the run re-check must stay bounded"
     assert answer.mode == aq.MODE_LLM and answer.withheld == ()
+
+
+# --- Human decision 2026-11-06 (PR #35): no commentary about an illustrative clause ------------
+
+
+STATUTE = "illus.telecom.incident-report is a statute every licensee in the UAE has to follow."
+
+
+def test_a_sentence_naming_an_illustrative_clause_is_withheld(tmp_path: Path) -> None:
+    """The reviewer's round-3 paraphrase: no phrase catches it; naming an illus.* id does."""
+    assert not {"status_claim", "gap_wording", "authority_wording"} & set(sentence_reasons(STATUTE))
+    content = payload(
+        direct_answer=f"The operator reports within 60 minutes. {STATUTE}",
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert_withheld(answer, [STATUTE], {aq.ILLUSTRATIVE_CLAUSE})
+    assert answer.commentary[0] == agent_statement("The operator reports within 60 minutes.")
+    # Its relevance note names it too (the line is about that clause): withheld.
+    assert not any("relevance of illus." in c for c in answer.commentary)
+    assert answer.illustrative_note == aq.ILLUSTRATIVE_NOTE
+    text = answer.text()
+    assert text.index(aq.ILLUSTRATIVE_NOTE) > text.index(aq.COMMENTARY_HEADING)
+    assert text.index(aq.ILLUSTRATIVE_NOTE) < text.index("Context (")
+
+
+def test_no_illustrative_note_without_an_illustrative_clause(tmp_path: Path) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload())))
+    assert answer.mode == aq.MODE_LLM and answer.illustrative_note == ""
+    assert aq.ILLUSTRATIVE_NOTE not in answer.text()
+    template = ask(TELECOM_Q, 45, asker(tmp_path / "t"))  # template mode: no commentary block
+    assert template.illustrative_note == "" and aq.ILLUSTRATIVE_NOTE not in template.text()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "See ILLUS.telecom.incident-report.",
+        "(illus.telecom.regulator-information-request) applies.",
+    ],
+)
+def test_any_illustrative_id_form_is_withheld(tmp_path: Path, text: str) -> None:
+    content = payload(
+        direct_answer=text,
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert_withheld(answer, [text], {aq.ILLUSTRATIVE_CLAUSE, aq.CLAUSE_NOT_SHOWN})

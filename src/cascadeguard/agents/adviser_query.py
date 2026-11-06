@@ -105,6 +105,9 @@ RETRIEVAL_KEYWORD = (
 KEYWORD_NOTE = "Context was found by keyword search only: no query vector for this question."
 
 COMMENTARY_HEADING = "Model commentary (unverified agent statement)"
+ILLUSTRATIVE_NOTE = (
+    "Illustrative clauses are synthetic rules written for this scenario, not UAE law."
+)
 UAE_HEADING = "UAE evidence (illustrative scenario rules marked as such)"
 INTERNATIONAL_HEADING = "International comparison (not UAE law; listed separately)"
 INTERNATIONAL_NOTE = (
@@ -315,6 +318,13 @@ class AdviserAnswer:
         return tuple(e.clause_id for e in (*self.uae_evidence, *self.international))
 
     @property
+    def illustrative_note(self) -> str:
+        """The fixed line under the commentary when an LLM answer cites an illustrative clause
+        (human decision 2026-11-06); empty otherwise."""
+        cites = any(e.illustrative for e in (*self.uae_evidence, *self.international))
+        return ILLUSTRATIVE_NOTE if self.mode == MODE_LLM and cites else ""
+
+    @property
     def withheld_note(self) -> str:
         """The engine's line under the commentary: how many sentences it withheld, and why."""
         return withheld_note(self.withheld, len(self.commentary))
@@ -379,6 +389,8 @@ class AdviserAnswer:
             lines.extend(f"  {c}" for c in self.commentary)
             if self.withheld:
                 lines.append(f"  {self.withheld_note}")
+            if self.illustrative_note:
+                lines.append(f"  {self.illustrative_note}")
         lines.append(f"Context ({CONTEXT_LABEL}):")
         if not self.context:
             lines.append("  none")
@@ -856,6 +868,10 @@ def llm_answer(
 
 RUN_WINDOW = 8  # sentences per re-checked run (test-breaker round 3: bounded work)
 CLAUSE_NOT_SHOWN = "clause_not_shown"
+# Human decision 2026-11-06 (PR #35): the commentary never describes an illustrative clause; when
+# the answer cites one, this fixed line is shown under the commentary.
+ILLUSTRATIVE_CLAUSE = "illustrative_clause"
+ILLUSTRATIVE_ID = re.compile(r"(?<![\w.-])illus\.[\w-]", re.IGNORECASE)
 
 
 def commentary_reasons(
@@ -874,6 +890,8 @@ def commentary_reasons(
     )
     if unlabelled:
         reasons.append(CLAUSE_NOT_SHOWN)
+    if (own is not None and ILLUSTRATIVE_ID.match(own)) or ILLUSTRATIVE_ID.search(sentence):
+        reasons.append(ILLUSTRATIVE_CLAUSE)
     return tuple(reasons)
 
 
