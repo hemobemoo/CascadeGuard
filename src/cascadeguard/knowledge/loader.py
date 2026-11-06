@@ -7,6 +7,7 @@ checked against the extracted PDF text before the human reviews them.
 
 import hashlib
 import json
+from functools import cache
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, cast
@@ -39,6 +40,24 @@ ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
 # Compared case-insensitively: Windows and macOS file systems ignore case.
 BOOK_MARKERS = ("abhivardhan", "oxford handbook")
 ALLOWED_NON_CLAUSE_FILES = frozenset({"readme.md"})
+# Sources whose reproduction needs the issuer's prior written consent (human decision 2026-11-06,
+# Task 3: UAE Cyber Security Council). The PDFs and their extracted text are gitignored; each is
+# pinned here by its SHA-256 (also in docs/policy-inventory.md). A clause may cite one while the
+# file is absent (a clone or CI); its quote is then checked against the extracted text where
+# present, and every quoted page has a committed text digest (NOT_REDISTRIBUTED_PAGES).
+NOT_REDISTRIBUTED = {
+    "Cyber Incident Response Plan V2.0.pdf": (
+        "212a2155f82de69eff5d33cb6601bbb0df76fb36d05d3223dacf5d191a4ecbe8"
+    ),
+    "Cyber Security Information Sharing Framework V2.0.pdf": (
+        "0dcdffad720af6b5c81b822a1a8cd7aeab49277fb0ec30878a7343e141597d88"
+    ),
+    "National Cyber Security Policy for Artificial Intelligence v1.1.pdf": (
+        "eb9bf50934743b304860dadae5365ab204c6f32bc0baa90129cd512b1b576077"
+    ),
+}
+# SHA-256 of each extracted page's text, per not-redistributed source: {source: {page: digest}}.
+NOT_REDISTRIBUTED_PAGES = PROJECT_ROOT / "policies" / "not_redistributed_pages.json"
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
@@ -161,6 +180,13 @@ def load_transcription_approvals(path: Path = APPROVALS_FILE) -> dict[str, str]:
     """The human's approved page-image transcriptions: "<source_file>#<page>" -> the SHA-256 of
     the page text at approval (approvals.yaml, `approved_transcriptions`)."""
     return dict(cast(dict[str, str], _approvals_data(path)["approved_transcriptions"] or {}))
+
+
+@cache
+def page_digests(path: Path = NOT_REDISTRIBUTED_PAGES) -> dict[str, dict[int, str]]:
+    """The committed per-page text digests of the not-redistributed sources."""
+    raw = cast(dict[str, dict[str, str]], json.loads(path.read_text(encoding="utf-8")))
+    return {source: {int(n): d for n, d in pages.items()} for source, pages in raw.items()}
 
 
 def transcription_digest(text: str) -> str:
@@ -326,6 +352,8 @@ def _load_file(path: Path, sources_dir: Path) -> list[PolicyClause]:
             raise ClauseLoadError(f"{path.name}: clause #{index + 1}: {exc}") from exc
         if clause.source_file is not None:
             _check_source(path.name, clause.id, clause.source_file, sources_dir)
+            if clause.source_file in NOT_REDISTRIBUTED:
+                _check_not_redistributed(path.name, clause, sources_dir)
         clauses.append(clause)
     return clauses
 
@@ -342,6 +370,8 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
     if any(part != part.strip() or part.endswith(".") for part in relative.parts):
         raise ClauseLoadError(f"{where}: source_file must be a plain path inside policies/sources")
     resolved = (sources_dir / relative).resolve()
+    if source_file in NOT_REDISTRIBUTED and not resolved.exists():
+        return  # not in a clone or CI: its pages are pinned instead (_check_not_redistributed)
     if not resolved.is_relative_to(sources_dir.resolve()) or not resolved.exists():
         raise ClauseLoadError(f"{where}: unknown source_file")
     # Each part must be a real entry name (any case), so a Windows short name ("UAEFED~1.PDF")
@@ -351,6 +381,23 @@ def _check_source(file_name: str, clause_id: str, source_file: str, sources_dir:
         if "~" in part or part.casefold() not in {e.name.casefold() for e in directory.iterdir()}:
             raise ClauseLoadError(f"{where}: source_file must name the file as listed")
         directory = directory / part
+
+
+def _check_not_redistributed(file_name: str, clause: PolicyClause, sources_dir: Path) -> None:
+    """A clause citing a not-redistributed source (test-breaker, Task 3): its page must have a
+    committed text digest (so a clone or CI still pins the page), and the PDF, where present,
+    must be the pinned file (its SHA-256)."""
+    where = f"{file_name}: {clause.id}"
+    source = cast(str, clause.source_file)
+    if clause.page not in page_digests().get(source, {}):
+        raise ClauseLoadError(f"{where}: page {clause.page} has no committed text digest")
+    pdf = sources_dir / source
+    if pdf.exists() and _file_sha256(pdf) != NOT_REDISTRIBUTED[source]:
+        raise ClauseLoadError(f"{where}: {source} is not the pinned file (SHA-256)")
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _squash(text: str) -> str:

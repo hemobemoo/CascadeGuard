@@ -38,6 +38,8 @@ KEY_PHRASES = (
     "candidate gap for expert review, not a confirmed legal or standards gap",
     "hypothetical rules, not source clauses",
     "decision support, not legal interpretation",
+    # Gate 7, human 2026-11-06 (Task 3): the legal-status wording of the UAE CSC examples.
+    "legal force for this scenario not established",
 )
 # Numbers that are labels, not data: section numbers, standard and report names, the review date,
 # the contact address. Everything else must come from the data (`traced`).

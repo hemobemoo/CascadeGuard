@@ -64,6 +64,13 @@ NOT_SEARCHED = frozenset(
         # change the corpus, so the committed index would refuse to load and extracted_digest
         # (LLM cache keys) would change.
         "nistspecialpublication800-34r1.pdf",
+        # Task 3 (human, 2026-11-06): the three UAE Cyber Security Council PDFs, local only
+        # (reproduction needs the CSC's consent), drafted as gap examples only. Never searched,
+        # so the search, extracted_digest and the LLM cache keys are the same with or without
+        # their extracted text on disk.
+        "Cyber Incident Response Plan V2.0.pdf",
+        "Cyber Security Information Sharing Framework V2.0.pdf",
+        "National Cyber Security Policy for Artificial Intelligence v1.1.pdf",
     }
     | TRANSCRIBED_SOURCES
 )

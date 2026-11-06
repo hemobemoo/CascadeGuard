@@ -301,8 +301,8 @@ PINNED_PRESET_KEYS = [  # (step, key), in adviser_questions.yaml order
 
 
 def test_the_nist_clauses_are_reviewed_gap_examples_only() -> None:
-    gap = load_gap_example_clauses()
-    assert set(gap) == NIST_IDS
+    gap = {cid: c for cid, c in load_gap_example_clauses().items() if cid.startswith("nist.")}
+    assert set(gap) == NIST_IDS  # the CSC ones (Task 3) are tested in test_uae_cyber_sources.py
     for c in gap.values():
         assert c.status is ClauseStatus.REVIEWED and c.source_file == NIST_SOURCE
         assert c.binding is False and c.normalized is None

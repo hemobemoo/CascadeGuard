@@ -1,5 +1,6 @@
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,9 @@ from cascadeguard.domain.policies import (
     in_source_dir,
 )
 from cascadeguard.knowledge.loader import (
+    EXTRACTED_DIR,
+    GAP_EXAMPLES_DIR,
+    NOT_REDISTRIBUTED,
     ClauseLoadError,
     load_clauses,
     load_engine_clauses,
@@ -71,13 +75,27 @@ def test_repository_clauses_load_with_unique_ids() -> None:
     assert len({c.id for c in clauses}) == len(clauses)
 
 
-def test_repository_clause_quotes_are_verbatim_on_their_cited_page() -> None:
-    missing = [
+def text_absent(clause: PolicyClause, extracted_dir: Path = EXTRACTED_DIR) -> bool:
+    """A not-redistributed source whose extracted text is not here (a clone, CI): its quote
+    cannot be checked; the loader has already required a committed digest for its page."""
+    source = clause.source_file
+    return (
+        source in NOT_REDISTRIBUTED and not (extracted_dir / f"{Path(source).stem}.jsonl").exists()
+    )
+
+
+def quotes_not_found(clauses: list[PolicyClause], extracted_dir: Path = EXTRACTED_DIR) -> list[str]:
+    return [
         c.id
-        for c in [*load_clauses(), *load_gap_example_clauses().values()]
-        if c.status is not ClauseStatus.ILLUSTRATIVE and not quote_found_on_page(c)
+        for c in clauses
+        if c.status is not ClauseStatus.ILLUSTRATIVE
+        and not text_absent(c, extracted_dir)
+        and not quote_found_on_page(c, extracted_dir)
     ]
-    assert missing == []
+
+
+def test_repository_clause_quotes_are_verbatim_on_their_cited_page() -> None:
+    assert quotes_not_found([*load_clauses(), *load_gap_example_clauses().values()]) == []
 
 
 # A gap may skip stray column, header or margin text only. Skipped text that could change the
@@ -108,7 +126,7 @@ def gap_problems(skipped: list[str]) -> list[str]:
 def test_repository_elisions_skip_only_harmless_text() -> None:
     problems: dict[str, list[str]] = {}
     for clause in [*load_clauses(), *load_gap_example_clauses().values()]:
-        if ELISION not in clause.text:
+        if ELISION not in clause.text or text_absent(clause):
             continue
         skipped = skipped_texts(clause)
         assert skipped is not None, clause.id
@@ -308,3 +326,50 @@ def test_quote_is_never_checked_against_another_document_with_the_same_stem(
         {**VALID, "source_file": "web/doc.pdf", "binding": False, "notes": WEB_NOTE}
     )
     assert not quote_found_on_page(web, tmp_path)
+
+
+# --- Not-redistributed sources (Task 3, test-breaker) -------------------------------------------
+
+
+def csc_reviewed_copy(tmp_path: Path) -> list[PolicyClause]:
+    folder = tmp_path / "approved"
+    folder.mkdir()
+    data = yaml.safe_load((GAP_EXAMPLES_DIR / "uae_csc_cyber.yaml").read_text(encoding="utf-8"))
+    data["clauses"] = [{**c, "status": "reviewed"} for c in data["clauses"]]
+    (folder / "csc.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    return load_clauses(folder)
+
+
+def test_approved_csc_clauses_pass_the_repo_wide_checks_without_their_text(tmp_path: Path) -> None:
+    """Once the human approves them (gate 1), the repo-wide quote and elision checks must still
+    pass in a clone or CI, where the extracted text is absent."""
+    clauses = csc_reviewed_copy(tmp_path)
+    without = tmp_path / "extracted"
+    shutil.copytree(EXTRACTED_DIR, without)
+    for name in NOT_REDISTRIBUTED:
+        (without / f"{Path(name).stem}.jsonl").unlink(missing_ok=True)
+    assert all(text_absent(c, without) for c in clauses)
+    assert quotes_not_found(clauses, without) == []
+
+
+def test_a_not_redistributed_clause_needs_a_pinned_page(tmp_path: Path) -> None:
+    folder, sources = tmp_path / "clauses", tmp_path / "sources"
+    folder.mkdir()
+    sources.mkdir()
+    data = yaml.safe_load((GAP_EXAMPLES_DIR / "uae_csc_cyber.yaml").read_text(encoding="utf-8"))
+    data["clauses"] = [{**data["clauses"][0], "page": 999}]
+    (folder / "csc.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(ClauseLoadError, match="no committed text digest"):
+        load_clauses(folder, sources)
+
+
+def test_a_present_not_redistributed_pdf_must_be_the_pinned_file(tmp_path: Path) -> None:
+    folder, sources = tmp_path / "clauses", tmp_path / "sources"
+    folder.mkdir()
+    sources.mkdir()
+    data = yaml.safe_load((GAP_EXAMPLES_DIR / "uae_csc_cyber.yaml").read_text(encoding="utf-8"))
+    data["clauses"] = data["clauses"][:1]
+    (folder / "csc.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    (sources / data["clauses"][0]["source_file"]).write_bytes(b"%PDF- tampered")
+    with pytest.raises(ClauseLoadError, match="not the pinned file"):
+        load_clauses(folder, sources)

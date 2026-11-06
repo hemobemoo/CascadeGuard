@@ -61,6 +61,9 @@ def test_traces_are_the_three_scripted_runs(runs: ScriptedRuns) -> None:
     assert off["ungoverned_run"]["governance"] == "off" and "governance" not in base
 
 
+LEGAL_STATUS_PHRASE = "legal force for this scenario not established"
+
+
 def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: ScriptedRuns) -> None:
     examples = load_gap_examples()
     corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
@@ -68,7 +71,10 @@ def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: Scripte
     failures = {f.id for f in runs.baseline.failures}
     assert {e.failure for e in examples.entries} <= failures
     for e in examples.entries:  # the relevance line is not itself a gap claim or overstated
-        assert not GAP_CLAIM.search(e.relevance) and not OVERSTATED.search(e.relevance), e
+        # The legal-status phrase approved at gate 7 (human, 2026-11-06, Task 3) says what is
+        # NOT established; it is the only exception to OVERSTATED.
+        plain = e.relevance.replace(LEGAL_STATUS_PHRASE, "")
+        assert not GAP_CLAIM.search(e.relevance) and not OVERSTATED.search(plain), e
         # Any word on binding force agrees with the clause: only a binding clause may be called
         # binding without "not" or "non-".
         if corpus[e.clause].binding is not True:
