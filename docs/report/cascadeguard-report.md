@@ -48,7 +48,7 @@ Y.3172 is used as an architecture pattern for an institutional decision pipeline
 | MLFO | Orchestrator and repair search over the closed grammar | AI & Policies | — (no ML-intent input; critical goals stand in for it) |
 | Sandbox | Replay of the identical incident with a candidate repair | AI & Policies; Impacts of Humans in AI Integration | — (repair edits are hypothetical rules, not source clauses) |
 
-Every clause is shown with its status label (e.g. "reviewed (interpreted) · binding unknown", "illustrative", "not binding · international precedent"); 21 clauses are loaded (19 reviewed, 2 illustrative), drafts never.
+Every clause is shown with its status label (e.g. "reviewed (interpreted) · binding unknown", "illustrative", "not binding · international precedent"); 21 clauses are loaded (19 reviewed, 2 illustrative) of the 42 drafted from 24 original PDFs, 3 local-only CSC PDFs and 7 web transcriptions; drafts never.
 
 **Policy documents loaded and cited by the agents.** Citations per run, counted once per decision; binding means binding in the UAE, as recorded on each clause; it does not mean the document applies to this scenario. The clause-level map is in docs/citation-map.md.
 

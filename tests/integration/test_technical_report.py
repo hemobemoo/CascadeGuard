@@ -4,6 +4,7 @@ approved wording kept, the .docx equal to the Markdown, the committed PDF at mos
 import importlib.util
 import itertools
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +88,17 @@ def runs() -> ScriptedRuns:
     return scripted_runs()
 
 
+def _corpus_counts() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "corpus_counts", PROJECT_ROOT / "scripts" / "corpus_counts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["corpus_counts"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def traced(runs: ScriptedRuns) -> dict[str, str]:
     """Every number the report may state, with where it comes from."""
     b, off, rep = runs.baseline, runs.governance, runs.rank1
@@ -108,6 +120,12 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
         add(e.at_minute, "inject minute")
     add(len(b.failures), "scripted baseline failures")
     add(len(b.loaded_clauses), "loaded clauses")
+    # Task 5: the corpus counts, generated from policies/ (scripts/corpus_counts.py).
+    corpus = _corpus_counts().counts()
+    add(sum(corpus.clauses.values()), "clauses in policies/reviewed/ (corpus_counts)")
+    add(corpus.originals, "original PDFs (corpus_counts)")
+    add(corpus.local_only, "local-only CSC PDFs (corpus_counts)")
+    add(corpus.web, "web transcriptions (corpus_counts)")
     add(statuses.count("reviewed"), "loaded reviewed clauses")
     add(statuses.count("illustrative"), "loaded illustrative clauses")
     add(len(runs.search.ranked), "ranked repairs")
