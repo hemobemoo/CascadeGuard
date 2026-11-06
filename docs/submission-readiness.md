@@ -241,61 +241,11 @@ The unnumbered alignment paragraph (Y.3172 and the AI Readiness Framework) is co
 
 ## 7. ITU-T Y.3172 mapping (draft)
 
-Y.3172 (06/2019) defines ML pipeline nodes (clause 7):
-- SRC, the data source;
-- C, the collector;
-- PP, the preprocessor;
-- M, the model;
-- P, the policy node, with rules that safeguard the underlay network;
-- D, the distributor;
-- SINK, the target of the ML output.
-
-It also defines:
-- the **MLFO**, which manages and orchestrates the pipeline nodes "based on ML Intent";
-- the **ML sandbox**, "an isolated domain which allows the hosting of separate ML pipelines to
-  train, test and evaluate them before deploying them" (p.21 of the PDF);
-- the **ML underlay networks**, real or simulated.
-
-| Y.3172 component | CascadeGuard element | Evidenced in code | Note |
-|---|---|---|---|
-| ML underlay network (simulated) | The synthetic incident world: the telecom network, the health portal and their two AI systems | Yes: `scenarios/uae_health_access/scenario.yaml`, `src/cascadeguard/simulation/state.py` | Simulated, synthetic only |
-| SRC | Scenario injects and their facts (T+00 … T+75) | Yes: `scenario.yaml`, `src/cascadeguard/simulation/loader.py` | |
-| C (collector) | Per-inject collection of the facts each role may see | Yes: `src/cascadeguard/simulation/boundaries.py` (`RoleView`) | |
-| PP (preprocessor) | Boundary filtering, role-scoped clause retrieval, canonical view | Yes: `boundaries.py`, `knowledge/retrieval.py` (`clauses_for_role`), `agents/cache.py` (`canonical_view`) | |
-| M (model) | The role agents (scripted or LLM) returning `AgentDecision` | Yes: `src/cascadeguard/agents/scripted.py`, `agents/llm.py` | LLM at temperature 0, cached |
-| P (policy) | The deterministic engine: citation, authority, prohibition and safeguard checks, and the hard filter on repairs | Yes: `src/cascadeguard/engine/constraints.py`, `engine/repair_search.py` | The strongest correspondence: policy gates every output before it reaches the underlay |
-| D (distributor) | Applies accepted actions and releases facts to recipients | Yes: `src/cascadeguard/simulation/orchestrator.py`, `state.py` | |
-| SINK | Goals, obligations and diagnosed failures, shown in the CLI, UI, exports and audit | Yes: `engine/diagnosis.py`, `ui/`, `storage/export.py`, `storage/audit.py` | |
-| MLFO | The deterministic orchestrator (step order, view building, decision application) and the repair search driving replays | Partly: `simulation/orchestrator.py`, `engine/repair_search.py` | There is no ML-intent input. The nearest equivalent is the scenario's critical goals plus the closed repair grammar. |
-| ML sandbox | Identical-incident replay with a candidate repair, evaluated before anything is recommended | Yes: `src/cascadeguard/simulation/replay.py`, `engine/repair_search.py` | A repair is tested in replay, never applied to the baseline |
-| ML intent | Scenario critical goals (`patient_access_restored`, `alert_cause_known_to_health`) | Partly: `scenario.yaml` goals | Not expressed in the Y.3172 intent format |
-| Management subsystem / monitoring | Audit trail and evaluation outputs | Partly: `storage/audit.py`, `docs/evaluation/` | |
-
-Honest limit: Y.3172 is about ML pipelines in future networks. CascadeGuard uses its
-*architecture pattern* (pipeline nodes, policy node, sandbox, orchestrator) for an
-institutional decision pipeline. It does not deploy ML models into a network. Say so in the
-report.
+Moved, unchanged in meaning, to [standards/y3172-mapping.md](standards/y3172-mapping.md) (2026-11-06). No Y.3172 compliance is claimed.
 
 ## 8. AI Readiness Report 2.0, Clause 3 (13 dimensions)
 
-Clause 3 ("Structural Approach", pp.19–36 of the PDF) defines 13 dimensions under 6 factors.
-The table lists every dimension; only the first five rows can honestly be claimed.
-
-| # | Dimension | Claim? | Evidence | Report wording |
-|---|---|---|---|---|
-| 10 | **AI & Policies** | **Yes (strong)** | The dimension describes "a virtual sandbox for policy and regulatory interventions with a simulated timeline". It predicts outputs from intended interventions, shows "the gaps between the target and achievement milestones", and gives "actionable recommendations". CascadeGuard has a simulated timeline (T+00 … T+75), closed repair interventions, replay against critical goals, and ranked smallest safe repairs. It also cites "Sandbox/Policy/SINK as per ITU-T Y.3172". | Core claim |
-| 7 | **Strategy Alignment** | Yes (partial) | Coordination across distributed entities (telecom, health, regulators). Metrics such as "level of coordination between service providers" and "communication channel availability" correspond to the diagnosed information deadlock and the data-share repair. | Coordination failures and repairs |
-| 3 | **Cross-domain correlation analysis** | Yes (partial) | Its metric "integrated workflow including prevention…, detection…, response…, and impact analysis" matches the telecom → health cascade, from detection (T+00) to response (T+75). | Two domains, one integrated incident workflow |
-| 9 | **Impacts of Humans in AI Integration** | Yes (partial) | "AI decisions are referred back to domain experts to guarantee the accountability of the decision": human review gates (`approvals.yaml`), human-in-the-loop repair authorization (`requires_authorization`), and the orphan duty to review automated lockouts. | Human accountability |
-| 11 | **AI for Inclusion** | Partial | The `public_access_inclusion` role assesses patients' loss of access and recommends measures. The dimension's sub-dimensions (simulations, edge AI, GenAI) only partly fit; "availability of sandbox environments" fits. | Access impact as an inclusion lens |
-| 5 | Level of Integration of AI in Workflows | Weak | The scenario contains two AI systems in workflows, but we do not measure integration. | Mention only |
-| 8 | Collaboration with AI | Weak | The scripted vs LLM comparison and the human review of AI outputs; no co-creation metrics. | Mention only |
-| 6 | Human Interface | No | The demo UI is not an AI-ready human interface in the dimension's sense. | Do not claim |
-| 1 | Data/model Marketplace | No | — | — |
-| 2 | Generated Content Marketplace | No | — | — |
-| 4 | Contextualization and Regional Impact | Weak | A UAE-specific clause corpus; the event page itself asks for domain gaps over country recommendations. | Mention only |
-| 12 | Granular Priorities | No | — | — |
-| 13 | Digital Infrastructure | No | — | — |
+Moved, unchanged in meaning, to [standards/ai-readiness-2.0.md](standards/ai-readiness-2.0.md) (2026-11-06). The event's eight perspectives, with status and file paths: [standards/event-perspectives.md](standards/event-perspectives.md).
 
 ## 9. Technical report (FAQ a–h) and team contacts — **missing** (status as of 2026-11-02: closed, see the status note)
 
@@ -308,8 +258,8 @@ section:
 | a. Introduction of the agentic AI solution | missing | `CascadeGuard.md` (concept), `README.md` |
 | b. Use case | missing | `scenarios/uae_health_access/README.md`, `scenario.yaml` |
 | c. Requirements of the use case | missing | `CascadeGuard.md`, `specs/001–006d` |
-| d. Mapping to ITU-T Y.3172 | missing | §7 of this file |
-| e. Mapping to the AI Readiness Report 2.0 | missing | §8 of this file |
+| d. Mapping to ITU-T Y.3172 | missing | §7 of this file (now `docs/standards/y3172-mapping.md`) |
+| e. Mapping to the AI Readiness Report 2.0 | missing | §8 of this file (now `docs/standards/ai-readiness-2.0.md`) |
 | f. Requirements mapped to local policies | missing | `policies/reviewed/*.yaml` (reviewed clauses), `docs/policy-inventory.md`; needs a requirement → clause table |
 | g. Evaluation scenario (technical and policy) | partial | `expected_baseline.yaml`, `expected_repairs.yaml`, `docs/evaluation/llm-baseline-review.md`, UI screenshots in `docs/review/phase-6*-…` |
 | h. Policy/standards gaps from the mapping | partial | Diagnosed failures with qualifications; candidate findings in clause notes; §6 gap table to build |
