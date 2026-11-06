@@ -55,8 +55,10 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    2.0 tables (submission-readiness §7–§8) to docs/standards/ unchanged in meaning, and add the
    event's 8 perspectives with an honest status and a file path for each. - Do not claim Y.3172
    compliance." Plus the README "Sources" row for NIST SP 800-34 (deferred from Task 2).
-   Open for the human (gate 7): the report's Limits sentence still says the adviser "cannot be
-   queried live", untrue since PR #33; proposed wording in the PR. Local note: the e2e test
+   Gate 7 (human, 2026-11-06): the report's Limits sentence replaced with the human's longer
+   wording (adviser at any step, CLI or UI panel, role view only; commentary unverified and
+   phrase-filtered; presets on keyword retrieval only); each fact checked on main b0a685b; PDF 5
+   pages. Then merge (#37) and Task 4. Local note: the e2e test
    `test_expert_mode_shows_every_section` timed out once in the phase-auditor's full run and
    passed alone and in tests/e2e (the known intermittent one; no UI change here).
 6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.

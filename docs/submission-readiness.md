@@ -40,7 +40,7 @@
 > - **Open, stated as limits in the report (§6):** no fine-tuning and no Sandbox credits (gap 9).
 >   Gap 7 (the adviser cannot be queried) was closed by PR #33 on 2026-11-06: "Ask the Policy
 >   Adviser" at any step, in the CLI (`cascadeguard ask`) and the UI. The report's Limits sentence
->   that still says it cannot be queried live awaits the human's wording (gate 7).
+>   now says so, in the human's wording (gate 7, 2026-11-06).
 
 Audit of 2026-10-29. **Deadline: 10 November 2026.** Scope: the repository with the gate-1 PR #12
 and the qualifier-label change (branch `clause-qualifier-labels`) on top of `main` (`phase-6d`). No code was changed for this audit and no LLM call was made.
