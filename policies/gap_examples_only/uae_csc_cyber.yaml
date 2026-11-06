@@ -26,9 +26,10 @@ clauses:
       for this scenario: the scenario's operators are not designated CII entities, and the
       incident is an AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): applies
       to Ministries & Federal Authorities and Non-Government CII Entities; Emirate Government
-      Entities through an Emirate CIIP Program, or directly where there is none. Not
-      redistributed: reproduction needs the UAE Cyber Security Council's prior written consent;
-      the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
+      Entities through an Emirate CIIP Program, or directly where there is none. Legal status:
+      Council-approved national policy (as printed on its cover); legal force for this scenario
+      not established. Not redistributed: reproduction needs the UAE Cyber Security Council's
+      prior written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
 
   - id: uae.csc-ai-policy.3-4-3-redundant-systems-ready
     title: "UAE AI cyber security policy 3.4.3: redundant systems or alternative processes should be ready for immediate deployment"
@@ -52,9 +53,10 @@ clauses:
       for this scenario: the scenario's operators are not designated CII entities, and the
       incident is an AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): applies
       to Ministries & Federal Authorities and Non-Government CII Entities; Emirate Government
-      Entities through an Emirate CIIP Program, or directly where there is none. Not
-      redistributed: reproduction needs the UAE Cyber Security Council's prior written consent;
-      the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
+      Entities through an Emirate CIIP Program, or directly where there is none. Legal status:
+      Council-approved national policy (as printed on its cover); legal force for this scenario
+      not established. Not redistributed: reproduction needs the UAE Cyber Security Council's
+      prior written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
 
   - id: uae.csc-ai-policy.3-6-2-automated-response-human-intervention
     title: "UAE AI cyber security policy 3.6.2: automated response on predefined conditions; a fail-safe for timely human intervention (should)"
@@ -83,9 +85,10 @@ clauses:
       are not designated CII entities, and the incident is an AI model fault, not a cyber
       attack. Printed scope (p.8 of the PDF): applies to Ministries & Federal Authorities and
       Non-Government CII Entities; Emirate Government Entities through an Emirate CIIP Program,
-      or directly where there is none. Not redistributed: reproduction needs the UAE Cyber
-      Security Council's prior written consent; the PDF and its extracted text are local only
-      (NOT_REDISTRIBUTED).
+      or directly where there is none. Legal status: Council-approved national policy (as
+      printed on its cover); legal force for this scenario not established. Not redistributed:
+      reproduction needs the UAE Cyber Security Council's prior written consent; the PDF and its
+      extracted text are local only (NOT_REDISTRIBUTED).
 
   - id: uae.csc-isf.cii-sectors-cross-sector-sharing
     title: "UAE cyber information sharing framework, CII sectors item 4: share sector regulator or sector incident response information with other sectors"
@@ -110,9 +113,10 @@ clauses:
       scenario: the scenario's operators are not designated CII entities, and the incident is an
       AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): roles for national
       level entities, emirate level entities and CII sectors; a guideline for other entities
-      (non-CII entities, startups, academia, service providers). Not redistributed: reproduction
-      needs the UAE Cyber Security Council's prior written consent; the PDF and its extracted
-      text are local only (NOT_REDISTRIBUTED).
+      (non-CII entities, startups, academia, service providers). Legal status: Cabinet-approved
+      national framework (as printed on its cover); legal force for this scenario not
+      established. Not redistributed: reproduction needs the UAE Cyber Security Council's prior
+      written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
 
   - id: uae.csc-isf.traffic-light-protocol
     title: "UAE cyber information sharing framework 2.2.3: the Traffic Light Protocol signals with whom information may be shared"
@@ -140,9 +144,10 @@ clauses:
       scenario: the scenario's operators are not designated CII entities, and the incident is an
       AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): roles for national
       level entities, emirate level entities and CII sectors; a guideline for other entities
-      (non-CII entities, startups, academia, service providers). Not redistributed: reproduction
-      needs the UAE Cyber Security Council's prior written consent; the PDF and its extracted
-      text are local only (NOT_REDISTRIBUTED).
+      (non-CII entities, startups, academia, service providers). Legal status: Cabinet-approved
+      national framework (as printed on its cover); legal force for this scenario not
+      established. Not redistributed: reproduction needs the UAE Cyber Security Council's prior
+      written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
 
   - id: uae.csc-cirp.ncrg-level3-declaration
     title: "UAE cyber incident response plan 2.2: the NCRG Chair is to declare a Level 3 incident when alert-schema thresholds are met"
@@ -167,8 +172,10 @@ clauses:
       not designated CII entities, and the incident is an AI model fault, not a cyber attack.
       Printed scope (p.8 of the PDF): the CIRF and CIRP apply to all government and private
       sector entities identified under the UAE Critical Information Infrastructure Protection
-      (CIIP) Policy. Not redistributed: reproduction needs the UAE Cyber Security Council's
-      prior written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
+      (CIIP) Policy. Legal status: Cabinet-approved national plan (as printed on its cover);
+      legal force for this scenario not established. Not redistributed: reproduction needs the
+      UAE Cyber Security Council's prior written consent; the PDF and its extracted text are
+      local only (NOT_REDISTRIBUTED).
 
   - id: uae.csc-cirp.ncrg-sector-impact-information
     title: "UAE cyber incident response plan 2.2: sector representatives on the NCRG are expected to provide information on an incident's impact on their sector"
@@ -193,6 +200,7 @@ clauses:
       for this scenario: the scenario's operators are not designated CII entities, and the
       incident is an AI model fault, not a cyber attack. Printed scope (p.8 of the PDF): the
       CIRF and CIRP apply to all government and private sector entities identified under the UAE
-      Critical Information Infrastructure Protection (CIIP) Policy. Not redistributed:
-      reproduction needs the UAE Cyber Security Council's prior written consent; the PDF and its
-      extracted text are local only (NOT_REDISTRIBUTED).
+      Critical Information Infrastructure Protection (CIIP) Policy. Legal status:
+      Cabinet-approved national plan (as printed on its cover); legal force for this scenario
+      not established. Not redistributed: reproduction needs the UAE Cyber Security Council's
+      prior written consent; the PDF and its extracted text are local only (NOT_REDISTRIBUTED).
