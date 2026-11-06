@@ -199,6 +199,7 @@ _ABBREVIATIONS = frozenset(
         "etc",
         "u.s",
         "u.k",
+        "illus",  # an illustrative clause id written "illus. telecom..."
     ]
 )
 
@@ -245,6 +246,14 @@ def allowed_label_parts(
 def names(sentence: str, clause_id: str) -> bool:
     """Whether the sentence names this clause id as a whole token."""
     return re.search(rf"(?<![\w.-]){re.escape(clause_id)}(?![\w-]|\.\w)", sentence) is not None
+
+
+def without_labels(sentence: str, parts: Iterable[str]) -> str:
+    """The sentence normalised, with its evidence-scoped phrases and then its allowed label parts
+    removed: for a joined run check that keeps each sentence's own allowances (the same order as
+    `sentence_reasons`, so "the reviewed evidence does not identify" stays scoped)."""
+    scoped = EVIDENCE_SCOPED.sub(" ", normalise(sentence))
+    return " ".join(_without(scoped, parts).split())
 
 
 def _without(text: str, parts: Iterable[str]) -> str:

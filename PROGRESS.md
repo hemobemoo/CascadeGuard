@@ -1649,7 +1649,12 @@ the residual paraphrase risk, stop extending the lists, add the illus.* rule and
 the all-withheld behaviour, one last scoped test-breaker round). Known limits, not fixes: the
 paraphrases below; new paraphrase findings go here too. The cross-sentence run check can also
 withhold harmless neighbours (e.g. "is not binding. It sets ..." reads as "is not ... sets").
-History of the two questions:
+Test-breaker round 4 (final, scoped to ad94ab6 and 5844c09; FAIL: 1 MAJOR, 3 MINOR), all fixed,
+not re-reviewed (the human allowed one last round): the illus.* rule matches NFKC/normalised text,
+spaced dots and a hyphen before ("illus" is also a non-ending abbreviation); the run check keeps
+each sentence's own label and evidence-scope allowances; the trace (export, audit) holds
+illustrative_note and withheld_note. Deferred: a UI test of `ask-illustrative-note` and
+`ask-withheld` (no e2e of an LLM-mode answer). History of the two questions:
 - Gate 2 (test-breaker round 2, BLOCKER + QUESTION-FOR-HUMAN): model sentences are filtered by
   phrase lists, and every round finds new paraphrases that pass (e.g. an illustrative clause
   "carries full legal authority in the UAE", now added). A list cannot guarantee "binding,

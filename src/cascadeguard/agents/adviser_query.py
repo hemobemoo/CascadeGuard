@@ -57,8 +57,10 @@ from cascadeguard.engine.adviser_check import (
     check_answer,
     joined,
     names,
+    normalise,
     sentence_reasons,
     sentences,
+    without_labels,
 )
 from cascadeguard.engine.constraints import agent_statement
 from cascadeguard.knowledge import kb
@@ -368,6 +370,8 @@ class AdviserAnswer:
         data = asdict(self)
         data["sections"] = [{"title": t, "lines": lines} for t, lines in self.sections()]
         data["context_label"] = CONTEXT_LABEL
+        data["withheld_note"] = self.withheld_note
+        data["illustrative_note"] = self.illustrative_note
         return data
 
     def text(self) -> str:
@@ -843,9 +847,16 @@ def llm_answer(
         for start in range(len(shown_at)):
             for end in range(start + 1, min(start + RUN_WINDOW, len(shown_at))):
                 run = shown_at[start : end + 1]
-                text_run = joined(*(items[i][1] for i in run))
-                allowed = allowed_label_parts(text_run, None, cited)
-                if reasons := sentence_reasons(text_run, allowed, scope_words=False):
+                # Each sentence keeps its own label allowance (its clause for a relevance note).
+                text_run = joined(
+                    *(
+                        without_labels(
+                            items[i][1], allowed_label_parts(items[i][1], items[i][2], cited)
+                        )
+                        for i in run
+                    )
+                )
+                if reasons := sentence_reasons(text_run, (), scope_words=False):
                     for i in run:
                         flags[i] = reasons
                     changed = True
@@ -871,7 +882,15 @@ CLAUSE_NOT_SHOWN = "clause_not_shown"
 # Human decision 2026-11-06 (PR #35): the commentary never describes an illustrative clause; when
 # the answer cites one, this fixed line is shown under the commentary.
 ILLUSTRATIVE_CLAUSE = "illustrative_clause"
-ILLUSTRATIVE_ID = re.compile(r"(?<![\w.-])illus\.[\w-]", re.IGNORECASE)
+# Matched on the NFKC, case-folded text (full-width or leader dots become "."), and on the
+# engine's normalised text; spaces around the dot and any non-alphanumeric before it are allowed
+# (test-breaker round 4: a U+FF0E or U+2024 dot, "illus. telecom...", "UAE-illus.telecom...").
+ILLUSTRATIVE_ID = re.compile(r"(?<![a-z0-9])illus\s*\.\s*[a-z0-9]")
+
+
+def names_illustrative(sentence: str) -> bool:
+    folded = unicodedata.normalize("NFKC", sentence).casefold()
+    return any(ILLUSTRATIVE_ID.search(x) for x in (folded, normalise(sentence)))
 
 
 def commentary_reasons(
@@ -890,7 +909,7 @@ def commentary_reasons(
     )
     if unlabelled:
         reasons.append(CLAUSE_NOT_SHOWN)
-    if (own is not None and ILLUSTRATIVE_ID.match(own)) or ILLUSTRATIVE_ID.search(sentence):
+    if (own is not None and names_illustrative(own)) or names_illustrative(sentence):
         reasons.append(ILLUSTRATIVE_CLAUSE)
     return tuple(reasons)
 

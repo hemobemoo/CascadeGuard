@@ -1527,3 +1527,63 @@ def test_any_illustrative_id_form_is_withheld(tmp_path: Path, text: str) -> None
     )
     answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
     assert_withheld(answer, [text], {aq.ILLUSTRATIVE_CLAUSE, aq.CLAUSE_NOT_SHOWN})
+
+
+# --- Test-breaker round 4 (final, scoped) --------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "form",
+    [
+        "illus" + chr(0xFF0E) + "telecom.incident-report",  # full-width full stop
+        "illus" + chr(0x2024) + "telecom.incident-report",  # one dot leader
+        "Clause illus. telecom.incident-report",  # space after the dot
+        "UAE-illus.telecom.incident-report",  # hyphen before
+    ],
+)
+def test_an_illustrative_id_written_another_way_is_withheld(tmp_path: Path, form: str) -> None:
+    """The sentence under test is the only extra withheld one (the illus.* relevance note is
+    withheld in both runs), and its reason is the illus.* rule."""
+    claim = form + STATUTE.removeprefix("illus.telecom.incident-report")
+    base = {
+        "uae_evidence": [{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        "responsible_role": "telecom_operator, the licensee",
+    }
+    plain = payload(direct_answer="The operator reports within 60 minutes.", **base)
+    without = ask(TELECOM_Q, 45, llm_asker(tmp_path / "a", FakeClient(plain)))
+    content = payload(direct_answer=f"The operator reports within 60 minutes. {claim}", **base)
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path / "b", FakeClient(content)))
+    assert_withheld(answer, [claim], {aq.ILLUSTRATIVE_CLAUSE})
+    extra = list(answer.withheld)
+    for entry in without.withheld:
+        extra.remove(entry)
+    assert len(extra) == 1 and aq.ILLUSTRATIVE_CLAUSE in extra[0], extra
+
+
+def test_an_own_label_relevance_note_survives_the_run_check(tmp_path: Path) -> None:
+    note = "It is not binding."
+    content = payload(
+        direct_answer="The operator notifies within the designated period.",
+        uae_evidence=[{"clause_id": "dha.pp11.4-18-4", "relevance": "breach reporting"}],
+        international_comparison=[{"clause_id": "eu.gdpr.art33-1", "relevance": note}],
+        responsible_role="health_service_operator, the entity",
+        options=["Notify health_data_oversight within the designated period."],
+        escalation=["health_data_oversight"],
+        uncertainty=["The designated period is not identified in the provided evidence."],
+    )
+    answer = ask(NOTIFY_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert answer.withheld == (), answer.withheld
+    assert any(c.endswith(note) for c in answer.commentary)
+
+
+def test_the_trace_keeps_the_illustrative_and_withheld_notes(tmp_path: Path) -> None:
+    content = payload(
+        direct_answer=f"The operator reports within 60 minutes. {STATUTE}",
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    trace = answer.trace()
+    assert trace["illustrative_note"] == aq.ILLUSTRATIVE_NOTE
+    assert trace["withheld_note"] == answer.withheld_note != ""
+    assert aq.ILLUSTRATIVE_NOTE in json.dumps(trace, ensure_ascii=False)
