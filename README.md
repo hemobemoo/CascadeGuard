@@ -205,7 +205,9 @@ picks the clauses from the same evidence and writes a separate block, "Model com
 (unverified agent statement)", after the seven sections. The engine checks the answer's
 citations and structure (any problem: the template is shown, with the reasons) and the
 commentary sentence by sentence: a sentence with gap, status or authority wording is withheld,
-and the block says how many were withheld and why. Answers are cached in `data/adviser_cache/` and replayed
+and the block says how many were withheld and why. A sentence naming an illustrative clause
+(`illus.*`) is always withheld; when the answer cites one, the block ends with "Illustrative
+clauses are synthetic rules written for this scenario, not UAE law." **Known limit:** Model commentary is filtered by phrase lists and labelled unverified; it can still contain wording the filter does not catch. The answer itself (sections 1–7) is always the engine's text. Answers are cached in `data/adviser_cache/` and replayed
 without `--live`. **`ask` calls a model only with `--live`** (per question: at most 4 chat
 requests, and 1 query embedding, sent up to 4 times with retries); without it, even with a key,
 it uses the cache or the template.
@@ -217,7 +219,7 @@ same `CASCADEGUARD_MODEL` in `.env`; no call is made). They were recorded on **k
 retrieval**: embedding the preset questions failed (OpenRouter HTTP 502, 2026-11-05/06), so
 `policies/kb/adviser_query_vectors.json` does not exist and the context chunks come from the
 keyword half of the search. The engine accepted all six answers; their commentary is shown with
-1 to 8 sentences withheld each (19 in all; see `docs/evaluation/adviser/README.md`). If the
+2 to 12 sentences withheld each (24 in all; see `docs/evaluation/adviser/README.md`). If the
 presets are embedded later, their context changes and the recorded answers no longer match.
 Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
 DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by

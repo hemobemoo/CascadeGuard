@@ -1378,6 +1378,10 @@ def show_answer(answer: aq.AdviserAnswer) -> None:
                 ui.label(answer.withheld_note).classes("cg-muted text-sm").props(
                     "data-testid=ask-withheld"
                 )
+            if answer.illustrative_note:  # human decision 2026-11-06
+                ui.label(answer.illustrative_note).classes("cg-muted text-sm").props(
+                    "data-testid=ask-illustrative-note"
+                )
     ui.label(f"Context ({CONTEXT_LABEL})").classes("font-semibold mt-1")
     lines(
         [f"{c.source_file} p.{c.page} [{c.label}]: {c.text[:240]}" for c in answer.context],
