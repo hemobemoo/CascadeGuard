@@ -480,7 +480,7 @@ a gap example; not loaded into the simulation". Gate 7: both gap_examples.yaml e
 orphan_duty:activate_fallback_channel added (approved); docs/gap-analysis.md regenerated.
 Confirmed: gate-4 llm_cache replays 36/36 offline; six preset keys unchanged (pinned test);
 citation_map --check passes. Gate 7 (human, 2026-11-06): the report's policy-gaps fallback bullet
-(the human calls it §5; it is section 6 of the report) now names the two NIST gap examples, the
+(section 6, "Policy gaps", of docs/report/cascadeguard-report.md) now names the two NIST gap examples, the
 intro says "gate 7, 2026-10-31 and 2026-11-06", the alternate-means relevance line is the human's
 corrected wording, a test checks each bullet's named examples against gap_examples.yaml, and the
 .docx/.pdf are rebuilt (PDF 5 pages, nothing shortened); traces and goldens
@@ -1601,7 +1601,7 @@ nistspecialpublication800-34r1.pdf. Earlier items: all answered. Gate 1 scoped t
 (option (c)); gate 7 entries approved and added; gate 6 confirmed. Recorded for reference: had the
 clauses been loaded, the gate-4 cache would replay 30/36 (the adviser's 6 steps), the preset keys
 and extracted_digest would change, and the citation map, traces and report §4 would go stale.
-With option (c) only the report's fallback bullet went stale; updated by the human's gate-7
+With option (c) only the report's fallback bullet (section 6, policy gaps) went stale; updated by the human's gate-7
 decision (checked 2026-11-06; loading the clauses is a finals-backlog item). Note: `HARMLESS_GAP` in
 tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
 
