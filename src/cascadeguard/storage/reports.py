@@ -11,6 +11,7 @@ import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
+from functools import cache
 from pathlib import Path
 from typing import Any, Literal, Self
 
@@ -28,7 +29,12 @@ from cascadeguard.engine.repair_search import (
     ReplayComparison,
     SearchResult,
 )
-from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
+from cascadeguard.knowledge.loader import (
+    GAP_EXAMPLE_NOTE,
+    PROJECT_ROOT,
+    load_clauses,
+    load_gap_example_clauses,
+)
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.simulation.orchestrator import RunResult
 from cascadeguard.storage.export import (
@@ -129,7 +135,15 @@ def trace_files(runs: ScriptedRuns) -> dict[str, str]:
 
 
 def _label(clause: PolicyClause) -> str:
+    if clause.id in _gap_example_ids():  # option (c): shown, never loaded
+        return f"`{clause.id}` [{clause.status_label}; {GAP_EXAMPLE_NOTE}]"
     return f"`{clause.id}` [{clause.status_label}]"
+
+
+@cache
+def _gap_example_ids() -> frozenset[str]:
+    """Read once per process: the ids reviewed as gap examples only."""
+    return frozenset(load_gap_example_clauses())
 
 
 def _source(clause: PolicyClause) -> str:
@@ -482,8 +496,20 @@ def conclusion_markdown(runs: ScriptedRuns, gate4: tuple[dict[str, Any], dict[st
 def build(scenario: str = SCENARIO) -> dict[Path, str]:
     """Every generated file and its content."""
     runs = scripted_runs(scenario)
-    corpus = {c.id: c for c in load_clauses()}
+    _gap_example_ids.cache_clear()  # labels and corpus read the folder at the same moment
+    # The simulation's corpus plus the clauses reviewed as gap examples only (option (c)).
+    corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
     examples = load_gap_examples(scenario)
+    if not reviewed_example_clauses(examples, corpus):
+        missing = sorted(
+            e.clause
+            for e in examples.entries
+            if e.clause not in corpus or corpus[e.clause].status is not ClauseStatus.REVIEWED
+        )
+        raise ValueError(
+            f"gap_examples.yaml maps clauses that are not reviewed: {missing} (gate 1: a demoted "
+            "clause needs the human's re-approval before it is shown)"
+        )
     out = {TRACES_DIR / name: text for name, text in trace_files(runs).items()}
     out[GAP_ANALYSIS] = gap_analysis_markdown(runs, examples, corpus)
     out[CONCLUSION_DRAFT] = conclusion_markdown(runs, load_gate4())

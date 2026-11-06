@@ -8,8 +8,10 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 
 **Human brief of 2026-11-05 (deadline 10 Nov 2026): six tasks, one branch and one PR each, in
 order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
-1. Ask the Policy Adviser (`phase-7-adviser-query`, top priority): in progress, see below.
-2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): not started.
+1. Ask the Policy Adviser (`phase-7-adviser-query`): **merged, PR #33, 98b4173 (2026-11-06).**
+2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): built; PR
+   #34 open; option (c) applied (gate 1 scoped to gap examples only, gate 7 entries added, gate 6
+   confirmed); after its review loop, full suite and CI: merge.
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -21,7 +23,9 @@ not yet used by the simulation"; no code change).
 adapter wired into the simulation; facilitator start/pause/release controls; audit and trace view
 in the UI; provenance record for every live run (model, prompt version, KB and manifest hashes,
 step, errors); minimum-vs-excessive information-sharing branch at T+30; agent rubric evaluation
-suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated demo video.
+suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated demo video;
+load the NIST clauses into the simulation, then re-record the gate-4 adviser steps and the preset
+answers once embeddings work; update the citation map, traces and report §4 (gate 7).
 
 **Task 1 — Ask the Policy Adviser (branch `phase-7-adviser-query`, from `progress-after-pr31`,
 so the two PROGRESS commits after #31 ride along).**
@@ -453,11 +457,45 @@ then locked.
 
 ## Current phase
 
-**Human brief of 2026-11-05 (see "Start here"): Task 1, Ask the Policy Adviser, on branch
-`phase-7-adviser-query` (the name is the human's; it is not START_PROMPT's Phase 7, tracing).**
-Built; three review rounds done (all FAIL; every finding fixed except the structural
-question that round 3 left open, now a human gate under "Waiting on human"). PR opened with the
-full check result; stop for the human. Tasks 2-5 follow, one PR each.
+**Task 1, Ask the Policy Adviser: merged via PR #33 (merge commit 98b4173, 2026-11-06)** after
+the human's answers of 2026-11-06 (option (b), `--live`, recorded presets), a final
+test-breaker round (PASS, MINORs fixed), the full suite (805 passed) and CI green.
+
+**Task 2 (branch `gap-fallback-example`, 2026-11-05/06).** **Done when** (brief and answers of
+2026-11-06): NIST SP 800-34 Rev. 1 in policies/sources/ with URL, date and SHA-256 in the
+inventory, extracted; 1-2 draft clauses, verbatim and page-checked, labelled foreign precedent,
+not AI-specific, not binding in the UAE; loading them (temp dir) leaves diagnosis, goals and
+goldens unchanged; the only output change is the approved 21 -> 23 line (regenerated); NIST kept
+out of search (no KB rebuild); AGENTS.md says 24; the 4 tests fixed without weakening; all checks
+pass; reviewers with no open BLOCKER/MAJOR; PR open with the clause ids for gate 1. NIST SP 800-34 Rev. 1 downloaded from
+nvlpubs.nist.gov (SHA-256 476f04d4...d0df), extracted (149 pages), inventory #24; two drafts in
+international_precedents.yaml (`nist.sp800-34.alternate-manual-means` p.15,
+`nist.sp800-34.activation-by-designated-authority` p.50; quotes verified on page); the file is in
+`NOT_SEARCHED` (no KB rebuild, human 2026-11-06), so the KB index and extracted_digest stay
+identical to main. **Option (c), human decision 2026-11-06:** gate 1 scoped: the two clauses are
+reviewed **as gap examples only** and live in `policies/gap_examples_only/` (approvals pinned),
+never loaded: loader, RuleBook, clauses_for_role, role views, KB and the adviser's citable set
+ignore them; only `storage/reports.py` (scripts/build_reports.py) reads them, labelled "reviewed as
+a gap example; not loaded into the simulation". Gate 7: both gap_examples.yaml entries for
+orphan_duty:activate_fallback_channel added (approved); docs/gap-analysis.md regenerated.
+Confirmed: gate-4 llm_cache replays 36/36 offline; six preset keys unchanged (pinned test);
+citation_map --check passes. Gate 7 (human, 2026-11-06): the report's policy-gaps fallback bullet
+(section 6, "Policy gaps", of docs/report/cascadeguard-report.md) now names the two NIST gap examples, the
+intro says "gate 7, 2026-10-31 and 2026-11-06", the alternate-means relevance line is the human's
+corrected wording, a test checks each bullet's named examples against gap_examples.yaml, and the
+.docx/.pdf are rebuilt (PDF 5 pages, nothing shortened); traces and goldens
+byte-identical to main (the run line is back to "21 draft clauses not loaded", since the clauses
+left the corpus; the earlier approved 21 -> 23 change is no longer needed). Keep "foreign
+precedent"; AGENTS.md 23 -> 24 original PDFs (gate 6, confirmed). No other AGENTS.md change was
+needed (the engine still reads clause YAML in policies/reviewed/ only). The human gave the
+explicit gate-1 list in the chat (2026-11-06: "Gate 1 (scoped): reviewed by human as gap examples
+only: nist.sp800-34.alternate-manual-means, nist.sp800-34.activation-by-designated-authority").
+Option-(c) review round 1: evidence-auditor PASS, test-breaker PASS, phase-auditor FAIL (a test
+whose monkeypatch had no effect; this hand-off); fixed: the folder is read at call time and the
+test asserts the patch takes effect; a demoted (draft) gap-example clause stays in its folder, is
+not shown, and the builder refuses a mapping to it (tested); ids read once. Next: re-run the
+phase-auditor, full suite, CI, merge #34; then branch `adviser-commentary-check` (the human's
+follow-up of 2026-11-06).
 
 **Submission work (deadline 10 Nov 2026; human decisions 2026-10-29, reviewer Ibrahim
 Melhem).** PR #12 (gate 1) and PR #13 (qualifier labels) merged to main, in that order. Five
@@ -1557,17 +1595,27 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Task 1, Ask the Policy Adviser (2026-11-05):**
+**Task 2, NIST SP 800-34 (2026-11-06): all gates answered.** Gate 7 report wording approved and
+applied (fallback bullet, intro dates, corrected relevance line; PDF still 5 pages). Deferred to Task 5 (docs-reconcile): a README "Sources" row for
+nistspecialpublication800-34r1.pdf. Earlier items: all answered. Gate 1 scoped to "gap examples only"
+(option (c)); gate 7 entries approved and added; gate 6 confirmed. Recorded for reference: had the
+clauses been loaded, the gate-4 cache would replay 30/36 (the adviser's 6 steps), the preset keys
+and extracted_digest would change, and the citation map, traces and report §4 would go stale.
+With option (c) only the report's fallback bullet (section 6, policy gaps) went stale; updated by the human's gate-7
+decision (checked 2026-11-06; loading the clauses is a finals-backlog item). Note: `HARMLESS_GAP` in
+tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
+
+**Task 1, Ask the Policy Adviser (2026-11-05; merged 2026-11-06, items below answered):**
 - Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,
   8 requests sent, no result). Retry (up to 4 more requests) when the human says so. Until then presets use
   the keyword half without a key, and a live embedding with one.
-- Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
+- Done 2026-11-06 (recorded; all six rejected by the engine): Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
   retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
   answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:
   needs the human's explicit approval in the chat (rule of 2026-11-05).
 - Answered 2026-11-06: `ask` in the CLI calls a model only with `--live` (7d25d0b).
-- **Gate 2/8, open after review round 3 (test-breaker BLOCKERs):** the engine check matches
+- **Answered 2026-11-06 (option (b), implemented):** Gate 2/8 after review round 3 (test-breaker BLOCKERs): the engine check matches
   phrase lists, so model free text can still claim binding force, authority or a gap in new
   wording (the agent-statement label and the clause status labels stay next to it, and nothing
   reaches state). Options: (a) show model free text in sections 1, 5 and 6 only when every
@@ -1823,10 +1871,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-05:** Task 1 PR is open from `phase-7-adviser-query` (review rounds 1-3 done; the
-round-3 structural question is a human gate). Wait for the human's answers under "Waiting on
-human" (Task 1), then merge only on the human's instruction. Next: Task 2
-(`gap-fallback-example`). The older notes below are history.
+**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2 (PR #34): option (c) done (gates 1, 6 and
+7 answered); merge after the phase-auditor re-run, full suite and CI. Then the adviser
+commentary follow-up on branch `adviser-commentary-check` (per-sentence filter, evidence-scoped
+absence wording, re-record the 6 presets once: approved), PR, stop. Task 3 probably in a new
+session. The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".

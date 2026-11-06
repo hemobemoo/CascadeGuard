@@ -3,7 +3,12 @@
 from typing import Any
 
 from cascadeguard.domain.policies import ClauseStatus, PolicyClause
-from cascadeguard.knowledge.loader import clause_digest, load_approvals, load_clauses
+from cascadeguard.knowledge.loader import (
+    clause_digest,
+    gap_example_folder_clauses,
+    load_approvals,
+    load_clauses,
+)
 
 CLAUSE: dict[str, Any] = {
     "id": "test.clause",
@@ -22,7 +27,8 @@ CLAUSE: dict[str, Any] = {
 
 def test_every_reviewed_clause_matches_its_approved_digest() -> None:
     approved, _ = load_approvals()
-    for clause in load_clauses():
+    # Includes the clauses reviewed as gap examples only (policies/gap_examples_only/).
+    for clause in [*load_clauses(), *gap_example_folder_clauses()]:
         if clause.status is ClauseStatus.REVIEWED:
             assert clause.id in approved, f"{clause.id}: reviewed without a human approval"
             assert clause_digest(clause) == approved[clause.id], (
@@ -33,7 +39,7 @@ def test_every_reviewed_clause_matches_its_approved_digest() -> None:
 
 def test_a_demoted_clause_is_draft_and_listed_for_reapproval() -> None:
     approved, pending = load_approvals()
-    status = {c.id: c.status for c in load_clauses()}
+    status = {c.id: c.status for c in [*load_clauses(), *gap_example_folder_clauses()]}
     for cid in approved:
         assert cid in status, f"{cid}: approved but no longer exists"
         if status[cid] is not ClauseStatus.REVIEWED:

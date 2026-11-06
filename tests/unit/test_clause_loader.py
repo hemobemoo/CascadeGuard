@@ -18,6 +18,7 @@ from cascadeguard.knowledge.loader import (
     ClauseLoadError,
     load_clauses,
     load_engine_clauses,
+    load_gap_example_clauses,
     quote_found_on_page,
     skipped_texts,
 )
@@ -73,7 +74,7 @@ def test_repository_clauses_load_with_unique_ids() -> None:
 def test_repository_clause_quotes_are_verbatim_on_their_cited_page() -> None:
     missing = [
         c.id
-        for c in load_clauses()
+        for c in [*load_clauses(), *load_gap_example_clauses().values()]
         if c.status is not ClauseStatus.ILLUSTRATIVE and not quote_found_on_page(c)
     ]
     assert missing == []
@@ -86,7 +87,9 @@ QUALIFIER = re.compile(
     r"notwithstanding|may|shall|must|article|paragraph)\b|\d",
     re.IGNORECASE,
 )
-HARMLESS_GAP = re.compile(r"^(\d{1,2}|REQ-ML-[A-Z]+-\d{3})$")  # footnote marker, margin req id
+# Footnote marker, margin requirement id, or a bullet glyph pdfplumber extracts as "(cid:131)"
+# (Task 2, NIST SP 800-34: the elision skips only the glyph, never bullet text).
+HARMLESS_GAP = re.compile(r"^(\d{1,2}|REQ-ML-[A-Z]+-\d{3}|\(cid:131\))$")
 MAX_GAP_CHARS = 200
 
 
@@ -104,7 +107,7 @@ def gap_problems(skipped: list[str]) -> list[str]:
 
 def test_repository_elisions_skip_only_harmless_text() -> None:
     problems: dict[str, list[str]] = {}
-    for clause in load_clauses():
+    for clause in [*load_clauses(), *load_gap_example_clauses().values()]:
         if ELISION not in clause.text:
             continue
         skipped = skipped_texts(clause)
@@ -116,13 +119,24 @@ def test_repository_elisions_skip_only_harmless_text() -> None:
 
 @pytest.mark.parametrize(
     "gap",
-    ["unless the patient consents", "within 72 hours", "subject to Article 5", "x" * 201, ""],
+    [
+        "unless the patient consents",
+        "within 72 hours",
+        "subject to Article 5",
+        "x" * 201,
+        "",
+        # the bullet-glyph exception is exact: bullet text after the glyph is not skippable
+        "(cid:131) Recovering information systems operations at an alternate location (typically "
+        "acceptable for only long-term disruptions)",
+    ],
 )
 def test_gap_check_rejects_meaningful_skipped_text(gap: str) -> None:
     assert gap_problems([gap])
 
 
-@pytest.mark.parametrize("gap", ["1", "REQ-ML-MNG-003", "c In the case that such explanations"])
+@pytest.mark.parametrize(
+    "gap", ["1", "REQ-ML-MNG-003", "c In the case that such explanations", "(cid:131)"]
+)
 def test_gap_check_allows_stray_markers_and_column_text(gap: str) -> None:
     assert gap_problems([gap]) == []
 

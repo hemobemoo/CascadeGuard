@@ -144,7 +144,7 @@ TRA_QUERIES = (
 def test_no_tra_era_strategy_snippet_reaches_extracted_context() -> None:
     """Human decision 2026-10-28: the TRA-era strategy is kept as provenance only. Its extracted
     text does match these queries, yet no snippet from it is ever returned."""
-    assert {TRA_STRATEGY, NEWS_ITEM, CHARTER, *EXCLUDED_2026_10_30} == NOT_SEARCHED
+    assert {TRA_STRATEGY, NEWS_ITEM, CHARTER, *EXCLUDED_2026_10_30, NIST_SP800_34} == NOT_SEARCHED
     jsonl = EXTRACTED_DIR / TRA_STRATEGY.replace(".pdf", ".jsonl")
     pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
     for query in TRA_QUERIES:
@@ -312,6 +312,8 @@ EXCLUDED_2026_10_30 = (
     "web/07_oecd_ai_principles.pdf",
     "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
 )
+# Task 2 (human 2026-11-06): NIST SP 800-34 Rev. 1 is kept out of search until a KB rebuild.
+NIST_SP800_34 = "nistspecialpublication800-34r1.pdf"
 
 
 def test_superseded_web_copies_and_the_tdra_original_are_never_searched() -> None:
@@ -360,3 +362,16 @@ def test_extracted_digest_follows_the_served_text(tmp_path: Path) -> None:
     empty = tmp_path / "none"
     empty.mkdir()
     assert extracted_digest(plain, empty) != extracted_digest(header, empty)
+
+
+def test_nist_sp800_34_is_never_searched() -> None:
+    """Task 2 (human 2026-11-06): its extracted text matches these queries, yet no snippet from it
+    is returned, and it is not in the vector index's corpus (no rebuild)."""
+    jsonl = EXTRACTED_DIR / NIST_SP800_34.replace(".pdf", ".jsonl")
+    pages = [json.loads(line) for line in jsonl.read_text("utf-8").splitlines() if line]
+    for query in ("alternate site contingency plan", "activation criteria designated authority"):
+        # every query word is on one NIST page, so the query does target this source
+        assert any(all(w in p["text"].casefold() for w in query.split()) for p in pages), query
+        found = search_extracted(query, limit=1000)
+        assert found and all(s.source_file != NIST_SP800_34 for s in found), query
+    assert all(p.source_file != NIST_SP800_34 for p in searchable_pages())

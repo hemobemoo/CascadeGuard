@@ -59,6 +59,11 @@ NOT_SEARCHED = frozenset(
         "web/06_unesco_ai_ethics_recommendation.pdf",
         "web/07_oecd_ai_principles.pdf",
         "887026278-TDRA-Telecom-Law-Final-English-o.pdf",
+        # Task 2 (human brief 2026-11-05): NIST SP 800-34 Rev. 1, added for draft clauses only.
+        # Not searched until the human approves a knowledge-base rebuild: searching it would
+        # change the corpus, so the committed index would refuse to load and extracted_digest
+        # (LLM cache keys) would change.
+        "nistspecialpublication800-34r1.pdf",
     }
     | TRANSCRIBED_SOURCES
 )

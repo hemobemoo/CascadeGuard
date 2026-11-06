@@ -29,6 +29,10 @@ EXTRACTED_DIR = PROJECT_ROOT / "policies" / "extracted"
 # Page-image transcriptions for sources whose text layer is unreliable (see TRANSCRIBED_FLAG).
 TRANSCRIPTIONS_DIR = PROJECT_ROOT / "policies" / "transcriptions"
 APPROVALS_FILE = PROJECT_ROOT / "policies" / "approvals.yaml"
+# Clauses reviewed as gap-analysis examples only (human decision 2026-11-06, option (c)): never
+# loaded into the simulation; only the report builder reads them (load_gap_example_clauses).
+GAP_EXAMPLES_DIR = PROJECT_ROOT / "policies" / "gap_examples_only"
+GAP_EXAMPLE_NOTE = "reviewed as a gap example; not loaded into the simulation"
 
 ENGINE_STATUSES = frozenset({ClauseStatus.REVIEWED, ClauseStatus.ILLUSTRATIVE})
 # The two published books are context only and never a clause source (AGENTS.md).
@@ -90,6 +94,43 @@ def load_engine_clauses(
 ) -> dict[str, PolicyClause]:
     """Clauses the engine may use: `reviewed` and `illustrative` only, keyed by id."""
     return {c.id: c for c in load_clauses(directory, sources_dir) if c.status in ENGINE_STATUSES}
+
+
+def gap_example_folder_clauses(
+    directory: Path | None = None,
+    sources_dir: Path = SOURCES_DIR,
+    corpus_dir: Path = REVIEWED_DIR,
+) -> list[PolicyClause]:
+    """Every clause in the gap-examples-only folder (GAP_EXAMPLES_DIR, read at call time), of
+    status `reviewed`, or `draft` after an edit demoted it (gate 1: listed under
+    reapproval_needed until the human re-approves it). Never illustrative, never an id of the
+    simulation's corpus. For the report builder and the approval checks only."""
+    folder = GAP_EXAMPLES_DIR if directory is None else directory
+    if not folder.is_dir():
+        return []
+    clauses = load_clauses(folder, sources_dir)
+    corpus = {c.id for c in load_clauses(corpus_dir, sources_dir)}
+    for clause in clauses:
+        if clause.status is ClauseStatus.ILLUSTRATIVE:
+            raise ClauseLoadError(f"{clause.id}: a gap-example-only clause is quoted from a source")
+        if clause.id in corpus:
+            raise ClauseLoadError(f"{clause.id}: also in the simulation's corpus")
+    return clauses
+
+
+def load_gap_example_clauses(
+    directory: Path | None = None,
+    sources_dir: Path = SOURCES_DIR,
+    corpus_dir: Path = REVIEWED_DIR,
+) -> dict[str, PolicyClause]:
+    """The clauses reviewed as gap examples only, keyed by id: the `reviewed` ones of the
+    folder (a demoted draft is left out until re-approved). For the report builder alone: the
+    engine path (load_clauses, load_engine_clauses) never reads this folder."""
+    return {
+        c.id: c
+        for c in gap_example_folder_clauses(directory, sources_dir, corpus_dir)
+        if c.status is ClauseStatus.REVIEWED
+    }
 
 
 def clause_digest(clause: PolicyClause) -> str:
