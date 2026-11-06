@@ -81,7 +81,9 @@ def test_the_stored_vectors_hold_the_queries_and_presets_with_the_index_model() 
 
 
 def test_the_preset_vectors_are_not_wired_in() -> None:
-    """Human, 2026-11-06: the preset cache keys, recorded answers and report stay unchanged."""
+    """Human, 2026-11-06: the preset vectors are not wired in: no source file names the
+    pending file and the file the adviser reads does not exist. (Preset cache keys and recorded
+    answers are pinned by their own tests.)"""
     assert PRESET_VECTORS == "adviser_query_vectors.json"
     assert not (KB_DIR / PRESET_VECTORS).exists()
     for path in (ROOT / "src").rglob("*.py"):

@@ -275,6 +275,11 @@ def render() -> str:
         "",
         "## Misses",
         "",
+        "A miss is an answerable query with no relevant hit in the top 5; each line gives its",
+        f"first relevant rank, or says none is in the top {K}. (In the report's sentence,",
+        f'"a relevant passage in the top {K}" counts the queries that are not "not in the top',
+        f'{K}".)',
+        "",
     ]
     misses = [s for s in scored if not s.first or s.first > 5]
     if not misses:

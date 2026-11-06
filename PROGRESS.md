@@ -55,7 +55,7 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    the generated report (13 = 23 - 10 misses; 0.203/0.500/0.453 rounded) and traced by
    `test_every_number_is_traced_to_the_data`; PDF still 5 pages. **Ranking decided (human,
    2026-11-06): deferred to finals**; no change to `kb.search_kb`, the cap, the RRF weights or the
-   queries (see the finals backlog). Merged as PR #38 (merge commit recorded after the merge).
+   queries (see the finals backlog). PR #38 open; merge when the human's conditions hold.
    **Done when** (the human's brief of 2026-11-05, Task 4, word for word): "Write ~25 queries in
    tests/evaluation/kb_queries.yaml with the expected source and page, written before looking.
    Cover: AI governance, health data sharing, telecom duties, incident response, information
