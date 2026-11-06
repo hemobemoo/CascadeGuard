@@ -37,8 +37,12 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    and the printed version/date in the inventory, plus the short verbatim quotes inside the
    clauses"); binding is "unknown for this scenario" with the scope note (instruction 4). The
    evidence-auditor suggested a legal-status reason instead; raised in the PR as optional.
-4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
-5. Documentation reconciliation, docs only (`docs-reconcile`, from main b0a685b): built 2026-11-06:
+4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`, from main 965947e): the one approved
+   test embedding (2026-11-06) returned HTTP 200 (1 vector, 2048 dims, model
+   nvidia/nemotron-3.5-embed-1b). **Waiting on human (gate 4):** embedding the ~25 queries is
+   1 request (BATCH 32), up to 4 with the 3 retries; nothing sent until approved.
+5. Documentation reconciliation, docs only (`docs-reconcile`, from main b0a685b): **merged #37,
+   965947e, 2026-11-06** (clean checkout 916 passed, 3 skipped; CI green; PDF 5 pages). Built 2026-11-06:
    generated corpus count (`scripts/corpus_counts.py` -> `docs/corpus-counts.md`, repeated in README,
    readiness status note and report), `docs/institutional-mandate-crosswalk.md` (generated),
    §7/§8 moved to `docs/standards/` unchanged in meaning, `docs/standards/event-perspectives.md`
