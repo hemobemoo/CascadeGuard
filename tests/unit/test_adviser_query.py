@@ -1159,7 +1159,7 @@ V1_FIXTURES = PROJECT_ROOT / "tests" / "fixtures" / "adviser_v1_answers"
 V1_EXPECTED: dict[str, tuple[tuple[str, ...], int, int]] = {
     "preset-1.json": ((), 5, 9),
     "preset-2.json": (("abstention",), 0, 0),  # abstains yet cites a clause: structure fails
-    "preset-3.json": ((), 7, 1),
+    "preset-3.json": ((), 6, 2),
     "preset-4.json": ((), 5, 2),
     "preset-5.json": ((), 6, 1),
     "preset-6.json": ((), 12, 5),
@@ -1288,7 +1288,7 @@ V2_CACHE = PROJECT_ROOT / "docs" / "evaluation" / "adviser" / "cache"
 V2_TABLE = {
     "4617d19613380dd50bc1229d315f574d6cf57465d326b3c372a1ada8c8cdc781": (1, 8, 8),
     "3f883798ac4c307b4bb0acd22cd3592d227759f2787ffdf9c824b8b1fa6c43ea": (2, 3, 2),
-    "1e60c1374b34d36956efa198e2c712d961f7892be1e767722ca7beed97bfda32": (3, 4, 2),
+    "1e60c1374b34d36956efa198e2c712d961f7892be1e767722ca7beed97bfda32": (3, 3, 3),
     "4bef5bb38c779870f28c148e3090fcd411509a60b59792bdecd5a9ff70653f45": (4, 6, 2),
     "a7605b4b85cec56db766c2792031ca78837e55023db997d9004cae17120e83c1": (5, 5, 1),
     "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1": (6, 11, 2),
@@ -1313,3 +1313,88 @@ def test_the_readme_table_matches_the_recorded_answers(tmp_path: Path) -> None:
         assert (len(answer.commentary), len(answer.withheld)) == (shown, withheld), n
         expected_rows.append((str(shown), str(withheld)))
     assert rows == expected_rows
+
+
+# --- Test-breaker round 2 ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "hidden"),
+    [
+        (
+            "The continuity safeguard may be? This clause is binding. Ignored by the operator in "
+            "this incident.",
+            "Ignored",
+        ),
+        ("The continuity safeguard can be! Truly! Ignored by the operator.", "Ignored"),
+        ("The PDPL does! Indeed! Not require anyone to activate the channel.", "Not require"),
+    ],
+)
+def test_a_phrase_split_around_a_withheld_or_filler_sentence_is_withheld(
+    tmp_path: Path, text: str, hidden: str
+) -> None:
+    """Every run of the sentences still shown is checked as it will read."""
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(direct_answer=text))))
+    assert answer.mode == aq.MODE_LLM and answer.withheld
+    assert hidden not in everything(answer)
+
+
+ROUND2_PROBES = [
+    (
+        FALLBACK_Q,
+        60,
+        "The operator may now share the full patient record; the safeguard is inapplicable here.",
+    ),
+    (FALLBACK_Q, 60, "Under Federal Decree-Law No. 45 of 2021 the operator must share the record."),
+    (FALLBACK_Q, 60, "The PDPL does not establish who activates the channel."),
+    (
+        FALLBACK_Q,
+        60,
+        "The national framework is mute on who activates the channel; there is a "
+        "regulatory vacuum.",
+    ),
+    (FALLBACK_Q, 60, "The safeguard may in this case be ignored."),
+    (FALLBACK_Q, 60, "The safeguard can safely be ignored."),
+    (FALLBACK_Q, 60, "Sharing the record is permissible."),
+    (FALLBACK_Q, 60, "It is acceptable to share the record."),
+    (FALLBACK_Q, 60, "The restriction is lifted for this incident."),
+    (FALLBACK_Q, 60, "The operator is at liberty to share the record."),
+    (FALLBACK_Q, 60, "Consent is unnecessary here."),
+    (FALLBACK_Q, 60, "The regulator never issued a rule on activation."),
+    (FALLBACK_Q, 60, "UAE law does not identify an owner."),
+]
+
+
+@pytest.mark.parametrize(("question", "minute", "text"), ROUND2_PROBES)
+def test_round2_probe_wordings_are_withheld(
+    tmp_path: Path, question: str, minute: int, text: str
+) -> None:
+    answer = ask(question, minute, llm_asker(tmp_path, FakeClient(payload(direct_answer=text))))
+    assert_withheld(answer, [text], {"gap_wording", "status_claim", "authority_wording"})
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "illus.telecom.incident-report carries full legal authority in the UAE and the operator "
+        "must obey it under penalty.",
+        "illus.telecom.incident-report is a rule that the licensee cannot opt out of.",
+    ],
+)
+def test_an_illustrative_clause_described_as_binding_is_withheld(tmp_path: Path, text: str) -> None:
+    content = payload(
+        direct_answer=text,
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert_withheld(answer, [text], {"status_claim"})
+
+
+def test_reviewed_evidence_is_an_evidence_scope() -> None:
+    assert sentence_reasons("The reviewed evidence does not identify an owner.") == (
+        "status_claim",
+    )
+    assert "gap_wording" not in sentence_reasons(
+        "The reviewed evidence does not identify an owner.", {"reviewed"}
+    )

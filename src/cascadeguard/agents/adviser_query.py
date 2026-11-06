@@ -816,14 +816,25 @@ def llm_answer(
     for prefix, text, own in lines:
         parts = sentences(text)
         flags = [sentence_reasons(x, allowed_label_parts(x, own, cited)) for x in parts]
-        # A phrase split across a sentence end: both neighbours are withheld (test-breaker).
-        for i in range(len(parts) - 1):
-            if flags[i] or flags[i + 1]:
-                continue
-            pair = joined(parts[i], parts[i + 1])
-            allowed = allowed_label_parts(pair, own, cited)
-            if reasons := sentence_reasons(pair, allowed, scope_words=False):
-                flags[i] = flags[i + 1] = reasons
+        # A phrase split across sentence ends (test-breaker rounds 1 and 2): every run of the
+        # sentences still shown, joined as it will read (with filler or withheld sentences
+        # between them gone), is checked again until nothing more is flagged.
+        changed = True
+        while changed:
+            changed = False
+            shown_at = [i for i, r in enumerate(flags) if not r]
+            for start in range(len(shown_at)):
+                for end in range(start + 1, len(shown_at)):
+                    run = shown_at[start : end + 1]
+                    text_run = joined(*(parts[i] for i in run))
+                    allowed = allowed_label_parts(text_run, own, cited)
+                    if reasons := sentence_reasons(text_run, allowed, scope_words=False):
+                        for i in run:
+                            flags[i] = reasons
+                        changed = True
+                        break
+                if changed:
+                    break
         withheld.extend(", ".join(r) for r in flags if r)
         kept = [x for x, r in zip(parts, flags, strict=True) if not r]
         if kept:
