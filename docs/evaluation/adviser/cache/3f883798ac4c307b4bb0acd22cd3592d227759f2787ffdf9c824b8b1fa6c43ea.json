@@ -1,0 +1,28 @@
+{
+  "key": "3f883798ac4c307b4bb0acd22cd3592d227759f2787ffdf9c824b8b1fa6c43ea",
+  "prompt_version": "adviser-v2",
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The listed clauses do not identify who must activate the fallback channel.",
+    "uae_evidence": [
+      {
+        "clause_id": "dha.pp11.4-18-1",
+        "relevance": "Requires entities to establish incident response, business continuity, recovery, and disaster recovery plans, but does not state who must activate a fallback channel."
+      }
+    ],
+    "international_comparison": [],
+    "responsible_role": "not established in the reviewed corpus",
+    "options": [],
+    "escalation": [
+      "health_service_operator"
+    ],
+    "uncertainty": [
+      "No listed clause identifies the actor responsible for activating the fallback channel."
+    ]
+  },
+  "usage": {
+    "calls": 1,
+    "prompt_tokens": 1729,
+    "completion_tokens": 149
+  }
+}

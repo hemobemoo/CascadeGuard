@@ -211,16 +211,14 @@ requests, and 1 query embedding, sent up to 4 times with retries); without it, e
 it uses the cache or the template.
 
 Preset answers: the configured model's answers to the six presets were recorded on 2026-11-06
-(6 chat requests) in `docs/evaluation/adviser/cache/`; replay with
+(prompt adviser-v2, 6 chat requests) in `docs/evaluation/adviser/cache/`; replay with
 `--cache docs/evaluation/adviser/cache` (the cache key includes the model id, so replay needs the
 same `CASCADEGUARD_MODEL` in `.env`; no call is made). They were recorded on **keyword
 retrieval**: embedding the preset questions failed (OpenRouter HTTP 502, 2026-11-05/06), so
 `policies/kb/adviser_query_vectors.json` does not exist and the context chunks come from the
-keyword half of the search. **The engine rejected all six recorded answers** (gap, status or
-authority wording in the model's text, e.g. "does not state", "no clause", "illustrative"), so
-replaying a preset shows the deterministic template with the rejection reasons, not the model's
-commentary. If the presets are embedded later, their context changes and the recorded answers no
-longer match.
+keyword half of the search. The engine accepted all six answers; their commentary is shown with
+0 to 8 sentences withheld each (15 in all; see `docs/evaluation/adviser/README.md`). If the
+presets are embedded later, their context changes and the recorded answers no longer match.
 Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
 DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by
 default and shows only when `OPENROUTER_API_KEY` is set, with at most 20 live questions per

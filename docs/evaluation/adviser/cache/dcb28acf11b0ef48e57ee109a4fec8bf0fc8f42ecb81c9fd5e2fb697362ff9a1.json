@@ -1,0 +1,49 @@
+{
+  "key": "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1",
+  "prompt_version": "adviser-v2",
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The reviewed international clauses state that responsibility for AI systems must remain attributable to physical persons or existing legal entities, that humans decide whether to cede control in limited contexts and that AI can never replace ultimate human responsibility and accountability, and that appropriate oversight, impact assessment, audit and due diligence mechanisms should be developed to ensure accountability throughout the AI system life cycle. The UAE Charter clause states that human judgment and human oversight over AI are irreplaceable and may correct errors or biases, with a safeguard indicating health_service_operator review of automated lockouts where an AI output may be erroneous. The OECD clause states that AI actors should apply a systematic risk management approach to each phase of the AI system lifecycle on an ongoing basis, including co-operation between AI actors, suppliers, users and other stakeholders. No listed clause specifically addresses automatic lockouts of users.",
+    "uae_evidence": [
+      {
+        "clause_id": "uae.ai-charter.human-oversight",
+        "relevance": "states that human judgment and human oversight over AI are irreplaceable and may correct errors or biases, with a safeguard indicating health_service_operator review of automated lockouts where an AI output may be erroneous"
+      },
+      {
+        "clause_id": "uae.mohap-smart-health.p7-liability",
+        "relevance": "concerns establishing clear medical liability frameworks for smart health services and AI applications across the healthcare sector"
+      }
+    ],
+    "international_comparison": [
+      {
+        "clause_id": "unesco.ai-ethics.human-oversight",
+        "relevance": "states that responsibility must remain attributable to persons or legal entities, that ceding control remains a human decision, and that AI can never replace ultimate human responsibility and accountability"
+      },
+      {
+        "clause_id": "unesco.ai-ethics.responsibility-accountability",
+        "relevance": "calls for oversight, impact assessment, audit and due diligence mechanisms to ensure accountability for AI systems and their impact throughout the life cycle"
+      },
+      {
+        "clause_id": "oecd.ai-principles.accountability-cooperation",
+        "relevance": "requires AI actors to apply a systematic risk management approach to each phase of the AI system lifecycle on an ongoing basis, including co-operation between AI actors and stakeholders"
+      }
+    ],
+    "responsible_role": "health_service_operator because the UAE Charter clause's safeguard indicates health_service_operator review_automated_lockouts where an AI output may be erroneous",
+    "options": [
+      "Apply human oversight to automated lockouts so that responsibility remains attributable to a person or legal entity.",
+      "Require health_service_operator review of automated lockouts where an AI output may be erroneous.",
+      "Develop oversight, impact assessment, audit and due diligence mechanisms for AI systems that lock users out."
+    ],
+    "escalation": [
+      "The judge or the relevant human decision-maker must determine how to apply these clauses to automatic user lockouts."
+    ],
+    "uncertainty": [
+      "The listed clauses do not specifically address automatic lockouts of users, so their application to that scenario is not identified in the provided evidence."
+    ]
+  },
+  "usage": {
+    "calls": 1,
+    "prompt_tokens": 2361,
+    "completion_tokens": 642
+  }
+}
