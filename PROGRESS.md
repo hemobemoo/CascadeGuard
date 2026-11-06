@@ -561,6 +561,8 @@ then locked.
 
 ## Current phase
 
+**Latest: final docs pass (branch `final-docs-pass`, PR #39);** see the "Final docs pass" section at the end of this file.
+
 **Task 4, retrieval evaluation (branch `kb-retrieval-eval`, from main 965947e, 2026-11-06).**
 Merged (PR #38, fb4ee97). Stopped: no Task 6 and no incident-envelope schema until the human
 decides.
@@ -2062,6 +2064,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
   drafts included. Engine runs must use `load_engine_clauses()` or fixtures.
 
 ## Next step
+
+**2026-11-07 (final docs pass):** PR #39 opened; merge on green CI (human-approved 2026-11-07), then stop. See "Final docs pass" at the end of this file.
 
 **2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 merged (PR #38, fb4ee97,
 2026-11-07). Stopped: Task 6 (optional live run, gate 4) and the optional
