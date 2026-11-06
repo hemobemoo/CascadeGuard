@@ -109,6 +109,11 @@ table) first for 18 of 23 answerable queries. Of the 10 misses (no relevant hit 
 
 ## Misses
 
+A miss is an answerable query with no relevant hit in the top 5; each line gives its
+first relevant rank, or says none is in the top 10. (In the report's sentence,
+"a relevant passage in the top 10" counts the queries that are not "not in the top
+10".)
+
 - **gov-02** (AI governance): "governance and accountability principle for artificial intelligence in the UAE"; not in the top 10.
 - **gov-03** (AI governance): "UAE national AI strategy objective on strong governance and effective regulation"; not in the top 10.
 - **gov-04** (AI governance): "how is an AI incident defined for a common cross-country reporting framework"; not in the top 10.

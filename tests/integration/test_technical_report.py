@@ -136,9 +136,13 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
     )
     assert row, "kb-retrieval.md has no results row"
     answerable = int(row[1])
-    misses = len(re.findall(r"^- \*\*[a-z]+-\d+\*\* .*; not in the top 10\.$", evaluation, re.M))
+    cutoff = re.search(r"k = (\d+)", evaluation)
+    assert cutoff, "kb-retrieval.md states no k"
+    top = int(cutoff[1])
+    pattern = rf"^- \*\*[a-z]+-\d+\*\* .*; not in the top {top}\.$"
+    misses = len(re.findall(pattern, evaluation, re.M))
     add(answerable, "answerable retrieval queries (kb-retrieval.md)")
-    add(10, "retrieval cut-off: top 10 (kb-retrieval.md)")
+    add(top, "retrieval cut-off k (kb-retrieval.md)")
     add(answerable - misses, "queries with a relevant hit in the top 10 (kb-retrieval.md)")
     for value, name in zip(row.groups()[1:], ("Precision@3", "Recall@5", "MRR@10"), strict=True):
         add(f"{float(value):.2f}", f"{name}, rounded (kb-retrieval.md)")
