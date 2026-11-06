@@ -9,6 +9,8 @@ from types import ModuleType
 
 import pytest
 
+from cascadeguard.knowledge.loader import NOT_REDISTRIBUTED
+
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "policies" / "sources" / "web"
 EXTRACTED = ROOT / "policies" / "extracted"
@@ -195,7 +197,8 @@ def test_only_the_listed_two_column_original_is_read_by_column() -> None:
 
 def test_committed_originals_are_byte_identical_to_the_recorded_hashes() -> None:
     """Originals in policies/sources/ are never modified, renamed or deleted (AGENTS.md). The
-    two books are not committed and are not recorded."""
+    two books are not committed and are not recorded; the not-redistributed CSC PDFs are not
+    committed either and are recorded in their own table."""
     inventory = (ROOT / "docs" / "policy-inventory.md").read_text("utf-8")
     recorded = {
         name: digest
@@ -206,6 +209,9 @@ def test_committed_originals_are_byte_identical_to_the_recorded_hashes() -> None
         p.name
         for p in sources.glob("*.pdf")
         if not any(m in p.name.casefold() for m in ("abhivardhan", "oxford handbook"))
+        # Task 3: local-only CSC PDFs (not redistributed), pinned in their own inventory table
+        # and checked by tests/integration/test_uae_cyber_sources.py.
+        and p.name not in NOT_REDISTRIBUTED
     )
     # 22 since Task 2 (2026-11-05): NIST SP 800-34 Rev. 1 added on the human's instruction.
     assert len(recorded) == 22 and sorted(recorded) == on_disk

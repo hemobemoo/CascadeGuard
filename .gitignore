@@ -35,6 +35,15 @@ policies/sources/The Oxford Handbook of AI Governance (Oxford Handbooks) -- Just
 policies/extracted/Artificial Intelligence Ethics and International Law - 2nd -- Abhivardhan --.jsonl
 policies/extracted/The Oxford Handbook of AI Governance (Oxford Handbooks) -- Justin B. Bullock (editor), Yu-Che Chen (editor), Johannes --.jsonl
 
+# UAE Cyber Security Council PDFs: reproduction requires the CSC's prior written consent (human,
+# 2026-11-06). Local only; inventory rows record the official link, date and SHA-256.
+policies/sources/Cyber Incident Response Plan V2.0.pdf
+policies/sources/Cyber Security Information Sharing Framework V2.0.pdf
+policies/sources/National Cyber Security Policy for Artificial Intelligence v1.1.pdf
+policies/extracted/Cyber Incident Response Plan V2.0.jsonl
+policies/extracted/Cyber Security Information Sharing Framework V2.0.jsonl
+policies/extracted/National Cyber Security Policy for Artificial Intelligence v1.1.jsonl
+
 # Tool caches
 .ruff_cache/
 .pytest_cache/
