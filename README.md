@@ -55,9 +55,9 @@ illustrative clauses):
 ```mermaid
 %%{init: {"htmlLabels": false, "flowchart": {"htmlLabels": false}, "theme": "base", "themeVariables": {"background": "#f8fafc", "primaryColor": "#ffffff", "primaryTextColor": "#1f2937", "lineColor": "#475569", "clusterBkg": "#f1f5f9", "clusterBorder": "#cbd5e1", "fontFamily": "Inter, Segoe UI, sans-serif", "fontSize": "15px"}}}%%
 flowchart TB
-    %% Solid line: used every time that path runs. Dotted line: used only with an optional
-    %% flag, command or mode (LLM agents, --kb-context, --audit, --governance off, kb query/export,
-    %% the adviser's optional model commentary).
+    %% Solid line: used every time that path runs (a command's or the UI panel's own entry edge
+    %% is solid). Dotted line: used only with an optional flag, mode or kb command (LLM agents,
+    %% --kb-context, --audit, --governance off, kb query/export, the adviser's model commentary).
     %% Checked against the imports and calls in src/cascadeguard/.
 
     user((User))
@@ -103,7 +103,7 @@ flowchart TB
 
     user -->|runs commands| cli
     user -->|opens demo| app
-    app -->|load_world, search_repairs| cli
+    app -->|load_world, search_repairs, adviser_asker| cli
     app -->|formats results| vm
     vm -->|export data| export
     reports -->|load_world, search_repairs| cli
@@ -118,7 +118,7 @@ flowchart TB
     cli -->|writes| export
     cli -.->|--audit| audit
     cli -.->|--governance off| gov
-    cli -.->|kb query, kb export| kb
+    cli -.->|kb query, kb export; index for ask| kb
 
     orch -->|builds role views| bound
     bound -->|role clauses| retr
@@ -137,10 +137,15 @@ flowchart TB
 
     cli -->|ask| adviser
     app -->|adviser panel| adviser
-    adviser -->|"adviser's RoleView at T+n"| bound
+    bound -->|"adviser's RoleView at T+n"| adviser
     adviser -->|hybrid or keyword search| kb
     adviser -.->|optional model commentary| llm
     adviser -.->|checks model answer| acheck
+    adviser -->|canonical view digest| cache
+    adviser -->|UAE or international| pol
+    adviser -.->|marks agent statements| cons
+    acheck -->|cited clauses| pol
+    acheck -->|gap wording| cons
 
     classDef ui fill:#ffffff,stroke:#0f4c81,stroke-width:2px,color:#0f4c81
     classDef sim fill:#ffffff,stroke:#1b7f79,stroke-width:2px,color:#1b7f79
