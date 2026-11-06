@@ -13,8 +13,15 @@ import yaml
 from cascadeguard.domain.policies import is_uae_jurisdiction
 from cascadeguard.domain.repairs import RepairOperationType
 from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
-from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
-from cascadeguard.storage.reports import CONCLUSION_DRAFT, ScriptedRuns, load_gate4, scripted_runs
+from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses, load_gap_example_clauses
+from cascadeguard.storage.reports import (
+    CONCLUSION_DRAFT,
+    NO_EXAMPLE,
+    ScriptedRuns,
+    load_gap_examples,
+    load_gate4,
+    scripted_runs,
+)
 
 REPORT = PROJECT_ROOT / "docs" / "report"
 SOURCE = REPORT / "cascadeguard-report.md"
@@ -43,7 +50,8 @@ LABEL_NUMBERS = {
     "6",
     "2.0",  # "AI Readiness 2.0"
     "3172",  # ITU-T Y.3172
-    "2026-10-31",  # the gate-7 review date
+    "2026-10-31",  # the gate-7 review dates
+    "2026-11-06",
     "7",  # "gate 7", the human review gate
 }
 
@@ -270,7 +278,7 @@ def test_every_number_is_traced_to_the_data(runs: ScriptedRuns) -> None:
         assert not stray, f"cited-documents numbers not from the citation map: {sorted(set(stray))}"
     body = re.sub(r"`[^`]+`", "", body)  # ids are checked separately
     body = re.sub(r"\S+@\S+|https?://\S+", "", body)  # contact address and links
-    body = body.replace("2026-10-31", "")
+    body = body.replace("2026-10-31", "").replace("2026-11-06", "")
     untraced = [
         n
         for n in re.findall(NUMBER, body)
@@ -391,6 +399,7 @@ def test_every_backticked_id_exists(runs: ScriptedRuns) -> None:
         | {a.id for a in runs.world.roles.actions}
         | {r.id for r in runs.world.roles.roles}
         | {"RoleView"}
+        | set(load_gap_example_clauses())  # shown as gap examples only, never loaded
     )
     for token in re.findall(r"`([^`]+)`", text()):
         if token.startswith(("uv ", "illus.telecom.*")) or token == "illus.telecom.*":
@@ -402,6 +411,68 @@ def test_every_backticked_id_exists(runs: ScriptedRuns) -> None:
         assert token in known, token
         if token in corpus:  # a clause: loaded (reviewed or illustrative), never a draft
             assert token in loaded, token
+
+
+# The bullets of the policy-gaps section, by heading, and the diagnosed failure each one is about.
+GAP_BULLETS = {
+    "Information deadlock (network status to the health operator).": (
+        "information_deadlock:network_incident_status->health_service_operator"
+    ),
+    "Orphan duty: reversing automated lockouts.": "orphan_duty:reverse_automated_lockouts",
+    "Orphan duty: activating the fallback channel.": "orphan_duty:activate_fallback_channel",
+    "Undefined trigger: reviewing automated lockouts.": (
+        "undefined_trigger:review_automated_lockouts"
+    ),
+}
+
+
+def gap_bullets() -> dict[str, str]:
+    """The policy-gaps section's bullets, keyed by their bold heading."""
+    section = text().replace("\r\n", "\n").split("## 6.", 1)[1]
+    out: dict[str, str] = {}
+    for line in section.splitlines():
+        m = re.match(r"- \*\*(.+?)\*\* (.*)", line)
+        if m:
+            out[m.group(1)] = m.group(2)
+    return out
+
+
+def test_the_named_examples_match_the_reviewed_mapping(runs: ScriptedRuns) -> None:
+    """Each gap bullet names exactly the clauses gap_examples.yaml maps to its failure (after the
+    word "Example"/"Examples"), and none when nothing is mapped, so the text cannot go stale."""
+    bullets = gap_bullets()
+    assert set(bullets) == set(GAP_BULLETS), sorted(bullets)
+    assert set(GAP_BULLETS.values()) == {f.id for f in runs.baseline.failures}
+    mapped: dict[str, set[str]] = {}
+    for e in load_gap_examples().entries:
+        if e.approved:
+            mapped.setdefault(e.failure, set()).add(e.clause)
+    for heading, failure in GAP_BULLETS.items():
+        body = bullets[heading]
+        expected = mapped.get(failure, set())
+        assert named_examples(body) == expected, (heading, sorted(expected))
+        assert (NO_EXAMPLE in body) == (not expected), heading
+
+
+def named_examples(body: str) -> set[str]:
+    """The ids a bullet names after the word "Example"/"Examples" (none if it has no such word)."""
+    found = re.search(r"\bExamples?\b", body)
+    return set(re.findall(r"`([^`]+)`", body[found.start() :])) if found else set()
+
+
+def test_the_example_check_catches_the_old_sentence() -> None:
+    """The fallback bullet as submitted before the 2026-11-06 mapping fails the check."""
+    old = (
+        "Only uncertain authority was found (`dha.pp11.4-18-1`, binding unknown); it requires a "
+        "determination. No reviewed example clause is mapped to this failure."
+    )
+    assert named_examples(old) == set()
+    expected = {
+        e.clause
+        for e in load_gap_examples().entries
+        if e.failure == "orphan_duty:activate_fallback_channel" and e.approved
+    }
+    assert expected and named_examples(old) != expected and NO_EXAMPLE in old
 
 
 def test_the_approved_wording_is_kept() -> None:

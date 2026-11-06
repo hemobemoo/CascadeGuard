@@ -43,5 +43,5 @@ entries:
     approved: true
   - failure: orphan_duty:activate_fallback_channel
     clause: nist.sp800-34.alternate-manual-means
-    relevance: "US federal contingency guidance (not AI-specific; a recommendation): alternate (manual) processing as a way to restore a disrupted service, typically for short-term disruptions. It illustrates the fallback mechanism, not who activates it."
+    relevance: "US federal contingency guidance (not AI-specific; descriptive, not binding): lists alternate (manual) processing as one way to restore a disrupted service, typically acceptable for only short-term disruptions. It illustrates the fallback mechanism, not who activates it."
     approved: true
