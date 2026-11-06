@@ -49,6 +49,37 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    `kb export` records name model, dimensions and prefixes; README embedding-compatibility note.
    **Waiting on human:** whether one line goes into the report (gate 7); any ranking change is
    the human's decision (out of this task's scope).
+   **Done when** (the human's brief of 2026-11-05, Task 4, word for word): "Write ~25 queries in
+   tests/evaluation/kb_queries.yaml with the expected source and page, written before looking.
+   Cover: AI governance, health data sharing, telecom duties, incident response, information
+   sharing, human oversight, fallback arrangements, and 3 queries that should find nothing
+   relevant. - Query embeddings use the NVIDIA model in policies/kb/manifest.json via OpenRouter.
+   Tell me the call count first (gate 4). Store the vectors so the test runs with no API. - Report
+   Precision@3, Recall@5 and MRR in docs/evaluation/kb-retrieval.md, with failures listed. Don't
+   tune the ranking to the test. - Embedding compatibility: add embedding_model and prefix
+   metadata to the `kb export` collection; add a README/KB note that the stored vectors are
+   nvidia/nemotron-3.5-embed-1b and that anyone querying the export (including the ITU reference
+   code, which defaults to nomic-embed-text) must embed queries with the same model; the export
+   was loaded into ChromaDB locally, not run inside the reference app, and is not hosted in the
+   ITU Lab. - Do not add or run any other embedding model." Plus the human's gate-4 conditions of
+   2026-11-06: commit the queries before embedding; expected sources only from the current index
+   (not NIST, not CSC); the 6 presets in the same request into
+   `policies/kb/adviser_query_vectors.pending.json`, not wired in; the 3 nothing-queries reported
+   as they are, no threshold; no ranking change, no rewording; on failure stop; review loop,
+   clean-checkout suite, CI green, PR open, then stop and report the numbers.
+   **Proof of each item:** queries, topics, indexed pages only:
+   `test_the_queries_cover_the_brief_and_expect_indexed_pages_only`; written before looking: git
+   only (9e8517f adds the query file alone, 783be71 the vectors, the scorer comes later in
+   20504be); one request, NVIDIA model: by hand (the script printed "1 request(s) sent, retries
+   included"), the stored data by `test_the_stored_vectors_hold_the_queries_and_presets_with_the_index_model`,
+   the refusals by `test_the_embed_script_*`; no API and metrics current:
+   `test_the_report_is_current`, formulas by `test_the_metric_formulas_on_a_hand_built_ranking`;
+   presets not wired in: `test_the_preset_vectors_are_not_wired_in`; export metadata:
+   `test_every_exported_record_names_the_embedding_model_and_prefixes`; README note:
+   `test_the_readme_states_the_embedding_compatibility`; no other model: by hand (the scripts
+   use only `kb.MODEL_SLUG`).
+   Verify: `uv run python scripts/kb_retrieval_eval.py --check` and
+   `uv run pytest tests/unit/test_kb_retrieval_eval.py`.
 5. Documentation reconciliation, docs only (`docs-reconcile`, from main b0a685b): **merged #37,
    965947e, 2026-11-06** (clean checkout 916 passed, 3 skipped; CI green; PDF 5 pages). Built 2026-11-06:
    generated corpus count (`scripts/corpus_counts.py` -> `docs/corpus-counts.md`, repeated in README,
@@ -515,6 +546,10 @@ then locked.
 
 ## Current phase
 
+**Task 4, retrieval evaluation (branch `kb-retrieval-eval`, from main 965947e, 2026-11-06).**
+See the Task 4 entry in "Start here". PR to open after the review loop; then stop.
+
+**Before (Adviser commentary check):**
 **Adviser commentary check (branch `adviser-commentary-check`, from main df014a1, 2026-11-06).**
 Human decision of 2026-11-06: filter the model commentary per sentence; allow evidence-scoped
 absence ("not identified in the provided evidence", "the retrieved clauses do not address") and
@@ -1689,6 +1724,11 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
+**Task 4, retrieval evaluation (2026-11-06):** (1) gate 7: whether one line on the retrieval
+numbers goes into the report; (2) the evaluation shows the per-document cap and the fusion push
+relevant chunks out of the top 10 for 10 of 23 queries; any ranking change is the human's
+decision (not made; out of the brief).
+
 **Task 3, UAE cyber sources (2026-11-06): all answered; §6 approved; merge after suite and CI.**
 (History below.) Also for the human
 (phase-auditor round 3): the legal-status notes say "(as printed on its cover)", but the approval
@@ -2009,10 +2049,12 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06 (Task 5):** Task 3 merged (PR #36, b0a685b). Task 5 (`docs-reconcile`) built; after
-its review loop, clean-checkout suite and CI: open the PR and stop. Then Task 4 (one approved test
-embedding first; on HTTP 502 stop). Freeze: nothing merges after 9 Nov 18:00 Amman time except
-fixes to broken checks.
+**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 (`kb-retrieval-eval`) built:
+after its review loop, clean-checkout suite and CI, open the PR, report the numbers and stop. The
+human decides whether one line goes into the report (gate 7). Then Task 6 (optional, gate 4).
+Freeze: nothing merges after 9 Nov 18:00 Amman time except fixes to broken checks.
+
+**Earlier (Task 5):** Task 3 merged (PR #36, b0a685b); Task 5 merged (PR #37, 965947e).
 
 **Earlier (Task 3):** PR #35 merged (2a80a26); PR #36 merged (b0a685b).
 

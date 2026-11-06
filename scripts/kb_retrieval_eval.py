@@ -13,6 +13,7 @@ keeps it current.
 
 import argparse
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,6 +25,7 @@ from cascadeguard.knowledge.kb import (
     MODEL_SLUG,
     RRF_K,
     SCORE_DECIMALS,
+    Chunk,
     Hit,
     Index,
     StoredQueries,
@@ -51,13 +53,18 @@ def short(source: str) -> str:
     return name if len(name) <= 38 else name[:37] + "…"
 
 
-def locations(hit: Hit) -> set[Page]:
-    """The hit's page and the pages of its exact copies (`Chunk.also_in`)."""
-    pages = {(hit.chunk.source_file, hit.chunk.page)}
-    for chunk_id in hit.chunk.also_in:
+def chunk_locations(chunk: Chunk) -> set[Page]:
+    """The chunk's page and the pages of its exact copies (`Chunk.also_in`): the one relevance
+    rule, used for hits, the ceiling and the diagnosis alike."""
+    pages = {(chunk.source_file, chunk.page)}
+    for chunk_id in chunk.also_in:
         source, rest = chunk_id.split("#p", 1)
         pages.add((source, int(rest.split("#c", 1)[0])))
     return pages
+
+
+def locations(hit: Hit) -> set[Page]:
+    return chunk_locations(hit.chunk)
 
 
 @dataclass(frozen=True)
@@ -94,13 +101,19 @@ def relevant_pages(q: dict[str, Any]) -> frozenset[Page]:
     return frozenset(pages)
 
 
-def ceiling(index: Index, relevant: frozenset[Page]) -> float:
+def ceiling(chunks: Sequence[Chunk], relevant: frozenset[Page]) -> float:
     """Best possible Precision@3: relevant ranked chunks, at most MAX_PER_SOURCE per document."""
     per_source: dict[str, int] = {}
-    for c in index.chunks:
-        if c.duplicate_of is None and (c.source_file, c.page) in relevant:
+    for c in chunks:
+        if c.duplicate_of is None and chunk_locations(c) & relevant:
             per_source[c.source_file] = per_source.get(c.source_file, 0) + 1
     return min(3, sum(min(MAX_PER_SOURCE, n) for n in per_source.values())) / 3
+
+
+def score(q: dict[str, Any], hits: tuple[Hit, ...], chunks: Sequence[Chunk]) -> Scored:
+    rel = relevant_pages(q)
+    flags = tuple(bool(locations(h) & rel) for h in hits)
+    return Scored(q, rel, hits, flags, ceiling(chunks, rel))
 
 
 def similarities(index: Index, embedder: StoredQueries, query: str) -> Vectors:
@@ -116,32 +129,24 @@ def cosine(index: Index, embedder: StoredQueries, query: str, hit: Hit) -> float
 
 def half_ranks(
     index: Index, embedder: StoredQueries, query: str, relevant: frozenset[Page]
-) -> tuple[int, int | None, int]:
-    """Diagnostic only, the search unchanged: the best rank a relevant chunk gets in each half
-    of `search_kb` on its own (vector, keyword), computed the same way (rounded cosine, keyword
-    score, shared ranks over unduplicated chunks), before fusion and the per-document cap."""
+) -> tuple[int, int | None, int, int]:
+    """Diagnostic only, the search unchanged. For ONE chunk, the relevant chunk with the best
+    fused rank before the per-document cap (ties: better vector rank, then id): its rank in each
+    half of `search_kb` on its own (rounded cosine; keyword score; shared ranks over unduplicated
+    chunks) and its fused rank before the cap; last, the best vector rank of any relevant chunk."""
     ranked = [i for i, c in enumerate(index.chunks) if c.duplicate_of is None]
     cos = similarities(index, embedder, query)
     vector = shared_ranks({i: round(float(cos[i]), SCORE_DECIMALS) for i in ranked})
     words = query_words(query)
     scores = {i: float(keyword_score(index.chunks[i].text, words)) for i in ranked}
     keyword = shared_ranks({i: x for i, x in scores.items() if x})
-    rel = [
-        i
-        for i in ranked
-        if (index.chunks[i].source_file, index.chunks[i].page) in relevant
-        or any(c.startswith(f"{s}#p{p}#") for s, p in relevant for c in index.chunks[i].also_in)
-    ]
-    best_kw = [keyword[i] for i in rel if i in keyword]
+    rel = [i for i in ranked if chunk_locations(index.chunks[i]) & relevant]
     fused = {i: 1 / (RRF_K + r) for i, r in vector.items()}
     for i, r in keyword.items():
         fused[i] += 1 / (RRF_K + r)
     uncapped = shared_ranks(fused)
-    return (
-        min(vector[i] for i in rel),
-        min(best_kw) if best_kw else None,
-        min(uncapped[i] for i in rel),
-    )
+    best = min(rel, key=lambda i: (uncapped[i], vector[i], index.chunks[i].id))
+    return vector[best], keyword.get(best), uncapped[best], min(vector[i] for i in rel)
 
 
 def mean(xs: list[float]) -> float:
@@ -159,9 +164,7 @@ def render() -> str:
         if q.get("expect") == "nothing":
             nothing.append((q, hits))
             continue
-        rel = relevant_pages(q)
-        flags = tuple(bool(locations(h) & rel) for h in hits)
-        scored.append(Scored(q, rel, hits, flags, ceiling(index, rel)))
+        scored.append(score(q, hits, index.chunks))
 
     def row(label: str, group: list[Scored]) -> str:
         return (
@@ -181,7 +184,8 @@ def render() -> str:
         f"{len(nothing)} that should find nothing, committed in {QUERIES_COMMIT} before any",
         "query was embedded or searched. Query vectors: one embedding request with the index's",
         f"own model (`{MODEL_SLUG}`; gate 4, human 2026-11-06), committed in {VECTORS_COMMIT}",
-        "before any search; this report runs with no API. Search: `kb.search_kb` exactly as",
+        "before any search (the script reported 1 request sent, no retry); this report runs",
+        "with no API. Search: `kb.search_kb` exactly as",
         f"committed (hybrid vector + keyword, reciprocal rank fusion, at most {MAX_PER_SOURCE}",
         f"chunks per document), k = {K}. No ranking change and no query rewording after seeing",
         "the results. The expected pages were chosen by the agent from the indexed text; one",
@@ -224,23 +228,24 @@ def render() -> str:
         "",
         "## Diagnosis: each half of the search on its own",
         "",
-        "Diagnostic only; the search is unchanged. For each answerable query, the best rank a",
-        "relevant chunk gets in the vector ranking alone and in the keyword ranking alone (shared",
-        "ranks over all unduplicated chunks, before fusion and before the per-document cap), next",
-        "to the fused rank before the cap (the same RRF sum over every chunk) and the fused",
-        "rank the search returns (after the cap). A relevant chunk that is fused-ranked high but",
-        "missing after the cap was displaced by two better-fused chunks of the same document.",
+        "Diagnostic only; the search is unchanged. Each row follows ONE chunk: the relevant",
+        "chunk with the best fused rank before the per-document cap (the same RRF sum over every",
+        "unduplicated chunk). Its rank in the vector ranking alone and in the keyword ranking",
+        "alone (shared ranks, before fusion and the cap), its fused rank before the cap, and the",
+        "first relevant rank the search returns (after the cap). A relevant chunk in the fused top",
+        "10 before the cap but missing after it was displaced by two better-fused chunks of the",
+        "same document.",
         "",
         "| Id | Vector-only rank | Keyword-only rank | Fused, before the cap | Fused, returned |",
         "|---|---|---|---|---|",
     ]
     vector_first = capped = diluted = 0
     for s in scored:
-        vr, kr, ur = half_ranks(index, embedder, str(s.query["query"]), s.relevant)
-        vector_first += vr == 1
+        vr, kr, ur, best_vector = half_ranks(index, embedder, str(s.query["query"]), s.relevant)
+        vector_first += best_vector == 1
         missed = not s.first or s.first > 5
-        capped += missed and ur <= 10
-        diluted += missed and ur > 10
+        capped += s.first is None and ur <= K
+        diluted += missed and not (s.first is None and ur <= K)
         fused = str(s.first) if s.first else f"not in top {K}"
         kw = str(kr) if kr is not None else "- (no query word)"
         lines.append(f"| {s.query['id']} | {vr} | {kw} | {ur} | {fused} |")
@@ -248,10 +253,10 @@ def render() -> str:
         "",
         f"The vector ranking alone puts a relevant chunk first for {vector_first} of "
         f"{len(scored)} answerable queries. Of the {capped + diluted} misses (no relevant hit in "
-        f"the top 5): {capped} have a relevant chunk in the fused top 10 before the cap, so the",
-        "per-document cap removed it; the other "
-        f"{diluted} have a relevant chunk the vector half ranks high but",
-        "the keyword half ranks far down, so the fusion places it below the 10th.",
+        f"the top 5): {capped} have a relevant chunk in the fused top {K} before the cap and",
+        "none returned, so the per-document cap removed it; for the other "
+        f"{diluted}, the best-fused",
+        f"relevant chunk is below the {K}th even before the cap (see its two half ranks).",
         "",
         "## Misses",
         "",
