@@ -1,0 +1,169 @@
+# Retrieval evaluation queries for the knowledge base (Task 4, human brief of 2026-11-05;
+# gate 4 approved 2026-11-06). Written and committed on 2026-11-06 BEFORE any query was embedded
+# or searched: that commit is the proof (`git log -- tests/evaluation/kb_queries.yaml`). Expected
+# pages were chosen by reading the indexed chunk text (policies/kb/chunks.jsonl) and the clause
+# files, never from search results. Queries and expected pages are not reworded after seeing
+# results, and the ranking is not tuned to them.
+#
+# Expected sources are documents in the current KB index only (policies/kb/chunks.jsonl), never
+# the NIST excerpt and never the CSC PDFs (not indexed). Pages are PDF pages, as in the index.
+#
+# Rules fixed before looking:
+# - Search: `kb.search_kb` as committed (hybrid, RRF, at most 2 chunks per document), k = 10,
+#   with the query vectors stored by scripts/embed_eval_queries.py (one request).
+# - A hit is relevant when its (source_file, page), or the location of one of its exact copies
+#   (`Chunk.also_in`), is the expected page or one listed under `also_relevant`.
+# - Precision@3: relevant hits among the top 3, divided by 3 (several chunks of one relevant page
+#   each count). Recall@5: distinct relevant pages found in the top 5, divided by the number of
+#   relevant pages. MRR@10: 1 / rank of the first relevant hit in the top 10, else 0. All three
+#   averaged over the answerable queries only.
+# - The `expect: nothing` queries are outside the corpus: they are not scored; their top 5 hits
+#   and scores are reported as they are. No relevance threshold is set.
+queries:
+  # AI governance
+  - id: gov-01
+    topic: AI governance
+    query: Which UAE principle requires AI systems that pose risks to be modified or withdrawn?
+    expect_source: The UAE Charter for the Development and Use of Artificial Intelligence.pdf
+    expect_page: 3
+  - id: gov-02
+    topic: AI governance
+    query: governance and accountability principle for artificial intelligence in the UAE
+    expect_source: The UAE Charter for the Development and Use of Artificial Intelligence.pdf
+    expect_page: 4
+  - id: gov-03
+    topic: AI governance
+    query: UAE national AI strategy objective on strong governance and effective regulation
+    expect_source: UAE-National-Strategy-for-Artificial-Intelligence-2031.pdf
+    expect_page: 22
+  - id: gov-04
+    topic: AI governance
+    query: how is an AI incident defined for a common cross-country reporting framework
+    expect_source: OCED-Towards a common reporting framework for AI incidents.pdf
+    expect_page: 11
+  # Health data sharing
+  - id: health-01
+    topic: health data sharing
+    query: Who sets the standards for exchanging and protecting health data in the UAE?
+    expect_source: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    expect_page: 3
+  - id: health-02
+    topic: health data sharing
+    query: When may patient information be disclosed without breaching confidentiality?
+    expect_source: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf
+    expect_page: 5
+    also_relevant:
+      - {source: UAE Federal Law No. 2 of 2019. The Use of ICT in Health Fields..pdf, page: 4}
+  - id: health-03
+    topic: health data sharing
+    query: Does the UAE personal data protection law apply to health data governed by its own legislation?
+    expect_source: Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf
+    expect_page: 6
+  # Telecom duties
+  - id: telecom-01
+    topic: telecom duties
+    query: establishment of the telecommunications regulatory authority and its purpose
+    expect_source: ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf
+    expect_page: 11
+  - id: telecom-02
+    topic: telecom duties
+    query: Can the telecom regulator request information from licensees?
+    expect_source: ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf
+    expect_page: 14
+    also_relevant:
+      - {source: ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf, page: 25}
+  - id: telecom-03
+    topic: telecom duties
+    query: licensees must take account of service quality and the special needs of users
+    expect_source: ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf
+    expect_page: 21
+  # Incident response
+  - id: incident-01
+    topic: incident response
+    query: incident response and business continuity plans for health information
+    expect_source: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    expect_page: 30
+    also_relevant:
+      - {source: Health Data Protection and Confidentiality Policy_EN2022810559.pdf, page: 20}
+  - id: incident-02
+    topic: incident response
+    query: investigate a health data breach from discovery until closure
+    expect_source: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    expect_page: 31
+  - id: incident-03
+    topic: incident response
+    query: deadline to notify the supervisory authority of a personal data breach in the EU
+    expect_source: GDPR-Regulation (EU) 2016-679.pdf
+    expect_page: 29
+  - id: incident-04
+    topic: incident response
+    query: obligation on providers of high-risk AI systems to report serious incidents
+    expect_source: EU AI Act, Regulation (EU) 2024-1689.pdf
+    expect_page: 101
+  # Information sharing
+  - id: sharing-01
+    topic: information sharing
+    query: Who must receive breach notifications about health data in Dubai?
+    expect_source: Health Data Protection and Confidentiality Policy_EN2022810559.pdf
+    expect_page: 32
+  - id: sharing-02
+    topic: information sharing
+    query: classification of government data in Dubai as open data or shared data
+    expect_source: Dubai Law No. (26) of 2015.pdf
+    expect_page: 6
+    also_relevant:
+      - {source: Dubai Law No. (26) of 2015.pdf, page: 2}
+  - id: sharing-03
+    topic: information sharing
+    query: co-operation between AI actors to address risks of AI systems
+    expect_source: OECD_Recommendation_AI.pdf
+    expect_page: 9
+  # Human oversight
+  - id: oversight-01
+    topic: human oversight
+    query: people overseeing a high-risk AI system can decide to override or reverse its output
+    expect_source: EU AI Act, Regulation (EU) 2024-1689.pdf
+    expect_page: 61
+  - id: oversight-02
+    topic: human oversight
+    query: AI systems must never displace ultimate human responsibility and accountability
+    expect_source: UNESCO Recommendation on the Ethics of Artificial Intelligence.pdf
+    expect_page: 22
+  - id: oversight-03
+    topic: human oversight
+    query: right to object to decisions based on automated processing under UAE law
+    expect_source: Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data.pdf
+    expect_page: 21
+  - id: oversight-04
+    topic: human oversight
+    query: human judgment and oversight to correct errors made by AI in the UAE
+    expect_source: The UAE Charter for the Development and Use of Artificial Intelligence.pdf
+    expect_page: 4
+    also_relevant:
+      - {source: UAE Policy Foundation.pdf, page: 2}
+  # Fallback arrangements
+  - id: fallback-01
+    topic: fallback arrangements
+    query: AI systems should have safeguards that enable a fallback plan when problems occur
+    expect_source: MOCAI-AI-Ethics-EN-1.pdf
+    expect_page: 16
+  - id: fallback-02
+    topic: fallback arrangements
+    query: harmful AI systems can be overridden, repaired or decommissioned safely
+    expect_source: OECD_Recommendation_AI.pdf
+    expect_page: 9
+    also_relevant:
+      - {source: OECD_Recommendation_AI.pdf, page: 4}
+  # Should find nothing relevant (outside the corpus)
+  - id: none-01
+    topic: should find nothing
+    query: container shipping tariffs at Jebel Ali port
+    expect: nothing
+  - id: none-02
+    topic: should find nothing
+    query: recipe for traditional Emirati luqaimat dumplings
+    expect: nothing
+  - id: none-03
+    topic: should find nothing
+    query: football transfer window rules for professional clubs
+    expect: nothing

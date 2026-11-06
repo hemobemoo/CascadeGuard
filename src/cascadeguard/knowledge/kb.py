@@ -760,7 +760,10 @@ class StoredQueries:
 def export_records(index: Index) -> list[dict[str, Any]]:
     """One record per chunk as the reference code's `KnowledgeBase.add_documents` takes it: id,
     document, embedding and metadata whose values are all strings (ChromaDB metadata takes no
-    lists), using the reference's keys where they exist."""
+    lists), using the reference's keys where they exist. Every record also names the embedding
+    model, its dimensions and both prefixes (Task 4): a query against the export must be
+    embedded with the same model, "query: " prefix, truncation and normalisation, or the
+    similarities mean nothing (the reference code defaults to another model)."""
     return [
         {
             "id": c.id,
@@ -777,6 +780,10 @@ def export_records(index: Index) -> list[dict[str, Any]]:
                 "duplicate_of": c.duplicate_of or "",
                 "also_in": " | ".join(c.copies),
                 "document_category": "cascadeguard_policies",
+                "embedding_model": MODEL_SLUG,
+                "embedding_dimensions": str(DIMENSIONS),
+                "document_prefix": DOCUMENT_PREFIX,
+                "query_prefix": QUERY_PREFIX,
             },
         }
         for c, v in zip(index.chunks, index.vectors, strict=True)
