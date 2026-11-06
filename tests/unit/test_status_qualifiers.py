@@ -153,6 +153,8 @@ UAE_IN_CORPUS = {
     "UAE (federal public policy, health sector)",
     "UAE (illustrative)",
     "UAE (national strategy)",
+    # Task 3 (gate 1, human 2026-11-06): the UAE Cyber Security Council gap examples.
+    "UAE (federal; federal entities and CII entities)",
 }
 # "United States (federal guidance)": NIST SP 800-34 Rev. 1 (Task 2, human 2026-11-06: keep
 # the automatic "foreign precedent").
