@@ -41,7 +41,11 @@ The adviser's answer is accepted as a separate advisory channel, on these condit
    bare word "binding"; a sentence naming several clauses may use only the parts they share). An
    evidence-scoped sentence may not also speak about the law (any law, statute, country or
    "anywhere" word flags it), and a phrase split across a sentence end is checked on the joined
-   pair. Binding, permit, authorise and legal-gap claims stay blocked. The
+   run of the sentences still shown. Binding, permit, authorise and legal-gap claims are
+   withheld when they match the engine's phrase lists; a phrase list cannot catch every
+   paraphrase (test-breaker round 2: e.g. "carries full legal authority" was shown before it was
+   added). Whether to accept that residual risk under the agent-statement label, or to restrict
+   the shown commentary further, is open for the human (PROGRESS.md "Waiting on human"). The
    structure (citations, UAE/international split, responsible role, abstention, control
    characters) still rejects the whole answer. The prompt (adviser-v2) asks the model to say
    "not identified in the provided evidence". Trade-off: a withheld sentence can change how its

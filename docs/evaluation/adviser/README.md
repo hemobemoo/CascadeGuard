@@ -20,9 +20,9 @@ engine's seven sections, without the withheld sentences:
 |---|---|---|---|
 | T+30 | telecom status sharing | 8 | 8 (authority_wording 6, gap_wording 3, status_claim 1) |
 | T+60 | who activates the fallback channel | 3 | 2 (gap_wording 2) |
-| T+45 | reviewing and reversing the lockouts | 4 | 2 (gap_wording 2) |
+| T+45 | reviewing and reversing the lockouts | 3 | 3 (gap_wording 3) |
 | T+45 | notifying health-data oversight | 6 | 2 (gap_wording 2) |
-| T+45 | reporting to the telecom regulator | 5 | 1 (status_claim 1) |
+| T+45 | reporting to the telecom regulator | 5 | 1 (gap_wording 1, status_claim 1) |
 | T+15 | international frameworks on human oversight | 11 | 2 (gap_wording 2) |
 
 A sentence can have more than one reason. `test_the_readme_table_matches_the_recorded_answers`
