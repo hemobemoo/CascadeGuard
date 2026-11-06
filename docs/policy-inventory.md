@@ -1,6 +1,7 @@
 # Policy source inventory (Phase 1a; #20–22 added in Phase 6d; #23 for the submission; #24 Task 2, 2026-11-05; #25–27 Task 3, local only)
 
-The 24 committed PDFs in `policies/sources/` (plus three local-only CSC PDFs, #25–27, not
+The 24 original PDFs in `policies/sources/` (22 committed; the 2 published books kept local; see
+`docs/corpus-counts.md`) (plus three local-only CSC PDFs, #25–27, not
 redistributed; plus one derived OCR copy, listed after the table, and the
 seven web transcriptions in `policies/sources/web/`, listed at the end), from
 `policies/extracted/_inventory.json`

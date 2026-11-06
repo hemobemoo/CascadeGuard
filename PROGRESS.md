@@ -43,7 +43,22 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    readiness status note and report), `docs/institutional-mandate-crosswalk.md` (generated),
    §7/§8 moved to `docs/standards/` unchanged in meaning, `docs/standards/event-perspectives.md`
    (eight perspectives from the event page, honest status, paths), README NIST Sources row.
-   PR to open after the review loop; stop.
+   Evidence-auditor fixes: the crosswalk uses the engine's own authority verdict
+   (`RuleBook.authority`), lists prohibitions only where the role can hold the data category,
+   and labels non-binding guidance; the report's corpus sentence no longer implies the books or
+   CSC PDFs are clause sources. PR to open after the review loop; stop.
+   **Done when** (the human's brief of 2026-11-05, Task 5, word for word): "Docs only. - Put one
+   authoritative clause/source count, generated from policies/ and tested, into README,
+   submission-readiness status note and report. - Add docs/institutional-mandate-crosswalk.md:
+   each of the 6 roles, which of its mandates rest on a reviewed clause (ID) and which are
+   scenario archetypes. The adviser has no enforcement authority. - Move the Y.3172 and Readiness
+   2.0 tables (submission-readiness §7–§8) to docs/standards/ unchanged in meaning, and add the
+   event's 8 perspectives with an honest status and a file path for each. - Do not claim Y.3172
+   compliance." Plus the README "Sources" row for NIST SP 800-34 (deferred from Task 2).
+   Open for the human (gate 7): the report's Limits sentence still says the adviser "cannot be
+   queried live", untrue since PR #33; proposed wording in the PR. Local note: the e2e test
+   `test_expert_mode_shows_every_section` timed out once in the phase-auditor's full run and
+   passed alone and in tests/e2e (the known intermittent one; no UI change here).
 6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.
 Optional before 10 Nov, only if 1-5 merged by 8 Nov: `specs/cross_domain_incident_envelope.schema.json`
 (one illustrative telecom-to-health example; README: "proposed open specification, not adopted;
@@ -1985,11 +2000,7 @@ its review loop, clean-checkout suite and CI: open the PR and stop. Then Task 4 
 embedding first; on HTTP 502 stop). Freeze: nothing merges after 9 Nov 18:00 Amman time except
 fixes to broken checks.
 
-**Earlier (Task 3):** PR #35 merged (2a80a26). Task 3 is PR #36: gates 1, 6 and 7 applied;
-§6 approved and the notes corrected (re-approved); clean-checkout suite, CI green, merge, report
-the merge commit and page count. Then Task 5, then Task 4.
-Then Task 5 (docs reconciliation), then Task 4 (one approved test embedding first; on HTTP 502
-stop). Freeze: nothing merges after 9 Nov 18:00 Amman time except fixes to broken checks.
+**Earlier (Task 3):** PR #35 merged (2a80a26); PR #36 merged (b0a685b).
 
 **2026-11-06:** Task 1 merged (PR #33, 98b4173); Task 2 merged (PR #34, df014a1). The adviser
 commentary follow-up (`adviser-commentary-check`) is built and re-recorded; after its review loop,
