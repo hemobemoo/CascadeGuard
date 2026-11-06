@@ -2105,3 +2105,15 @@ Earlier (done):
    - approve the paid Phase 5 smoke test (gate 4: anything that costs money).
 2. Then start Phase 5 on `phase-5-llm`; its first test-breaker round covers a0b6342 and the
    Phase 4 commits after it.
+
+## Final docs pass (branch `final-docs-pass`, from `progress-after-pr38`, 2026-11-07)
+
+PR #39 opened; merge on green CI (human-approved 2026-11-07). Adds the Policy Adviser
+(`agents/adviser_query.py`) and the adviser answer check (`engine/adviser_check.py`) to
+`docs/architecture.mmd`, the README block (identical) and `docs/architecture.svg` (mermaid-cli
+11.4.2, `htmlLabels: false`, 0 foreignObject); renames "Vector index" to "Knowledge-base
+search". Guided step b narration gains: "Use 'Ask the Policy Adviser' below the lanes to
+question the adviser at any step." Scripted run, repairs, replay and `--governance off` output
+byte-identical to main; goldens, caches, citation map, traces, report (PDF 5 pages) and
+`kb.search_kb` unchanged; no live call. After the merge, delete the `progress-after-pr38`
+branch (human instruction, 2026-11-07). Then stop: no Task 6, no schema.
