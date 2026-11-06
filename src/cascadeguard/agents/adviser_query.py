@@ -53,7 +53,10 @@ from cascadeguard.engine.adviser_check import (
     NOT_ESTABLISHED,
     NOT_IDENTIFIED,
     AnswerCheck,
+    allowed_label_parts,
     check_answer,
+    sentence_reasons,
+    sentences,
 )
 from cascadeguard.engine.constraints import agent_statement
 from cascadeguard.knowledge import kb
@@ -62,7 +65,9 @@ from cascadeguard.knowledge.retrieval import CONTEXT_LABEL
 from cascadeguard.simulation.boundaries import RoleView
 
 ADVISER = "policy_legal_adviser"
-PROMPT_VERSION = "adviser-v1"
+# v2 (human decision 2026-11-06): evidence-scoped absence wording; per-sentence commentary check.
+PROMPT_VERSION = "adviser-v2"
+NOT_IN_EVIDENCE = "not identified in the provided evidence"
 DEFAULT_ANSWER_CACHE = PROJECT_ROOT / "data" / "adviser_cache"
 PRESETS_FILE = "adviser_questions.yaml"
 PRESET_VECTORS = "adviser_query_vectors.json"  # in policies/kb/, tied to the index digest
@@ -299,10 +304,18 @@ class AdviserAnswer:
     # LLM mode only: every line the model wrote, each under the agent-statement label. Never
     # part of the seven sections (option (b), human decision 2026-11-06).
     commentary: tuple[str, ...] = ()
+    # One entry per model sentence the engine withheld from the commentary: its reasons, e.g.
+    # "gap_wording" or "gap_wording, status_claim". The withheld text itself is never shown.
+    withheld: tuple[str, ...] = ()
 
     @property
     def cited_ids(self) -> tuple[str, ...]:
         return tuple(e.clause_id for e in (*self.uae_evidence, *self.international))
+
+    @property
+    def withheld_note(self) -> str:
+        """The engine's line under the commentary: how many sentences it withheld, and why."""
+        return withheld_note(self.withheld, len(self.commentary))
 
     def sections(self) -> list[tuple[str, list[str]]]:
         """The seven sections as plain lines, in order."""
@@ -359,9 +372,11 @@ class AdviserAnswer:
         for title, body in self.sections():
             lines.append(title)
             lines.extend(f"  {b}" for b in body)
-        if self.commentary:
+        if self.commentary or self.withheld:
             lines.append(COMMENTARY_HEADING)
             lines.extend(f"  {c}" for c in self.commentary)
+            if self.withheld:
+                lines.append(f"  {self.withheld_note}")
         lines.append(f"Context ({CONTEXT_LABEL}):")
         if not self.context:
             lines.append("  none")
@@ -369,6 +384,22 @@ class AdviserAnswer:
             lines.append(f"  {c.source_file} p.{c.page} [{c.label}]")
             lines.append(f"    {c.text[:300]}{'...' if len(c.text) > 300 else ''}")
         return "\n".join(lines)
+
+
+def withheld_note(withheld: Sequence[str], shown: int) -> str:
+    """ "2 sentences withheld by the engine check (gap_wording: 2, status_claim: 1)"; when
+    nothing was shown, says the whole commentary was withheld. Empty when nothing was."""
+    if not withheld:
+        return ""
+    counts: dict[str, int] = {}
+    for entry in withheld:
+        for reason in entry.split(", "):
+            counts[reason] = counts.get(reason, 0) + 1
+    why = ", ".join(f"{r}: {n}" for r, n in sorted(counts.items()))
+    n = len(withheld)
+    if not shown:
+        return f"All {n} sentences of the model commentary withheld by the engine check ({why})"
+    return f"{n} sentence{'s' if n != 1 else ''} withheld by the engine check ({why})"
 
 
 def view_digest(view: RoleView) -> str:
@@ -558,8 +589,9 @@ Rules:
   using each clause's status label.
 - If no listed clause supports an answer, set abstain to true, cite nothing, list no options,
   and say the answer is {NOT_IDENTIFIED}.
-- Never say that anything is absent, lacking, missing, unclear or not required, or that a gap
-  exists: say only what the listed clauses state.
+- Never say that anything is absent, lacking, missing, unclear or not required in the law, or
+  that a gap exists: say only what the listed clauses state. Where the listed clauses do not
+  answer part of the question, say that it is "{NOT_IN_EVIDENCE}".
 - Never state a clause's status or whether it binds (no "binding", "mandatory", "federal law"):
   the simulation shows each clause's status label next to it.
 - Never authorise, approve, permit, waive or override anything: you advise only.
@@ -720,7 +752,9 @@ def llm_answer(
     mode_detail: str,
     usage: dict[str, Any],
 ) -> AdviserAnswer:
-    """The model's answer if the engine accepts it, else the template with the reasons."""
+    """The model's answer if the engine accepts its structure, else the template with the
+    reasons. The model's sentences are checked one by one: a flagged one is withheld from the
+    commentary and counted (human decision 2026-11-06)."""
     by_id = {e.clause_id: e for e in offered}
     citable = {cid: clauses[cid] for cid in by_id}
     check = check_answer(
@@ -750,8 +784,8 @@ def llm_answer(
 
     # Option (b), human decision 2026-11-06: sections 1, 5 and 6 are always the engine's
     # template text, built from the clauses the model chose; every line the model wrote goes to
-    # the separate "Model commentary" block, under the agent-statement label (the engine check
-    # above has already run its phrase checks on each of them).
+    # the separate "Model commentary" block, under the agent-statement label, keeping only the
+    # sentences that pass the engine's per-sentence check.
     def chosen(cited: Sequence[CitedClause]) -> tuple[EvidenceItem, ...]:
         return tuple(by_id[cid] for cid in dict.fromkeys(c.clause_id for c in cited))
 
@@ -763,28 +797,45 @@ def llm_answer(
     shown = template_answer(
         scenario_id, question, view, picked, role_ids, mode_detail, model_selected=True
     )
-    notes = [
-        f"{c.clause_id}: {c.relevance}"
-        for c in (*payload.uae_evidence, *payload.international_comparison)
+    cited = {cid: citable[cid] for cid in picked_ids(payload)}
+    # (prefix, model text, the clause a relevance note is about)
+    lines: list[tuple[str, str, str | None]] = [
+        ("", payload.direct_answer, None),
+        ("responsible role: ", payload.responsible_role, None),
+        *((SUGGESTION, o, None) for o in payload.options),
+        *(("escalation: ", e, None) for e in payload.escalation),
+        *(("uncertainty: ", u, None) for u in payload.uncertainty),
+        *(
+            (f"relevance of {c.clause_id}: ", c.relevance, c.clause_id)
+            for c in (*payload.uae_evidence, *payload.international_comparison)
+        ),
     ]
-    commentary = tuple(
-        agent_statement(line)
-        for line in (
-            payload.direct_answer,
-            f"responsible role: {payload.responsible_role}",
-            *(f"{SUGGESTION}{o}" for o in payload.options),
-            *(f"escalation: {e}" for e in payload.escalation),
-            *(f"uncertainty: {u}" for u in payload.uncertainty),
-            *(f"relevance of {n}" for n in notes),
-        )
-    )
+    commentary: list[str] = []
+    withheld: list[str] = []
+    for prefix, text, own in lines:
+        kept: list[str] = []
+        for sentence in sentences(text):
+            reasons = sentence_reasons(sentence, allowed_label_parts(sentence, own, cited))
+            if reasons:
+                withheld.append(", ".join(reasons))
+            else:
+                kept.append(sentence)
+        if kept:
+            commentary.append(agent_statement(prefix + " ".join(kept)))
     return replace(
         shown,
         mode=MODE_LLM,
         retrieved=tuple(e.clause_id for e in retrieved.candidates),
-        commentary=commentary,
+        commentary=tuple(commentary),
+        withheld=tuple(withheld),
         usage=usage,
     )
+
+
+def picked_ids(payload: AdviserPayload) -> tuple[str, ...]:
+    """The clause ids the model cited, in order, once each."""
+    cited = (*payload.uae_evidence, *payload.international_comparison)
+    return tuple(dict.fromkeys(c.clause_id for c in cited))
 
 
 # --- Entry point -------------------------------------------------------------------------------

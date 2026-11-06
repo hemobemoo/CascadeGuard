@@ -1,0 +1,35 @@
+{
+  "minute": 45,
+  "question": "Must the health service operator notify the health-data oversight role of a suspected incident, and within what period?",
+  "recorded_key": "9322e163bdf1745a80cbb625ce381195f5ae96f0548ffc2b0084b2eff58b16df",
+  "prompt_version": "adviser-v1",
+  "rejected": [
+    "gap_wording"
+  ],
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The health service operator must report breaches/incidents to the health-data oversight role within the period defined by Executive Regulations of UAE Data Protection Law; that period is not stated in the reviewed corpus.",
+    "uae_evidence": [
+      {
+        "clause_id": "dha.pp11.4-18-4",
+        "relevance": "Requires the Entity to report breaches/incidents within the designated period defined by Executive Regulations of UAE Data Protection Law."
+      }
+    ],
+    "international_comparison": [
+      {
+        "clause_id": "eu.gdpr.art33-1",
+        "relevance": "Foreign precedent requiring notification to a supervisory authority without undue delay and, where feasible, within 72 hours of becoming aware of a personal data breach."
+      }
+    ],
+    "responsible_role": "health_service_operator - clause dha.pp11.4-18-4 assigns breach/incident reporting to the Entity.",
+    "options": [
+      "Report the suspected incident to health_data_oversight within the period set by UAE Data Protection Law Executive Regulations once that period is identified."
+    ],
+    "escalation": [
+      "health_data_oversight"
+    ],
+    "uncertainty": [
+      "The specific notification period is not stated in the reviewed corpus because it depends on Executive Regulations of UAE Data Protection Law that are not included."
+    ]
+  }
+}

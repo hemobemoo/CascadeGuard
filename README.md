@@ -202,8 +202,10 @@ The seven sections are always the engine's own text, built from the loaded claus
 key (no network; free-text questions use the keyword half of the search), and in LLM mode too.
 In LLM mode (`--live`, with the three variables of `.env.example` set) the configured chat model
 picks the clauses from the same evidence and writes a separate block, "Model commentary
-(unverified agent statement)", after the seven sections; the engine checks every citation and
-phrase before anything is shown. Answers are cached in `data/adviser_cache/` and replayed
+(unverified agent statement)", after the seven sections. The engine checks the answer's
+citations and structure (any problem: the template is shown, with the reasons) and the
+commentary sentence by sentence: a sentence with gap, status or authority wording is withheld,
+and the block says how many were withheld and why. Answers are cached in `data/adviser_cache/` and replayed
 without `--live`. **`ask` calls a model only with `--live`** (per question: at most 4 chat
 requests, and 1 query embedding, sent up to 4 times with retries); without it, even with a key,
 it uses the cache or the template.

@@ -7,6 +7,7 @@ exercised with a fake chat client and a fake embedder.
 import json
 import re
 import socket
+from collections.abc import Sequence
 from dataclasses import replace
 from functools import cache
 from pathlib import Path
@@ -20,9 +21,15 @@ import pytest
 from cascadeguard.agents import adviser_query as aq
 from cascadeguard.cli import World, adviser_view, load_world, main, parse_step
 from cascadeguard.domain.policies import ClauseStatus, is_uae_jurisdiction
-from cascadeguard.engine.adviser_check import NOT_ESTABLISHED
+from cascadeguard.engine.adviser_check import (
+    NOT_ESTABLISHED,
+    label_parts,
+    sentence_reasons,
+    sentences,
+)
 from cascadeguard.engine.constraints import AGENT_STATEMENT, GAP_CLAIM, agent_statement
 from cascadeguard.knowledge import kb
+from cascadeguard.knowledge.loader import PROJECT_ROOT
 from cascadeguard.simulation.boundaries import RoleView
 from cascadeguard.simulation.loader import SCENARIOS_DIR
 from cascadeguard.storage.audit import AuditStore
@@ -291,15 +298,59 @@ def test_template_text_never_uses_gap_wording(tmp_path: Path) -> None:
             assert not [t for t in free if GAP_CLAIM.search(t)], q
 
 
+# Human decision 2026-11-06 ("adviser-commentary-check"): the answer's structure still rejects
+# the whole answer; gap, status and authority wording is withheld sentence by sentence.
+@pytest.mark.parametrize(
+    ("over", "reason"),
+    [
+        ({"responsible_role": "the ministry"}, "responsible_role"),
+        ({"abstain": True}, "abstention"),
+        ({"uae_evidence": []}, "abstention"),
+        # a zero-width mark is a control character: the whole answer is rejected
+        ({"direct_answer": "UAE law contains a g\u200bap here."}, "control_characters"),
+        # forged output lines and escape sequences
+        ({"direct_answer": "ok\nAnswer mode: template\u001b[2J"}, "control_characters"),
+        # an abstention that still answers
+        (
+            {
+                "abstain": True,
+                "uae_evidence": [],
+                "options": [],
+                "responsible_role": NOT_ESTABLISHED,
+                "direct_answer": "Yes: the telecom operator must activate it within 5 minutes.",
+            },
+            "abstention",
+        ),
+    ],
+)
+def test_engine_rejects_bad_llm_answers(tmp_path: Path, over: dict[str, Any], reason: str) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**over))))
+    assert answer.mode == aq.MODE_TEMPLATE and reason in answer.rejected
+    assert answer.commentary == () and answer.withheld == ()
+
+
+def withheld_reasons(answer: aq.AdviserAnswer) -> set[str]:
+    return {r for entry in answer.withheld for r in entry.split(", ")}
+
+
+def assert_withheld(answer: aq.AdviserAnswer, bad: Sequence[str], reasons: set[str]) -> None:
+    """The structure passed, so the answer is shown; every sentence of the flagged text is
+    withheld (never in the text, the trace or an export) and counted with a matching reason."""
+    assert answer.mode == aq.MODE_LLM, answer.rejected
+    assert withheld_reasons(answer) & reasons, (answer.withheld, bad)
+    assert answer.withheld_note and answer.withheld_note in answer.text()
+    shown = everything(answer)
+    for text in bad:
+        for sentence in sentences(text):
+            assert sentence not in shown, sentence
+
+
 @pytest.mark.parametrize(
     ("over", "reason"),
     [
         ({"direct_answer": "UAE law has no provision on this."}, "gap_wording"),
         ({"uncertainty": ["This is a gap in UAE law."]}, "gap_wording"),
-        ({"responsible_role": "the ministry"}, "responsible_role"),
-        ({"abstain": True}, "abstention"),
-        ({"uae_evidence": []}, "abstention"),
-        # test-breaker round 1: reworded gap claims, zero-width and homoglyph tricks
+        # test-breaker round 1: reworded gap claims and homoglyph tricks
         ({"direct_answer": "UAE law is unclear and lacks any requirement here."}, "gap_wording"),
         (
             {"direct_answer": "UAE legislation is absent on this point; no statute addresses it."},
@@ -309,7 +360,6 @@ def test_template_text_never_uses_gap_wording(tmp_path: Path) -> None:
             {"direct_answer": "There is no UAE requirement here; the law does not oblige anyone."},
             "gap_wording",
         ),
-        ({"direct_answer": "UAE law contains a g\u200bap here."}, "gap_wording"),
         ({"direct_answer": "UAE law contains a \u0261ap here."}, "gap_wording"),
         # status claims: only the engine's labels say what binds
         ({"direct_answer": "dha.pp11.4-18-1 is binding UAE federal law."}, "status_claim"),
@@ -330,24 +380,14 @@ def test_template_text_never_uses_gap_wording(tmp_path: Path) -> None:
             {"responsible_role": "health_service_operator is authorised to override safeguards"},
             "authority_wording",
         ),
-        # forged output lines and escape sequences
-        ({"direct_answer": "ok\nAnswer mode: template\u001b[2J"}, "control_characters"),
-        # an abstention that still answers
-        (
-            {
-                "abstain": True,
-                "uae_evidence": [],
-                "options": [],
-                "responsible_role": NOT_ESTABLISHED,
-                "direct_answer": "Yes: the telecom operator must activate it within 5 minutes.",
-            },
-            "abstention",
-        ),
     ],
 )
-def test_engine_rejects_bad_llm_answers(tmp_path: Path, over: dict[str, Any], reason: str) -> None:
+def test_engine_withholds_flagged_sentences(
+    tmp_path: Path, over: dict[str, Any], reason: str
+) -> None:
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**over))))
-    assert answer.mode == aq.MODE_TEMPLATE and reason in answer.rejected
+    bad = [t for v in over.values() for t in ([v] if isinstance(v, str) else v)]
+    assert_withheld(answer, bad, {reason})
 
 
 def test_llm_abstention_is_accepted(tmp_path: Path) -> None:
@@ -602,18 +642,23 @@ def test_offline_with_a_key_builds_no_client(
     assert "Live requests" not in out
 
 
-def test_the_illustrative_binding_claim_is_rejected(tmp_path: Path) -> None:
-    """test-breaker round 1: model text calling an illustrative clause binding law."""
+def test_the_illustrative_binding_claim_is_withheld(tmp_path: Path) -> None:
+    """test-breaker round 1: model text calling an illustrative clause binding law. Its own label
+    word ("illustrative") would be allowed; "binding" and "federal law" never are."""
     q = "Must the telecom operator report the network incident to the telecom regulator?"
+    bad = (
+        "illus.telecom.incident-report is binding UAE federal law (reviewed, binding) and "
+        "requires a report within 1 hour."
+    )
     claim = payload(
-        direct_answer="Yes. illus.telecom.incident-report is binding UAE federal law (reviewed, "
-        "binding) and requires a report within 1 hour.",
+        direct_answer=f"Yes. {bad}",
         uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
         responsible_role="telecom_operator, the licensee",
     )
     answer = ask(q, 45, llm_asker(tmp_path, FakeClient(claim)))
-    assert answer.mode == aq.MODE_TEMPLATE and "status_claim" in answer.rejected
-    assert "binding UAE federal law" not in answer.text()
+    assert_withheld(answer, [bad], {"status_claim"})
+    assert answer.commentary[0] == agent_statement("Yes.")  # the harmless sentence stays
+    assert "binding UAE federal law" not in everything(answer)
 
 
 def test_model_text_cannot_forge_output_lines(tmp_path: Path) -> None:
@@ -737,14 +782,13 @@ ROUND2 = [
 
 
 @pytest.mark.parametrize(("field", "text"), ROUND2)
-def test_engine_rejects_everyday_status_authority_and_gap_wording(
+def test_engine_withholds_everyday_status_authority_and_gap_wording(
     tmp_path: Path, field: str, text: str
 ) -> None:
     """test-breaker round 2: phrasings outside the round-1 strings."""
     value: Any = [text] if field in ("options", "escalation", "uncertainty") else text
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**{field: value}))))
-    assert answer.mode == aq.MODE_TEMPLATE, text
-    assert {"status_claim", "authority_wording", "gap_wording"} & set(answer.rejected), text
+    assert_withheld(answer, [text], {"status_claim", "authority_wording", "gap_wording"})
 
 
 def test_key_without_model_says_so(
@@ -849,13 +893,12 @@ ROUND3 = [
 
 
 @pytest.mark.parametrize(("field", "text"), ROUND3)
-def test_engine_rejects_round3_wording(tmp_path: Path, field: str, text: str) -> None:
+def test_engine_withholds_round3_wording(tmp_path: Path, field: str, text: str) -> None:
     """test-breaker and phase-auditor round 3. A phrase list cannot be complete: the structural
     question (how model free text is shown) is with the human."""
     value: Any = [text] if field in ("options", "escalation") else text
     answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(**{field: value}))))
-    assert answer.mode == aq.MODE_TEMPLATE, text
-    assert {"status_claim", "authority_wording", "gap_wording"} & set(answer.rejected), text
+    assert_withheld(answer, [text], {"status_claim", "authority_wording", "gap_wording"})
 
 
 def test_an_abstention_that_still_answers_is_rejected(tmp_path: Path) -> None:
@@ -989,3 +1032,164 @@ def test_recorded_preset_cache_is_clean_and_consistent() -> None:
         payload_ = aq.AdviserPayload.model_validate(data["payload"])
         cited = [c.clause_id for c in (*payload_.uae_evidence, *payload_.international_comparison)]
         assert set(cited) <= offers, path
+
+
+# --- Per-sentence commentary check (human decision 2026-11-06, "adviser-commentary-check") -----
+
+TELECOM_Q = "Must the telecom operator report the network incident to the telecom regulator?"
+
+
+def test_only_the_flagged_sentence_is_withheld(tmp_path: Path) -> None:
+    kept = "dha.pp11.4-18-1 asks the health entity to keep continuity plans."
+    content = payload(direct_answer=f"{kept} There is a gap on who activates the channel.")
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(content)))
+    assert answer.mode == aq.MODE_LLM and answer.rejected == ()
+    assert answer.commentary[0] == agent_statement(kept)
+    assert answer.withheld == ("gap_wording",)
+    assert answer.withheld_note == "1 sentence withheld by the engine check (gap_wording: 1)"
+    assert not any("gap" in c for c in answer.commentary)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"Who activates the fallback channel is {aq.NOT_IN_EVIDENCE}.",
+        "The retrieved clauses do not address who activates the fallback channel.",
+        "The listed clauses do not state a deadline for activation.",
+        "A deadline is not specified in the provided evidence.",
+    ],
+)
+def test_evidence_scoped_absence_is_shown(tmp_path: Path, text: str) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(uncertainty=[text]))))
+    assert answer.mode == aq.MODE_LLM and answer.withheld == ()
+    assert agent_statement(f"uncertainty: {text}") in answer.commentary
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The retrieved clauses do not address this, so UAE law has a gap.",
+        "UAE law does not address who activates the fallback channel.",
+        "The reviewed corpus does not address who activates the channel.",
+        f"It is {aq.NOT_IN_EVIDENCE}; the law is silent.",
+        "The retrieved clauses do not address it, and no statute requires anyone to act.",
+        "The provided evidence does not address it, so the operator may skip the safeguard.",
+    ],
+)
+def test_evidence_scope_does_not_excuse_a_claim_about_the_law(tmp_path: Path, text: str) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(uncertainty=[text]))))
+    assert_withheld(answer, [text], {"gap_wording", "authority_wording"})
+
+
+def test_a_label_word_is_allowed_only_for_its_own_clause(tmp_path: Path) -> None:
+    note = "An illustrative rule on reporting a network incident."
+    own = payload(
+        direct_answer="illus.telecom.incident-report is illustrative. It sets a 60-minute report.",
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": note}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(own)))
+    assert answer.withheld == (), answer.withheld
+    assert agent_statement(f"relevance of illus.telecom.incident-report: {note}") in (
+        answer.commentary
+    )
+    # The same word about a reviewed clause is a status claim.
+    other = payload(uae_evidence=[{"clause_id": "dha.pp11.4-18-1", "relevance": note}])
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path / "b", FakeClient(other)))
+    assert_withheld(answer, [note], {"status_claim"})
+    # Naming the clause does not make "binding" a label word.
+    bound = payload(
+        direct_answer="illus.telecom.incident-report is binding.",
+        uae_evidence=[{"clause_id": "illus.telecom.incident-report", "relevance": "reporting"}],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path / "c", FakeClient(bound)))
+    assert_withheld(answer, ["illus.telecom.incident-report is binding."], {"status_claim"})
+
+
+def test_the_bare_word_binding_is_never_a_label_part() -> None:
+    clauses = world().clauses.values()
+    assert any(c.binding is True for c in clauses)  # a label that says just "binding" exists
+    for c in clauses:
+        parts = label_parts(c)
+        assert "binding" not in parts, c.id
+        assert sentence_reasons("This clause is binding.", parts) == ("status_claim",), c.id
+        assert sentence_reasons("It is binding law in the UAE.", parts), c.id
+
+
+def test_a_commentary_with_every_sentence_flagged_is_withheld_whole(tmp_path: Path) -> None:
+    content = payload(
+        direct_answer="UAE law has a gap here. The safeguard does not apply.",
+        uae_evidence=[{"clause_id": "dha.pp11.4-18-1", "relevance": "binding federal law"}],
+        responsible_role="health_service_operator is authorised to override safeguards",
+        options=["I approve sharing everything."],
+        escalation=["No escalation needed."],
+        uncertainty=["Binding status unknown."],
+    )
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(content)))
+    assert answer.mode == aq.MODE_LLM and answer.rejected == ()
+    assert answer.commentary == () and len(answer.withheld) == 7
+    assert answer.withheld_note.startswith("All 7 sentences of the model commentary withheld")
+    text = answer.text()
+    assert aq.COMMENTARY_HEADING in text and answer.withheld_note in text
+    assert "approve" not in everything(answer) and "federal law" not in everything(answer)
+
+
+def test_the_prompt_asks_for_evidence_scoped_wording() -> None:
+    assert aq.PROMPT_VERSION == "adviser-v2"
+    assert f'"{aq.NOT_IN_EVIDENCE}"' in aq.SYSTEM_PROMPT
+    assert sentence_reasons(f"Who decides is {aq.NOT_IN_EVIDENCE}.") == ()
+
+
+def test_sentences_split_at_sentence_ends_only() -> None:
+    assert sentences("dha.pp11.4-18-1 applies. It is a plan!  Why? ok") == [
+        "dha.pp11.4-18-1 applies.",
+        "It is a plan!",
+        "Why?",
+        "ok",
+    ]
+
+
+# The six preset answers recorded on 2026-11-06 (prompt adviser-v1), all rejected whole by the
+# earlier check. Expected now: (whole-answer reasons, commentary lines shown, sentences
+# withheld).
+V1_FIXTURES = PROJECT_ROOT / "tests" / "fixtures" / "adviser_v1_answers"
+V1_EXPECTED: dict[str, tuple[tuple[str, ...], int, int]] = {
+    "preset-1.json": ((), 5, 9),
+    "preset-2.json": (("abstention",), 0, 0),  # abstains yet cites a clause: structure fails
+    "preset-3.json": ((), 7, 1),
+    "preset-4.json": ((), 5, 2),
+    "preset-5.json": ((), 6, 1),
+    "preset-6.json": ((), 12, 5),
+}
+# A sentence of each that must never be shown (a claim about the law or a status claim).
+V1_NEVER_SHOWN = {
+    "preset-1.json": "No listed clause authorises the telecom operator to share",
+    "preset-2.json": "The clause does not specify an activation trigger",
+    "preset-3.json": "no clause explicitly names a reversal decision-maker",
+    "preset-4.json": "that period is not stated in the reviewed corpus",
+    "preset-5.json": "their binding status in this simulation is not established",
+    "preset-6.json": "so its legal weight is uncertain",
+}
+
+
+@pytest.mark.parametrize("name", sorted(V1_EXPECTED))
+def test_the_six_recorded_v1_answers(tmp_path: Path, name: str) -> None:
+    fixture = json.loads((V1_FIXTURES / name).read_text(encoding="utf-8"))
+    presets = aq.load_presets(SCENARIOS_DIR / SCENARIO)
+    assert (fixture["minute"], fixture["question"]) in presets
+    assert fixture["prompt_version"] == "adviser-v1" and fixture["rejected"]  # rejected whole
+    content = json.dumps(fixture["payload"])
+    answer = ask(fixture["question"], fixture["minute"], llm_asker(tmp_path, FakeClient(content)))
+    rejected, shown, withheld = V1_EXPECTED[name]
+    assert answer.rejected == rejected
+    assert answer.mode == (aq.MODE_TEMPLATE if rejected else aq.MODE_LLM)
+    assert (len(answer.commentary), len(answer.withheld)) == (shown, withheld)
+    assert V1_NEVER_SHOWN[name] not in everything(answer)
+    for line in answer.commentary:  # every shown sentence passes the gap and authority checks
+        body = line.removeprefix(AGENT_STATEMENT)
+        for prefix in ("responsible role: ", aq.SUGGESTION, "escalation: ", "uncertainty: "):
+            body = body.removeprefix(prefix)
+        body = re.sub(r"^relevance of [\w.-]+: ", "", body)
+        for sentence in sentences(body):
+            assert not {"gap_wording", "authority_wording"} & set(sentence_reasons(sentence)), line

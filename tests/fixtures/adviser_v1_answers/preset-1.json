@@ -1,0 +1,46 @@
+{
+  "minute": 30,
+  "question": "Can the telecom operator share network degradation status with the health operator, and what may be shared?",
+  "recorded_key": "797936f5e5e30976a4ab255c8660944b7f35dfb0944c5f62f71cbc73e8b9110b",
+  "prompt_version": "adviser-v1",
+  "rejected": [
+    "gap_wording",
+    "status_claim",
+    "authority_wording"
+  ],
+  "payload": {
+    "abstain": false,
+    "direct_answer": "The reviewed clauses do not state that the telecom operator may share network degradation status with the health operator. They state that the telecom operator must report significant network degradation to the telecom regulator, and that the telecom regulator may request incident information from the operator. Separately, the health data clauses restrict circulation of patient information and health data to permitted cases and health purposes, with patient written approval generally required except in listed exceptions. Because no clause authorises sharing network degradation status with the health operator, and no clause defines what may be shared in that direction, the answer is not identified in the reviewed corpus.",
+    "uae_evidence": [
+      {
+        "clause_id": "illus.telecom.incident-report",
+        "relevance": "requires the telecom operator to report significant network degradation to the telecom regulator, not to the health operator"
+      },
+      {
+        "clause_id": "illus.telecom.regulator-information-request",
+        "relevance": "permits the telecom regulator to request incident information from the operator, not the health operator"
+      },
+      {
+        "clause_id": "uae.fl2-2019.art4",
+        "relevance": "requires confidentiality of health data and restricts circulation to permitted cases"
+      },
+      {
+        "clause_id": "uae.fl2-2019.art16",
+        "relevance": "restricts circulation of patient information to health purposes and patient written approval except in listed exceptions"
+      }
+    ],
+    "international_comparison": [],
+    "responsible_role": "not established in the reviewed corpus",
+    "options": [
+      "Do not share network degradation status with the health operator unless a listed clause or applicable legislation authorises it.",
+      "Refer the question to health_data_oversight and telecom_regulator for a decision on whether any permitted case or exception applies."
+    ],
+    "escalation": [
+      "health_data_oversight",
+      "telecom_regulator"
+    ],
+    "uncertainty": [
+      "No listed clause authorises the telecom operator to share network degradation status with the health operator or specifies what may be shared in that direction."
+    ]
+  }
+}
