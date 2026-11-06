@@ -37,6 +37,14 @@ approved:
   # never loaded (policies/gap_examples_only/); quotes checked against the PDF pp. 15 and 50.
   nist.sp800-34.activation-by-designated-authority: 791d8817c0863f48b0e595320306af66cf7633cdffa3370cfc33e48e274ea400
   nist.sp800-34.alternate-manual-means: 78867467325ab47feebabac0427dd383b3163043f998dc4cf27cc96fa566d730
+  # Gate 1 (scoped) on 2026-11-06 (reviewer Ibrahim Melhem): UAE Cyber Security Council
+  # clauses reviewed as gap examples only, never loaded (policies/gap_examples_only/);
+  # quotes checked against the three PDFs (not redistributed).
+  uae.csc-ai-policy.2-4-2-redundancy-failover: 73d347536894306ec8041d1e160b80a525cf3248552855b98c5022de93d2a28b
+  uae.csc-ai-policy.3-4-3-redundant-systems-ready: e23d61f37707893cd4efdb87af64d0c3a1574b5553e292dea7803b49ba5d5d83
+  uae.csc-ai-policy.3-6-2-automated-response-human-intervention: 1a3f289891d353e1e2c90814f82b2134d8c951ce557748701b9b6ac1c598dd62
+  uae.csc-isf.cii-sectors-cross-sector-sharing: 174a3c83632b69ba52d4c3830c55359d1bb1527f2873a878a1b7c28ca5819e42
+  uae.csc-isf.traffic-light-protocol: a0df63fcb797380ad0356cd1fcac7116a11fc00058ba3d5cf185cbea0a9b5019
 reapproval_needed: []
 # Page-image transcriptions the human checked against the image (AGENTS.md, transcription
 # route): "<source_file>#<page>" -> SHA-256 of the record's text at approval. A record with

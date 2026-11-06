@@ -3,7 +3,9 @@
 # reads this folder). The PDFs are not redistributed (reproduction needs the CSC's consent): they
 # and their extracted text are local only; see NOT_REDISTRIBUTED in knowledge/loader.py and
 # policies/not_redistributed_pages.json. Each note gives the PDF (viewer) page and the printed
-# page. Gate 1: the human checks each quote against the PDF.
+# page. Gate 1 (scoped) on 2026-11-06 (Ibrahim Melhem): five reviewed as gap examples only,
+# quotes checked against the three PDFs; uae.csc-cirp.ncrg-level3-declaration and
+# uae.csc-cirp.ncrg-sector-impact-information stay drafts (they map to no failure).
 clauses:
   - id: uae.csc-ai-policy.2-4-2-redundancy-failover
     title: "UAE AI cyber security policy 2.4.2: the entity shall ensure resilience of AI/ML systems with redundancy and failover"
@@ -16,7 +18,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2025-11"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 15 is printed page 14. Version as
@@ -42,7 +44,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2025-11"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 36 is printed page 35. Version as
@@ -73,7 +75,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2025-11"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 41 is printed page 40. Version as
@@ -102,7 +104,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2023-05"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 32 is printed page 31. Version as
@@ -133,7 +135,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2023-05"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 24 is printed page 23. Version as

@@ -14,7 +14,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import yaml
@@ -63,6 +63,27 @@ PAGES = {
     "uae.csc-cirp.ncrg-sector-impact-information": (16, 15),
 }
 SCOPE = "applies to federal entities and CII entities"
+# Gate 1 (scoped), human 2026-11-06: reviewed as gap examples only. The two NCRG clauses stay
+# drafts: they map to no failure (the Level 3 declaration; the sector-impact entry was dropped
+# at gate 7).
+REVIEWED = CSC_IDS - {
+    "uae.csc-cirp.ncrg-level3-declaration",
+    "uae.csc-cirp.ncrg-sector-impact-information",
+}
+LEGAL = {
+    "National Cyber Security Policy for Artificial Intelligence v1.1.pdf": (
+        "Council-approved national policy (as printed on its cover); legal force for this "
+        "scenario not established."
+    ),
+    "Cyber Security Information Sharing Framework V2.0.pdf": (
+        "Cabinet-approved national framework (as printed on its cover); legal force for this "
+        "scenario not established."
+    ),
+    "Cyber Incident Response Plan V2.0.pdf": (
+        "Cabinet-approved national plan (as printed on its cover); legal force for this "
+        "scenario not established."
+    ),
+}
 
 
 def csc_clauses() -> list[Any]:
@@ -171,11 +192,14 @@ def test_they_are_never_searched_and_the_search_digest_ignores_their_text(
 # --- The drafts ---------------------------------------------------------------------------------
 
 
-def test_the_drafts_carry_the_labels_the_human_set() -> None:
+def test_the_clauses_carry_the_labels_the_human_set() -> None:
     for c in csc_clauses():
-        assert c.status is ClauseStatus.DRAFT and c.binding == "unknown", c.id
+        status = ClauseStatus.REVIEWED if c.id in REVIEWED else ClauseStatus.DRAFT
+        assert c.status is status and c.binding == "unknown", c.id
         assert c.issuer == "UAE Cyber Security Council" and c.jurisdiction.startswith("UAE")
-        assert c.status_label == "draft · binding unknown", c.id
+        assert c.status_label == f"{status} · binding unknown", c.id
+        notes = " ".join((c.notes or "").split())
+        assert f"Legal status: {LEGAL[cast(str, c.source_file)]}" in notes, c.id
         pdf, printed = PAGES[c.id]
         assert c.page == pdf and f"Viewer page {pdf} is printed page {printed}." in c.notes
         assert SCOPE in c.notes and "not designated CII" in c.notes, c.id
@@ -205,7 +229,8 @@ def test_shall_and_should_are_as_printed() -> None:
 def test_they_are_not_loaded_into_the_simulation() -> None:
     assert not CSC_IDS & {c.id for c in load_clauses()}
     assert not CSC_IDS & set(load_engine_clauses())
-    assert not CSC_IDS & set(load_gap_example_clauses())  # drafts: not even shown in reports
+    # The reviewed ones are shown only by the report builder, as gap examples; drafts never.
+    assert CSC_IDS & set(load_gap_example_clauses()) == REVIEWED
     world = cli.load_world(SCENARIO)
     baseline = world.baseline()
     for view in baseline.views:
