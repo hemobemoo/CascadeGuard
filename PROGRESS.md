@@ -13,7 +13,8 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    PR #34, df014a1 (2026-11-06)**; option (c) (gap examples only, never loaded); report section 6
    fallback bullet updated (gate 7); PDF 5 pages.
    Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
-   adviser-v2, presets re-recorded (gate 4, approved): PR open, waiting on the human.
+   adviser-v2, presets re-recorded (gate 4, approved): built and reviewed; PR to open, then stop
+   for the human.
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -471,8 +472,16 @@ text never); prompt adviser-v2; ADR 0003 amended; README; six v1 answers kept as
 Gate 4 run 2026-11-06: 6 chat requests, all succeeded, keyword retrieval; all six answers
 accepted, commentary shown for all six, 15 sentences withheld (8, 2, 2, 1, 0, 2); secrets check
 clean (no key, base URL, model id or local path); table in docs/evaluation/adviser/README.md.
-Not decided by the agent: whether all-flagged commentary should fall back to the template (now:
-the answer is shown with no commentary lines and "All N sentences ... withheld").
+Test-breaker round 1 (FAIL, 2 MAJOR) fixed: an evidence-scoped sentence may not mention the law
+or reach beyond the evidence (BEYOND_EVIDENCE); a sentence naming several clauses may use only
+the label parts they share; ids matched whole; a phrase split across a sentence end is checked
+on the joined pair; "legal effect", "mention", "contemplate", "deal with", "not legislated",
+"nothing ... prevents" added. Re-counted: 17 sentences withheld (8, 2, 2, 2, 1, 2), pinned by
+`test_the_readme_table_matches_the_recorded_answers`. Phase-auditor round 1: PASS (MINORs fixed
+or recorded). Open for the human: all-flagged commentary (see "Waiting on human").
+Verify: `uv run pytest tests/unit/test_adviser_query.py`; offline replay
+`uv run cascadeguard ask uae_health_access --at T+60 "Who must activate the fallback channel?"
+--cache docs/evaluation/adviser/cache` (needs the same CASCADEGUARD_MODEL in .env; no call).
 Local note: `tests/e2e/test_ui_flow.py::test_expert_mode_shows_every_section` failed in 3 of 4
 full runs in the main checkout on 2026-11-06 ("Compare" on rung 2 not visible after scrolling),
 but passed alone, in the e2e file alone, in a clean worktree full run (814 passed) and in CI. It
@@ -1626,11 +1635,20 @@ With option (c) only the report's fallback bullet (section 6, policy gaps) went 
 decision (checked 2026-11-06; loading the clauses is a finals-backlog item). Note: `HARMLESS_GAP` in
 tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
 
+**Adviser commentary check (branch `adviser-commentary-check`, 2026-11-06): one question.**
+- Gate 2 (test-breaker QUESTION-FOR-HUMAN): when every sentence of the model commentary is
+  flagged, the answer is now still shown in LLM mode (engine sections from the model-chosen
+  clauses) with no commentary lines and "All N sentences of the model commentary withheld by the
+  engine check (...)". Keep this, or fall back to the template with the reasons?
+- Deferred MINOR (phase-auditor): no e2e test or recorded Playwright run of the UI's withheld
+  note (`ask-withheld`); the text and trace are covered by unit tests.
+
 **Task 1, Ask the Policy Adviser (2026-11-05; merged 2026-11-06, items below answered):**
 - Gate 4: embedding the 6 preset questions was approved (2026-11-05) but failed twice (HTTP 502,
   8 requests sent, no result). Retry (up to 4 more requests) when the human says so. Until then presets use
   the keyword half without a key, and a live embedding with one.
-- Done 2026-11-06 (recorded; all six rejected by the engine): Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
+- Done 2026-11-06 (v1 recording: all six rejected whole; replaced the same day by the adviser-v2
+  recording on `adviser-commentary-check`, all six accepted with sentences withheld): Gate 4: record the LLM answers to the 6 presets at their steps, so the demo replays them with
   `--offline`: 6 questions, at most 4 chat requests each (one invalid-output retry x client
   retries; cap 4), so 6 requests if all succeed; the configured model. Where to commit the
   answer cache (proposal: `docs/evaluation/adviser/cache/`, used with `--cache`). Not done:

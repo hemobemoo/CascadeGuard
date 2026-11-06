@@ -38,7 +38,10 @@ The adviser's answer is accepted as a separate advisory channel, on these condit
    never shown). Two narrow allowances: an absence scoped to the evidence the model was given
    ("not identified in the provided evidence", "the retrieved clauses do not address"), and a
    part of the status label of the clause the sentence is about (e.g. "illustrative"; never the
-   bare word "binding"). Binding, permit, authorise and legal-gap claims stay blocked. The
+   bare word "binding"; a sentence naming several clauses may use only the parts they share). An
+   evidence-scoped sentence may not also speak about the law (any law, statute, country or
+   "anywhere" word flags it), and a phrase split across a sentence end is checked on the joined
+   pair. Binding, permit, authorise and legal-gap claims stay blocked. The
    structure (citations, UAE/international split, responsible role, abstention, control
    characters) still rejects the whole answer. The prompt (adviser-v2) asks the model to say
    "not identified in the provided evidence". Trade-off: a withheld sentence can change how its

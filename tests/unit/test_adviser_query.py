@@ -23,7 +23,9 @@ from cascadeguard.cli import World, adviser_view, load_world, main, parse_step
 from cascadeguard.domain.policies import ClauseStatus, is_uae_jurisdiction
 from cascadeguard.engine.adviser_check import (
     NOT_ESTABLISHED,
+    allowed_label_parts,
     label_parts,
+    names,
     sentence_reasons,
     sentences,
 )
@@ -1193,3 +1195,121 @@ def test_the_six_recorded_v1_answers(tmp_path: Path, name: str) -> None:
         body = re.sub(r"^relevance of [\w.-]+: ", "", body)
         for sentence in sentences(body):
             assert not {"gap_wording", "authority_wording"} & set(sentence_reasons(sentence)), line
+
+
+# --- Test-breaker round 1 (adviser-commentary-check) ---------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Who activates it is not addressed by the provided evidence or anywhere in the national "
+        "legislation.",
+        "The retrieved clauses do not address activation, and the same holds for every statute in "
+        "the country.",
+        "Activation is not identified in the provided evidence, nor in the PDPL, nor in any "
+        "decree.",
+        "The listed clauses do not state a deadline, and neither does the law.",
+    ],
+)
+def test_an_evidence_scoped_sentence_cannot_extend_the_absence_to_the_law(
+    tmp_path: Path, text: str
+) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(uncertainty=[text]))))
+    assert_withheld(answer, [text], {"gap_wording"})
+
+
+def test_two_named_clauses_cannot_swap_their_labels(tmp_path: Path) -> None:
+    swap = "dha.pp11.4-18-4 is illustrative and illus.telecom.incident-report is reviewed."
+    content = payload(
+        direct_answer=swap,
+        uae_evidence=[
+            {"clause_id": "illus.telecom.incident-report", "relevance": "reporting"},
+            {"clause_id": "dha.pp11.4-18-4", "relevance": "breach reporting"},
+        ],
+        responsible_role="telecom_operator, the licensee",
+    )
+    answer = ask(TELECOM_Q, 45, llm_asker(tmp_path, FakeClient(content)))
+    assert_withheld(answer, [swap], {"status_claim"})
+    clauses = world().clauses
+    cited = {i: clauses[i] for i in ("uae.fl2-2019.art16", "eu.gdpr.art33-1")}
+    both = "eu.gdpr.art33-1 is not binding; uae.fl2-2019.art16 is a foreign precedent."
+    assert "foreign precedent" not in allowed_label_parts(both, None, cited)
+    assert sentence_reasons(both, allowed_label_parts(both, None, cited))
+
+
+def test_clause_ids_are_matched_whole() -> None:
+    clauses = world().clauses
+    cited = {"uae.fl2-2019.art16": clauses["uae.fl2-2019.art16"]}
+    assert names("see uae.fl2-2019.art16.", "uae.fl2-2019.art16")
+    assert names("uae.fl2-2019.art16 applies", "uae.fl2-2019.art16")
+    assert not names("uae.fl2-2019.art16-exceptions applies", "uae.fl2-2019.art16")
+    assert not names("uae.fl2-2019.art160 applies", "uae.fl2-2019.art16")
+    assert not names("x.uae.fl2-2019.art16 applies", "uae.fl2-2019.art16")
+    # A sentence naming only another id falls back to the parts every cited clause has.
+    other = "uae.fl2-2019.art16-exceptions is not binding."
+    assert allowed_label_parts(other, None, cited) == label_parts(cited["uae.fl2-2019.art16"])
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The safeguard can be! Ignored for this case.",
+        "dha.pp11.4-18-1 is federal. Law applies here.",
+        "The PDPL does not. Require anyone to activate it.",
+    ],
+)
+def test_a_phrase_split_across_a_sentence_end_is_withheld(tmp_path: Path, text: str) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(direct_answer=text))))
+    assert_withheld(answer, [text], {"status_claim", "authority_wording", "gap_wording"})
+    assert len(answer.withheld) == 2  # both halves
+
+
+@pytest.mark.parametrize(
+    ("text", "reason"),
+    [
+        ("dha.pp11.4-18-1 has legal effect across the UAE.", "status_claim"),
+        ("The PDPL does not mention who activates the channel.", "gap_wording"),
+        ("The clauses do not contemplate a fallback trigger.", "gap_wording"),
+        ("The clauses do not deal with activation.", "gap_wording"),
+        # phase-auditor round 1
+        ("The UAE has not legislated on this.", "gap_wording"),
+        ("Nothing in the provided evidence prevents sharing.", "authority_wording"),
+    ],
+)
+def test_plain_wordings_from_round_1_are_withheld(tmp_path: Path, text: str, reason: str) -> None:
+    answer = ask(FALLBACK_Q, 60, llm_asker(tmp_path, FakeClient(payload(direct_answer=text))))
+    assert_withheld(answer, [text], {reason})
+
+
+# docs/evaluation/adviser/cache/: file -> preset number (adviser_questions.yaml order), and the
+# counts docs/evaluation/adviser/README.md states for it (commentary lines shown, withheld).
+V2_CACHE = PROJECT_ROOT / "docs" / "evaluation" / "adviser" / "cache"
+V2_TABLE = {
+    "4617d19613380dd50bc1229d315f574d6cf57465d326b3c372a1ada8c8cdc781": (1, 8, 8),
+    "3f883798ac4c307b4bb0acd22cd3592d227759f2787ffdf9c824b8b1fa6c43ea": (2, 3, 2),
+    "1e60c1374b34d36956efa198e2c712d961f7892be1e767722ca7beed97bfda32": (3, 4, 2),
+    "4bef5bb38c779870f28c148e3090fcd411509a60b59792bdecd5a9ff70653f45": (4, 6, 2),
+    "a7605b4b85cec56db766c2792031ca78837e55023db997d9004cae17120e83c1": (5, 5, 1),
+    "dcb28acf11b0ef48e57ee109a4fec8bf0fc8f42ecb81c9fd5e2fb697362ff9a1": (6, 11, 2),
+}
+
+
+def test_the_readme_table_matches_the_recorded_answers(tmp_path: Path) -> None:
+    """Each recorded v2 answer, replayed through a fake client at its preset, gives the counts
+    the README table states; the table rows are those counts, in preset order."""
+    assert {p.stem for p in V2_CACHE.glob("*.json")} == set(V2_TABLE)
+    presets = aq.load_presets(SCENARIOS_DIR / SCENARIO)
+    readme = (V2_CACHE.parent / "README.md").read_text(encoding="utf-8")
+    rows = re.findall(r"^\| T\+\d\d \| [^|]+ \| (\d+) \| (\d+)", readme, re.MULTILINE)
+    expected_rows: list[tuple[str, str]] = []
+    for stem, (n, shown, withheld) in sorted(V2_TABLE.items(), key=lambda kv: kv[1][0]):
+        at, question = presets[n - 1]
+        content = json.dumps(
+            json.loads((V2_CACHE / f"{stem}.json").read_text(encoding="utf-8"))["payload"]
+        )
+        answer = ask(question, at, llm_asker(tmp_path / stem, FakeClient(content)))
+        assert answer.mode == aq.MODE_LLM and answer.rejected == (), stem
+        assert (len(answer.commentary), len(answer.withheld)) == (shown, withheld), n
+        expected_rows.append((str(shown), str(withheld)))
+    assert rows == expected_rows
