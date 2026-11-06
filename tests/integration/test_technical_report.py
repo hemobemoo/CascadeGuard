@@ -127,6 +127,21 @@ def traced(runs: ScriptedRuns) -> dict[str, str]:
     add(corpus.originals, "original PDFs (corpus_counts)")
     add(corpus.local_only, "local-only CSC PDFs (corpus_counts)")
     add(corpus.web, "web transcriptions (corpus_counts)")
+    # Task 4 (gate 7, 2026-11-06): the retrieval check, from the generated evaluation report
+    # (kept current by tests/unit/test_kb_retrieval_eval.py).
+    evaluation = (PROJECT_ROOT / "docs" / "evaluation" / "kb-retrieval.md").read_text("utf-8")
+    row = re.search(
+        r"\| \*\*All answerable\*\* \| (\d+) \| ([\d.]+) \| [\d.]+ \| ([\d.]+) \| ([\d.]+) \|",
+        evaluation,
+    )
+    assert row, "kb-retrieval.md has no results row"
+    answerable = int(row[1])
+    misses = len(re.findall(r"^- \*\*[a-z]+-\d+\*\* .*; not in the top 10\.$", evaluation, re.M))
+    add(answerable, "answerable retrieval queries (kb-retrieval.md)")
+    add(10, "retrieval cut-off: top 10 (kb-retrieval.md)")
+    add(answerable - misses, "queries with a relevant hit in the top 10 (kb-retrieval.md)")
+    for value, name in zip(row.groups()[1:], ("Precision@3", "Recall@5", "MRR@10"), strict=True):
+        add(f"{float(value):.2f}", f"{name}, rounded (kb-retrieval.md)")
     add(statuses.count("reviewed"), "loaded reviewed clauses")
     add(statuses.count("illustrative"), "loaded illustrative clauses")
     add(len(runs.search.ranked), "ranked repairs")

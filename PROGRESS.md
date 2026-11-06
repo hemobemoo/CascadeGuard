@@ -47,8 +47,15 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    are removed by the per-document cap, 4 are pushed down by the fusion (keyword rank about
    1,000). Presets' vectors in `policies/kb/adviser_query_vectors.pending.json`, read by nothing.
    `kb export` records name model, dimensions and prefixes; README embedding-compatibility note.
-   **Waiting on human:** whether one line goes into the report (gate 7); any ranking change is
-   the human's decision (out of this task's scope).
+   **Gate 7 answered (human, 2026-11-06):** one sentence added word for word at the end of the
+   report's Limits paragraph: "A small retrieval check (23 queries written before searching, one
+   annotator: an indication, not a benchmark) found a relevant passage in the top 10 for 13 of 23
+   queries (Precision@3 0.20, Recall@5 0.50, MRR@10 0.45); the ranking was not tuned to these
+   queries, and the misses are listed in docs/evaluation/kb-retrieval.md." Numbers checked against
+   the generated report (13 = 23 - 10 misses; 0.203/0.500/0.453 rounded) and traced by
+   `test_every_number_is_traced_to_the_data`; PDF still 5 pages. **Ranking decided (human,
+   2026-11-06): deferred to finals**; no change to `kb.search_kb`, the cap, the RRF weights or the
+   queries (see the finals backlog). Merged as PR #38 (merge commit recorded after the merge).
    **Done when** (the human's brief of 2026-11-05, Task 4, word for word): "Write ~25 queries in
    tests/evaluation/kb_queries.yaml with the expected source and page, written before looking.
    Cover: AI governance, health data sharing, telecom duties, incident response, information
@@ -120,6 +127,8 @@ step, errors); minimum-vs-excessive information-sharing branch at T+30; agent ru
 suite; KB rebuild and LLM re-record if UAE cyber clauses are approved; updated demo video;
 load the NIST clauses into the simulation, then re-record the gate-4 adviser steps and the preset
 answers once embeddings work; update the citation map, traces and report §4 (gate 7).
+Retrieval ranking: test a looser per-document cap and/or keyword weighting against a NEW query set
+written before looking (not the Task 4 queries); report both sets.
 
 **Task 1 — Ask the Policy Adviser (branch `phase-7-adviser-query`, from `progress-after-pr31`,
 so the two PROGRESS commits after #31 ride along).**
@@ -552,7 +561,8 @@ then locked.
 ## Current phase
 
 **Task 4, retrieval evaluation (branch `kb-retrieval-eval`, from main 965947e, 2026-11-06).**
-See the Task 4 entry in "Start here". PR to open after the review loop; then stop.
+See the Task 4 entry in "Start here". PR #38; gate 7 answered; merge when the human's conditions
+hold, then stop (no Task 6, no incident-envelope schema until the human decides).
 
 **Before (Adviser commentary check):**
 **Adviser commentary check (branch `adviser-commentary-check`, from main df014a1, 2026-11-06).**
@@ -1285,6 +1295,9 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 
 ## Decisions
 
+- Task 4 (human, 2026-11-06): gate 7 answered with one fixed report sentence on the retrieval
+  check; any ranking change deferred to finals, to be tested on a new query set written before
+  looking, reported next to the Task 4 set.
 - Repair grammar = the five types in `CascadeGuard.md` §6; lexicographic ranking as in `AGENTS.md`.
 - CLI uses stdlib `argparse` (no new dependency). Pyright `strict`. Ruff excludes `*.md`.
 - **Health-data regime (working reading of draft clauses, pending human review):** Federal Law
@@ -1729,11 +1742,6 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Task 4, retrieval evaluation (2026-11-06):** (1) gate 7: whether one line on the retrieval
-numbers goes into the report; (2) the evaluation shows the per-document cap and the fusion push
-relevant chunks out of the top 10 for 10 of 23 queries; any ranking change is the human's
-decision (not made; out of the brief).
-
 **Task 3, UAE cyber sources (2026-11-06): all answered; §6 approved; merge after suite and CI.**
 (History below.) Also for the human
 (phase-auditor round 3): the legal-status notes say "(as printed on its cover)", but the approval
@@ -2054,9 +2062,11 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 (`kb-retrieval-eval`) built:
-after its review loop, clean-checkout suite and CI, open the PR, report the numbers and stop. The
-human decides whether one line goes into the report (gate 7). Then Task 6 (optional, gate 4).
+**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 merged as PR #38 once the
+human's conditions hold. Then stop: Task 6 (optional live run, gate 4) and the optional
+incident-envelope schema wait for the human's decision. The four carried-over clause items
+(dha.pp11.4-18-5, mocai.ethics.fallback-plan, uae.cyber-strategy-2025.governance-aim,
+uae.cyber-strategy-2025.partnership-aim) also wait for the human.
 Freeze: nothing merges after 9 Nov 18:00 Amman time except fixes to broken checks.
 
 **Earlier (Task 5):** Task 3 merged (PR #36, b0a685b); Task 5 merged (PR #37, 965947e).
