@@ -426,9 +426,9 @@ GAP_BULLETS = {
 }
 
 
-def gap_bullets() -> dict[str, str]:
+def gap_bullets(report: str) -> dict[str, str]:
     """The policy-gaps section's bullets, keyed by their bold heading."""
-    section = text().replace("\r\n", "\n").split("## 6.", 1)[1]
+    section = report.replace("\r\n", "\n").split("## 6.", 1)[1]
     out: dict[str, str] = {}
     for line in section.splitlines():
         m = re.match(r"- \*\*(.+?)\*\* (.*)", line)
@@ -437,21 +437,35 @@ def gap_bullets() -> dict[str, str]:
     return out
 
 
-def test_the_named_examples_match_the_reviewed_mapping(runs: ScriptedRuns) -> None:
-    """Each gap bullet names exactly the clauses gap_examples.yaml maps to its failure (after the
-    word "Example"/"Examples"), and none when nothing is mapped, so the text cannot go stale."""
-    bullets = gap_bullets()
-    assert set(bullets) == set(GAP_BULLETS), sorted(bullets)
-    assert set(GAP_BULLETS.values()) == {f.id for f in runs.baseline.failures}
+def example_mismatches(report: str, failures: set[str]) -> list[str]:
+    """Why the policy-gaps section disagrees with gap_examples.yaml (empty when it agrees): each
+    bullet must name exactly the clauses mapped to its failure (after the word "Example" or
+    "Examples"), and say NO_EXAMPLE only when nothing is mapped."""
+    bullets = gap_bullets(report)
+    problems: list[str] = []
+    if set(bullets) != set(GAP_BULLETS):
+        problems.append(f"bullet headings {sorted(bullets)}")
+    if set(GAP_BULLETS.values()) != failures:
+        problems.append(f"diagnosed failures {sorted(failures)}")
     mapped: dict[str, set[str]] = {}
     for e in load_gap_examples().entries:
         if e.approved:
             mapped.setdefault(e.failure, set()).add(e.clause)
     for heading, failure in GAP_BULLETS.items():
-        body = bullets[heading]
+        body = bullets.get(heading, "")
         expected = mapped.get(failure, set())
-        assert named_examples(body) == expected, (heading, sorted(expected))
-        assert (NO_EXAMPLE in body) == (not expected), heading
+        if named_examples(body) != expected:
+            problems.append(
+                f"{heading} names {sorted(named_examples(body))}, not {sorted(expected)}"
+            )
+        if (NO_EXAMPLE in body) != (not expected):
+            problems.append(f"{heading}: the no-example sentence")
+    return problems
+
+
+def test_the_named_examples_match_the_reviewed_mapping(runs: ScriptedRuns) -> None:
+    """The report's policy-gaps bullets name the reviewed mapping, so the text cannot go stale."""
+    assert example_mismatches(text(), {f.id for f in runs.baseline.failures}) == []
 
 
 def named_examples(body: str) -> set[str]:
@@ -460,19 +474,21 @@ def named_examples(body: str) -> set[str]:
     return set(re.findall(r"`([^`]+)`", body[found.start() :])) if found else set()
 
 
-def test_the_example_check_catches_the_old_sentence() -> None:
-    """The fallback bullet as submitted before the 2026-11-06 mapping fails the check."""
+def test_the_example_check_catches_the_old_sentence(runs: ScriptedRuns) -> None:
+    """The report with its fallback bullet as submitted before the 2026-11-06 mapping fails the
+    same check the real report passes."""
+    report = text().replace("\r\n", "\n")
+    heading = "- **Orphan duty: activating the fallback channel.** "
+    start = report.index(heading)
+    end = report.index("\n", start)
     old = (
-        "Only uncertain authority was found (`dha.pp11.4-18-1`, binding unknown); it requires a "
-        "determination. No reviewed example clause is mapped to this failure."
+        heading + "Only uncertain authority was found (`dha.pp11.4-18-1`, binding unknown); it "
+        "requires a determination. No reviewed example clause is mapped to this failure. The "
+        "rank-1 repair only masks it: it stays open for the authorities to determine."
     )
-    assert named_examples(old) == set()
-    expected = {
-        e.clause
-        for e in load_gap_examples().entries
-        if e.failure == "orphan_duty:activate_fallback_channel" and e.approved
-    }
-    assert expected and named_examples(old) != expected and NO_EXAMPLE in old
+    stale = report[:start] + old + report[end:]
+    problems = example_mismatches(stale, {f.id for f in runs.baseline.failures})
+    assert len(problems) == 2 and all("activating the fallback channel" in p for p in problems)
 
 
 def test_the_approved_wording_is_kept() -> None:
