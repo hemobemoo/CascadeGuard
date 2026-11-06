@@ -13,8 +13,7 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    PR #34, df014a1 (2026-11-06)**; option (c) (gap examples only, never loaded); report section 6
    fallback bullet updated (gate 7); PDF 5 pages.
    Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
-   adviser-v2, presets re-recorded (gate 4, approved): built and reviewed; PR to open, then stop
-   for the human.
+   adviser-v2, presets re-recorded (gate 4, approved): **merged, PR #35, 2a80a26 (2026-11-06).**
 3. UAE cyber sources (`uae-cyber-sources`, from main 2a80a26): started 2026-11-06; human change of
    2026-11-06: approved clauses go the gap_examples_only route like NIST (never loaded, no KB
    rebuild; gate-4 cache, preset keys, citation map, traces and goldens unchanged); prefer
@@ -22,6 +21,21 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    human: downloading the three official PDFs** (see "Waiting on human"). Unblocked 2026-11-06:
    the human downloaded them; seven drafts in `policies/gap_examples_only/uae_csc_cyber.yaml`;
    PR to open, then stop for gates 1, 6 and 7 (`docs/review/uae-cyber-sources-triage.md`).
+   **Done when** (human brief 2026-11-05 and instructions 2026-11-06): the three official CSC PDFs
+   are local only (gitignored with their extracted text) and pinned (inventory: official link,
+   retrieval date 2026-11-06, SHA-256, version as printed; per-page digests); README Sources rows
+   say "not redistributed (reproduction requires CSC consent); download from the official link";
+   drafts in policies/gap_examples_only/ only, with the human's labels (UAE text, issuer, scope,
+   binding unknown for this scenario), PDF and printed pages, modal verbs as printed, relevance
+   lines saying what each covers and does not; quote checks verifiable (digest route, explained in
+   the PR); gate-4 cache 36/36, preset keys, citation map and report tests, traces and goldens
+   unchanged, no KB rebuild; triage with gate-1 ids and proposed gate-7 entries; review loop, full
+   suite, CI green; PR opened; stop.
+   Decided by the human (2026-11-06), not open: committing the short verbatim quotes inside the
+   clauses is allowed ("Commit only the official csc.gov.ae URL, the retrieval date ..., the SHA-256
+   and the printed version/date in the inventory, plus the short verbatim quotes inside the
+   clauses"); binding is "unknown for this scenario" with the scope note (instruction 4). The
+   evidence-auditor suggested a legal-status reason instead; raised in the PR as optional.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
 6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.

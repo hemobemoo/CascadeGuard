@@ -36,7 +36,11 @@ are not designated CII, and the incident is an AI model fault, not a cyber attac
 | `uae.csc-isf.cii-sectors-cross-sector-sharing` | Information Sharing Framework | 32 | 31 | 3.1 National Level Entities, CII sectors, item 4 | none (a listed role) |
 | `uae.csc-isf.traffic-light-protocol` | Information Sharing Framework | 24 | 23 | 2.2.3 Methods of Information Exchange, Traffic Light Protocol | none (descriptive) |
 | `uae.csc-cirp.ncrg-level3-declaration` | Incident Response Plan | 18 | 17 | 2.2 NCRG, role during Significant Cyber Incidents (Level 3) | "is to" |
-| `uae.csc-cirp.ncrg-sector-impact-information` | Incident Response Plan | 16 | 15 | 2.2 NCRG (added by the agent: sector representatives provide impact information) | "are expected to" |
+| `uae.csc-cirp.ncrg-sector-impact-information` | Incident Response Plan | 16 | 15 | 2.2 NCRG, Membership | "are expected to" |
+
+`uae.csc-cirp.ncrg-sector-impact-information` was not in the human's list: the agent drafted it
+as a further information_deadlock candidate (the human allowed "other passages if you find better
+ones").
 
 Each quote was cut from the extracted page text between start and end markers, so no character
 was retyped; each is found on its cited page (`test_each_draft_quote_is_verbatim_on_its_page_...`).
@@ -81,9 +85,9 @@ diagnosis and its qualification are not changed. Proposed lines:
 
 **orphan_duty:activate_fallback_channel**
 - `uae.csc-ai-policy.2-4-2-redundancy-failover`: "UAE AI cyber security policy (federal and CII
-  entities; \"shall\"): requires redundancy and failover within each entity's AI/ML systems. It
-  requires a fallback within each entity; it does not say who activates one across the
-  telecom-health boundary."
+  entities; binding unknown for this scenario): states that the entity \"shall\" ensure
+  redundancy and failover in its AI/ML systems. It covers a fallback within each entity; it does
+  not say who activates one across the telecom-health boundary."
 - `uae.csc-ai-policy.3-4-3-redundant-systems-ready`: "UAE AI cyber security policy guidance
   (\"should\"): redundant systems or alternative processes ready for immediate deployment where
   AI/ML systems are critical to operations. It illustrates a ready fallback; it does not name who
