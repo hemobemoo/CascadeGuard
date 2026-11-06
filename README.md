@@ -266,6 +266,20 @@ format that the ITU reference code's ingestion loads into its `kb_main` collecti
 ChromaDB is not needed to run CascadeGuard; the test that loads the export uses the optional
 extra: `uv sync --extra chroma`. The scripted demo and the keyword search never use the API.
 
+**Embedding compatibility.** The exported vectors are `nvidia/nemotron-3.5-embed-1b` (via
+OpenRouter, slug `nvidia/nemotron-3.5-embed-1b:free`), each text prefixed `passage: `, cut to
+the first 1,024 of 2,048 dimensions and L2-normalised; every record's metadata names the model,
+the dimensions and both prefixes. Anyone querying the export, including the ITU reference code
+(which defaults to `nomic-embed-text`), must embed queries with the same model, the `query: `
+prefix and the same truncation and normalisation; vectors from another model are not
+comparable. The export was loaded into ChromaDB locally with the reference code's calls; it has
+not been run inside the reference application and is not hosted in the ITU AI for Good Lab.
+
+**Retrieval evaluation.** 23 answerable queries and 3 with nothing to find, written before any
+search, scored with the committed search and no API:
+[docs/evaluation/kb-retrieval.md](docs/evaluation/kb-retrieval.md) (Precision@3, Recall@5,
+MRR@10, every miss listed).
+
 ### Sources
 
 The documents in `policies/sources/` belong to their issuers and are used here for research
