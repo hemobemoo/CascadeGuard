@@ -45,7 +45,14 @@ approved:
   uae.csc-ai-policy.3-6-2-automated-response-human-intervention: 1a3f289891d353e1e2c90814f82b2134d8c951ce557748701b9b6ac1c598dd62
   uae.csc-isf.cii-sectors-cross-sector-sharing: 174a3c83632b69ba52d4c3830c55359d1bb1527f2873a878a1b7c28ca5819e42
   uae.csc-isf.traffic-light-protocol: a0df63fcb797380ad0356cd1fcac7116a11fc00058ba3d5cf185cbea0a9b5019
-reapproval_needed: []
+# Edited 2026-11-06 (human's wording: the legal-status note's location; 2.4.2 note): set back to
+# draft until the human re-approves them (gate 1).
+reapproval_needed:
+  - uae.csc-ai-policy.2-4-2-redundancy-failover
+  - uae.csc-ai-policy.3-4-3-redundant-systems-ready
+  - uae.csc-ai-policy.3-6-2-automated-response-human-intervention
+  - uae.csc-isf.cii-sectors-cross-sector-sharing
+  - uae.csc-isf.traffic-light-protocol
 # Page-image transcriptions the human checked against the image (AGENTS.md, transcription
 # route): "<source_file>#<page>" -> SHA-256 of the record's text at approval. A record with
 # `status: reviewed` must match its entry here; editing its text sends it back to draft, and any
