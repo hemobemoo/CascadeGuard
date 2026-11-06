@@ -89,8 +89,10 @@ An absent provision in the reviewed corpus is never reported as a confirmed lega
 
 ## Policy and evidence rules
 
-- The policy knowledge base is the 24 original PDF documents in `policies/sources/` plus the
-  web transcriptions of official pages in `policies/sources/web/`, listed in its `MANIFEST.md`.
+- The policy knowledge base is the 24 original PDF documents in `policies/sources/` (plus three
+  UAE Cyber Security Council PDFs kept locally only, not redistributed: see `NOT_REDISTRIBUTED`)
+  plus the web transcriptions of official pages in `policies/sources/web/`, listed in its
+  `MANIFEST.md`.
   These originals are never modified, renamed, or deleted.
 - The two published books among them are context only: never a clause source, never quoted
   into clauses or the dataset, and never committed. They and their extracted text are listed
@@ -219,7 +221,8 @@ scenario works.
   phase, merge with `gh pr merge --merge`, tag `main` as `phase-N`, push the tag, update
   `PROGRESS.md`, and start the next phase.
 - Otherwise stop after opening the PR and wait for the human.
-- Never commit `.env`, `data/`, secrets, or the two published books and their extracted text.
+- Never commit `.env`, `data/`, secrets, or the two published books and their extracted text,
+  or the not-redistributed sources.
 - Never touch other repositories.
 
 ## Working rules

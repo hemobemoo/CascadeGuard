@@ -8,6 +8,20 @@ their extracted text, and pinned by SHA-256 (`docs/policy-inventory.md`, #25–2
 digests (`policies/not_redistributed_pages.json`). The short verbatim quotes are only in
 `policies/gap_examples_only/uae_csc_cyber.yaml`; this file does not repeat them.
 
+## Decisions (human, 2026-11-06)
+
+- Gate 1: the human checked all seven quotes against the PDFs (verbatim, pages correct). Five are
+  reviewed as gap examples only; `uae.csc-cirp.ncrg-level3-declaration` and
+  `uae.csc-cirp.ncrg-sector-impact-information` stay drafts (they map to no failure).
+- Legal status, in every note and (short form) in every relevance line: ISF and CIRP
+  "Cabinet-approved national framework/plan (as printed on its cover); legal force for this
+  scenario not established"; AI policy "Council-approved national policy (as printed on its
+  cover); legal force for this scenario not established". `binding: unknown` kept.
+- Gate 7: the six entries below approved with the legal-status short form added; the
+  sector-impact entry dropped. The final lines are in `scenarios/uae_health_access/gap_examples.yaml`.
+- Gate 6: the AGENTS.md wording below, approved and applied.
+- The generated gap analysis and the report name these clauses without reproducing their text.
+
 ## Sources (version as printed, not the file name)
 
 | Source | Version as printed (cover) | File name | Pages |

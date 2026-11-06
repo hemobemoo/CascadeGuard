@@ -1654,7 +1654,11 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Task 3, UAE cyber sources (2026-11-06): gates 1, 6 and 7 open.** The human downloaded the three
+**Task 3, UAE cyber sources (2026-11-06): gates 1, 6 and 7 answered the same day; one approval
+left: the final report §6 text (shown in PR #36's body), then merge.** Gate 1: five reviewed as gap
+examples only (8a6a617); two NCRG clauses stay drafts. Gate 7: six entries; the sector-impact entry
+dropped. Gate 6: AGENTS.md wording applied. Legal-status sentence in every note and relevance line.
+Earlier text: The human downloaded the three
 CSC PDFs (not redistributed: gitignored, pinned by SHA-256 and per-page digests). Gate 1: the
 seven draft quotes (ids, PDF and printed pages in `docs/review/uae-cyber-sources-triage.md`).
 Gate 7: the proposed gap_examples entries in that file (none added; drafts cannot be mapped).
