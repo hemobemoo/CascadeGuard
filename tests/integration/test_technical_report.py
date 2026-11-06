@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 import yaml
 
+from cascadeguard.cli import build_parser
 from cascadeguard.domain.policies import is_uae_jurisdiction
 from cascadeguard.domain.repairs import RepairOperationType
 from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
@@ -424,6 +425,8 @@ def test_every_backticked_id_exists(runs: ScriptedRuns) -> None:
     for token in re.findall(r"`([^`]+)`", text()):
         if token.startswith(("uv ", "illus.telecom.*")) or token == "illus.telecom.*":
             continue
+        if token in CLI_TOKENS:  # checked against the real parser below
+            continue
         if token.endswith(".*"):
             matches = [c for c in loaded if c.startswith(token[:-1])]
             assert matches, token
@@ -431,6 +434,21 @@ def test_every_backticked_id_exists(runs: ScriptedRuns) -> None:
         assert token in known, token
         if token in corpus:  # a clause: loaded (reviewed or illustrative), never a draft
             assert token in loaded, token
+
+
+# CLI words the report may put in backticks (the Limits sentence, gate 7, 2026-11-06).
+CLI_TOKENS = {"cascadeguard ask", "--live"}
+
+
+def test_the_cli_words_in_the_report_exist() -> None:
+    """`cascadeguard ask` is a real subcommand and `--live` one of its flags."""
+    used = set(re.findall(r"`([^`]+)`", text())) & CLI_TOKENS
+    assert used == CLI_TOKENS
+    parser = build_parser()
+    help_text = parser.format_help()
+    assert "ask" in help_text
+    ask = parser.parse_args(["ask", "uae_health_access", "--at", "T+30", "q", "--live"])
+    assert ask.live is True
 
 
 # The bullets of the policy-gaps section, by heading, and the diagnosed failure each one is about.
