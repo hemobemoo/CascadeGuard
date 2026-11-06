@@ -20,7 +20,8 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    official PDFs; propose gap_examples entries mainly for information_deadlock. **Blocked on the
    human: downloading the three official PDFs** (see "Waiting on human"). Unblocked 2026-11-06:
    the human downloaded them; seven drafts in `policies/gap_examples_only/uae_csc_cyber.yaml`;
-   PR to open, then stop for gates 1, 6 and 7 (`docs/review/uae-cyber-sources-triage.md`).
+   PR #36 open; gates 1, 6 and 7 answered 2026-11-06; open: the human's approval of the final §6
+   text in the PR body, and the "as printed on its cover" note question (see "Waiting on human").
    **Done when** (human brief 2026-11-05 and instructions 2026-11-06): the three official CSC PDFs
    are local only (gitignored with their extracted text) and pinned (inventory: official link,
    retrieval date 2026-11-06, SHA-256, version as printed; per-page digests); README Sources rows
@@ -1655,7 +1656,10 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 ## Waiting on human
 
 **Task 3, UAE cyber sources (2026-11-06): gates 1, 6 and 7 answered the same day; one approval
-left: the final report §6 text (shown in PR #36's body), then merge.** Gate 1: five reviewed as gap
+left: the final report §6 text (shown in PR #36's body), then merge.** Also for the human
+(phase-auditor round 3): the legal-status notes say "(as printed on its cover)", but the approval
+statement is printed on p.2 (the disclaimer), not the cover; correcting it edits five reviewed
+clauses (back to draft, gate-1 re-approval). Not changed. Gate 1: five reviewed as gap
 examples only (8a6a617); two NCRG clauses stay drafts. Gate 7: six entries; the sector-impact entry
 dropped. Gate 6: AGENTS.md wording applied. Legal-status sentence in every note and relevance line.
 Earlier text: The human downloaded the three
@@ -1971,10 +1975,9 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06 (Task 3):** PR #35 merged (2a80a26). Task 3 on `uae-cyber-sources`: drafts, tests,
-inventory, README Sources rows and triage done; checks as Task 2 (gate-4 cache 36/36 and 72/72
-offline, preset keys pinned, citation map and report checks unchanged, goldens pass, no KB
-rebuild). After its review loop, full suite and CI: open the PR and stop for gates 1, 6 and 7.
+**2026-11-06 (Task 3):** PR #35 merged (2a80a26). Task 3 is PR #36: gates 1, 6 and 7 applied;
+waiting for the human's approval of the final §6 text (in the PR body), then clean-checkout suite,
+CI green, merge, report the merge commit and page count.
 Then Task 5 (docs reconciliation), then Task 4 (one approved test embedding first; on HTTP 502
 stop). Freeze: nothing merges after 9 Nov 18:00 Amman time except fixes to broken checks.
 

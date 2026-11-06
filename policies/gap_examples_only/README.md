@@ -10,7 +10,7 @@ edit to one of them sets it back to `status: draft` and lists it under `reapprov
 this folder; while it is a draft the report builder does not show it and refuses a
 gap_examples.yaml entry that maps it.
 
-`uae_csc_cyber.yaml` (Task 3, 2026-11-06) holds drafts from three UAE Cyber Security Council
+`uae_csc_cyber.yaml` (Task 3, 2026-11-06) holds clauses from three UAE Cyber Security Council
 PDFs that are not redistributed (reproduction needs the CSC's consent): the PDFs and their
 extracted text are local only. Each clause's notes give the viewer and printed page and the
 version as printed; `tests/integration/test_uae_cyber_sources.py` checks the quotes where the
