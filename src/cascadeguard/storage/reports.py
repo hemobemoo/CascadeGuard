@@ -31,6 +31,7 @@ from cascadeguard.engine.repair_search import (
 )
 from cascadeguard.knowledge.loader import (
     GAP_EXAMPLE_NOTE,
+    NOT_REDISTRIBUTED,
     PROJECT_ROOT,
     load_clauses,
     load_gap_example_clauses,
@@ -151,7 +152,15 @@ def _source(clause: PolicyClause) -> str:
     return f"{clause.source_file}, p. {clause.page}{article}"
 
 
+NOT_REPRODUCED = (
+    "  (quote not reproduced here: the source is not redistributed, so its short verbatim quote "
+    "stays in the clause file only; human decision 2026-11-06)"
+)
+
+
 def _quote(clause: PolicyClause) -> list[str]:
+    if clause.source_file in NOT_REDISTRIBUTED:
+        return [NOT_REPRODUCED]
     return [f"  > {line}" if line else "  >" for line in clause.text.strip().splitlines()]
 
 

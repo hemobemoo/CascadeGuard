@@ -8,6 +8,9 @@
 # Gate 7, 2026-11-06 (Ibrahim Melhem): the two NIST SP 800-34 entries for
 # orphan_duty:activate_fallback_channel approved, with the human's relevance lines; their
 # clauses are reviewed as gap examples only (policies/gap_examples_only/), never loaded.
+# Gate 7, 2026-11-06 (Ibrahim Melhem), Task 3: six UAE Cyber Security Council entries approved
+# with the relevance lines of docs/review/uae-cyber-sources-triage.md plus the legal-status short
+# form; the NCRG sector-impact entry was dropped. Their clauses are reviewed as gap examples only.
 # Hypothetical scenario, synthetic data.
 status: reviewed
 reviewed_by: Ibrahim Melhem
@@ -44,4 +47,28 @@ entries:
   - failure: orphan_duty:activate_fallback_channel
     clause: nist.sp800-34.alternate-manual-means
     relevance: "US federal contingency guidance (not AI-specific; descriptive, not binding): lists alternate (manual) processing as one way to restore a disrupted service, typically acceptable for only short-term disruptions. It illustrates the fallback mechanism, not who activates it."
+    approved: true
+  - failure: information_deadlock:network_incident_status->health_service_operator
+    clause: uae.csc-isf.cii-sectors-cross-sector-sharing
+    relevance: "UAE cybersecurity information-sharing framework (Cabinet-approved national framework; legal force for this scenario not established): lists sharing a sector regulator's or sector incident response centre's information with other sectors as a role of CII sectors. It covers cybersecurity information between sectors; it does not say that a telecom operator shares a network incident's status directly with a health operator, or what may be shared."
+    approved: true
+  - failure: information_deadlock:network_incident_status->health_service_operator
+    clause: uae.csc-isf.traffic-light-protocol
+    relevance: "UAE cybersecurity information-sharing framework (Cabinet-approved national framework; legal force for this scenario not established; descriptive): the Traffic Light Protocol marks in advance with whom shared information may be passed on. It illustrates a pre-agreed rule on what may be shared and with whom; it does not create a duty to share."
+    approved: true
+  - failure: orphan_duty:activate_fallback_channel
+    clause: uae.csc-ai-policy.2-4-2-redundancy-failover
+    relevance: "UAE AI cyber security policy (Council-approved national policy; legal force for this scenario not established): states that the entity \"shall\" ensure redundancy and failover in its AI/ML systems. It covers a fallback within each entity; it does not say who activates one across the telecom-health boundary."
+    approved: true
+  - failure: orphan_duty:activate_fallback_channel
+    clause: uae.csc-ai-policy.3-4-3-redundant-systems-ready
+    relevance: "UAE AI cyber security policy guidance (Council-approved national policy; legal force for this scenario not established; \"should\"): redundant systems or alternative processes ready for immediate deployment where AI/ML systems are critical to operations. It illustrates a ready fallback; it does not name who decides to deploy it."
+    approved: true
+  - failure: undefined_trigger:review_automated_lockouts
+    clause: uae.csc-ai-policy.3-6-2-automated-response-human-intervention
+    relevance: "UAE AI cyber security policy guidance (Council-approved national policy; legal force for this scenario not established; \"should\"): automated responses based on predefined conditions and incident severity levels. It illustrates a trigger set in advance; it concerns AI/ML security incidents (attacks), not a model fault, and sets no threshold for reviewing an automated lockout."
+    approved: true
+  - failure: orphan_duty:reverse_automated_lockouts
+    clause: uae.csc-ai-policy.3-6-2-automated-response-human-intervention
+    relevance: "UAE AI cyber security policy guidance (Council-approved national policy; legal force for this scenario not established; \"should\"): a fail-safe that allows timely and informed human intervention where automated responses may not be suitable. It illustrates a human override of an automated response; it does not assign who intervenes."
     approved: true

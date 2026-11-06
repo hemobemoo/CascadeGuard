@@ -264,3 +264,23 @@ def test_loading_them_would_leave_the_diagnosis_goals_and_ranking_unchanged(
     assert loaded.goals == base.goals and loaded.findings == base.findings
     ranked = [c.proposal.repair_id for c in cli.search_repairs(SCENARIO, target).ranked]
     assert ranked == [c.proposal.repair_id for c in cli.search_repairs(SCENARIO).ranked]
+
+
+def test_their_quotes_are_committed_in_the_clause_file_only() -> None:
+    """Human decision 2026-11-06: the short verbatim quotes may be committed inside the clauses;
+    the generated gap analysis and the report name the ids without reproducing the text."""
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    allowed = {"policies/gap_examples_only/uae_csc_cyber.yaml"}
+    texts = {
+        path: " ".join((ROOT / path).read_text(encoding="utf-8").split())
+        for path in tracked
+        if path.endswith((".md", ".yaml", ".json", ".py", ".txt")) and path not in allowed
+    }
+    for c in csc_clauses():
+        for piece in c.text.split("[...]"):
+            piece = " ".join(piece.split())
+            assert not [p for p, t in texts.items() if piece in t], c.id
+    analysis = (ROOT / "docs" / "gap-analysis.md").read_text(encoding="utf-8")
+    assert analysis.count("quote not reproduced here") == len(REVIEWED) + 1  # 3-6-2 twice
