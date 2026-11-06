@@ -479,9 +479,11 @@ ignore them; only `storage/reports.py` (scripts/build_reports.py) reads them, la
 a gap example; not loaded into the simulation". Gate 7: both gap_examples.yaml entries for
 orphan_duty:activate_fallback_channel added (approved); docs/gap-analysis.md regenerated.
 Confirmed: gate-4 llm_cache replays 36/36 offline; six preset keys unchanged (pinned test);
-citation_map --check passes; the technical report's tests pass unchanged, BUT report §5 still says
-"No reviewed example clause is mapped to this failure" for the fallback failure, which the gate-7
-entries make untrue (phase-auditor round 2 MAJOR; human decision needed, gate 7); traces and goldens
+citation_map --check passes. Gate 7 (human, 2026-11-06): the report's policy-gaps fallback bullet
+(the human calls it §5; it is section 6 of the report) now names the two NIST gap examples, the
+intro says "gate 7, 2026-10-31 and 2026-11-06", the alternate-means relevance line is the human's
+corrected wording, a test checks each bullet's named examples against gap_examples.yaml, and the
+.docx/.pdf are rebuilt (PDF 5 pages, nothing shortened); traces and goldens
 byte-identical to main (the run line is back to "21 draft clauses not loaded", since the clauses
 left the corpus; the earlier approved 21 -> 23 change is no longer needed). Keep "foreign
 precedent"; AGENTS.md 23 -> 24 original PDFs (gate 6, confirmed). No other AGENTS.md change was
@@ -1593,17 +1595,14 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 
 ## Waiting on human
 
-**Task 2, NIST SP 800-34 (2026-11-06): one gate open (gate 7, report wording).** Report §5
-(`docs/report/cascadeguard-report.md`, the fallback bullet) says "No reviewed example clause is
-mapped to this failure", which the approved gate-7 entries make untrue. Update the sentence (and
-rebuild the 5-page .docx/.pdf), or keep the submitted report frozen. PR #34 is not merged until
-the human decides. Deferred to Task 5 (docs-reconcile): a README "Sources" row for
+**Task 2, NIST SP 800-34 (2026-11-06): all gates answered.** Gate 7 report wording approved and
+applied (fallback bullet, intro dates, corrected relevance line; PDF still 5 pages). Deferred to Task 5 (docs-reconcile): a README "Sources" row for
 nistspecialpublication800-34r1.pdf. Earlier items: all answered. Gate 1 scoped to "gap examples only"
 (option (c)); gate 7 entries approved and added; gate 6 confirmed. Recorded for reference: had the
 clauses been loaded, the gate-4 cache would replay 30/36 (the adviser's 6 steps), the preset keys
 and extracted_digest would change, and the citation map, traces and report §4 would go stale.
-With option (c) only report §5's fallback bullet goes stale (see "Current phase")
-(checked 2026-11-06; now a finals-backlog item). Note: `HARMLESS_GAP` in
+With option (c) only the report's fallback bullet went stale; updated by the human's gate-7
+decision (checked 2026-11-06; loading the clauses is a finals-backlog item). Note: `HARMLESS_GAP` in
 tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bullet glyph).
 
 **Task 1, Ask the Policy Adviser (2026-11-05; merged 2026-11-06, items below answered):**
