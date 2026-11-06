@@ -33,7 +33,7 @@ digests (`policies/not_redistributed_pages.json`). The short verbatim quotes are
 Some pages of the AI policy also carry "Implementation Guidance Version 1.0" in their header
 (e.g. 3.4.3), inside the Version 1.1 document. Printed page = PDF page − 1 for every quoted page.
 
-## Drafts for gate 1 (all `status: draft`, in `policies/gap_examples_only/`, never loaded)
+## Drafts as submitted for gate 1 (history; five now reviewed, see Decisions) (all `status: draft`, in `policies/gap_examples_only/`, never loaded)
 
 Labels for every one: UAE text; issuer UAE Cyber Security Council; jurisdiction "UAE (federal;
 federal entities and CII entities)"; `binding: unknown` (shown as "draft · binding unknown"); the
@@ -123,7 +123,7 @@ diagnosis and its qualification are not changed. Proposed lines:
 alert-schema thresholds are met, on the NSOC's recommendation). It is context for escalation of
 national cyber incidents; no diagnosed failure is about that escalation, so it maps to none.
 
-## Open for the human
+## Open for the human (history: answered 2026-11-06, see Decisions)
 
 - Gate 1: check the seven quotes against the PDFs (pages above).
 - Gate 7: the proposed entries and relevance lines above.

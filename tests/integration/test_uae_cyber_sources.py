@@ -2,8 +2,9 @@
 
 They are not redistributed (reproduction needs the CSC's prior written consent): the PDFs and
 their extracted text are gitignored and pinned by SHA-256 (NOT_REDISTRIBUTED) and a per-page
-text digest (policies/not_redistributed_pages.json). Their clauses are drafts in
-policies/gap_examples_only/ (the NIST route): never loaded, never searched. Where the files are
+text digest (policies/not_redistributed_pages.json). Their clauses are in
+policies/gap_examples_only/ (the NIST route; five reviewed as gap examples, two drafts):
+never loaded, never searched. Where the files are
 present (the author's checkout) the quotes are checked on their pages; where they are absent (a
 clone, CI) that check is skipped with the reason, and the committed digests still pin each
 quoted page.

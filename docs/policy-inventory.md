@@ -136,7 +136,8 @@ the official csc.gov.ae links (retrieved 2026-11-06). They and their extracted t
 **gitignored**; this table, `NOT_REDISTRIBUTED` in `src/cascadeguard/knowledge/loader.py` and the
 per-page text digests in `policies/not_redistributed_pages.json` pin them. Download them from the
 official links below to check a quote. Not searched (`NOT_SEARCHED`); no knowledge-base rebuild.
-Their clauses are drafts in `policies/gap_examples_only/uae_csc_cyber.yaml` (never loaded).
+Their clauses are in `policies/gap_examples_only/uae_csc_cyber.yaml` (never loaded): five reviewed as
+gap examples only (gate 1, 2026-11-06), two drafts.
 
 | File | SHA-256 | Official link | Version as printed (cover) | Pages | No-text pages |
 |---|---|---|---|---|---|
