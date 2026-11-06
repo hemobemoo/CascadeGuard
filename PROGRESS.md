@@ -37,10 +37,18 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    and the printed version/date in the inventory, plus the short verbatim quotes inside the
    clauses"); binding is "unknown for this scenario" with the scope note (instruction 4). The
    evidence-auditor suggested a legal-status reason instead; raised in the PR as optional.
-4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`, from main 965947e): the one approved
-   test embedding (2026-11-06) returned HTTP 200 (1 vector, 2048 dims, model
-   nvidia/nemotron-3.5-embed-1b). **Waiting on human (gate 4):** embedding the ~25 queries is
-   1 request (BATCH 32), up to 4 with the 3 retries; nothing sent until approved.
+4. Retrieval evaluation (`kb-retrieval-eval`, from main 965947e), built 2026-11-06. The one
+   approved test embedding returned HTTP 200. Gate 4 (human, 2026-11-06): one request, 32 texts
+   (26 queries + 6 presets), succeeded with no retry. Queries committed first (9e8517f),
+   vectors second (783be71), before any search. `scripts/kb_retrieval_eval.py` ->
+   `docs/evaluation/kb-retrieval.md`, no API: 23 answerable queries, Precision@3 0.203 (ceiling
+   0.681 under the 2-per-document cap), Recall@5 0.500, MRR@10 0.453; 10 misses. Diagnosis (no
+   ranking change): the vector half alone ranks a relevant chunk first for 18 of 23; 6 misses
+   are removed by the per-document cap, 4 are pushed down by the fusion (keyword rank about
+   1,000). Presets' vectors in `policies/kb/adviser_query_vectors.pending.json`, read by nothing.
+   `kb export` records name model, dimensions and prefixes; README embedding-compatibility note.
+   **Waiting on human:** whether one line goes into the report (gate 7); any ranking change is
+   the human's decision (out of this task's scope).
 5. Documentation reconciliation, docs only (`docs-reconcile`, from main b0a685b): **merged #37,
    965947e, 2026-11-06** (clean checkout 916 passed, 3 skipped; CI green; PDF 5 pages). Built 2026-11-06:
    generated corpus count (`scripts/corpus_counts.py` -> `docs/corpus-counts.md`, repeated in README,
