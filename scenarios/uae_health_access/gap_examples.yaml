@@ -54,7 +54,7 @@ entries:
     approved: true
   - failure: information_deadlock:network_incident_status->health_service_operator
     clause: uae.csc-isf.traffic-light-protocol
-    relevance: "UAE cybersecurity information-sharing framework (Cabinet-approved national framework; legal force for this scenario not established; descriptive): the Traffic Light Protocol marks in advance with whom shared information may be passed on. It illustrates a pre-agreed rule on what may be shared and with whom; it does not create a duty to share."
+    relevance: "UAE cybersecurity information-sharing framework (Cabinet-approved national framework; legal force for this scenario not established; descriptive): the Traffic Light Protocol marks in advance with whom shared information may be passed on. It illustrates a pre-agreed marking of with whom shared information may be passed on; it does not create a duty to share."
     approved: true
   - failure: orphan_duty:activate_fallback_channel
     clause: uae.csc-ai-policy.2-4-2-redundancy-failover

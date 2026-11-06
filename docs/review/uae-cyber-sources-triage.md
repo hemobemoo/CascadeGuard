@@ -14,13 +14,17 @@ digests (`policies/not_redistributed_pages.json`). The short verbatim quotes are
   reviewed as gap examples only; `uae.csc-cirp.ncrg-level3-declaration` and
   `uae.csc-cirp.ncrg-sector-impact-information` stay drafts (they map to no failure).
 - Legal status, in every note and (short form) in every relevance line: ISF and CIRP
-  "Cabinet-approved national framework/plan (as printed on its cover); legal force for this
+  "Cabinet-approved national framework/plan (as stated on its disclaimer page, PDF p.2, printed
+  p.1; first written "as printed on its cover", corrected by the human); legal force for this
   scenario not established"; AI policy "Council-approved national policy (as printed on its
   cover); legal force for this scenario not established". `binding: unknown` kept.
 - Gate 7: the six entries below approved with the legal-status short form added; the
   sector-impact entry dropped. The final lines are in `scenarios/uae_health_access/gap_examples.yaml`.
 - Gate 6: the AGENTS.md wording below, approved and applied.
 - The generated gap analysis and the report name these clauses without reproducing their text.
+- Later the same day: the note location corrected (the five re-approved at gate 1); the 2.4.2
+  note adds the IA Standard sentence; the Traffic Light Protocol line now reads "a pre-agreed
+  marking of with whom shared information may be passed on" (gate 7); report §6 approved.
 
 ## Sources (version as printed, not the file name)
 
