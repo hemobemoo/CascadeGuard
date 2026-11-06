@@ -2121,3 +2121,7 @@ question the adviser at any step." Scripted run, repairs, replay and `--governan
 byte-identical to main; goldens, caches, citation map, traces, report (PDF 5 pages) and
 `kb.search_kb` unchanged; no live call. After the merge, delete the `progress-after-pr38`
 branch (human instruction, 2026-11-07). Then stop: no Task 6, no schema.
+Reviewers: phase-auditor PASS, evidence-auditor PASS; their MINORs fixed in the diagram (triage:
+`docs/review/final-docs-pass-clause-triage.md`). Deferred MINOR: the `knowledge/kb.py` module
+docstring still says the knowledge base is for the LLM context path only, but the adviser uses it
+too; fix after the freeze (kb.py had to stay unchanged here).
