@@ -63,7 +63,8 @@ flowchart TB
     cli -->|writes| export
     cli -.->|--audit| audit
     cli -.->|--governance off| gov
-    cli -.->|kb query, kb export; index for ask| kb
+    cli -.->|kb query, kb export| kb
+    cli -->|index for ask| kb
 
     orch -->|builds role views| bound
     bound -->|role clauses| retr
