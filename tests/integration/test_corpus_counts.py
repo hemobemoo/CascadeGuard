@@ -45,8 +45,10 @@ def test_the_report_states_the_same_counts() -> None:
     r = c.clauses
     short = (
         f"{c.loaded} clauses are loaded ({r['reviewed']} reviewed, {r['illustrative']} "
-        f"illustrative) of the {sum(r.values())} drafted from {c.originals} original PDFs, "
-        f"{c.local_only} local-only CSC PDFs and {c.web} web transcriptions; drafts never."
+        f"illustrative) of {sum(r.values())} in policies/reviewed/, drafts never; the corpus is "
+        f"{c.originals} original PDFs ({c.books} published books, context only, never a clause "
+        f"source), {c.local_only} local-only CSC PDFs (gap examples only) and {c.web} web "
+        "transcriptions."
     )
     assert short in read("docs/report/cascadeguard-report.md")
 
