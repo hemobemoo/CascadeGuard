@@ -2,9 +2,12 @@
 actions rest on a loaded clause (reviewed, or illustrative and synthetic) through the clause's
 engine reading, and which are scenario archetypes with no clause behind them.
 
-Generated from scenarios/uae_health_access/roles.yaml and the loaded clauses (the same reading
-the engine uses: normalized actor and action). Writes docs/institutional-mandate-crosswalk.md;
-`--check` (and tests/integration/test_mandate_crosswalk.py) keeps it current.
+Generated from scenarios/uae_health_access/roles.yaml and the loaded clauses. Authority is the
+engine's own verdict (`RuleBook.authority`: firm, uncertain and requiring a determination, or
+none), never re-derived here. A prohibition is listed only under a role whose information
+boundary includes the restricted data category, with its condition. Writes
+docs/institutional-mandate-crosswalk.md; `--check` (and tests/integration/test_mandate_crosswalk.py)
+keeps it current.
 
     uv run python scripts/mandate_crosswalk.py [--check]
 """
@@ -13,29 +16,49 @@ import argparse
 import sys
 
 from cascadeguard.cli import load_world
-from cascadeguard.domain.policies import ClauseStatus, PolicyClause
+from cascadeguard.domain.policies import ClauseStatus, PolicyClause, RuleKind
+from cascadeguard.engine.constraints import Authority, RuleBook
 from cascadeguard.knowledge.loader import PROJECT_ROOT
 
 SCENARIO = "uae_health_access"
 OUTPUT = PROJECT_ROOT / "docs" / "institutional-mandate-crosswalk.md"
 ADVISER = "policy_legal_adviser"
 ARCHETYPE = "scenario archetype (no clause)"
-
-
-def _prohibition(clause: PolicyClause) -> bool:
-    return clause.normalized is not None and str(clause.normalized.kind) == "prohibition"
+ENGINE_AUTHORITY = {
+    Authority.AUTHORISED: "firm (engine)",
+    Authority.UNCERTAIN: "uncertain: requires a determination (engine)",
+    Authority.NONE: "none established (engine)",
+}
 
 
 def basis(clauses: list[PolicyClause]) -> str:
+    """What the action rests on, from the clauses whose reading names the role and the action."""
     if not clauses:
         return ARCHETYPE
-    if any(c.status is ClauseStatus.REVIEWED for c in clauses):
+    reviewed = [c for c in clauses if c.status is ClauseStatus.REVIEWED]
+    if any(c.binding is not False for c in reviewed):
         return "reviewed clause"
+    if reviewed:
+        return "reviewed guidance only (not binding; no mandate)"
     return "illustrative rule only (synthetic, not UAE law)"
+
+
+def reading(clause: PolicyClause) -> str:
+    n = clause.normalized
+    assert n is not None
+    text = str(n.kind)
+    if n.data_category:
+        text += f" on `{n.data_category}`"
+    if n.condition and n.kind is RuleKind.OBLIGATION:
+        text += " (applies when its stated condition holds)"
+    elif n.condition:  # the engine's is_conditional: it cannot evaluate the condition
+        text += " (conditional: requires a determination)"
+    return text
 
 
 def render() -> str:
     world = load_world(SCENARIO)
+    book = RuleBook(dict(world.clauses))
     readings = [c for c in world.clauses.values() if c.normalized is not None]
     actions = {a.id: a for a in world.roles.actions}
     lines = [
@@ -49,12 +72,21 @@ def render() -> str:
         "behaviour written for this hypothetical scenario, not a mandate found in the reviewed",
         "corpus. Synthetic data; the roles are archetypes, not named UAE institutions.",
         "",
+        "The Authority column is the engine's own verdict for actions that require authority:",
+        "**firm**, **uncertain** (a binding-unknown clause, a permission whose condition the",
+        "engine cannot evaluate, or authority only implied by another duty: a determination is",
+        "required),",
+        "or **none established**. Non-binding guidance never counts as authority. A prohibition is",
+        "a constraint, not a mandate; it is listed only under a role whose information boundary",
+        "includes the restricted data category.",
+        "",
         "**The Policy and Legal Adviser has no enforcement authority:** it advises, cites and",
         "states uncertainty; it cannot authorise, permit or block any action (AGENTS.md;",
         "`docs/decisions/0003-adviser-advisory-channel.md`).",
         "",
     ]
     for role in world.roles.roles:
+        visible = set(role.boundary.visible_categories)
         lines += [f"## {role.name} (`{role.id}`)", ""]
         if role.id == ADVISER:
             lines += ["Advisory only: no enforcement authority.", ""]
@@ -70,26 +102,38 @@ def render() -> str:
                 if c.normalized is not None
                 and c.normalized.action == action
                 and c.normalized.actor in (role.id, "any")
+                and (
+                    c.normalized.kind is not RuleKind.PROHIBITION
+                    or c.normalized.data_category in visible
+                )
             ]
-            mandates = [c for c in backing if not _prohibition(c)]
-            constraints = [c for c in backing if _prohibition(c)]
+            mandates = [
+                c for c in backing if c.normalized and c.normalized.kind is not RuleKind.PROHIBITION
+            ]
+            constraints = [c for c in backing if c not in mandates]
             where = basis(mandates)
             if constraints:
                 where += "; constrained by a prohibition"
             cited = "; ".join(f"`{c.id}` [{c.status_label}]" for c in backing) or "—"
-            kinds = ", ".join(sorted({str(c.normalized.kind) for c in backing if c.normalized}))
+            kinds = "; ".join(reading(c) for c in backing) or "—"
             authority = "—"
             if spec.requires_authority:
-                authority = "required"
-                if spec.uncertain_authority_from:
+                verdict, ids = book.authority(role.id, action, spec.uncertain_authority_from)
+                authority = ENGINE_AUTHORITY[verdict]
+                if (
+                    spec.uncertain_authority_from
+                    and verdict is Authority.UNCERTAIN
+                    and not mandates
+                ):
                     via = ", ".join(f"`{u}`" for u in spec.uncertain_authority_from)
-                    authority = f"required; only uncertain authority (via {via})"
-            lines.append(f"| `{action}` | {where} | {cited} | {kinds or '—'} | {authority} |")
+                    authority += f", implied only via {via}"
+                if ids:
+                    authority += f" ({', '.join(f'`{i}`' for i in ids)})"
+            lines.append(f"| `{action}` | {where} | {cited} | {kinds} | {authority} |")
         lines.append("")
     lines += [
-        "A prohibition is a constraint on the action, not a mandate to take it. Clauses with no",
-        "engine reading (international principles, scope clauses) are context the roles may cite;",
-        "they assign no mandate here.",
+        "Clauses with no engine reading (international principles, scope clauses) are context the",
+        "roles may cite; they assign no mandate here.",
         "",
     ]
     return "\n".join(lines)

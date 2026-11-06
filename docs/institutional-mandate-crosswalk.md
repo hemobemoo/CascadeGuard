@@ -8,6 +8,14 @@ Everything else a role may do is a **scenario archetype**: a plausible instituti
 behaviour written for this hypothetical scenario, not a mandate found in the reviewed
 corpus. Synthetic data; the roles are archetypes, not named UAE institutions.
 
+The Authority column is the engine's own verdict for actions that require authority:
+**firm**, **uncertain** (a binding-unknown clause, a permission whose condition the
+engine cannot evaluate, or authority only implied by another duty: a determination is
+required),
+or **none established**. Non-binding guidance never counts as authority. A prohibition is
+a constraint, not a mandate; it is listed only under a role whose information boundary
+includes the restricted data category.
+
 **The Policy and Legal Adviser has no enforcement authority:** it advises, cites and
 states uncertainty; it cannot authorise, permit or block any action (AGENTS.md;
 `docs/decisions/0003-adviser-advisory-channel.md`).
@@ -16,13 +24,13 @@ states uncertainty; it cannot authorise, permit or block any action (AGENTS.md;
 
 | Action | Basis | Clause (status label) | Reading | Authority |
 |---|---|---|---|---|
-| `raise_security_incident` | reviewed clause | `dha.pp11.4-18-2` [reviewed (interpreted) · binding unknown] | obligation | — |
-| `notify_health_data_oversight` | reviewed clause | `dha.pp11.4-18-4` [reviewed (interpreted) · binding unknown] | obligation | — |
-| `review_automated_lockouts` | reviewed clause | `uae.ai-charter.human-oversight` [reviewed (interpreted) · not binding] | safeguard | — |
-| `reverse_automated_lockouts` | scenario archetype (no clause) | — | — | required |
-| `activate_fallback_channel` | scenario archetype (no clause) | — | — | required; only uncertain authority (via `maintain_fallback_plan`) |
-| `maintain_fallback_plan` | reviewed clause | `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown] | obligation | — |
-| `share_incident_status` | scenario archetype (no clause); constrained by a prohibition | `uae.fl2-2019.art4` [reviewed (interpreted) · binding · English translation]; `uae.fl2-2019.art16` [reviewed (interpreted) · binding · English translation] | prohibition | — |
+| `raise_security_incident` | reviewed clause | `dha.pp11.4-18-2` [reviewed (interpreted) · binding unknown] | obligation (applies when its stated condition holds) | — |
+| `notify_health_data_oversight` | reviewed clause | `dha.pp11.4-18-4` [reviewed (interpreted) · binding unknown] | obligation (applies when its stated condition holds) | — |
+| `review_automated_lockouts` | reviewed guidance only (not binding; no mandate) | `uae.ai-charter.human-oversight` [reviewed (interpreted) · not binding] | safeguard (conditional: requires a determination) | — |
+| `reverse_automated_lockouts` | scenario archetype (no clause) | — | — | none established (engine) |
+| `activate_fallback_channel` | scenario archetype (no clause) | — | — | uncertain: requires a determination (engine), implied only via `maintain_fallback_plan` (`dha.pp11.4-18-1`) |
+| `maintain_fallback_plan` | reviewed clause | `dha.pp11.4-18-1` [reviewed (interpreted) · binding unknown] | obligation (applies when its stated condition holds) | — |
+| `share_incident_status` | scenario archetype (no clause); constrained by a prohibition | `uae.fl2-2019.art4` [reviewed (interpreted) · binding · English translation]; `uae.fl2-2019.art16` [reviewed (interpreted) · binding · English translation] | prohibition on `patient_account_records` (conditional: requires a determination); prohibition on `patient_account_records` (conditional: requires a determination) | — |
 | `request_information` | scenario archetype (no clause) | — | — | — |
 | `request_determination` | scenario archetype (no clause) | — | — | — |
 | `monitor` | scenario archetype (no clause) | — | — | — |
@@ -33,8 +41,8 @@ states uncertainty; it cannot authorise, permit or block any action (AGENTS.md;
 |---|---|---|---|---|
 | `investigate_network_fault` | scenario archetype (no clause) | — | — | — |
 | `suspend_ai_traffic_model` | scenario archetype (no clause) | — | — | — |
-| `report_to_telecom_regulator` | illustrative rule only (synthetic, not UAE law) | `illus.telecom.incident-report` [illustrative] | obligation | — |
-| `share_incident_status` | scenario archetype (no clause); constrained by a prohibition | `uae.fl2-2019.art16` [reviewed (interpreted) · binding · English translation] | prohibition | — |
+| `report_to_telecom_regulator` | illustrative rule only (synthetic, not UAE law) | `illus.telecom.incident-report` [illustrative] | obligation (applies when its stated condition holds) | — |
+| `share_incident_status` | scenario archetype (no clause) | — | — | — |
 | `request_information` | scenario archetype (no clause) | — | — | — |
 | `request_determination` | scenario archetype (no clause) | — | — | — |
 | `monitor` | scenario archetype (no clause) | — | — | — |
@@ -43,10 +51,10 @@ states uncertainty; it cannot authorise, permit or block any action (AGENTS.md;
 
 | Action | Basis | Clause (status label) | Reading | Authority |
 |---|---|---|---|---|
-| `request_information` | illustrative rule only (synthetic, not UAE law) | `illus.telecom.regulator-information-request` [illustrative] | permission | — |
-| `issue_determination` | scenario archetype (no clause) | — | — | required |
+| `request_information` | illustrative rule only (synthetic, not UAE law) | `illus.telecom.regulator-information-request` [illustrative] | permission on `network_incident_status` | — |
+| `issue_determination` | scenario archetype (no clause) | — | — | none established (engine) |
 | `recommend_measure` | scenario archetype (no clause) | — | — | — |
-| `share_incident_status` | scenario archetype (no clause); constrained by a prohibition | `uae.fl2-2019.art16` [reviewed (interpreted) · binding · English translation] | prohibition | — |
+| `share_incident_status` | scenario archetype (no clause) | — | — | — |
 | `monitor` | scenario archetype (no clause) | — | — | — |
 
 ## Health-Data and Privacy Oversight (`health_data_oversight`)
@@ -54,7 +62,7 @@ states uncertainty; it cannot authorise, permit or block any action (AGENTS.md;
 | Action | Basis | Clause (status label) | Reading | Authority |
 |---|---|---|---|---|
 | `request_information` | scenario archetype (no clause) | — | — | — |
-| `issue_determination` | reviewed clause | `uae.fl2-2019.art6` [reviewed (interpreted) · binding · English translation] | permission | required |
+| `issue_determination` | reviewed clause | `uae.fl2-2019.art6` [reviewed (interpreted) · binding · English translation] | permission (conditional: requires a determination) | uncertain: requires a determination (engine) (`uae.fl2-2019.art6`) |
 | `recommend_measure` | scenario archetype (no clause) | — | — | — |
 | `monitor` | scenario archetype (no clause) | — | — | — |
 
@@ -77,6 +85,5 @@ Advisory only: no enforcement authority.
 | `request_information` | scenario archetype (no clause) | — | — | — |
 | `monitor` | scenario archetype (no clause) | — | — | — |
 
-A prohibition is a constraint on the action, not a mandate to take it. Clauses with no
-engine reading (international principles, scope clauses) are context the roles may cite;
-they assign no mandate here.
+Clauses with no engine reading (international principles, scope clauses) are context the
+roles may cite; they assign no mandate here.
