@@ -149,6 +149,17 @@ def half_ranks(
     return vector[best], keyword.get(best), uncapped[best], min(vector[i] for i in rel)
 
 
+def miss_cause(first: int | None, uncapped: int) -> str | None:
+    """Why a query missed (no relevant hit in the top 5), from the first relevant rank the search
+    returns and the best-fused relevant chunk's rank before the cap; None when it did not miss.
+    The three causes are exhaustive and exclusive."""
+    if first is not None and first <= 5:
+        return None
+    if first is not None:
+        return "late"  # returned, at rank 6 to K
+    return "cap" if uncapped <= K else "below"
+
+
 def mean(xs: list[float]) -> float:
     return sum(xs) / len(xs) if xs else 0.0
 
@@ -195,9 +206,10 @@ def render() -> str:
         "or a page of one of its exact copies, is the expected page or an `also_relevant` page.",
         "**Precision@3** = relevant hits in the top 3 / 3. **Recall@5** = distinct relevant",
         "pages in the top 5 / relevant pages. **MRR@10** = 1 / rank of the first relevant hit in",
-        "the top 10, else 0. Averaged over the answerable queries. **P@3 ceiling** is the best",
-        f"Precision@3 the per-document cap ({MAX_PER_SOURCE}) and the number of relevant chunks",
-        "allow: most queries have one relevant page, so the ceiling is below 1.",
+        "the top 10, else 0. Averaged over the answerable queries. Added after the results, as a",
+        "reading aid only (not in the query file): the **P@3 ceiling**, the best Precision@3 the",
+        f"per-document cap ({MAX_PER_SOURCE}) and the number of relevant chunks allow; most",
+        "queries have one relevant page, so the ceiling is below 1.",
         "",
         "## Results",
         "",
@@ -239,24 +251,27 @@ def render() -> str:
         "| Id | Vector-only rank | Keyword-only rank | Fused, before the cap | Fused, returned |",
         "|---|---|---|---|---|",
     ]
-    vector_first = capped = diluted = 0
+    vector_first = 0
+    causes: list[str] = []
     for s in scored:
         vr, kr, ur, best_vector = half_ranks(index, embedder, str(s.query["query"]), s.relevant)
         vector_first += best_vector == 1
-        missed = not s.first or s.first > 5
-        capped += s.first is None and ur <= K
-        diluted += missed and not (s.first is None and ur <= K)
+        cause = miss_cause(s.first, ur)
+        if cause:
+            causes.append(cause)
         fused = str(s.first) if s.first else f"not in top {K}"
         kw = str(kr) if kr is not None else "- (no query word)"
         lines.append(f"| {s.query['id']} | {vr} | {kw} | {ur} | {fused} |")
     lines += [
         "",
-        f"The vector ranking alone puts a relevant chunk first for {vector_first} of "
-        f"{len(scored)} answerable queries. Of the {capped + diluted} misses (no relevant hit in "
-        f"the top 5): {capped} have a relevant chunk in the fused top {K} before the cap and",
-        "none returned, so the per-document cap removed it; for the other "
-        f"{diluted}, the best-fused",
-        f"relevant chunk is below the {K}th even before the cap (see its two half ranks).",
+        "The vector ranking alone puts some relevant chunk (not necessarily the one in the",
+        f"table) first for {vector_first} of {len(scored)} answerable queries. Of the "
+        f"{len(causes)} misses (no relevant hit in the top 5):",
+        f"- {causes.count('cap')}: a relevant chunk is in the fused top {K} before the cap and",
+        "  none is returned, so the per-document cap removed it;",
+        f"- {causes.count('below')}: the best-fused relevant chunk is below the {K}th even",
+        "  before the cap (see its two half ranks);",
+        f"- {causes.count('late')}: a relevant chunk is returned, at rank 6 to {K}.",
         "",
         "## Misses",
         "",
@@ -267,6 +282,14 @@ def render() -> str:
     for s in misses:
         where = f"first relevant hit at rank {s.first}" if s.first else f"not in the top {K}"
         lines.append(f'- **{s.query["id"]}** ({s.query["topic"]}): "{s.query["query"]}"; {where}.')
+    weak = [s for s in scored if s.p3 == 0 and s.first is not None and s.first <= 5]
+    if weak:
+        lines += ["", "Also weak: no relevant hit in the top 3, though one is in the top 5:", ""]
+    for s in weak:
+        lines.append(
+            f'- **{s.query["id"]}** ({s.query["topic"]}): "{s.query["query"]}"; '
+            f"first relevant hit at rank {s.first}."
+        )
     lines += [
         "",
         "## Queries that should find nothing",
