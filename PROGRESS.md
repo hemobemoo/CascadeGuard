@@ -9,9 +9,11 @@ Read this section first, then "Current phase" and "Waiting on human". Rules are 
 **Human brief of 2026-11-05 (deadline 10 Nov 2026): six tasks, one branch and one PR each, in
 order; each keeps the scripted path and both goldens byte-identical unless the human approves.**
 1. Ask the Policy Adviser (`phase-7-adviser-query`): **merged, PR #33, 98b4173 (2026-11-06).**
-2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): built; PR
-   #34 open; option (c) applied (gate 1 scoped to gap examples only, gate 7 entries added, gate 6
-   confirmed); after its review loop, full suite and CI: merge.
+2. Fallback-channel global example, NIST SP 800-34 Rev.1 (`gap-fallback-example`): **merged,
+   PR #34, df014a1 (2026-11-06)**; option (c) (gap examples only, never loaded); report section 6
+   fallback bullet updated (gate 7); PDF 5 pages.
+   Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
+   adviser-v2, presets re-recorded (gate 4, approved): PR open, waiting on the human.
 3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
@@ -456,6 +458,25 @@ then locked.
 - 2026-11-04: removed docs/report/cascadeguard-report-template.pdf; the .docx is the template version. The PDF test now covers the designed PDF only.
 
 ## Current phase
+
+**Adviser commentary check (branch `adviser-commentary-check`, from main df014a1, 2026-11-06).**
+Human decision of 2026-11-06: filter the model commentary per sentence; allow evidence-scoped
+absence ("not identified in the provided evidence", "the retrieved clauses do not address") and
+status words in the clause's own label; keep blocking binding/permit/authorise/legal-gap claims;
+prompt asks for "not identified in the provided evidence"; tests on the six real rejected
+answers; then re-record the 6 presets once (gate 4). **Done:** engine/adviser_check.py split
+(structure rejects the whole answer; wording withheld per sentence, count and reasons shown, the
+text never); prompt adviser-v2; ADR 0003 amended; README; six v1 answers kept as fixtures
+(tests/fixtures/adviser_v1_answers/); PINNED_PRESET_KEYS re-pinned (prompt change only).
+Gate 4 run 2026-11-06: 6 chat requests, all succeeded, keyword retrieval; all six answers
+accepted, commentary shown for all six, 15 sentences withheld (8, 2, 2, 1, 0, 2); secrets check
+clean (no key, base URL, model id or local path); table in docs/evaluation/adviser/README.md.
+Not decided by the agent: whether all-flagged commentary should fall back to the template (now:
+the answer is shown with no commentary lines and "All N sentences ... withheld").
+Local note: `tests/e2e/test_ui_flow.py::test_expert_mode_shows_every_section` failed in 3 of 4
+full runs in the main checkout on 2026-11-06 ("Compare" on rung 2 not visible after scrolling),
+but passed alone, in the e2e file alone, in a clean worktree full run (814 passed) and in CI. It
+looks tied to this checkout's environment (.env, chroma extra), not to a code change; not fixed.
 
 **Task 1, Ask the Policy Adviser: merged via PR #33 (merge commit 98b4173, 2026-11-06)** after
 the human's answers of 2026-11-06 (option (b), `--live`, recorded presets), a final
@@ -1871,11 +1892,10 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06:** Task 1 merged (PR #33, 98b4173). Task 2 (PR #34): option (c) done (gates 1, 6 and
-7 answered); merge after the phase-auditor re-run, full suite and CI. Then the adviser
-commentary follow-up on branch `adviser-commentary-check` (per-sentence filter, evidence-scoped
-absence wording, re-record the 6 presets once: approved), PR, stop. Task 3 probably in a new
-session. The older notes below are history.
+**2026-11-06:** Task 1 merged (PR #33, 98b4173); Task 2 merged (PR #34, df014a1). The adviser
+commentary follow-up (`adviser-commentary-check`) is built and re-recorded; after its review loop,
+full suite and CI, open the PR and stop for the human. Next: Task 3 (`uae-cyber-sources`, triage
+only), probably in a new session. The older notes below are history.
 
 **Done 2026-11-04:** organizer feedback (citation map, precedents, report §2/§4) merged via
 PR #31 (bdf1013); final PDF 5 pages. The precedent spot-check is done by the human (closed). See "Start here".
