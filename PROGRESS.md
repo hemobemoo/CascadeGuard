@@ -14,7 +14,7 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    fallback bullet updated (gate 7); PDF 5 pages.
    Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
    adviser-v2, presets re-recorded (gate 4, approved): **merged, PR #35, 2a80a26 (2026-11-06).**
-3. UAE cyber sources (`uae-cyber-sources`, from main 2a80a26): started 2026-11-06; human change of
+3. UAE cyber sources (`uae-cyber-sources`): **merged, PR #36, b0a685b (2026-11-06)**; report PDF 5 pages. Started 2026-11-06; human change of
    2026-11-06: approved clauses go the gap_examples_only route like NIST (never loaded, no KB
    rebuild; gate-4 cache, preset keys, citation map, traces and goldens unchanged); prefer
    official PDFs; propose gap_examples entries mainly for information_deadlock. **Blocked on the
@@ -38,7 +38,12 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    clauses"); binding is "unknown for this scenario" with the scope note (instruction 4). The
    evidence-auditor suggested a legal-status reason instead; raised in the PR as optional.
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
-5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
+5. Documentation reconciliation, docs only (`docs-reconcile`, from main b0a685b): built 2026-11-06:
+   generated corpus count (`scripts/corpus_counts.py` -> `docs/corpus-counts.md`, repeated in README,
+   readiness status note and report), `docs/institutional-mandate-crosswalk.md` (generated),
+   §7/§8 moved to `docs/standards/` unchanged in meaning, `docs/standards/event-perspectives.md`
+   (eight perspectives from the event page, honest status, paths), README NIST Sources row.
+   PR to open after the review loop; stop.
 6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.
 Optional before 10 Nov, only if 1-5 merged by 8 Nov: `specs/cross_domain_incident_envelope.schema.json`
 (one illustrative telecom-to-health example; README: "proposed open specification, not adopted;
@@ -1975,7 +1980,12 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06 (Task 3):** PR #35 merged (2a80a26). Task 3 is PR #36: gates 1, 6 and 7 applied;
+**2026-11-06 (Task 5):** Task 3 merged (PR #36, b0a685b). Task 5 (`docs-reconcile`) built; after
+its review loop, clean-checkout suite and CI: open the PR and stop. Then Task 4 (one approved test
+embedding first; on HTTP 502 stop). Freeze: nothing merges after 9 Nov 18:00 Amman time except
+fixes to broken checks.
+
+**Earlier (Task 3):** PR #35 merged (2a80a26). Task 3 is PR #36: gates 1, 6 and 7 applied;
 §6 approved and the notes corrected (re-approved); clean-checkout suite, CI green, merge, report
 the merge commit and page count. Then Task 5, then Task 4.
 Then Task 5 (docs reconciliation), then Task 4 (one approved test embedding first; on HTTP 502
