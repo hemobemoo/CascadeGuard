@@ -18,7 +18,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2025-11"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 15 is printed page 14. Version as
@@ -47,7 +47,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2025-11"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 36 is printed page 35. Version as
@@ -79,7 +79,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2025-11"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 41 is printed page 40. Version as
@@ -108,7 +108,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2023-05"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 32 is printed page 31. Version as
@@ -140,7 +140,7 @@ clauses:
     issuer: UAE Cyber Security Council
     jurisdiction: UAE (federal; federal entities and CII entities)
     document_date: "2023-05"
-    status: draft
+    status: reviewed
     binding: unknown
     notes: >-
       UAE text (UAE Cyber Security Council). Viewer page 24 is printed page 23. Version as

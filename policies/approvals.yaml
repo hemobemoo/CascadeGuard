@@ -39,20 +39,14 @@ approved:
   nist.sp800-34.alternate-manual-means: 78867467325ab47feebabac0427dd383b3163043f998dc4cf27cc96fa566d730
   # Gate 1 (scoped) on 2026-11-06 (reviewer Ibrahim Melhem): UAE Cyber Security Council
   # clauses reviewed as gap examples only, never loaded (policies/gap_examples_only/);
-  # quotes checked against the three PDFs (not redistributed).
-  uae.csc-ai-policy.2-4-2-redundancy-failover: 73d347536894306ec8041d1e160b80a525cf3248552855b98c5022de93d2a28b
-  uae.csc-ai-policy.3-4-3-redundant-systems-ready: e23d61f37707893cd4efdb87af64d0c3a1574b5553e292dea7803b49ba5d5d83
-  uae.csc-ai-policy.3-6-2-automated-response-human-intervention: 1a3f289891d353e1e2c90814f82b2134d8c951ce557748701b9b6ac1c598dd62
-  uae.csc-isf.cii-sectors-cross-sector-sharing: 174a3c83632b69ba52d4c3830c55359d1bb1527f2873a878a1b7c28ca5819e42
-  uae.csc-isf.traffic-light-protocol: a0df63fcb797380ad0356cd1fcac7116a11fc00058ba3d5cf185cbea0a9b5019
-# Edited 2026-11-06 (human's wording: the legal-status note's location; 2.4.2 note): set back to
-# draft until the human re-approves them (gate 1).
-reapproval_needed:
-  - uae.csc-ai-policy.2-4-2-redundancy-failover
-  - uae.csc-ai-policy.3-4-3-redundant-systems-ready
-  - uae.csc-ai-policy.3-6-2-automated-response-human-intervention
-  - uae.csc-isf.cii-sectors-cross-sector-sharing
-  - uae.csc-isf.traffic-light-protocol
+  # quotes checked against the three PDFs (not redistributed). Re-approved the same day after
+  # the human's note edit (legal-status location; 2.4.2 note).
+  uae.csc-ai-policy.2-4-2-redundancy-failover: 9dbe95b2876903aa8109211eda851266c693b73a942220f2d804ca3a899a09b5
+  uae.csc-ai-policy.3-4-3-redundant-systems-ready: 40b4c4d06b41de4f72de478e2dadead7f4bf85b1898401e7202ac9ac5406a029
+  uae.csc-ai-policy.3-6-2-automated-response-human-intervention: 4ddea3bd13fcf897068bc7e1b92512e0ec275be682e13b0ad9ca0e465887f2cc
+  uae.csc-isf.cii-sectors-cross-sector-sharing: 323c582f0d1ac4d4a12e22d18f3fbbc9099e0b8f39c528e00761c3a70a920e07
+  uae.csc-isf.traffic-light-protocol: fbfc64e15b1d985242d579c224fb9677084a72e55cf581bd7fad8a74c82c0d23
+reapproval_needed: []
 # Page-image transcriptions the human checked against the image (AGENTS.md, transcription
 # route): "<source_file>#<page>" -> SHA-256 of the record's text at approval. A record with
 # `status: reviewed` must match its entry here; editing its text sends it back to draft, and any

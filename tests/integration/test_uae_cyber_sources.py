@@ -73,16 +73,16 @@ REVIEWED = CSC_IDS - {
 }
 LEGAL = {
     "National Cyber Security Policy for Artificial Intelligence v1.1.pdf": (
-        "Council-approved national policy (as printed on its cover); legal force for this "
-        "scenario not established."
+        "Council-approved national policy (as stated on its disclaimer page, PDF p.2, printed "
+        "p.1); legal force for this scenario not established."
     ),
     "Cyber Security Information Sharing Framework V2.0.pdf": (
-        "Cabinet-approved national framework (as printed on its cover); legal force for this "
-        "scenario not established."
+        "Cabinet-approved national framework (as stated on its disclaimer page, PDF p.2, printed "
+        "p.1); legal force for this scenario not established."
     ),
     "Cyber Incident Response Plan V2.0.pdf": (
-        "Cabinet-approved national plan (as printed on its cover); legal force for this "
-        "scenario not established."
+        "Cabinet-approved national plan (as stated on its disclaimer page, PDF p.2, printed "
+        "p.1); legal force for this scenario not established."
     ),
 }
 
@@ -205,6 +205,11 @@ def test_the_clauses_carry_the_labels_the_human_set() -> None:
         assert c.page == pdf and f"Viewer page {pdf} is printed page {printed}." in c.notes
         assert SCOPE in c.notes and "not designated CII" in c.notes, c.id
         assert "Version as printed:" in c.notes and c.normalized is None, c.id
+    by_id = {c.id: c for c in csc_clauses()}
+    assert (
+        "compliance is monitored through the UAE IA Standard (PDF p.44); no reviewed text "
+        "establishes its legal force, and the scenario's operators are not designated CII entities."
+    ) in " ".join((by_id["uae.csc-ai-policy.2-4-2-redundancy-failover"].notes or "").split())
     dates = {c.source_file: c.document_date for c in csc_clauses()}
     assert dates == {
         "National Cyber Security Policy for Artificial Intelligence v1.1.pdf": "2025-11",
