@@ -53,10 +53,11 @@ illustrative clauses):
 ## Architecture
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"background": "#f8fafc", "primaryColor": "#ffffff", "primaryTextColor": "#1f2937", "lineColor": "#475569", "clusterBkg": "#f1f5f9", "clusterBorder": "#cbd5e1", "fontFamily": "Inter, Segoe UI, sans-serif", "fontSize": "15px"}}}%%
+%%{init: {"htmlLabels": false, "flowchart": {"htmlLabels": false}, "theme": "base", "themeVariables": {"background": "#f8fafc", "primaryColor": "#ffffff", "primaryTextColor": "#1f2937", "lineColor": "#475569", "clusterBkg": "#f1f5f9", "clusterBorder": "#cbd5e1", "fontFamily": "Inter, Segoe UI, sans-serif", "fontSize": "15px"}}}%%
 flowchart TB
     %% Solid line: used every time that path runs. Dotted line: used only with an optional
-    %% flag or command (LLM agents, --kb-context, --audit, --governance off, kb query/export).
+    %% flag, command or mode (LLM agents, --kb-context, --audit, --governance off, kb query/export,
+    %% the adviser's optional model commentary).
     %% Checked against the imports and calls in src/cascadeguard/.
 
     user((User))
@@ -76,6 +77,7 @@ flowchart TB
         cache[("Decision cache<br/>agents/cache.py")]
         state[("Simulation state<br/>simulation/state.py")]
         replay["Incident replay<br/>simulation/replay.py"]
+        adviser["Policy Adviser (Q&A)<br/>agents/adviser_query.py"]
     end
 
     subgraph GOV["Governance and repair"]
@@ -83,13 +85,14 @@ flowchart TB
         diag["Failure diagnosis<br/>engine/diagnosis.py<br/>engine/graph.py"]
         rsearch["Repair search<br/>engine/repair_search.py"]
         gov["Governance comparison<br/>engine/governance.py"]
+        acheck["Adviser answer check<br/>engine/adviser_check.py"]
     end
 
     subgraph POL["Policy knowledge"]
         cload["Clause loader<br/>knowledge/loader.py"]
         pol["Policy clauses<br/>domain/policies.py"]
         retr["Clause retrieval<br/>knowledge/retrieval.py"]
-        kb[("Vector index<br/>knowledge/kb.py")]
+        kb[("Knowledge-base search<br/>knowledge/kb.py")]
     end
 
     subgraph RES["Results and exports"]
@@ -132,6 +135,13 @@ flowchart TB
     rsearch -->|replay callback from CLI| replay
     replay -->|reruns identical incident| orch
 
+    cli -->|ask| adviser
+    app -->|adviser panel| adviser
+    adviser -->|"adviser's RoleView at T+n"| bound
+    adviser -->|hybrid or keyword search| kb
+    adviser -.->|optional model commentary| llm
+    adviser -.->|checks model answer| acheck
+
     classDef ui fill:#ffffff,stroke:#0f4c81,stroke-width:2px,color:#0f4c81
     classDef sim fill:#ffffff,stroke:#1b7f79,stroke-width:2px,color:#1b7f79
     classDef gov fill:#ffffff,stroke:#b91c1c,stroke-width:2px,color:#b91c1c
@@ -140,8 +150,8 @@ flowchart TB
     classDef person fill:#0f4c81,stroke:#0f4c81,color:#ffffff
 
     class cli,app,vm ui
-    class sload,orch,bound,scripted,llm,cache,state,replay sim
-    class cons,diag,rsearch,gov gov
+    class sload,orch,bound,scripted,llm,cache,state,replay,adviser sim
+    class cons,diag,rsearch,gov,acheck gov
     class cload,pol,retr,kb pol
     class export,audit,reports res
     class user person

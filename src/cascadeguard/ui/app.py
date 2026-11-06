@@ -108,12 +108,13 @@ EXPORTS = (
     "Replay Markdown",
 )
 AGENT_MODES = {"scripted": "Scripted", "llm-offline": "LLM (cached only)"}
-STEPS = (  # (key, title, one sentence of narration) for the guided demo
+STEPS = (  # (key, title, narration) for the guided demo
     ("a", "Verdict", "What broke in the baseline, and what the best repair achieves on replay."),
     (
         "b",
         "Timeline",
-        "Each role sees only what reaches it: facts, actions and obligations per inject.",
+        "Each role sees only what reaches it: facts, actions and obligations per inject. "
+        "Use 'Ask the Policy Adviser' below the lanes to question the adviser at any step.",
     ),
     ("c", "Cascade", "How roles, actions, data and clauses depend on each other."),
     (
