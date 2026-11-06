@@ -114,6 +114,15 @@ def test_the_metric_formulas_on_a_hand_built_ranking() -> None:
     assert lone.ceiling == pytest.approx(1 / 3)
 
 
+def test_every_miss_has_exactly_one_cause() -> None:
+    """Test-breaker round 2: a relevant hit returned at rank 6-10 is its own cause."""
+    cause = script("kb_retrieval_eval").miss_cause
+    assert [cause(f, 1) for f in (1, 5)] == [None, None]
+    assert cause(7, 3) == "late"  # returned at rank 7: neither capped nor below
+    assert cause(None, 3) == "cap"  # in the fused top 10 before the cap, none returned
+    assert cause(None, 25) == "below"
+
+
 def run_embed(monkeypatch: pytest.MonkeyPatch, texts: list[str], presets: list[str], *args: str):
     module = script("embed_eval_queries")
 

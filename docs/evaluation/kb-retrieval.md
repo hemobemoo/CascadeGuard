@@ -15,9 +15,10 @@ Definitions (fixed in the query file before looking): a hit is relevant when its
 or a page of one of its exact copies, is the expected page or an `also_relevant` page.
 **Precision@3** = relevant hits in the top 3 / 3. **Recall@5** = distinct relevant
 pages in the top 5 / relevant pages. **MRR@10** = 1 / rank of the first relevant hit in
-the top 10, else 0. Averaged over the answerable queries. **P@3 ceiling** is the best
-Precision@3 the per-document cap (2) and the number of relevant chunks
-allow: most queries have one relevant page, so the ceiling is below 1.
+the top 10, else 0. Averaged over the answerable queries. Added after the results, as a
+reading aid only (not in the query file): the **P@3 ceiling**, the best Precision@3 the
+per-document cap (2) and the number of relevant chunks allow; most
+queries have one relevant page, so the ceiling is below 1.
 
 ## Results
 
@@ -98,9 +99,13 @@ same document.
 | fallback-01 | 2 | 5 | 1 | 1 |
 | fallback-02 | 1 | 3 | 1 | 1 |
 
-The vector ranking alone puts a relevant chunk first for 18 of 23 answerable queries. Of the 10 misses (no relevant hit in the top 5): 6 have a relevant chunk in the fused top 10 before the cap and
-none returned, so the per-document cap removed it; for the other 4, the best-fused
-relevant chunk is below the 10th even before the cap (see its two half ranks).
+The vector ranking alone puts some relevant chunk (not necessarily the one in the
+table) first for 18 of 23 answerable queries. Of the 10 misses (no relevant hit in the top 5):
+- 6: a relevant chunk is in the fused top 10 before the cap and
+  none is returned, so the per-document cap removed it;
+- 4: the best-fused relevant chunk is below the 10th even
+  before the cap (see its two half ranks);
+- 0: a relevant chunk is returned, at rank 6 to 10.
 
 ## Misses
 
@@ -114,6 +119,10 @@ relevant chunk is below the 10th even before the cap (see its two half ranks).
 - **oversight-02** (human oversight): "AI systems must never displace ultimate human responsibility and accountability"; not in the top 10.
 - **oversight-03** (human oversight): "right to object to decisions based on automated processing under UAE law"; not in the top 10.
 - **oversight-04** (human oversight): "human judgment and oversight to correct errors made by AI in the UAE"; not in the top 10.
+
+Also weak: no relevant hit in the top 3, though one is in the top 5:
+
+- **incident-01** (incident response): "incident response and business continuity plans for health information"; first relevant hit at rank 4.
 
 ## Queries that should find nothing
 

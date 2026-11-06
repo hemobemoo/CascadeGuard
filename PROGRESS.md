@@ -78,6 +78,11 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    `test_every_exported_record_names_the_embedding_model_and_prefixes`; README note:
    `test_the_readme_states_the_embedding_compatibility`; no other model: by hand (the scripts
    use only `kb.MODEL_SLUG`).
+   Review loop: round 1 phase-auditor FAIL (no Done when, stale hand-off, structure file) and
+   test-breaker FAIL (no Done when), fixed in d1f4ce6 with the diagnosis per chunk and fixture
+   tests; round 2 test-breaker PASS, phase-auditor no BLOCKER/MAJOR (FAIL only on CI and PR,
+   which come later; its fresh clone 926 passed, 3 skipped); their MINORs fixed (miss causes
+   exhaustive, ceiling labelled as added after the results, weak queries listed).
    Verify: `uv run python scripts/kb_retrieval_eval.py --check` and
    `uv run pytest tests/unit/test_kb_retrieval_eval.py`.
 5. Documentation reconciliation, docs only (`docs-reconcile`, from main b0a685b): **merged #37,
