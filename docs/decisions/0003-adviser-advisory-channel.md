@@ -45,7 +45,11 @@ The adviser's answer is accepted as a separate advisory channel, on these condit
    withheld when they match the engine's phrase lists; a phrase list cannot catch every
    paraphrase (test-breaker round 2: e.g. "carries full legal authority" was shown before it was
    added). Whether to accept that residual risk under the agent-statement label, or to restrict
-   the shown commentary further, is open for the human (PROGRESS.md "Waiting on human"). The
+   the shown commentary further, is open for the human (PROGRESS.md "Waiting on human").
+   Also withheld: a sentence naming a clause the sections do not show (so no status label would
+   be shown for it; at most 3 UAE and 2 international clauses are shown), and a sentence with
+   letters outside the Latin blocks (look-alikes). Each relevance line carries its clause's
+   status label. Runs of up to 8 shown sentences, across lines in display order, are re-checked. The
    structure (citations, UAE/international split, responsible role, abstention, control
    characters) still rejects the whole answer. The prompt (adviser-v2) asks the model to say
    "not identified in the provided evidence". Trade-off: a withheld sentence can change how its

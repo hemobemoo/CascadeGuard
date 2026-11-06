@@ -479,8 +479,13 @@ on the joined pair; "legal effect", "mention", "contemplate", "deal with", "not 
 "nothing ... prevents" added. Test-breaker round 2 (FAIL: MAJOR, BLOCKER, QUESTION-FOR-HUMAN):
 every run of the sentences still shown is re-checked as it will read; sentence split no longer
 breaks at abbreviations ("Decree-Law No. 45"); the probe wordings are added to the lists and the
-tests; "reviewed evidence" is an evidence scope. Re-counted: 18 sentences withheld
-(8, 2, 3, 2, 1, 2), pinned by
+tests; "reviewed evidence" is an evidence scope. Test-breaker round 3 (the last; FAIL: BLOCKER,
+3 MAJOR, MINOR, QUESTION) fixed without a further review round (round limit): a sentence naming a
+clause the sections do not show is withheld (`clause_not_shown`; preset 6 described a third
+international clause with no label), relevance lines carry the status label, runs are re-checked
+across fields in display order (window of 8 sentences, bounded time), letters outside the Latin
+blocks are withheld (`unusual_letters`). Its paraphrase MAJOR is the open gate-2 question.
+Re-counted: 19 sentences withheld (8, 2, 3, 2, 1, 3), pinned by
 `test_the_readme_table_matches_the_recorded_answers`. Phase-auditor round 1: PASS (MINORs fixed
 or recorded). Open for the human: all-flagged commentary (see "Waiting on human").
 Verify: `uv run pytest tests/unit/test_adviser_query.py`; offline replay
@@ -1646,7 +1651,12 @@ tests/unit/test_clause_loader.py accepts exactly "(cid:131)" (the pdfplumber bul
   permit, authorise and legal-gap claims stay blocked". Options from the reviewer: (1) accept the
   residual risk under the agent-statement label and say "most wordings are withheld"; (2) show
   less commentary, e.g. only relevance notes, or only sentences that name a cited clause id;
-  (3) keep option (b) but show no commentary for illustrative clauses.
+  (3) keep option (b) but show no commentary for illustrative clauses. Round 3 found two more
+  that pass ("is a statute every licensee in the UAE has to follow" about an illustrative clause;
+  "As adviser I sanction sharing ...; consent rules give way here"); not added, per the reviewer.
+- Review limit: test-breaker ran three rounds (FAIL each time); the round-3 fixes (clause not
+  shown, labels on relevance lines, cross-field runs, Latin-only letters, bounded time) are not
+  re-reviewed. The human may ask for a further round.
 - Gate 2 (test-breaker QUESTION-FOR-HUMAN): when every sentence of the model commentary is
   flagged, the answer is now still shown in LLM mode (engine sections from the model-chosen
   clauses) with no commentary lines and "All N sentences of the model commentary withheld by the

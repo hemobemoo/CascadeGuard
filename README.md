@@ -217,7 +217,7 @@ same `CASCADEGUARD_MODEL` in `.env`; no call is made). They were recorded on **k
 retrieval**: embedding the preset questions failed (OpenRouter HTTP 502, 2026-11-05/06), so
 `policies/kb/adviser_query_vectors.json` does not exist and the context chunks come from the
 keyword half of the search. The engine accepted all six answers; their commentary is shown with
-1 to 8 sentences withheld each (18 in all; see `docs/evaluation/adviser/README.md`). If the
+1 to 8 sentences withheld each (19 in all; see `docs/evaluation/adviser/README.md`). If the
 presets are embedded later, their context changes and the recorded answers no longer match.
 Every answer names its mode. `--export DIR` writes the full trace; `--audit` records it in
 DuckDB. In the UI the panel is under the timeline (step b): its live-call switch is off by

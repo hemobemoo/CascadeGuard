@@ -269,7 +269,19 @@ def sentence_reasons(
         reasons.append("status_claim")
     if AUTHORITY.search(text):
         reasons.append("authority_wording")
+    if unusual_letters(sentence):
+        reasons.append("unusual_letters")
     return tuple(reasons)
+
+
+LATIN_END = 0x024F  # Basic Latin to Latin Extended-B
+
+
+def unusual_letters(text: str) -> bool:
+    """Any letter outside the Latin blocks up to Latin Extended-B (small capitals, IPA, Cyrillic,
+    Greek, ...): look-alikes the confusables table may miss (test-breaker round 3), so the
+    sentence is withheld rather than matched."""
+    return any(ord(ch) > LATIN_END and unicodedata.category(ch).startswith("L") for ch in text)
 
 
 def joined(*parts: str) -> str:
