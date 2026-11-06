@@ -8,7 +8,12 @@ from pathlib import Path
 import pytest
 
 from cascadeguard.engine.constraints import GAP_CLAIM, OVERSTATED
-from cascadeguard.knowledge.loader import PROJECT_ROOT, load_clauses
+from cascadeguard.knowledge.loader import (
+    GAP_EXAMPLE_NOTE,
+    PROJECT_ROOT,
+    load_clauses,
+    load_gap_example_clauses,
+)
 from cascadeguard.storage import reports
 from cascadeguard.storage.reports import (
     CONCLUSION_DRAFT,
@@ -58,7 +63,7 @@ def test_traces_are_the_three_scripted_runs(runs: ScriptedRuns) -> None:
 
 def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: ScriptedRuns) -> None:
     examples = load_gap_examples()
-    corpus = {c.id: c for c in load_clauses()}
+    corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
     assert reviewed_example_clauses(examples, corpus)
     failures = {f.id for f in runs.baseline.failures}
     assert {e.failure for e in examples.entries} <= failures
@@ -103,7 +108,7 @@ def test_gap_examples_name_reviewed_clauses_and_diagnosed_failures(runs: Scripte
 
 def test_gap_analysis_quotes_verbatim_and_keeps_every_qualification(runs: ScriptedRuns) -> None:
     text = committed(GAP_ANALYSIS)
-    corpus = {c.id: c for c in load_clauses()}
+    corpus = {c.id: c for c in load_clauses()} | load_gap_example_clauses()
     for f in runs.baseline.failures:
         assert f"## `{f.id}`" in text and f"_{f.qualification}_" in text
     header = "**Examples (context, not UAE law; UAE principles are not binding):**"
@@ -118,7 +123,9 @@ def test_gap_analysis_quotes_verbatim_and_keeps_every_qualification(runs: Script
         if not m:
             continue
         cid, label = m.groups()
-        assert label == corpus[cid].status_label, cid
+        # A clause reviewed as a gap example only says so after its label (option (c)).
+        note = f"; {GAP_EXAMPLE_NOTE}" if cid in load_gap_example_clauses() else ""
+        assert label == corpus[cid].status_label + note, cid
         block: list[str] = []
         for nxt in lines[i + 1 :]:
             if not nxt.startswith("  >"):
@@ -138,7 +145,9 @@ def test_a_failure_with_no_example_says_so(runs: ScriptedRuns) -> None:
     examples = load_gap_examples()
     mapped = {e.failure for e in examples.entries}
     unmapped = [f.id for f in runs.baseline.failures if f.id not in mapped]
-    assert unmapped == ["orphan_duty:activate_fallback_channel"]
+    # Gate 7 (human, 2026-11-06): the fallback failure now has the two NIST gap examples, so
+    # every diagnosed failure has an example (until then this listed the fallback failure).
+    assert unmapped == []
     text = committed(GAP_ANALYSIS)
     for fid in unmapped:
         section = text.split(f"## `{fid}`", 1)[1].split("\n## ", 1)[0]

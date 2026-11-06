@@ -340,6 +340,18 @@
     }
   },
   {
+    "source_file": "nistspecialpublication800-34r1.pdf",
+    "output": "nistspecialpublication800-34r1.jsonl",
+    "page_count": 149,
+    "pages_without_text": [],
+    "image_pages_without_text": [],
+    "metadata": {
+      "Title": "NIST 800-34, Rev 1 Contingency Planning Guide for Federal Information Systems",
+      "Author": "NIST Computer Security Division (CSD)",
+      "CreationDate": "D:20101222170941-05'00'"
+    }
+  },
+  {
     "source_file": "ocr/887026278-TDRA-Telecom-Law-Final-English-o.ocr.pdf",
     "output": "887026278-TDRA-Telecom-Law-Final-English-o.ocr.jsonl",
     "page_count": 47,

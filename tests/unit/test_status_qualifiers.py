@@ -21,7 +21,7 @@ from cascadeguard.domain.policies import (
     PolicyClause,
     in_source_dir,
 )
-from cascadeguard.knowledge.loader import load_clauses
+from cascadeguard.knowledge.loader import load_clauses, load_gap_example_clauses
 from cascadeguard.ui import view_model as vm
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -154,7 +154,13 @@ UAE_IN_CORPUS = {
     "UAE (illustrative)",
     "UAE (national strategy)",
 }
-FOREIGN_IN_CORPUS = {"EU", "United States (voluntary framework)"}
+# "United States (federal guidance)": NIST SP 800-34 Rev. 1 (Task 2, human 2026-11-06: keep
+# the automatic "foreign precedent").
+FOREIGN_IN_CORPUS = {
+    "EU",
+    "United States (voluntary framework)",
+    "United States (federal guidance)",
+}
 INTERNATIONAL_IN_CORPUS = {
     "International (ITU-T Recommendation)",
     "International (OECD Adherents; non-binding recommendation; UAE adherence not checked)",
@@ -164,7 +170,7 @@ INTERNATIONAL_IN_CORPUS = {
 
 
 def test_every_repository_clause_label_states_binding_and_source_type() -> None:
-    for c in load_clauses():
+    for c in [*load_clauses(), *load_gap_example_clauses().values()]:
         parts = c.status_label.split(LABEL_SEPARATOR)
         if c.status is ClauseStatus.ILLUSTRATIVE:
             assert parts == [c.status_label], c.id

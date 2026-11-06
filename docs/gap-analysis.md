@@ -4,7 +4,7 @@ _Hypothetical scenario with synthetic data only. CascadeGuard is decision suppor
 
 Generated from the governed baseline run with scripted agents (clause set: policies/reviewed: reviewed + illustrative clauses) by `scripts/build_reports.py`; regenerate it, never edit it. Each diagnosed failure is a candidate for expert review, not a finding of law: its qualification below is part of it.
 
-The examples are a mapping reviewed by the human (Ibrahim Melhem, 2026-10-31, gate 7) (`scenarios/uae_health_access/gap_examples.yaml`). An entry not yet approved is marked so. Foreign and international texts are shown as examples of practice elsewhere, never as UAE law; every clause carries its status label.
+The examples are a mapping reviewed by the human (Ibrahim Melhem, 2026-11-06, gate 7) (`scenarios/uae_health_access/gap_examples.yaml`). An entry not yet approved is marked so. Foreign and international texts are shown as examples of practice elsewhere, never as UAE law; every clause carries its status label.
 
 ## `information_deadlock:network_incident_status->health_service_operator`
 
@@ -39,7 +39,11 @@ The examples are a mapping reviewed by the human (Ibrahim Melhem, 2026-10-31, ga
 
 **Examples (context, not UAE law; UAE principles are not binding):**
 
-- No reviewed example clause is mapped to this failure.
+- `nist.sp800-34.activation-by-designated-authority` [reviewed · not binding · foreign precedent; reviewed as a gap example; not loaded into the simulation], nistspecialpublication800-34r1.pdf, p. 50, 4.2.1 Activation Criteria and Procedure (approved). Relevance: US federal contingency guidance (not AI-specific; a recommendation): a designated authority activates the plan when activation criteria stated in advance are met. It illustrates an assigned owner and a pre-set trigger for activating a fallback.
+  > The ISCP should be activated if one or more of the activation criteria for that system are met. If an activation criterion is met, the designated authority should activate the plan. [...] Activation criteria for system outages or disruptions are unique for each organization and should be stated in the contingency planning policy.
+
+- `nist.sp800-34.alternate-manual-means` [reviewed · not binding · foreign precedent; reviewed as a gap example; not loaded into the simulation], nistspecialpublication800-34r1.pdf, p. 15, Chapter 1, Introduction (approved). Relevance: US federal contingency guidance (not AI-specific; descriptive, not binding): lists alternate (manual) processing as one way to restore a disrupted service, typically acceptable for only short-term disruptions. It illustrates the fallback mechanism, not who activates it.
+  > Contingency planning generally includes one or more of the following approaches to restore disrupted services: [...] Restoring information systems using alternate equipment; [...] Performing some or all of the affected business processes using alternate processing (manual) means (typically acceptable for only short-term disruptions);
 
 **Repairs tested by replay (hypothetical rules, scripted agents):**
 

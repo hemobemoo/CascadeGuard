@@ -5,10 +5,13 @@
 # Each entry names a reviewed clause and says, in one line, what it is an example of. It never says
 # the UAE corpus lacks a provision: every diagnosed failure keeps its own qualification (not a
 # confirmed legal or standards gap). A failure with no entry has no reviewed example mapped.
+# Gate 7, 2026-11-06 (Ibrahim Melhem): the two NIST SP 800-34 entries for
+# orphan_duty:activate_fallback_channel approved, with the human's relevance lines; their
+# clauses are reviewed as gap examples only (policies/gap_examples_only/), never loaded.
 # Hypothetical scenario, synthetic data.
 status: reviewed
 reviewed_by: Ibrahim Melhem
-reviewed_on: 2026-10-31
+reviewed_on: 2026-11-06
 entries:
   - failure: information_deadlock:network_incident_status->health_service_operator
     clause: oecd.ai-principles.accountability-cooperation
@@ -33,4 +36,12 @@ entries:
   - failure: undefined_trigger:review_automated_lockouts
     clause: uae.ai-charter.human-oversight
     relevance: A UAE principle (not binding) on human oversight to correct errors of AI. It sets no trigger for review (no threshold or time; its interpreted condition, that an AI output may be erroneous, is not a trigger). It illustrates the principle without a trigger.
+    approved: true
+  - failure: orphan_duty:activate_fallback_channel
+    clause: nist.sp800-34.activation-by-designated-authority
+    relevance: "US federal contingency guidance (not AI-specific; a recommendation): a designated authority activates the plan when activation criteria stated in advance are met. It illustrates an assigned owner and a pre-set trigger for activating a fallback."
+    approved: true
+  - failure: orphan_duty:activate_fallback_channel
+    clause: nist.sp800-34.alternate-manual-means
+    relevance: "US federal contingency guidance (not AI-specific; descriptive, not binding): lists alternate (manual) processing as one way to restore a disrupted service, typically acceptable for only short-term disruptions. It illustrates the fallback mechanism, not who activates it."
     approved: true

@@ -86,11 +86,11 @@ The two live runs share 32 decisions, so their counts overlap; scripted and live
 
 ## 6. Policy gaps and standards gaps derived from the mapping exercise
 
-Each item is a candidate gap for expert review, not a confirmed legal or standards gap. Examples are from the reviewed mapping (gate 7, 2026-10-31); international and foreign texts are not binding. Repairs are hypothetical rules, not source clauses, tested with scripted agents; each needs human and institutional approval.
+Each item is a candidate gap for expert review, not a confirmed legal or standards gap. Examples are from the reviewed mapping (gate 7, 2026-10-31 and 2026-11-06); international and foreign texts are not binding. Repairs are hypothetical rules, not source clauses, tested with scripted agents; each needs human and institutional approval.
 
 - **Information deadlock (network status to the health operator).** Not found in the loaded clause set: no clause authorising this share. Example: `oecd.ai-principles.accountability-cooperation` (co-operation between AI actors, as appropriate). Removed at its cause by the rank-1 repair.
 - **Orphan duty: reversing automated lockouts.** Not found in the loaded clause set. Examples: `oecd.ai-principles.robustness-override`, `unesco.ai-ethics.review-and-correct`, `uae.ai-charter.human-oversight` (not binding). Removed at its cause by the rank-1 repair.
-- **Orphan duty: activating the fallback channel.** Only uncertain authority was found (`dha.pp11.4-18-1`, binding unknown); it requires a determination. No reviewed example clause is mapped to this failure. The rank-1 repair only masks it: it stays open for the authorities to determine.
+- **Orphan duty: activating the fallback channel.** Only uncertain authority was found (`dha.pp11.4-18-1`, binding unknown); it requires a determination. Examples (US federal guidance, not AI-specific, not binding; reviewed as gap examples, not loaded into the simulation): `nist.sp800-34.activation-by-designated-authority` (a designated authority activates on criteria set in advance) and `nist.sp800-34.alternate-manual-means` (alternate manual processing). The rank-1 repair only masks it: it stays open for the authorities to determine.
 - **Undefined trigger: reviewing automated lockouts.** Not found in the loaded clause set. Examples: `unesco.ai-ethics.human-oversight` and `uae.ai-charter.human-oversight`, which state oversight but set no trigger for review. The rank-1 repair only masks it: it stays open for expert review.
 
 The two masked items are the candidate gaps the rank-1 repair leaves open: in the scripted replay the incident resolves without settling who may activate a fallback channel or what triggers a review of an automated lockout. Both need expert review.

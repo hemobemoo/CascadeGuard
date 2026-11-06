@@ -31,7 +31,7 @@ cascadeguard/
 ├── docs/                             no separate agent-rules or MCP-rules files here
 │   ├── architecture.md               [P2] one page, updated as the build progresses
 │   ├── policy-methodology.md         [P1] how clauses are sourced, reviewed, labelled
-│   ├── policy-inventory.md           [P1] table of the 23 PDFs (pages, text, issuer, date)
+│   ├── policy-inventory.md           [P1] table of the 24 PDFs (pages, text, issuer, date)
 │   ├── gap-analysis.md               [PR 5] generated: failures, clauses, examples, repairs
 │   ├── report/                       [report] technical report: cascadeguard-report.md (source),
 │   │                                 .docx (built on the organizers' template), .pdf (Chromium, scripts/report_pdf);
@@ -121,9 +121,11 @@ cascadeguard/
 │       └── tracing.py                [P7] OpenTelemetry/OpenInference -> Phoenix (optional, off by default)
 │
 ├── policies/
-│   ├── sources/                      [P0] the original PDFs (23 since the Charter PR) — never modified; engine never reads them
+│   ├── sources/                      [P0] the original PDFs (24 since Task 2, 2026-11-06) — never modified; engine never reads them
 │   │   └── web/                      [P6c] web transcriptions of official pages (unverified), MANIFEST.md
 │   ├── approvals.yaml                [P3] digests of human-approved reviewed clauses (gate 1)
+│   ├── gap_examples_only/            [Task 2, 2026-11-06] clauses reviewed as gap examples only (NIST SP 800-34);
+│   │                                 never loaded; read only by the report builder
 │   ├── extracted/                    [P1] generated: <pdf-stem>.jsonl, page-by-page text
 │   ├── transcriptions/               [Charter PR] page-image transcriptions for sources with an unreliable text layer
 │   │                                 (TRANSCRIBED_SOURCES); quotes flagged so are checked here
