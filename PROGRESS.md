@@ -55,7 +55,8 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    the generated report (13 = 23 - 10 misses; 0.203/0.500/0.453 rounded) and traced by
    `test_every_number_is_traced_to_the_data`; PDF still 5 pages. **Ranking decided (human,
    2026-11-06): deferred to finals**; no change to `kb.search_kb`, the cap, the RRF weights or the
-   queries (see the finals backlog). PR #38 open; merge when the human's conditions hold.
+   queries (see the finals backlog). **Merged: PR #38, merge commit fb4ee97 (2026-11-07);** clean
+   checkout 927 passed, 3 skipped; CI green on c7bbaaf; PDF 5 pages; phase-auditor round 3 PASS.
    **Done when** (the human's brief of 2026-11-05, Task 4, word for word): "Write ~25 queries in
    tests/evaluation/kb_queries.yaml with the expected source and page, written before looking.
    Cover: AI governance, health data sharing, telecom duties, incident response, information
@@ -561,8 +562,8 @@ then locked.
 ## Current phase
 
 **Task 4, retrieval evaluation (branch `kb-retrieval-eval`, from main 965947e, 2026-11-06).**
-See the Task 4 entry in "Start here". PR #38; gate 7 answered; merge when the human's conditions
-hold, then stop (no Task 6, no incident-envelope schema until the human decides).
+Merged (PR #38, fb4ee97). Stopped: no Task 6 and no incident-envelope schema until the human
+decides.
 
 **Before (Adviser commentary check):**
 **Adviser commentary check (branch `adviser-commentary-check`, from main df014a1, 2026-11-06).**
@@ -2062,8 +2063,8 @@ the Phase 4 review gates (see Decisions). Re-approval needed (gate 1): none
 
 ## Next step
 
-**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 merged as PR #38 once the
-human's conditions hold. Then stop: Task 6 (optional live run, gate 4) and the optional
+**2026-11-06 (Task 4):** Task 5 merged (PR #37, 965947e). Task 4 merged (PR #38, fb4ee97,
+2026-11-07). Stopped: Task 6 (optional live run, gate 4) and the optional
 incident-envelope schema wait for the human's decision. The four carried-over clause items
 (dha.pp11.4-18-5, mocai.ethics.fallback-plan, uae.cyber-strategy-2025.governance-aim,
 uae.cyber-strategy-2025.partnership-aim) also wait for the human.
