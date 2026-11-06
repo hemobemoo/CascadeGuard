@@ -15,7 +15,11 @@ order; each keeps the scripted path and both goldens byte-identical unless the h
    Follow-up to Task 1, `adviser-commentary-check`: per-sentence commentary check, prompt
    adviser-v2, presets re-recorded (gate 4, approved): built and reviewed; PR to open, then stop
    for the human.
-3. UAE cyber sources, triage only, nothing loaded, no KB rebuild (`uae-cyber-sources`): not started.
+3. UAE cyber sources (`uae-cyber-sources`, from main 2a80a26): started 2026-11-06; human change of
+   2026-11-06: approved clauses go the gap_examples_only route like NIST (never loaded, no KB
+   rebuild; gate-4 cache, preset keys, citation map, traces and goldens unchanged); prefer
+   official PDFs; propose gap_examples entries mainly for information_deadlock. **Blocked on the
+   human: downloading the three official PDFs** (see "Waiting on human").
 4. Retrieval evaluation, ~25 queries (`kb-retrieval-eval`): not started (gate 4 before embedding).
 5. Documentation reconciliation, docs only (`docs-reconcile`): not started.
 6. Optional ungoverned live run of all 36 steps (gate 4), only after 1-5 are merged.
@@ -1633,6 +1637,20 @@ clauses are precedents and context for gap analysis and can be reviewed later.
 | `illus.telecom.regulator-information-request` | Already illustrative: regulator's telecom remit |
 
 ## Waiting on human
+
+**Task 3, UAE cyber sources (2026-11-06): the three official PDFs need a human download.** The
+u.ae pages link official Cyber Security Council PDFs on csc.gov.ae:
+- Cyber Security Information Sharing Framework V2.0 (PDF, 2.36 MB):
+  https://csc.gov.ae/documents/38662/1042755/Cyber+Security+Information+Sharing+Framework+V2.0.pdf/f6194090-0797-51ec-5372-05b68f4d099f?t=1771617652952
+- Cyber Incident Response Plan V2.0 (PDF, 2.17 MB):
+  https://csc.gov.ae/documents/38662/1042755/Cyber+Incident+Response+Plan_V2.0.pdf/5893693c-7a1a-05cf-60a0-d10a1ee154ef?t=1771617652578
+- National Cyber Security Policy for Artificial Intelligence v1.1 (PDF, 2.14 MB):
+  https://csc.gov.ae/documents/38662/1042755/National+Cyber+Security+Policy+for+Artificial+Intelligence_v1.1.pdf/aeca22fd-f413-f1ac-a01f-14446e62f982?t=1771617654295
+csc.gov.ae drops the TLS connection for curl and Python; fetching through a scripted browser was
+refused by the agent's permission check (bot-check circumvention), so the agent did not retry.
+Options: the human downloads the three files in a browser and puts them in `policies/sources/`
+(the agent then records SHA-256, inventory rows and extracts), or the agent uses the u.ae summary
+pages as web transcriptions (weaker: the pages summarise; the frameworks are in the PDFs).
 
 **Task 2, NIST SP 800-34 (2026-11-06): all gates answered.** Gate 7 report wording approved and
 applied (fallback bullet, intro dates, corrected relevance line; PDF still 5 pages). Deferred to Task 5 (docs-reconcile): a README "Sources" row for
