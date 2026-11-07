@@ -2134,3 +2134,9 @@ Demo video updated by the human (2026-11-07); PR #40 opened; merge on green CI (
 ffprobe is not installed). It now also shows the Ask the Policy Adviser panel. No text described
 the video's contents or length, so only this entry changed; no code, golden, cache, citation
 map, trace, report or diagram file changed. Then stop.
+
+## CascadeGuard.md status note (branch `concept-status-note`, from main f326c6a, 2026-11-07)
+
+CascadeGuard.md status note and Planned vs built table (human, 2026-11-07); PR #41 opened;
+merge on green CI (human-approved). Inserted after the tagline, before section 1; no existing
+line of CascadeGuard.md changed. Every "Built" cell cites its source file. Then stop.
