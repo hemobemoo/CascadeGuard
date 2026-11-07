@@ -8,10 +8,12 @@ Find where AI decisions and institutional rules collide. Test the smallest safe 
 An evidence-grounded, multi-agent simulation and policy-failure discovery platform for the ITU AI for Good Sandbox Hackathon — United Arab Emirates.
 
 > **Status (7 Nov 2026):** This is the original concept, written before the build (October
-> 2026), and is kept unchanged as the design record. Where it says "will" or "should", it
-> describes the plan. For what was built and measured, see the [README](README.md) and the
-> technical report in `docs/report/`. The table below summarises where the build differs from
-> this plan.
+> 2026), and is kept as the design record. Since then, one sentence in §6 (the lexicographic
+> order of the repair ranking) was updated on 24 Oct 2026 to match the ranking as built
+> (docs/decisions/0001-repair-ranking.md); nothing else in the concept has changed. Where it
+> says "will" or "should", it describes the plan. For what was built and measured, see the
+> [README](README.md) and the technical report in `docs/report/`. The table below summarises
+> where the build differs from this plan.
 
 ### Planned vs built
 
