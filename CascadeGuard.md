@@ -7,6 +7,28 @@ Find where AI decisions and institutional rules collide. Test the smallest safe 
 
 An evidence-grounded, multi-agent simulation and policy-failure discovery platform for the ITU AI for Good Sandbox Hackathon — United Arab Emirates.
 
+> **Status (7 Nov 2026):** This is the original concept, written before the build (October
+> 2026), and is kept as the design record. Since then, one sentence in §6 (the lexicographic
+> order of the repair ranking) was updated on 24 Oct 2026 to match the ranking as built
+> (docs/decisions/0001-repair-ranking.md); nothing else in the concept has changed. Where it
+> says "will" or "should", it describes the plan. For what was built and measured, see the
+> [README](README.md) and the technical report in `docs/report/`. The table below summarises
+> where the build differs from this plan.
+
+### Planned vs built
+
+| Area | Planned (this document) | Built (see) |
+|---|---|---|
+| Roles | Seven roles, including the Orchestrator | Six institutional roles (`scenarios/uae_health_access/roles.yaml`); the orchestrator is deterministic code, not an agent (`docs/architecture.md`). |
+| Scenarios | One scenario and three controlled variants | One scenario and no controlled variants (`scenarios/uae_health_access/`). |
+| Knowledge base and clauses | 25–40 manually verified precedent clauses or framework provisions | 24 original PDFs, plus 3 kept local only, and 7 web transcriptions; 42 clauses (19 reviewed, 2 illustrative, 21 draft), of which 21 are loaded, plus 9 gap-example-only clauses never loaded (`docs/corpus-counts.md`). |
+| Global sources | Canada's Directive on Automated Decision-Making, Singapore's agentic AI framework, NIS2, WHO guidance | None of these four is in the corpus; the international and foreign sources are EU (AI Act, GDPR), OECD, UNESCO, ITU, Agile Nations and US NIST documents (`docs/policy-inventory.md`). |
+| Evaluation | Three system configurations compared | Scripted and live LLM agents, governed and ungoverned runs, and a retrieval check on 23 answerable queries (`docs/evaluation/traces/`, `docs/evaluation/gate4/`, `docs/evaluation/kb-retrieval.md`). |
+| Result (§6) | An illustrative baseline and repair outcome | With scripted agents, the baseline has 4 coordination failures and both critical goals unmet; the rank-1 repair (2 policy edits) meets all critical goals, with 2 failures removed and 2 masked (cause still present), and needs human and institutional approval (`docs/report/cascadeguard-report.md`). |
+| Policy Adviser | Retrieves provisions, compares them with global precedents and explains uncertainty | Ask the Policy Adviser answers a question at a step T+n from the adviser's own view, through the CLI `cascadeguard ask` or the UI panel, and never changes a run (`docs/architecture.md`). |
+| Toolkit | Graphify, and OpenAPPA to evaluate | NiceGUI, NetworkX, DuckDB, pdfplumber and the openai SDK, with neither Graphify nor OpenAPPA as a dependency (`pyproject.toml`); OpenRouter and the `nvidia/nemotron-3.5-embed-1b` embedding model (`README.md`). |
+| Not done | Fine-tuning not required for the initial prototype | No fine-tuning and no Sandbox credits were used (`docs/report/cascadeguard-report.md`), and the knowledge-base export is not hosted in the ITU AI for Good Lab (`README.md`). |
+
 ---
 
 ## 1. Executive summary
