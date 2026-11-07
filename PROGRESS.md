@@ -2126,3 +2126,11 @@ Reviewers: phase-auditor PASS, evidence-auditor PASS; their MINORs fixed in the 
 docstring still says the knowledge base is for the LLM context path only, but the adviser uses it
 too; fix after the freeze (kb.py had to stay unchanged here). Evidence-auditor rounds 2 and 3: PASS; deferred
 diagram MINORs (optional labels) are listed in the triage file.
+
+## Demo video update (branch `demo-video-update`, from main 7e2f6ab, 2026-11-07)
+
+Demo video updated by the human (2026-11-07); PR #40 opened; merge on green CI (human-approved).
+`cascadeguard-demo.mp4`, same name and path: 36,648,981 bytes, 5:25 (read from the MP4 header;
+ffprobe is not installed). It now also shows the Ask the Policy Adviser panel. No text described
+the video's contents or length, so only this entry changed; no code, golden, cache, citation
+map, trace, report or diagram file changed. Then stop.
